@@ -1,0 +1,16 @@
+[package]
+name = "leptonic"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.56"
+authors = ["Lukas Potthast <privat@lukas-potthast.de>"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/lpotthast/leptonic"
+description = """
+The Leptos component library.
+"""
+categories = ["gui"]
+keywords = ["leptos", "components"]
+
+[dependencies]
