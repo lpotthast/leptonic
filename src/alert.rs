@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_icons::*;
 
 use crate::Bool;
 
@@ -51,7 +52,7 @@ where
             })
             >
             <div class="prepend">
-                "ico"
+                <LeptosIcon icon=BsIcon::BsCheckCircleFill width="2em" height="2em" />
             </div>
             <div class="content">
                 <div class="title">
