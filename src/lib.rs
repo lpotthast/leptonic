@@ -1,6 +1,7 @@
 use leptos::*;
 
 pub mod alert;
+pub mod r#box;
 pub mod button;
 pub mod card;
 pub mod checkbox;
@@ -11,6 +12,7 @@ pub mod progress_bar;
 pub mod separator;
 pub mod tab;
 pub mod tabs;
+pub mod theme;
 pub mod tile;
 pub mod toast;
 pub mod toggle;
@@ -65,7 +67,6 @@ pub mod prelude {
     pub use super::card::CardProps;
     pub use super::checkbox::Checkbox;
     pub use super::checkbox::CheckboxProps;
-    pub use super::collapsible::OnOpen;
     pub use super::collapsible::Collapsible;
     pub use super::collapsible::CollapsibleBody;
     pub use super::collapsible::CollapsibleBodyProps;
@@ -74,6 +75,8 @@ pub mod prelude {
     pub use super::collapsible::CollapsibleProps;
     pub use super::collapsible::Collapsibles;
     pub use super::collapsible::CollapsiblesProps;
+    pub use super::collapsible::OnOpen;
+    pub use super::create_signal_ls;
     pub use super::icon::Icon;
     pub use super::icon::IconProps;
     pub use super::modal::Modal;
@@ -90,20 +93,28 @@ pub mod prelude {
     pub use super::modal::ModalTitleProps;
     pub use super::progress_bar::ProgressBar;
     pub use super::progress_bar::ProgressBarProps;
+    pub use super::r#box::Box;
+    pub use super::r#box::BoxProps;
     pub use super::separator::Separator;
     pub use super::separator::SeparatorProps;
     pub use super::tab::Tab;
     pub use super::tab::TabProps;
     pub use super::tabs::Tabs;
     pub use super::tabs::TabsProps;
+    pub use super::theme::DarkThemeToggle;
+    pub use super::theme::DarkThemeToggleProps;
+    pub use super::theme::Theme;
+    pub use super::theme::ThemeContext;
+    pub use super::theme::ThemeProvider;
+    pub use super::theme::ThemeProviderProps;
     pub use super::tile::Tile;
     pub use super::tile::TileProps;
     pub use super::toast::Toast;
     pub use super::toast::ToastRoot;
     pub use super::toast::ToastRootProps;
+    pub use super::toast::ToastTimeout;
     pub use super::toast::ToastVariant;
     pub use super::toast::Toasts;
-    pub use super::toast::ToastTimeout;
     pub use super::toggle::Toggle;
     pub use super::toggle::ToggleProps;
     pub use super::Active;
@@ -186,4 +197,45 @@ where
     T: 't,
 {
     move || item().map(|t| view(cx, t))
+}
+
+pub fn create_signal_ls<T: Clone + serde::Serialize + serde::de::DeserializeOwned>(
+    cx: Scope,
+    key: &'static str,
+    initial: T,
+) -> (ReadSignal<T>, WriteSignal<T>) {
+    let (signal, set_signal) =
+        create_signal(cx, read_from_local_storage::<T>(key).unwrap_or(initial));
+
+    track_in_local_storage(cx, key, signal);
+
+    (signal, set_signal)
+}
+
+pub fn read_from_local_storage<T: serde::de::DeserializeOwned>(key: &'static str) -> Option<T> {
+    let storage = window().local_storage().ok()??;
+    let stored = storage.get(key).ok()??;
+    match serde_json::from_str(&stored) {
+        Ok(des) => Some(des),
+        Err(err) => {
+            tracing::error!(
+                "Could not deserialize local-storage value at key '{key}'. Received '{stored}'. Tried to convert to '{ty}'. App may continue using a default value. Err: {err}",
+                ty = std::any::type_name::<T>()
+            );
+            None
+        }
+    }
+}
+
+pub fn track_in_local_storage<T: serde::Serialize + Clone>(
+    cx: Scope,
+    key: &'static str,
+    signal: ReadSignal<T>,
+) {
+    create_effect(cx, move |_old| {
+        let storage = window().local_storage().ok()??;
+        storage
+            .set(key, serde_json::to_string(&signal.get()).ok()?.as_ref())
+            .ok()
+    })
 }
