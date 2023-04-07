@@ -77,7 +77,7 @@ pub fn Collapsibles(cx: Scope, default_on_open: OnOpen, children: Children) -> i
         },
     );
     view! { cx,
-        <div class="crud-collapsibles">
+        <div class="leptonic-collapsibles">
             { children(cx) }
         </div>
     }
@@ -120,7 +120,7 @@ where
     provide_context(cx, ctx);
 
     view! { cx,
-        <div id=id_str class="crud-collapsible">
+        <div id=id_str class="leptonic-collapsible">
             <CollapsibleHeader>
                 { header }
             </CollapsibleHeader>
@@ -137,7 +137,7 @@ pub fn CollapsibleHeader(cx: Scope, children: Children) -> impl IntoView {
         .expect("A CollapsibleHeader musst be placed inside a Collapsible component.");
 
     view! { cx,
-        <div class="crud-collapsible-header" on:click=move |_| collapsible_ctx.toggle()>
+        <div class="leptonic-collapsible-header" on:click=move |_| collapsible_ctx.toggle()>
             { children(cx) }
         </div>
     }
@@ -149,7 +149,7 @@ pub fn CollapsibleBody(cx: Scope, children: Children) -> impl IntoView {
         .expect("A CollapsibleHeader musst be placed inside a Collapsible component.");
 
     view! { cx,
-        <div class="crud-collapsible-body" class:show=collapsible_ctx.show>
+        <div class="leptonic-collapsible-body" class:show=collapsible_ctx.show>
             { children(cx) }
         </div>
     }

@@ -76,7 +76,7 @@ where
     F: FnMut(MouseEvent) + 'static,
 {
     view! { cx,
-        <button class=format!("crud-btn {variant} {size}") on:click=on_click>
+        <button class=format!("leptonic-btn {variant} {size}") on:click=on_click>
             <div class="name">
                 { children(cx) }
             </div>
@@ -90,7 +90,7 @@ pub fn ButtonGroup(
     children: Children,
 ) -> impl IntoView{
     view! { cx,
-        <div class="crud-btn-group">
+        <div class="leptonic-btn-group">
             { children(cx) }
         </div>
     }
@@ -102,7 +102,7 @@ pub fn ButtonWrapper(
     children: Children,
 ) -> impl IntoView{
     view! { cx,
-        <div class="crud-btn-wrapper">
+        <div class="leptonic-btn-wrapper">
             { children(cx) }
         </div>
     }

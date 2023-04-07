@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_icons::BsIcon;
 
 use crate::prelude::*;
 
@@ -54,6 +55,6 @@ pub fn DarkThemeToggle(cx: Scope) -> impl IntoView {
     });
 
     view! {cx,
-        <Toggle on=toggle set_on=set_toggle />
+        <Toggle on=toggle set_on=set_toggle icons=ToggleIcons { on: BsIcon::BsMoon.into(), off: BsIcon::BsSun.into() } />
     }
 }

@@ -28,11 +28,11 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
 
         <If sig=move || modals.get().len() != 0>
             <div id="modal-host">
-                <div class={"crud-modal-backdrop"}></div>
+                <div class={"leptonic-modal-backdrop"}></div>
 
                 <div class="modals">
                     {move || modals.get().last().map(|(_, modal)| view! { cx,
-                        <div class={"crud-modal"}>
+                        <div class={"leptonic-modal"}>
                             { (modal.children)(modal.scope) }
                         </div>
                     })}
@@ -73,7 +73,7 @@ pub fn Modal(cx: Scope, display_if: ReadSignal<bool>, children: ChildrenFn) -> i
 #[component]
 pub fn ModalHeader(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="crud-modal-header">
+        <div class="leptonic-modal-header">
             { children(cx) }
         </div>
     }
@@ -82,7 +82,7 @@ pub fn ModalHeader(cx: Scope, children: Children) -> impl IntoView {
 #[component]
 pub fn ModalTitle(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="crud-modal-title">
+        <div class="leptonic-modal-title">
             { children(cx) }
         </div>
     }
@@ -91,7 +91,7 @@ pub fn ModalTitle(cx: Scope, children: Children) -> impl IntoView {
 #[component]
 pub fn ModalBody(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="crud-modal-body">
+        <div class="leptonic-modal-body">
             { children(cx) }
         </div>
     }
@@ -100,7 +100,7 @@ pub fn ModalBody(cx: Scope, children: Children) -> impl IntoView {
 #[component]
 pub fn ModalFooter(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="crud-modal-footer">
+        <div class="leptonic-modal-footer">
             { children(cx) }
         </div>
     }

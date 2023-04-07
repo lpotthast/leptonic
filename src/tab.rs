@@ -13,7 +13,7 @@ pub struct TabLabel {
     pub label: Arc<View>,
 }
 
-// TODO: We might want to take only Children and hide them when the tab is not active...
+// TODO: We might want to take only `Children` and hide them when the tab is not active...
 #[component]
 pub fn Tab<L>(
     cx: Scope,
@@ -22,7 +22,8 @@ pub fn Tab<L>(
     name: &'static str,
     label: L,
     #[prop(optional)] children: Option<ChildrenFn>,
-    #[prop(optional_no_strip)] on_hide: Option<WriteSignal<()>>,
+    #[prop(optional)] on_show: Option<fn()>,
+    #[prop(optional)] on_hide: Option<fn()>,
 ) -> impl IntoView
 where
     L: IntoView + 'static,
@@ -37,13 +38,32 @@ where
     };
 
     tabs.set_tab_labels.update(|labels| labels.push(tab_label));
-    tabs.set_active_tab.update(|active| {
-        if (*active).is_none() {
-            *active = Some(name);
-        }
-    });
 
-    let is_active = move || tabs.active_tab.get() == Some(name);
+    if tabs.history.get().get_active() == None {
+        tabs.set_history.update(|history| {
+            history.push(name);
+        });
+    }
+
+    let is_active = move || tabs.history.get().get_active() == Some(name);
+
+    if let Some(on_show) = on_show {
+        create_effect(cx, move |_| {
+            let history = tabs.history.get();
+            if history.get_active() == Some(name) && history.get_previous() != Some(name) {
+                on_show();
+            }
+        });
+    }
+
+    if let Some(on_hide) = on_hide {
+        create_effect(cx, move |_| {
+            let history = tabs.history.get();
+            if history.get_active() != Some(name) && history.get_previous() == Some(name) {
+                on_hide();
+            }
+        });
+    }
 
     on_cleanup(cx, move || {
         info!("cleanup tab");
@@ -52,7 +72,7 @@ where
     view! { cx,
         {
             move || is_active().then(|| view! { cx,
-                <div id=id.to_string() class={"crud-tab"} data:name=name>
+                <div id=id.to_string() class={"leptonic-tab"} data:name=name>
                     {
                         if let Some(children) = &children {
                             children(cx)

@@ -10,7 +10,7 @@ pub fn ProgressBar(
 ) -> impl IntoView {
     view! { cx,
         <progress
-            class="crud-progress-bar"
+            class="leptonic-progress-bar"
             max=max
             value=progress
         />

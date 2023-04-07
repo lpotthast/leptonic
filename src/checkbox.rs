@@ -79,11 +79,11 @@ pub fn Checkbox(
 ) -> impl IntoView {
     let id = id.unwrap_or_else(|| Uuid::new_v4());
     view! { cx,
-        <div class="crud-checkbox-wrapper">
+        <div class="leptonic-checkbox-wrapper">
             <input
                 type="checkbox"
                 id=id.to_string()
-                class=format!("crud-checkbox {} {}", variant, size)
+                class=format!("leptonic-checkbox {} {}", variant, size)
                 class:active=move || active.map(|it| match it {
                     Active::Static(active) => active,
                     Active::Reactive(active) => active.get(),

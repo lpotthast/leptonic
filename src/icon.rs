@@ -1,13 +1,9 @@
 use leptos::*;
-
-#[derive(Debug, PartialEq, Clone, Copy)]
-pub enum Bi {
-    Unknown,
-}
+use leptos_icons::*;
 
 #[component]
-pub fn Icon(cx: Scope, variant: Bi) -> impl IntoView {
+pub fn Icon(cx: Scope, #[prop(into)] icon: Icon) -> impl IntoView {
     view! { cx,
-        "BI"
+        <LeptosIcon class="leptonic-icon" icon=icon />
     }
 }

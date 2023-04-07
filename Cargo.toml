@@ -21,13 +21,9 @@ leptos = { version = "0.2", default-features = false, features = [
     "tracing",
 ] }
 leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
-    "BsFolderFill",
-    "BsFolder",
+    "BsSun",
+    "BsMoon",
     "BsCheckCircleFill",
-    "FaBarsSolid",
-    "FaBarsSolid",
-    "ImPagebreak",
-    "ImPageBreak",
 ] }
 time = { version = "0.3", features = [
     "wasm-bindgen",

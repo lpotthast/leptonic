@@ -89,7 +89,7 @@ pub fn ToastRoot(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
         { children(cx) }
 
-        <div class="crud-toasts">
+        <div class="leptonic-toasts">
             <For
                 each=toasts
                 key=|toast| toast.id
@@ -106,11 +106,11 @@ pub fn ToastRoot(cx: Scope, children: Children) -> impl IntoView {
 #[component]
 pub fn Toast(cx: Scope, toast: Toast) -> impl IntoView {
     view! { cx,
-        <div id=toast.id.to_string() class=format!("crud-toast {}", toast.variant)>
-            <div class={"crud-toast-heading"}>
+        <div id=toast.id.to_string() class=format!("leptonic-toast {}", toast.variant)>
+            <div class={"leptonic-toast-heading"}>
                 { toast.header }
             </div>
-            <div class={"crud-toast-message"}>
+            <div class={"leptonic-toast-message"}>
                 { toast.body }
             </div>
         </div>
