@@ -42,6 +42,8 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
     let (test_bool, set_test_bool) = create_signal(cx, false);
     let (center_alert, set_center_alert) = create_signal(cx, false);
 
+    let (transition, set_transition) = create_signal(cx, false);
+
     let toasts = use_context::<Toasts>(cx).unwrap();
 
     view! { cx,
@@ -57,11 +59,11 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
             <ModalBody>"This ia a test modal."</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| set_show_modal.set(false) variant=ButtonVariant::Danger>"Accept"</Button>
+                    <Button on_click=move |_| set_show_modal.set(false) color=ButtonColor::Danger>"Accept"</Button>
                     <Button on_click=move |_| {
                         //set_show_modal.set(false);
                         set_show_modal2.set(true);
-                    } variant=ButtonVariant::Info>"Next"</Button>
+                    } color=ButtonColor::Info>"Next"</Button>
                     <Button on_click=move |_| set_show_modal.set(false)>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
@@ -76,6 +78,15 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
+
+        <Separator />
+
+        <h2>"Buttons"</h2>
+        <div>
+            <Button on_click=move |_| {}>"Flat"</Button>
+            <Button on_click=move |_| {}>"Outlined"</Button>
+            <Button on_click=move |_| {}>"Filled"</Button>
+        </div>
 
         <Separator />
 
@@ -127,6 +138,16 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
                 body=view! {cx, "Body3"}
                 on_open=OnOpen::DoNothing />
         </Collapsibles>
+
+
+        <Separator />
+
+        <h2>"Transitions"</h2>
+        <Toggle on=transition set_on=set_transition />
+        <Fade in=move || transition.get()>
+            <Skeleton>"Item"</Skeleton>
+        </Fade>
+
 
         <Separator />
 
