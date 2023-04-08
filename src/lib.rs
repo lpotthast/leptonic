@@ -6,7 +6,6 @@ pub mod button;
 pub mod card;
 pub mod checkbox;
 pub mod collapsible;
-pub mod fade;
 pub mod grid;
 pub mod icon;
 pub mod modal;
@@ -20,6 +19,7 @@ pub mod theme;
 pub mod tile;
 pub mod toast;
 pub mod toggle;
+pub mod transitions;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Bool {
@@ -81,8 +81,6 @@ pub mod prelude {
     pub use super::collapsible::CollapsiblesProps;
     pub use super::collapsible::OnOpen;
     pub use super::create_signal_ls;
-    pub use super::fade::Fade;
-    pub use super::fade::FadeProps;
     pub use super::grid::Col;
     pub use super::grid::ColProps;
     pub use super::grid::Grid;
@@ -134,6 +132,17 @@ pub mod prelude {
     pub use super::toggle::Toggle;
     pub use super::toggle::ToggleIcons;
     pub use super::toggle::ToggleProps;
+    pub use super::transitions::collapse::Collapse;
+    pub use super::transitions::collapse::CollapseProps;
+    pub use super::transitions::collapse::CollapseAxis;
+    pub use super::transitions::fade::Fade;
+    pub use super::transitions::fade::FadeProps;
+    pub use super::transitions::grow::Grow;
+    pub use super::transitions::grow::GrowProps;
+    pub use super::transitions::slide::Slide;
+    pub use super::transitions::slide::SlideProps;
+    pub use super::transitions::zoom::Zoom;
+    pub use super::transitions::zoom::ZoomProps;
     pub use super::Active;
     pub use super::Disabled;
     pub use super::FirstOf;
