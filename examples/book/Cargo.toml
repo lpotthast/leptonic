@@ -20,7 +20,7 @@ leptos_meta = { version = "0.2", default-features = false, features = ["csr"] }
 leptos_router = { version = "0.2", default-features = false, features = [
     "csr",
 ] }
-leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
+leptos-icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "main", features = [
     "csr",
     "BsFolder",
     "BsFolderFill",
