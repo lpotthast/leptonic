@@ -6,6 +6,9 @@ use uuid::Uuid;
 
 use crate::*;
 
+// TODO: Add mount prop.
+// TODO: Add dialog component, making modal the underlying technology?
+
 #[derive(Clone)]
 pub struct Modal {
     pub id: Uuid,
@@ -27,17 +30,17 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
         { children(cx) }
 
         <If sig=move || modals.get().len() != 0>
-            <div id="modal-host">
-                <div class={"leptonic-modal-backdrop"}></div>
+            <leptonic-modal-host>
+                <leptonic-modal-backdrop></leptonic-modal-backdrop>
 
-                <div class="modals">
+                <leptonic-modals>
                     {move || modals.get().last().map(|(_, modal)| view! { cx,
-                        <div class={"leptonic-modal"}>
+                        <leptonic-modal>
                             { (modal.children)(modal.scope) }
-                        </div>
+                        </leptonic-modal>
                     })}
-                </div>
-            </div>
+                </leptonic-modals>
+            </leptonic-modal-host>
         </If>
     }
 }
@@ -73,35 +76,35 @@ pub fn Modal(cx: Scope, display_if: ReadSignal<bool>, children: ChildrenFn) -> i
 #[component]
 pub fn ModalHeader(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="leptonic-modal-header">
+        <leptonic-modal-header>
             { children(cx) }
-        </div>
+        </leptonic-modal-header>
     }
 }
 
 #[component]
 pub fn ModalTitle(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="leptonic-modal-title">
+        <leptonic-modal-title>
             { children(cx) }
-        </div>
+        </leptonic-modal-title>
     }
 }
 
 #[component]
 pub fn ModalBody(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="leptonic-modal-body">
+        <leptonic-modal-body>
             { children(cx) }
-        </div>
+        </leptonic-modal-body>
     }
 }
 
 #[component]
 pub fn ModalFooter(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="leptonic-modal-footer">
+        <leptonic-modal-footer>
             { children(cx) }
-        </div>
+        </leptonic-modal-footer>
     }
 }

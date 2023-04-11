@@ -5,6 +5,7 @@ use tracing::info;
 use uuid::Uuid;
 
 use crate::tabs::TabsContext;
+use crate::Mount;
 
 #[derive(Clone)]
 pub struct TabLabel {
@@ -21,6 +22,7 @@ pub fn Tab<L>(
     /// Uniquely identifies this tab.
     name: &'static str,
     label: L,
+    #[prop(optional)] mount: Option<Mount>,
     #[prop(optional)] children: Option<ChildrenFn>,
     #[prop(optional)] on_show: Option<fn()>,
     #[prop(optional)] on_hide: Option<fn()>,
@@ -30,6 +32,8 @@ where
 {
     let id = id.unwrap_or_else(|| Uuid::new_v4());
     let tabs = use_context::<TabsContext>(cx).unwrap();
+
+    let mount = mount.or(tabs.mount).unwrap_or(Mount::Once);
 
     let tab_label = TabLabel {
         id,
@@ -44,8 +48,6 @@ where
             history.push(name);
         });
     }
-
-    let is_active = move || tabs.history.get().get_active() == Some(name);
 
     if let Some(on_show) = on_show {
         create_effect(cx, move |_| {
@@ -65,23 +67,44 @@ where
         });
     }
 
+    let is_active = move || tabs.history.get().get_active() == Some(name);
+
     on_cleanup(cx, move || {
         info!("cleanup tab");
     });
 
-    view! { cx,
-        {
-            move || is_active().then(|| view! { cx,
-                <div id=id.to_string() class={"leptonic-tab"} data:name=name>
-                    {
-                        if let Some(children) = &children {
-                            children(cx)
-                        } else {
-                            Fragment::new(vec![])
+    match mount {
+        Mount::Once | Mount::OnceShown => view! { cx,
+            {
+                view! { cx,
+                    <leptonic-tab id=id.to_string() data-name=name aria-hidden=move || if is_active() { "false" } else { "true"} >
+                        {
+                            if let Some(children) = &children {
+                                children(cx)
+                            } else {
+                                Fragment::new(vec![])
+                            }
                         }
-                    }
-                </div>
-            })
-        }
+                    </leptonic-tab>
+                }.into_view(cx)
+            }
+        },
+        Mount::WhenShown => view! { cx,
+            {
+                view! { cx,
+                    <Show when=is_active fallback=|_cx| view! { cx,  }>
+                        <leptonic-tab id=id.to_string() data:name=name>
+                            {
+                                if let Some(children) = &children {
+                                    children(cx)
+                                } else {
+                                    Fragment::new(vec![])
+                                }
+                            }
+                        </leptonic-tab>
+                    </Show>
+                }.into_view(cx)
+            }
+        },
     }
 }

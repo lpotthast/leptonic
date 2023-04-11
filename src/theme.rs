@@ -1,9 +1,10 @@
 use leptos::*;
 use leptos_icons::BsIcon;
+use serde::{Deserialize, Serialize};
 
 use crate::prelude::*;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum Theme {
     Light,
     Dark,
@@ -22,16 +23,24 @@ pub struct ThemeContext {
 }
 
 #[component]
-pub fn ThemeProvider(cx: Scope, children: Children) -> impl IntoView {
-    let (theme, set_theme) = create_signal(cx, Theme::default());
+pub fn ThemeProvider(
+    cx: Scope,
+    #[prop(into, optional)] theme: Option<(ReadSignal<Theme>, WriteSignal<Theme>)>,
+    children: Children,
+) -> impl IntoView {
+    let (theme, set_theme) = theme.unwrap_or_else(|| create_signal(cx, Theme::default()));
 
     provide_context(cx, ThemeContext { theme, set_theme });
 
     view! {cx,
-        <div class=move || match theme.get() {
-            Theme::Light => "leptonic-theme-light",
-            Theme::Dark => "leptonic-theme-dark",
-        }>
+        <div
+            class="leptonic-theme-provider"
+            data-theme=move || match theme.get() {
+                Theme::Light => "light",
+                Theme::Dark => "dark",
+            }
+            style="height: 100%; width: auto;"
+        >
             { children(cx) }
         </div>
     }
@@ -41,10 +50,9 @@ pub fn ThemeProvider(cx: Scope, children: Children) -> impl IntoView {
 pub fn DarkThemeToggle(cx: Scope) -> impl IntoView {
     let theme_context = use_context::<ThemeContext>(cx).expect("to be present");
 
-    let (toggle, set_toggle) =
-        create_signal_ls(cx, "prefer_dark", theme_context.theme.get() == Theme::Dark);
+    let (toggle, set_toggle) = create_signal(cx, theme_context.theme.get() == Theme::Dark);
 
-    // Out "Theme" must always match / should always be derived from our toggle state.
+    // Our "Theme" must always match / should always be derived from our toggle state.
     create_effect(cx, move |_old| {
         theme_context
             .set_theme

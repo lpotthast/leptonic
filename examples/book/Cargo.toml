@@ -10,7 +10,7 @@ path = "build.rs"
 required-features = ["build_deps"]  # only needed for build-dependencies
 
 [profile.release]
-opt-level = "s"
+opt-level = "z"
 lto = "thin"
 debug = 0
 

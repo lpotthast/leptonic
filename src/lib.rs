@@ -9,7 +9,7 @@ pub mod collapsible;
 pub mod grid;
 pub mod icon;
 pub mod modal;
-pub mod progress_bar;
+pub mod progress_indicator;
 pub mod separator;
 pub mod skeleton;
 pub mod stack;
@@ -18,6 +18,7 @@ pub mod tabs;
 pub mod theme;
 pub mod tile;
 pub mod toast;
+pub mod typography;
 pub mod toggle;
 pub mod transitions;
 
@@ -65,6 +66,7 @@ pub mod prelude {
     pub use super::button::ButtonGroup;
     pub use super::button::ButtonGroupProps;
     pub use super::button::ButtonProps;
+    pub use super::button::ButtonVariant;
     pub use super::button::ButtonWrapper;
     pub use super::button::ButtonWrapperProps;
     pub use super::card::Card;
@@ -87,6 +89,8 @@ pub mod prelude {
     pub use super::grid::GridProps;
     pub use super::grid::Row;
     pub use super::grid::RowProps;
+    pub use super::typography::Typography;
+    pub use super::typography::TypographyProps;
     pub use super::icon::Icon;
     pub use super::icon::IconProps;
     pub use super::modal::Modal;
@@ -101,8 +105,8 @@ pub mod prelude {
     pub use super::modal::ModalRootProps;
     pub use super::modal::ModalTitle;
     pub use super::modal::ModalTitleProps;
-    pub use super::progress_bar::ProgressBar;
-    pub use super::progress_bar::ProgressBarProps;
+    pub use super::progress_indicator::ProgressBar;
+    pub use super::progress_indicator::ProgressBarProps;
     pub use super::r#box::Box;
     pub use super::r#box::BoxProps;
     pub use super::separator::Separator;
@@ -110,6 +114,7 @@ pub mod prelude {
     pub use super::skeleton::Skeleton;
     pub use super::skeleton::SkeletonProps;
     pub use super::stack::Stack;
+    pub use super::stack::StackOrientation;
     pub use super::stack::StackProps;
     pub use super::tab::Tab;
     pub use super::tab::TabProps;
@@ -133,8 +138,8 @@ pub mod prelude {
     pub use super::toggle::ToggleIcons;
     pub use super::toggle::ToggleProps;
     pub use super::transitions::collapse::Collapse;
-    pub use super::transitions::collapse::CollapseProps;
     pub use super::transitions::collapse::CollapseAxis;
+    pub use super::transitions::collapse::CollapseProps;
     pub use super::transitions::fade::Fade;
     pub use super::transitions::fade::FadeProps;
     pub use super::transitions::grow::Grow;
@@ -151,8 +156,19 @@ pub mod prelude {
     pub use super::IfProps;
     pub use super::LastOf;
     pub use super::LastOfProps;
+    pub use super::Mount;
     pub use super::With;
     pub use super::WithProps;
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum Mount {
+    /// Mount the child view once. Then keep it mounted as long as the parent lives.
+    Once,
+    /// Mount the child view once. May defer mounting to the point where the view is first needed. Then keep it mounted as long as the parent lives.
+    OnceShown,
+    /// Always re-mount the child view when it is needed.
+    WhenShown,
 }
 
 #[component]

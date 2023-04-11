@@ -12,19 +12,13 @@ pub enum AlertVariant {
 }
 
 impl AlertVariant {
-    pub fn class_name(&self) -> &'static str {
+    pub fn to_str(&self) -> &'static str {
         match self {
             AlertVariant::Success => "success",
             AlertVariant::Info => "info",
             AlertVariant::Warn => "warn",
             AlertVariant::Danger => "danger",
         }
-    }
-}
-
-impl std::fmt::Display for AlertVariant {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.class_name())
     }
 }
 
@@ -40,7 +34,7 @@ where
     T: IntoView + 'static,
 {
     view! { cx,
-        <div class=format!("alert {variant}")>
+        <leptonic-alert variant=variant.to_str()>
             <div class="prepend">
                 <Icon icon=BsIcon::BsCheckCircleFill />
             </div>
@@ -53,6 +47,6 @@ where
                 </div>
                 { children(cx) }
             </div>
-        </div>
+        </leptonic-alert>
     }
 }

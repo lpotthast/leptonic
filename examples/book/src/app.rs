@@ -14,19 +14,27 @@ pub fn App(cx: Scope) -> impl IntoView {
     view! {
         cx,
         <Title text="Leptos component demo"/>
-        <ThemeProvider>
+        <ThemeProvider theme=create_signal_ls(cx, "theme", Theme::default())>
             <ToastRoot>
                 <ModalRoot>
-                    <Box>
+                    <Box style="min-height: 100vh;">
                         <Router>
                             <Routes>
                                 <Route path="" view=|cx| view! { cx, <HomePage/> }/>
+                                <Route path="button" view=|cx| view! { cx, <Buttons/> }/>
                             </Routes>
                         </Router>
                     </Box>
                 </ModalRoot>
             </ToastRoot>
         </ThemeProvider>
+    }
+}
+
+#[component]
+pub fn Buttons(cx: Scope) -> impl IntoView {
+    view! { cx,
+        "Hi"
     }
 }
 
@@ -51,6 +59,9 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
     let toasts = use_context::<Toasts>(cx).unwrap();
 
     view! { cx,
+        <Button on_click=move |_| set_show_modal.set(true)>"To buttons"</Button>
+        <A href="button">"Buttons"</A>
+
         <h1>"Leptos component demo!"</h1>
         <DarkThemeToggle />
 
@@ -87,15 +98,22 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
 
         <h2>"Buttons"</h2>
         <div>
-            <Button on_click=move |_| {}>"Flat"</Button>
-            <Button on_click=move |_| {}>"Outlined"</Button>
-            <Button on_click=move |_| {}>"Filled"</Button>
+            <Button on_click=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
+            <Button on_click=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
+            <Button on_click=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
         </div>
+
+        <h2>"Button group"</h2>
+        <ButtonGroup>
+            <Button on_click=move |_| {} variant=ButtonVariant::Filled>"Button 1"</Button>
+            <Button on_click=move |_| {} variant=ButtonVariant::Filled>"Button 2"</Button>
+            <Button on_click=move |_| {} variant=ButtonVariant::Filled>"Button 3"</Button>
+        </ButtonGroup>
 
         <Separator />
 
         <h2>"Tabs"</h2>
-        <Tabs>
+        <Tabs mount=Mount::WhenShown>
             <Tab
                 name="outer-1"
                 label=view! {cx, "Toasts; Count is" {move || count.get()}}
@@ -191,8 +209,15 @@ pub fn HomePage(cx: Scope) -> impl IntoView {
 
         <Separator />
 
-        <h2>"Stack"</h2>
+        <h2>"Stack - Vertically"</h2>
         <Stack spacing=6>
+            <Skeleton>"Item 1"</Skeleton>
+            <Skeleton>"Item 2"</Skeleton>
+            <Skeleton>"Item 3"</Skeleton>
+        </Stack>
+
+        <h2>"Stack - Horizontally"</h2>
+        <Stack orientation=StackOrientation::Horizontal spacing=6>
             <Skeleton>"Item 1"</Skeleton>
             <Skeleton>"Item 2"</Skeleton>
             <Skeleton>"Item 3"</Skeleton>

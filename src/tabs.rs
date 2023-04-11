@@ -1,5 +1,7 @@
 use leptos::*;
 
+use crate::Mount;
+
 use super::tab::TabLabel;
 
 #[derive(Debug, Clone)]
@@ -37,10 +39,17 @@ pub struct TabsContext {
 
     pub tab_labels: ReadSignal<Vec<TabLabel>>,
     pub set_tab_labels: WriteSignal<Vec<TabLabel>>,
+
+    /// Default mount option when not otherwise specified for an individual tab.
+    pub mount: Option<Mount>,
 }
 
 #[component]
-pub fn Tabs(cx: Scope, children: Children) -> impl IntoView {
+pub fn Tabs(
+    cx: Scope,
+    #[prop(optional)] mount: Option<Mount>,
+    children: Children,
+) -> impl IntoView {
     let (history, set_history) = create_signal(cx, TabHistory::new());
     let (tab_labels, set_tab_labels) = create_signal(cx, Vec::new());
     provide_context::<TabsContext>(
@@ -50,13 +59,14 @@ pub fn Tabs(cx: Scope, children: Children) -> impl IntoView {
             set_history,
             tab_labels,
             set_tab_labels,
+            mount,
         },
     );
     view! { cx,
-        <div class="leptonic-tabs">
+        <leptonic-tabs>
             <TabSelectors tab_labels history set_history/>
             { children(cx) }
-        </div>
+        </leptonic-tabs>
     }
 }
 
@@ -68,7 +78,7 @@ pub fn TabSelectors(
     set_history: WriteSignal<TabHistory>,
 ) -> impl IntoView {
     view! { cx,
-        <div class="leptonic-tab-selectors">
+        <leptonic-tab-selectors>
             <For
                 each=tab_labels
                 key=|label| label.id
@@ -82,7 +92,7 @@ pub fn TabSelectors(
                     }
                 }
             />
-        </div>
+        </leptonic-tab-selectors>
     }
 }
 
@@ -98,11 +108,12 @@ where
     S: Fn() -> () + 'static,
 {
     view! { cx,
-        <button class="leptonic-tab-selector"
-                data:for-name=name
-                class:active=is_active
-                on:click=move |_event| set_active()>
-                { label }
-        </button>
+        <leptonic-tab-selector
+            data:for-name=name
+            class:active=is_active
+            on:click=move |_event| set_active()
+        >
+            { label }
+        </leptonic-tab-selector>
     }
 }

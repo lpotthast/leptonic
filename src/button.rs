@@ -1,3 +1,5 @@
+use std::fmt::{Display, Formatter};
+
 use leptos::{ev::MouseEvent, *};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -8,7 +10,7 @@ pub enum ButtonVariant {
 }
 
 impl ButtonVariant {
-    pub fn class_name(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             ButtonVariant::Flat => "flat",
             ButtonVariant::Outlined => "outlined",
@@ -17,9 +19,9 @@ impl ButtonVariant {
     }
 }
 
-impl std::fmt::Display for ButtonVariant {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.class_name())
+impl Display for ButtonVariant {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -40,7 +42,7 @@ pub enum ButtonColor {
 }
 
 impl ButtonColor {
-    pub fn class_name(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             ButtonColor::Primary => "primary",
             ButtonColor::Secondary => "secondary",
@@ -52,9 +54,9 @@ impl ButtonColor {
     }
 }
 
-impl std::fmt::Display for ButtonColor {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.class_name())
+impl Display for ButtonColor {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -72,7 +74,7 @@ pub enum BtnSize {
 }
 
 impl BtnSize {
-    pub fn class_name(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             BtnSize::Small => "small",
             BtnSize::Normal => "normal",
@@ -81,9 +83,9 @@ impl BtnSize {
     }
 }
 
-impl std::fmt::Display for BtnSize {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.class_name())
+impl Display for BtnSize {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -106,7 +108,12 @@ where
     F: FnMut(MouseEvent) + 'static,
 {
     view! { cx,
-        <button class=format!("leptonic-btn {variant} {color} {size}") on:click=on_click>
+        <button class="leptonic-btn"
+            data-variant=variant.as_str()
+            data-color=color.as_str()
+            data-size=size.as_str()
+            on:click=on_click
+        >
             <div class="name">
                 { children(cx) }
             </div>
