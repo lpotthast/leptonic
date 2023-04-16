@@ -32,28 +32,40 @@ impl Default for ToggleSize {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 pub struct ToggleIcons {
     pub off: leptos_icons::Icon,
     pub on: leptos_icons::Icon,
 }
 
 #[component]
-pub fn Toggle(
+pub fn Toggle<O, S>(
     cx: Scope,
-    #[prop(into)]
-    on: Signal<bool>,
-    #[prop(into)]
-    set_on: WriteSignal<bool>,
+    on: O,
+    set_on: S,
     #[prop(optional)] active: Option<Active>,
     #[prop(optional)] disabled: Option<Disabled>,
     #[prop(optional)] id: Option<Uuid>,
+    /// Sets the `class` attribute on the underlying `<Toggle>` tag, making it easier to style.
+    #[prop(into, optional)]
+    class: Option<AttributeValue>,
     #[prop(optional)] size: ToggleSize,
     #[prop(into, optional)] icons: Option<ToggleIcons>,
-) -> impl IntoView {
+) -> impl IntoView
+where
+    O: Fn() -> bool + 'static,
+    S: Fn(bool) + 'static,
+{
     let id = id.unwrap_or_else(|| Uuid::new_v4());
+    let on = Signal::derive(cx, move || on());
+
+    let class = match class {
+        Some(attr) => attr.into_attribute_boxed(cx),
+        None => Attribute::String("leptonic-toggle-wrapper".to_owned()),
+    };
+
     view! { cx,
-        <div class="leptonic-toggle-wrapper">
+        <div class=class>
             <label
                 id=id.to_string()
                 class=format!("leptonic-toggle {}", size)
@@ -65,17 +77,20 @@ pub fn Toggle(
                     Disabled::Static(disabled) => disabled,
                     Disabled::Reactive(disabled) => disabled.get(),
                 }).unwrap_or(false)
-                on:click=move |_| set_on.update(|c| *c = !*c)
+                on:click=move |_| (set_on)(!on.get())
             >
                 <span class="slider round" class:on=on>
                     {
-                        move || icons.as_ref().map(|icons| view! { cx,
-                            <span class="icon-positioner">
-                                {match on.get() {
-                                    true => view! {cx, <Icon icon=icons.on/> },
-                                    false => view! {cx, <Icon icon=icons.off/> },
-                                }}
-                            </span>
+                        move || icons.as_ref().map(|icons| {
+                            let off_icon = icons.off;
+                            let on_icon = icons.on;
+                            view! { cx,
+                                <span class="icon-positioner">
+                                    <Show when=on fallback=move |cx| view! {cx, <Icon icon=off_icon/> }>
+                                        <Icon icon=on_icon/>
+                                    </Show>
+                                </span>
+                            }
                         })
                     }
                 </span>

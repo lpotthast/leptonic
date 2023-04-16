@@ -124,17 +124,17 @@ where
 #[component]
 pub fn ButtonGroup(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="leptonic-btn-group">
+        <leptonic-btn-group>
             { children(cx) }
-        </div>
+        </leptonic-btn-group>
     }
 }
 
 #[component]
 pub fn ButtonWrapper(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="leptonic-btn-wrapper">
+        <leptonic-btn-wrapper>
             { children(cx) }
-        </div>
+        </leptonic-btn-wrapper>
     }
 }

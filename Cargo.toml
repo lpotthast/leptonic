@@ -20,10 +20,15 @@ leptos = { version = "0.2", default-features = false, features = [
     "serde",
     "tracing",
 ] }
+leptos_router = { version = "0.2", default-features = false, features = [
+    "csr",
+] }
 leptos-icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "main", features = [
     "BsSun",
     "BsMoon",
     "BsCheckCircleFill",
+    "BsCaretDownFill",
+    "BsCaretUpFill",
 ] }
 time = { version = "0.3", features = [
     "wasm-bindgen",

@@ -10,7 +10,7 @@ pub enum ToastVariant {
 }
 
 impl ToastVariant {
-    pub fn class_name(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             ToastVariant::Success => "success",
             ToastVariant::Info => "info",
@@ -22,7 +22,7 @@ impl ToastVariant {
 
 impl std::fmt::Display for ToastVariant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.class_name())
+        f.write_str(self.as_str())
     }
 }
 
@@ -89,7 +89,7 @@ pub fn ToastRoot(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
         { children(cx) }
 
-        <div class="leptonic-toasts">
+        <leptonic-toasts>
             <For
                 each=toasts
                 key=|toast| toast.id
@@ -99,20 +99,20 @@ pub fn ToastRoot(cx: Scope, children: Children) -> impl IntoView {
                     }
                 }
             />
-        </div>
+        </leptonic-toasts>
     }
 }
 
 #[component]
 pub fn Toast(cx: Scope, toast: Toast) -> impl IntoView {
     view! { cx,
-        <div id=toast.id.to_string() class=format!("leptonic-toast {}", toast.variant)>
-            <div class={"leptonic-toast-heading"}>
+        <leptonic-toast id=toast.id.to_string() variant=toast.variant.as_str()>
+            <leptonic-toast-heading>
                 { toast.header }
-            </div>
-            <div class={"leptonic-toast-message"}>
+            </leptonic-toast-heading>
+            <leptonic-toast-message>
                 { toast.body }
-            </div>
-        </div>
+            </leptonic-toast-message>
+        </leptonic-toast>
     }
 }

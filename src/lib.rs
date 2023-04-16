@@ -1,15 +1,23 @@
+use std::fmt::Display;
+
 use leptos::*;
 
 pub mod alert;
+pub mod app_bar;
 pub mod r#box;
 pub mod button;
 pub mod card;
 pub mod checkbox;
+pub mod code;
 pub mod collapsible;
+pub mod drawer;
 pub mod grid;
 pub mod icon;
+pub mod link;
 pub mod modal;
 pub mod progress_indicator;
+pub mod quicksearch;
+pub mod root;
 pub mod separator;
 pub mod skeleton;
 pub mod stack;
@@ -18,9 +26,9 @@ pub mod tabs;
 pub mod theme;
 pub mod tile;
 pub mod toast;
-pub mod typography;
 pub mod toggle;
 pub mod transitions;
+pub mod typography;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Bool {
@@ -61,6 +69,8 @@ pub mod prelude {
     pub use super::alert::Alert;
     pub use super::alert::AlertProps;
     pub use super::alert::AlertVariant;
+    pub use super::app_bar::AppBar;
+    pub use super::app_bar::AppBarProps;
     pub use super::button::Button;
     pub use super::button::ButtonColor;
     pub use super::button::ButtonGroup;
@@ -73,6 +83,8 @@ pub mod prelude {
     pub use super::card::CardProps;
     pub use super::checkbox::Checkbox;
     pub use super::checkbox::CheckboxProps;
+    pub use super::code::Code;
+    pub use super::code::CodeProps;
     pub use super::collapsible::Collapsible;
     pub use super::collapsible::CollapsibleBody;
     pub use super::collapsible::CollapsibleBodyProps;
@@ -83,16 +95,18 @@ pub mod prelude {
     pub use super::collapsible::CollapsiblesProps;
     pub use super::collapsible::OnOpen;
     pub use super::create_signal_ls;
+    pub use super::drawer::Drawer;
+    pub use super::drawer::DrawerProps;
     pub use super::grid::Col;
     pub use super::grid::ColProps;
     pub use super::grid::Grid;
     pub use super::grid::GridProps;
     pub use super::grid::Row;
     pub use super::grid::RowProps;
-    pub use super::typography::Typography;
-    pub use super::typography::TypographyProps;
     pub use super::icon::Icon;
     pub use super::icon::IconProps;
+    pub use super::link::Link;
+    pub use super::link::LinkProps;
     pub use super::modal::Modal;
     pub use super::modal::ModalBody;
     pub use super::modal::ModalBodyProps;
@@ -107,8 +121,12 @@ pub mod prelude {
     pub use super::modal::ModalTitleProps;
     pub use super::progress_indicator::ProgressBar;
     pub use super::progress_indicator::ProgressBarProps;
+    pub use super::quicksearch::Quicksearch;
+    pub use super::quicksearch::QuicksearchProps;
     pub use super::r#box::Box;
     pub use super::r#box::BoxProps;
+    pub use super::root::Root;
+    pub use super::root::RootProps;
     pub use super::separator::Separator;
     pub use super::separator::SeparatorProps;
     pub use super::skeleton::Skeleton;
@@ -120,12 +138,12 @@ pub mod prelude {
     pub use super::tab::TabProps;
     pub use super::tabs::Tabs;
     pub use super::tabs::TabsProps;
-    pub use super::theme::DarkThemeToggle;
-    pub use super::theme::DarkThemeToggleProps;
     pub use super::theme::Theme;
     pub use super::theme::ThemeContext;
     pub use super::theme::ThemeProvider;
     pub use super::theme::ThemeProviderProps;
+    pub use super::theme::ThemeToggle;
+    pub use super::theme::ThemeToggleProps;
     pub use super::tile::Tile;
     pub use super::tile::TileProps;
     pub use super::toast::Toast;
@@ -148,15 +166,23 @@ pub mod prelude {
     pub use super::transitions::slide::SlideProps;
     pub use super::transitions::zoom::Zoom;
     pub use super::transitions::zoom::ZoomProps;
+    pub use super::typography::Typography;
+    pub use super::typography::TypographyProps;
+    pub use super::typography::TypographyVariant;
     pub use super::Active;
     pub use super::Disabled;
     pub use super::FirstOf;
     pub use super::FirstOfProps;
+    pub use super::Height;
     pub use super::If;
     pub use super::IfProps;
     pub use super::LastOf;
     pub use super::LastOfProps;
+    pub use super::Margin;
     pub use super::Mount;
+    pub use super::OptionDeref;
+    pub use super::Size;
+    pub use super::Width;
     pub use super::With;
     pub use super::WithProps;
 }
@@ -280,4 +306,81 @@ pub fn track_in_local_storage<T: serde::Serialize + Clone>(
             .set(key, serde_json::to_string(&signal.get()).ok()?.as_ref())
             .ok()
     })
+}
+
+pub trait OptionDeref<T: std::ops::Deref> {
+    fn deref(&self) -> Option<&T::Target>;
+    fn deref_or<'a>(&'a self, default: &'a T::Target) -> &'a T::Target;
+    fn deref_or_else<'a, F: Fn() -> &'a T::Target>(&'a self, default: F) -> &'a T::Target;
+}
+
+impl<T: std::ops::Deref> OptionDeref<T> for Option<T> {
+    fn deref(&self) -> Option<&T::Target> {
+        self.as_ref().map(std::ops::Deref::deref)
+    }
+
+    fn deref_or<'a>(&'a self, default: &'a T::Target) -> &'a T::Target {
+        self.as_ref().map(std::ops::Deref::deref).unwrap_or(default)
+    }
+
+    fn deref_or_else<'a, F: Fn() -> &'a T::Target>(&'a self, default: F) -> &'a T::Target {
+        self.as_ref()
+            .map(std::ops::Deref::deref)
+            .unwrap_or_else(default)
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Size {
+    Zero,
+    Px(i32),
+    Em(f32),
+    Rem(f32),
+    Percent(f32),
+    Auto,
+}
+
+impl Display for Size {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Size::Zero => f.write_str("0"),
+            Size::Px(px) => f.write_fmt(format_args!("{px}px")),
+            Size::Em(em) => f.write_fmt(format_args!("{em}em")),
+            Size::Rem(rem) => f.write_fmt(format_args!("{rem}rem")),
+            Size::Percent(percent) => f.write_fmt(format_args!("{percent}%")),
+            Size::Auto => f.write_str("auto"),
+        }
+    }
+}
+
+pub type Width = Size;
+pub type Height = Size;
+
+#[derive(Debug, Clone, Copy)]
+pub enum Margin {
+    Top(Size),
+    Right(Size),
+    Bottom(Size),
+    Left(Size),
+    All(Size),
+    Double(Size, Size),
+    Full(Size, Size, Size, Size),
+}
+
+impl Display for Margin {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Margin::Top(size) => f.write_fmt(format_args!("{size} 0 0 0")),
+            Margin::Right(size) => f.write_fmt(format_args!("0 {size} 0 0")),
+            Margin::Bottom(size) => f.write_fmt(format_args!("0 0 {size} 0")),
+            Margin::Left(size) => f.write_fmt(format_args!("0 0 0 {size}")),
+            Margin::All(size) => f.write_fmt(format_args!("{size}")),
+            Margin::Double(vertical, horizontal) => {
+                f.write_fmt(format_args!("{vertical} {horizontal}"))
+            }
+            Margin::Full(top, right, bottom, left) => {
+                f.write_fmt(format_args!("{top} {right} {bottom} {left}"))
+            }
+        }
+    }
 }

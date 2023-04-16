@@ -1,6 +1,7 @@
 use leptos::*;
 
 mod app;
+mod pages;
 mod wasm_tracing_layer;
 
 use crate::app::*;
@@ -15,7 +16,6 @@ fn main() {
             .set_max_level(tracing::Level::DEBUG)
             .build(),
     );
-
 
     mount_to_body(|cx| {
         view! { cx, <App/> }

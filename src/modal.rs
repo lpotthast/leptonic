@@ -4,8 +4,6 @@ use indexmap::IndexMap;
 use leptos::*;
 use uuid::Uuid;
 
-use crate::*;
-
 // TODO: Add mount prop.
 // TODO: Add dialog component, making modal the underlying technology?
 
@@ -29,8 +27,8 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
         { children(cx) }
 
-        <If sig=move || modals.get().len() != 0>
-            <leptonic-modal-host>
+        <leptonic-modal-host>
+            <Show fallback=|_cx| view! { cx, } when=move || modals.get().len() != 0>
                 <leptonic-modal-backdrop></leptonic-modal-backdrop>
 
                 <leptonic-modals>
@@ -40,8 +38,8 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
                         </leptonic-modal>
                     })}
                 </leptonic-modals>
-            </leptonic-modal-host>
-        </If>
+            </Show>
+        </leptonic-modal-host>
     }
 }
 

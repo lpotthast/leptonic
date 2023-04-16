@@ -1,8 +1,11 @@
 use std::sync::{Arc, RwLock};
 
 use leptos::*;
+use leptos_icons::*;
 use tracing::warn;
 use uuid::Uuid;
+
+use crate::prelude::*;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum OnOpen {
@@ -86,10 +89,12 @@ pub fn Collapsibles(cx: Scope, default_on_open: OnOpen, children: Children) -> i
 #[component]
 pub fn Collapsible<H, B>(
     cx: Scope,
+    /// Whether this collapsible should initially be opened.
+    #[prop(optional, default = false)]
+    open: bool,
     #[prop(optional)] on_open: Option<OnOpen>,
     header: H,
     body: B,
-    //children: Children,
 ) -> impl IntoView
 where
     H: IntoView + 'static,
@@ -98,7 +103,7 @@ where
     let id = Uuid::new_v4();
     let id_str = id.to_string();
 
-    let (show, set_show) = create_signal(cx, false);
+    let (show, set_show) = create_signal(cx, open);
 
     let parent = use_context::<CollapsiblesContext>(cx);
 
@@ -121,9 +126,15 @@ where
 
     view! { cx,
         <leptonic-collapsible id=id_str>
-            <CollapsibleHeader>
-                { header }
-            </CollapsibleHeader>
+            <CollapsibleHeaderWrapper>
+                <CollapsibleHeader>
+                    { header }
+                </CollapsibleHeader>
+                {move || match show.get() {
+                    true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
+                    false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                }}
+            </CollapsibleHeaderWrapper>
             <CollapsibleBody>
                 { body }
             </CollapsibleBody>
@@ -132,12 +143,21 @@ where
 }
 
 #[component]
-pub fn CollapsibleHeader(cx: Scope, children: Children) -> impl IntoView {
+pub fn CollapsibleHeaderWrapper(cx: Scope, children: Children) -> impl IntoView {
     let collapsible_ctx = use_context::<CollapsibleContext>(cx)
         .expect("A CollapsibleHeader musst be placed inside a Collapsible component.");
 
     view! { cx,
-        <leptonic-collapsible-header on:click=move |_| collapsible_ctx.toggle()>
+        <leptonic-collapsible-header-wrapper on:click=move |_| collapsible_ctx.toggle()>
+            { children(cx) }
+        </leptonic-collapsible-header-wrapper>
+    }
+}
+
+#[component]
+pub fn CollapsibleHeader(cx: Scope, children: Children) -> impl IntoView {
+    view! { cx,
+        <leptonic-collapsible-header>
             { children(cx) }
         </leptonic-collapsible-header>
     }

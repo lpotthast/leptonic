@@ -18,3 +18,82 @@ body {
 }
 
 @import "../generated/leptonic/leptonic-themes";
+
+#content {
+    display: block;
+    width: 100%;
+    padding: 0.5em;
+    //color: #fff;
+    //background-color: #343434;
+    max-height: calc(100vh - 2.75em);
+    overflow-y: auto;
+}
+
+.menu {
+    margin-bottom: 0.5em;
+    
+    .item {
+        width: 100%;
+        a {
+            width: 100%;
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            color: #fff;
+            padding: 0.75em;
+            font-weight: 400;
+            padding-left: 0.5em;
+            border-left: 5px solid rgba(0, 0, 0, 0);
+            border-bottom: 1px solid #4a4a4a;
+            cursor: pointer;
+            user-select: none;
+        }
+    }
+
+    &.dense {
+        .item {
+            a {
+                padding: 0.2em;
+                border-bottom: none;
+            }
+        }
+    }
+
+    &.nested {
+        .item {
+            a {
+                padding-left: 2.3em;
+                margin: 0.125em 0.5em;
+                border-radius: 5em;
+                font-size: 0.9em;
+            }
+
+            a[aria-current] {
+                background-color: blueviolet;
+            }
+
+            a:hover {
+                background-color: blueviolet;
+            }
+        }
+    }
+
+    leptonic-collapsible {
+        width: 100%;
+        border-bottom: 1px solid #4a4a4a;
+
+        leptonic-collapsible-header-wrapper {
+            background-color: transparent;
+            font-weight: 700;
+        }
+
+        leptonic-collapsible-body {
+            background-color: transparent;
+            padding: 0;
+
+            leptonic-stack {
+                width: 100%;
+            }
+        }
+    }
+}
