@@ -22,18 +22,20 @@ use crate::pages::grid::PageGrid;
 use crate::pages::grid::PageGridProps;
 use crate::pages::icon::PageIcon;
 use crate::pages::icon::PageIconProps;
+use crate::pages::input::PageInput;
+use crate::pages::input::PageInputProps;
 use crate::pages::installation::PageInstallation;
 use crate::pages::installation::PageInstallationProps;
 use crate::pages::modal::PageModal;
 use crate::pages::modal::PageModalProps;
-use crate::pages::transition::PageTransition;
-use crate::pages::transition::PageTransitionProps;
 use crate::pages::overview::PageOverview;
 use crate::pages::overview::PageOverviewProps;
 use crate::pages::stack::PageStack;
 use crate::pages::stack::PageStackProps;
 use crate::pages::tab::PageTab;
 use crate::pages::tab::PageTabProps;
+use crate::pages::transition::PageTransition;
+use crate::pages::transition::PageTransitionProps;
 use crate::pages::typography::PageTypography;
 use crate::pages::typography::PageTypographyProps;
 use crate::pages::usage::PageUsage;
@@ -76,6 +78,7 @@ pub enum Routes {
     // Components
     Button,
     Tab,
+    Input,
     Collapsible,
     Drawer,
     Modal,
@@ -100,6 +103,7 @@ impl Routes {
             Routes::Grid => "grid",
             Routes::Button => "button",
             Routes::Tab => "tab",
+            Routes::Input => "input",
             Routes::Collapsible => "collapsible",
             Routes::Drawer => "drawer",
             Routes::Modal => "modal",
@@ -147,6 +151,7 @@ pub fn App(cx: Scope) -> impl IntoView {
 
                         <Route path=Routes::Button view=|cx| view! { cx, <PageButton/> }/>
                         <Route path=Routes::Tab view=|cx| view! { cx, <PageTab/> }/>
+                        <Route path=Routes::Input view=|cx| view! { cx, <PageInput/> }/>
                         <Route path=Routes::Collapsible view=|cx| view! { cx, <PageCollapsible/> }/>
                         <Route path=Routes::Drawer view=|cx| view! { cx, <PageDrawer/> }/>
                         <Route path=Routes::Modal view=|cx| view! { cx, <PageModal/> }/>
@@ -222,6 +227,7 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
                             <Link href=Routes::Button class="item">"Button"</Link>
                             <Link href=Routes::Tab class="item">"Tabs"</Link>
+                            <Link href=Routes::Input class="item">"Inputs"</Link>
                             <Link href=Routes::Collapsible class="item">"Collapsible"</Link>
                             <Link href=Routes::Drawer class="item">"Drawer"</Link>
                             <Link href=Routes::Modal class="item">"Modal"</Link>

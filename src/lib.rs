@@ -13,6 +13,7 @@ pub mod collapsible;
 pub mod drawer;
 pub mod grid;
 pub mod icon;
+pub mod input;
 pub mod link;
 pub mod modal;
 pub mod progress_indicator;
@@ -105,6 +106,9 @@ pub mod prelude {
     pub use super::grid::RowProps;
     pub use super::icon::Icon;
     pub use super::icon::IconProps;
+    pub use super::input::Input;
+    pub use super::input::InputProps;
+    pub use super::input::InputType;
     pub use super::link::Link;
     pub use super::link::LinkProps;
     pub use super::modal::Modal;
