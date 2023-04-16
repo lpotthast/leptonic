@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use leptos::*;
 use leptos_icons::*;
 use leptos_meta::{provide_meta_context, Title, TitleProps};
@@ -24,6 +26,8 @@ use crate::pages::installation::PageInstallation;
 use crate::pages::installation::PageInstallationProps;
 use crate::pages::modal::PageModal;
 use crate::pages::modal::PageModalProps;
+use crate::pages::transition::PageTransition;
+use crate::pages::transition::PageTransitionProps;
 use crate::pages::overview::PageOverview;
 use crate::pages::overview::PageOverviewProps;
 use crate::pages::stack::PageStack;
@@ -58,6 +62,70 @@ impl Theme for AppTheme {
     }
 }
 
+#[derive(Debug, Copy, Clone)]
+pub enum Routes {
+    // Getting started
+    Overview,
+    Installation,
+    Usage,
+
+    // Layout
+    Stack,
+    Grid,
+
+    // Components
+    Button,
+    Tab,
+    Collapsible,
+    Drawer,
+    Modal,
+    Alert,
+    Typography,
+    Icon,
+
+    // Animation
+    Transition,
+
+    // Technical
+    CatchAll,
+}
+
+impl Routes {
+    pub fn route(self) -> &'static str {
+        match self {
+            Routes::Overview => "overview",
+            Routes::Installation => "installation",
+            Routes::Usage => "usage",
+            Routes::Stack => "stack",
+            Routes::Grid => "grid",
+            Routes::Button => "button",
+            Routes::Tab => "tab",
+            Routes::Collapsible => "collapsible",
+            Routes::Drawer => "drawer",
+            Routes::Modal => "modal",
+            Routes::Alert => "alert",
+            Routes::Typography => "typography",
+            Routes::Icon => "icon",
+            Routes::Transition => "transition",
+            Routes::CatchAll => "*",
+        }
+    }
+}
+
+/// Required so that `Routes` variants can be used in `<Route path=Routes::Foo ...>` definitions.
+impl Display for Routes {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.route())
+    }
+}
+
+/// Required so that `Routes` variants can be used in `<Link href=Routes::Foo ...>` definitions.
+impl ToHref for Routes {
+    fn to_href(&self) -> Box<dyn Fn() -> String + '_> {
+        Box::new(move || self.route().to_owned())
+    }
+}
+
 #[component]
 pub fn App(cx: Scope) -> impl IntoView {
     provide_meta_context(cx);
@@ -70,23 +138,25 @@ pub fn App(cx: Scope) -> impl IntoView {
                 <Layout>
                     <Routes>
                         <Route path="" view=|cx| view! { cx, <PageOverview/> }/>
-                        <Route path="overview" view=|cx| view! { cx, <PageOverview/> }/>
-                        <Route path="installation" view=|cx| view! { cx, <PageInstallation/> }/>
-                        <Route path="usage" view=|cx| view! { cx, <PageUsage/> }/>
+                        <Route path=Routes::Overview view=|cx| view! { cx, <PageOverview/> }/>
+                        <Route path=Routes::Installation view=|cx| view! { cx, <PageInstallation/> }/>
+                        <Route path=Routes::Usage view=|cx| view! { cx, <PageUsage/> }/>
 
-                        <Route path="stack" view=|cx| view! { cx, <PageStack/> }/>
-                        <Route path="grid" view=|cx| view! { cx, <PageGrid/> }/>
+                        <Route path=Routes::Stack view=|cx| view! { cx, <PageStack/> }/>
+                        <Route path=Routes::Grid view=|cx| view! { cx, <PageGrid/> }/>
 
-                        <Route path="button" view=|cx| view! { cx, <PageButton/> }/>
-                        <Route path="tab" view=|cx| view! { cx, <PageTab/> }/>
-                        <Route path="collapsible" view=|cx| view! { cx, <PageCollapsible/> }/>
-                        <Route path="drawer" view=|cx| view! { cx, <PageDrawer/> }/>
-                        <Route path="modal" view=|cx| view! { cx, <PageModal/> }/>
-                        <Route path="alert" view=|cx| view! { cx, <PageAlert/> }/>
-                        <Route path="typography" view=|cx| view! { cx, <PageTypography/> }/>
-                        <Route path="icon" view=|cx| view! { cx, <PageIcon/> }/>
+                        <Route path=Routes::Button view=|cx| view! { cx, <PageButton/> }/>
+                        <Route path=Routes::Tab view=|cx| view! { cx, <PageTab/> }/>
+                        <Route path=Routes::Collapsible view=|cx| view! { cx, <PageCollapsible/> }/>
+                        <Route path=Routes::Drawer view=|cx| view! { cx, <PageDrawer/> }/>
+                        <Route path=Routes::Modal view=|cx| view! { cx, <PageModal/> }/>
+                        <Route path=Routes::Alert view=|cx| view! { cx, <PageAlert/> }/>
+                        <Route path=Routes::Typography view=|cx| view! { cx, <PageTypography/> }/>
+                        <Route path=Routes::Icon view=|cx| view! { cx, <PageIcon/> }/>
 
-                        <Route path="*" view=|cx| view! { cx, <PageErr404 /> }/>
+                        <Route path=Routes::Transition view=|cx| view! { cx, <PageTransition/> }/>
+
+                        <Route path=Routes::CatchAll view=|cx| view! { cx, <PageErr404 /> }/>
                     </Routes>
                 </Layout>
             </Router>
@@ -123,9 +193,9 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
-                            <Link href="overview" class="item">"Overview"</Link>
-                            <Link href="installation" class="item">"Installation"</Link>
-                            <Link href="usage" class="item">"Usage"</Link>
+                            <Link href=Routes::Overview class="item">"Overview"</Link>
+                            <Link href=Routes::Installation class="item">"Installation"</Link>
+                            <Link href=Routes::Usage class="item">"Usage"</Link>
                         </Stack>
                     }
                 />
@@ -137,8 +207,8 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
-                            <Link href="stack" class="item">"Stack"</Link>
-                            <Link href="grid" class="item">"Grid"</Link>
+                            <Link href=Routes::Stack class="item">"Stack"</Link>
+                            <Link href=Routes::Grid class="item">"Grid"</Link>
                         </Stack>
                     }
                 />
@@ -150,14 +220,14 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
-                            <Link href="button" class="item">"Button"</Link>
-                            <Link href="tab" class="item">"Tabs"</Link>
-                            <Link href="collapsible" class="item">"Collapsible"</Link>
-                            <Link href="drawer" class="item">"Drawer"</Link>
-                            <Link href="modal" class="item">"Modal"</Link>
-                            <Link href="alert" class="item">"Alert"</Link>
-                            <Link href="typography" class="item">"Typography"</Link>
-                            <Link href="icon" class="item">"Icon"</Link>
+                            <Link href=Routes::Button class="item">"Button"</Link>
+                            <Link href=Routes::Tab class="item">"Tabs"</Link>
+                            <Link href=Routes::Collapsible class="item">"Collapsible"</Link>
+                            <Link href=Routes::Drawer class="item">"Drawer"</Link>
+                            <Link href=Routes::Modal class="item">"Modal"</Link>
+                            <Link href=Routes::Alert class="item">"Alert"</Link>
+                            <Link href=Routes::Typography class="item">"Typography"</Link>
+                            <Link href=Routes::Icon class="item">"Icon"</Link>
                         </Stack>
                     }
                 />
@@ -169,10 +239,7 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
-                            <Link href="fade" class="item">"Fade"</Link>
-                            <Link href="grow" class="item">"Grow"</Link>
-                            <Link href="slide" class="item">"Slide"</Link>
-                            <Link href="zoom" class="item">"Zoom"</Link>
+                            <Link href=Routes::Transition class="item">"Transitions"</Link>
                         </Stack>
                     }
                 />
