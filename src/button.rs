@@ -2,10 +2,13 @@ use std::fmt::{Display, Formatter};
 
 use leptos::{ev::MouseEvent, *};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+use crate::OptionalMaybeSignal;
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
     Flat,
     Outlined,
+    #[default]
     Filled,
 }
 
@@ -25,14 +28,9 @@ impl Display for ButtonVariant {
     }
 }
 
-impl Default for ButtonVariant {
-    fn default() -> Self {
-        Self::Filled
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonColor {
+    #[default]
     Primary,
     Secondary,
     Success,
@@ -60,15 +58,10 @@ impl Display for ButtonColor {
     }
 }
 
-impl Default for ButtonColor {
-    fn default() -> Self {
-        Self::Primary
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum BtnSize {
     Small,
+    #[default]
     Normal,
     Big,
 }
@@ -89,19 +82,14 @@ impl Display for BtnSize {
     }
 }
 
-impl Default for BtnSize {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
-
 #[component]
 pub fn Button<F>(
     cx: Scope,
     on_click: F,
-    #[prop(optional)] variant: ButtonVariant,
-    #[prop(optional)] color: ButtonColor,
-    #[prop(optional)] size: BtnSize,
+    #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
+    #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
+    #[prop(into, optional)] size: OptionalMaybeSignal<BtnSize>,
+    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     children: Children,
 ) -> impl IntoView
 where
@@ -109,9 +97,10 @@ where
 {
     view! { cx,
         <button class="leptonic-btn"
-            data-variant=variant.as_str()
-            data-color=color.as_str()
-            data-size=size.as_str()
+            data-variant=move || variant.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
+            data-color=move || color.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
+            data-size=move || size.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
+            aria-disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
             on:click=on_click
         >
             <div class="name">

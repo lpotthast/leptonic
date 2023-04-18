@@ -66,6 +66,36 @@ pub enum Disabled {
     Reactive(ReadSignal<bool>),
 }
 
+#[derive(Debug, Copy, Clone)]
+pub struct OptionalSignal<T: 'static>(Option<Signal<T>>);
+
+impl<T> Default for OptionalSignal<T> {
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl<T: 'static, I: Into<Signal<T>>> From<I> for OptionalSignal<T> {
+    fn from(value: I) -> Self {
+        Self(Some(value.into()))
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub struct OptionalMaybeSignal<T: 'static>(Option<MaybeSignal<T>>);
+
+impl<T> Default for OptionalMaybeSignal<T> {
+    fn default() -> Self {
+        Self(None)
+    }
+}
+
+impl<T: 'static, I: Into<MaybeSignal<T>>> From<I> for OptionalMaybeSignal<T> {
+    fn from(value: I) -> Self {
+        Self(Some(value.into()))
+    }
+}
+
 pub mod prelude {
     pub use super::alert::Alert;
     pub use super::alert::AlertProps;
@@ -185,6 +215,8 @@ pub mod prelude {
     pub use super::Margin;
     pub use super::Mount;
     pub use super::OptionDeref;
+    pub use super::OptionalMaybeSignal;
+    pub use super::OptionalSignal;
     pub use super::Size;
     pub use super::Width;
     pub use super::With;
