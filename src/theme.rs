@@ -56,8 +56,8 @@ where
     let toggle = Toggle(
         cx,
         ToggleProps {
-            on: move || theme_context.theme.get() == on,
-            set_on: move |val| {
+            state: Signal::derive(cx, move || theme_context.theme.get() == on),
+            on_toggle: move |val| {
                 theme_context.set_theme.update(|current| match val {
                     true => *current = on,
                     false => *current = off,

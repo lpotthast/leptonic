@@ -18,7 +18,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
             >
                 <Checkbox checked=(test_bool, set_test_bool) />
                 <Checkbox checked=(test_bool, set_test_bool) />
-                <Toggle on=test_bool set_on=set_test_bool />
+                <Toggle state=test_bool on_toggle=set_test_bool />
                 <If sig=test_bool>
                     "asd"
                 </If>

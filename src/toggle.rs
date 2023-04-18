@@ -39,10 +39,10 @@ pub struct ToggleIcons {
 }
 
 #[component]
-pub fn Toggle<O, S>(
+pub fn Toggle<S>(
     cx: Scope,
-    on: O,
-    set_on: S,
+    #[prop(into)] state: Signal<bool>,
+    on_toggle: S,
     #[prop(optional)] active: Option<Active>,
     #[prop(optional)] disabled: Option<Disabled>,
     #[prop(optional)] id: Option<Uuid>,
@@ -53,11 +53,9 @@ pub fn Toggle<O, S>(
     #[prop(into, optional)] icons: Option<ToggleIcons>,
 ) -> impl IntoView
 where
-    O: Fn() -> bool + 'static,
     S: Fn(bool) + 'static,
 {
     let id = id.unwrap_or_else(|| Uuid::new_v4());
-    let on = Signal::derive(cx, move || on());
 
     let class = match class {
         Some(attr) => attr.into_attribute_boxed(cx),
@@ -77,16 +75,16 @@ where
                     Disabled::Static(disabled) => disabled,
                     Disabled::Reactive(disabled) => disabled.get(),
                 }).unwrap_or(false)
-                on:click=move |_| (set_on)(!on.get())
+                on:click=move |_| (on_toggle)(!state.get())
             >
-                <span class="slider round" class:on=on>
+                <span class="slider round" class:on=state>
                     {
                         move || icons.as_ref().map(|icons| {
                             let off_icon = icons.off;
                             let on_icon = icons.on;
                             view! { cx,
                                 <span class="icon-positioner">
-                                    <Show when=on fallback=move |cx| view! {cx, <Icon icon=off_icon/> }>
+                                    <Show when=state fallback=move |cx| view! {cx, <Icon icon=off_icon/> }>
                                         <Icon icon=on_icon/>
                                     </Show>
                                 </span>
