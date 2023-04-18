@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageStack(cx: Scope) -> impl IntoView {
     view! { cx,
-        <h2>"Stack"</h2>
+        <Typography variant=TypographyVariant::H2>"Stack"</Typography>
 
         <h2>"Stack - Vertically"</h2>
         <Stack spacing=6>

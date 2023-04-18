@@ -10,10 +10,14 @@ use leptonic::prelude::*;
 
 use crate::pages::alert::PageAlert;
 use crate::pages::alert::PageAlertProps;
+use crate::pages::app_bar::PageAppBar;
+use crate::pages::app_bar::PageAppBarProps;
 use crate::pages::button::PageButton;
 use crate::pages::button::PageButtonProps;
 use crate::pages::collapsible::PageCollapsible;
 use crate::pages::collapsible::PageCollapsibleProps;
+use crate::pages::date_time::PageDateTime;
+use crate::pages::date_time::PageDateTimeProps;
 use crate::pages::drawer::PageDrawer;
 use crate::pages::drawer::PageDrawerProps;
 use crate::pages::err404::PageErr404;
@@ -30,10 +34,14 @@ use crate::pages::modal::PageModal;
 use crate::pages::modal::PageModalProps;
 use crate::pages::overview::PageOverview;
 use crate::pages::overview::PageOverviewProps;
+use crate::pages::progress_indicator::PageProgressIndicator;
+use crate::pages::progress_indicator::PageProgressIndicatorProps;
 use crate::pages::stack::PageStack;
 use crate::pages::stack::PageStackProps;
 use crate::pages::tab::PageTab;
 use crate::pages::tab::PageTabProps;
+use crate::pages::toast::PageToast;
+use crate::pages::toast::PageToastProps;
 use crate::pages::transition::PageTransition;
 use crate::pages::transition::PageTransitionProps;
 use crate::pages::typography::PageTypography;
@@ -79,12 +87,16 @@ pub enum Routes {
     Button,
     Tab,
     Input,
+    DateTime,
     Collapsible,
+    AppBar,
     Drawer,
+    Toast,
     Modal,
     Alert,
     Typography,
     Icon,
+    ProgressIndicator,
 
     // Animation
     Transition,
@@ -104,12 +116,16 @@ impl Routes {
             Routes::Button => "button",
             Routes::Tab => "tab",
             Routes::Input => "input",
+            Routes::DateTime => "date-time",
             Routes::Collapsible => "collapsible",
+            Routes::AppBar => "app-bar",
             Routes::Drawer => "drawer",
+            Routes::Toast => "toast",
             Routes::Modal => "modal",
             Routes::Alert => "alert",
             Routes::Typography => "typography",
             Routes::Icon => "icon",
+            Routes::ProgressIndicator => "progress-indicator",
             Routes::Transition => "transition",
             Routes::CatchAll => "*",
         }
@@ -152,12 +168,16 @@ pub fn App(cx: Scope) -> impl IntoView {
                         <Route path=Routes::Button view=|cx| view! { cx, <PageButton/> }/>
                         <Route path=Routes::Tab view=|cx| view! { cx, <PageTab/> }/>
                         <Route path=Routes::Input view=|cx| view! { cx, <PageInput/> }/>
+                        <Route path=Routes::DateTime view=|cx| view! { cx, <PageDateTime/> }/>
                         <Route path=Routes::Collapsible view=|cx| view! { cx, <PageCollapsible/> }/>
+                        <Route path=Routes::AppBar view=|cx| view! { cx, <PageAppBar/> }/>
                         <Route path=Routes::Drawer view=|cx| view! { cx, <PageDrawer/> }/>
+                        <Route path=Routes::Toast view=|cx| view! { cx, <PageToast/> }/>
                         <Route path=Routes::Modal view=|cx| view! { cx, <PageModal/> }/>
                         <Route path=Routes::Alert view=|cx| view! { cx, <PageAlert/> }/>
                         <Route path=Routes::Typography view=|cx| view! { cx, <PageTypography/> }/>
                         <Route path=Routes::Icon view=|cx| view! { cx, <PageIcon/> }/>
+                        <Route path=Routes::ProgressIndicator view=|cx| view! { cx, <PageProgressIndicator/> }/>
 
                         <Route path=Routes::Transition view=|cx| view! { cx, <PageTransition/> }/>
 
@@ -187,7 +207,7 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
             </Stack>
         </AppBar>
 
-        <Drawer>
+        <Drawer margin=Margin::Top(app_bar_height)>
             <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">
                 <Quicksearch />
 
@@ -228,12 +248,16 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                             <Link href=Routes::Button class="item">"Button"</Link>
                             <Link href=Routes::Tab class="item">"Tabs"</Link>
                             <Link href=Routes::Input class="item">"Inputs"</Link>
+                            <Link href=Routes::DateTime class="item">"Date & Time"</Link>
                             <Link href=Routes::Collapsible class="item">"Collapsible"</Link>
+                            <Link href=Routes::AppBar class="item">"App Bar"</Link>
                             <Link href=Routes::Drawer class="item">"Drawer"</Link>
+                            <Link href=Routes::Toast class="item">"Toast"</Link>
                             <Link href=Routes::Modal class="item">"Modal"</Link>
                             <Link href=Routes::Alert class="item">"Alert"</Link>
                             <Link href=Routes::Typography class="item">"Typography"</Link>
                             <Link href=Routes::Icon class="item">"Icon"</Link>
+                            <Link href=Routes::ProgressIndicator class="item">"Progress"</Link>
                         </Stack>
                     }
                 />

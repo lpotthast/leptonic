@@ -5,7 +5,7 @@ use indoc::indoc;
 #[component]
 pub fn PageInstallation(cx: Scope) -> impl IntoView {
     view! { cx,
-        <h2>"Installation"</h2>
+        <Typography variant=TypographyVariant::H2>"Installation"</Typography>
 
         <Code>
             "cargo add leptonic"

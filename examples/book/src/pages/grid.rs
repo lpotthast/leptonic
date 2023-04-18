@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageGrid(cx: Scope) -> impl IntoView {
     view! { cx,
-        <h2>"Grid"</h2>
+        <Typography variant=TypographyVariant::H2>"Grid"</Typography>
 
         <Grid spacing=6>
             <Row>

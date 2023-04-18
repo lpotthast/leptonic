@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageInput(cx: Scope) -> impl IntoView {
     view! { cx,
-        <h2>"Inputs"</h2>
+        <Typography variant=TypographyVariant::H2>"Inputs"</Typography>
 
         <Input />
         <Input ty=InputType::Text/>

@@ -1,15 +1,13 @@
 use leptonic::prelude::*;
 use leptos::*;
 use tracing::info;
-use uuid::Uuid;
 
 #[component]
 pub fn PageTab(cx: Scope) -> impl IntoView {
     let (count, _set_count) = create_signal_ls(cx, "count", 0u64);
     let (test_bool, set_test_bool) = create_signal(cx, false);
-    let toasts = use_context::<Toasts>(cx).unwrap();
     view! { cx,
-        <h2>"Tabs"</h2>
+        <Typography variant=TypographyVariant::H2>"Tabs"</Typography>
 
         <Tabs mount=Mount::WhenShown>
             <Tab
@@ -21,7 +19,6 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
                 <Checkbox checked=(test_bool, set_test_bool) />
                 <Checkbox checked=(test_bool, set_test_bool) />
                 <Toggle on=test_bool set_on=set_test_bool />
-                <Button on_click=move |_| toasts.push(op_success_toast(cx))>"Create Toast"</Button>
                 <If sig=test_bool>
                     "asd"
                 </If>
@@ -42,16 +39,5 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
             <Tab name="outer-4" label="Tab4Label">
             </Tab>
         </Tabs>
-    }
-}
-
-fn op_success_toast(cx: Scope) -> Toast {
-    Toast {
-        id: Uuid::new_v4(),
-        created_at: time::OffsetDateTime::now_utc(),
-        variant: ToastVariant::Success,
-        header: view! { cx, "Header" }.into_view(cx),
-        body: view! { cx, "Body" }.into_view(cx),
-        timeout: ToastTimeout::DefaultDelay,
     }
 }

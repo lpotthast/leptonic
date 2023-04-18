@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageCollapsible(cx: Scope) -> impl IntoView {
     view! { cx,
-        <h2>"Collapsibles"</h2>
+        <Typography variant=TypographyVariant::H2>"Collapsibles"</Typography>
 
         <Collapsibles default_on_open=OnOpen::CloseOthers>
             <Collapsible

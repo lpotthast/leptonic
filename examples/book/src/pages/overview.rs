@@ -8,6 +8,8 @@ pub fn PageOverview(cx: Scope) -> impl IntoView {
     let increase_counter_by_one = move |_| set_count.update(|count| *count += 1);
 
     view! { cx,
+        <Typography variant=TypographyVariant::H2>"Overview"</Typography>
+
         <Button on_click=increase_counter_by_one>"Click Me: " {count}</Button>
 
         <h2>"Sliders"</h2>

@@ -5,7 +5,7 @@ use leptos_icons::*;
 #[component]
 pub fn PageIcon(cx: Scope) -> impl IntoView {
     view! { cx,
-        <h2>"Icons"</h2>
+        <Typography variant=TypographyVariant::H2>"Icons"</Typography>
 
         <Icon icon=BsIcon::BsFolderFill/>
         <Icon icon=BsIcon::BsFolder/>

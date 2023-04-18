@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageButton(cx: Scope) -> impl IntoView {
     view! { cx,
-        <h2>"Buttons"</h2>
+        <Typography variant=TypographyVariant::H2>"Buttons"</Typography>
 
         <div>
             <Button on_click=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>

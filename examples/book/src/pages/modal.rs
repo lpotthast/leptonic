@@ -7,7 +7,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
     let (show_modal2, set_show_modal2) = create_signal(cx, false);
 
     view! { cx,
-        <h2>"Modals"</h2>
+        <Typography variant=TypographyVariant::H2>"Modals"</Typography>
 
         <Button on_click=move |_| set_show_modal.set(true)>"Show Modal"</Button>
 
