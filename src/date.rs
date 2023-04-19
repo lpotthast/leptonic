@@ -1,0 +1,440 @@
+use leptos::*;
+use time::macros::format_description;
+use tracing::info;
+use uuid::Uuid;
+
+use crate::datetime::{Day, InMonth, Month, SaveReplaceYear, Week, Year, whole_days_in};
+
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
+pub enum Show {
+    YearSelection,
+    MonthSelection,
+    DaySelection,
+}
+
+#[component]
+pub fn DateSelector(
+    cx: Scope,
+    value: time::OffsetDateTime,
+    #[prop(optional)] min: Option<time::OffsetDateTime>,
+    #[prop(optional)] max: Option<time::OffsetDateTime>,
+) -> impl IntoView {
+    let (staging, set_staging) = create_signal(cx, value);
+    let staging_year = Signal::derive(cx, move || staging.get().year());
+    let staging_month = Signal::derive(cx, move || staging.get().month().to_string());
+
+    let (show, set_show) = create_signal(cx, Show::DaySelection);
+
+    let (years_starting_at, set_years_starting_at) = create_signal(cx, None);
+    let years = Signal::derive(cx, move || {
+        staging.with(|staging| {
+            create_years(staging, years_starting_at.get(), min.as_ref(), max.as_ref())
+        })
+    });
+    let years_range = Signal::derive(cx, move || {
+        years.with(|years| {
+            if years.is_empty() {
+                "ERR: no years".to_owned()
+            } else {
+                format!("{} - {}", years[0].number, years[years.len() - 1].number)
+            }
+        })
+    });
+    let (months, _) = create_signal(
+        cx,
+        create_months(
+            &value, // Should months be derived from staging? No, this was always constructed using the prop value...
+            min.as_ref(),
+            max.as_ref(),
+        ),
+    );
+    // TODO: Make static. Make i18n.
+    let (short_weekday_names, _) = create_signal(cx, create_week_day_names());
+    let weeks = Signal::derive(cx, move || {
+        create_weeks(&staging.get(), min.as_ref(), max.as_ref())
+    });
+
+    let select_previous_month =
+        move |_| set_staging.update(|staging| *staging = start_of_previous_month(*staging));
+    let select_next_month =
+        move |_| set_staging.update(|staging| *staging = start_of_next_month(*staging));
+    let select_previous_year = move |_| {
+        set_staging
+            .update(|staging| *staging = staging.save_replace_year(staging.year() - 1).unwrap())
+        // TODO: Set set_years_starting_at to Some(self.staging.year() - 4),
+    };
+    let select_next_year = move |_| {
+        set_staging
+            .update(|staging| *staging = staging.save_replace_year(staging.year() + 1).unwrap())
+        // TODO: Set set_years_starting_at to Some(self.staging.year() - 4),
+    };
+    let select_previous_years = move |_| {
+        years.with(|years| {
+            set_years_starting_at.update(|starting| {
+                *starting = match years.len() {
+                    0 => None,
+                    _ => Some(years[0].number - (3 * 7)),
+                }
+            })
+        })
+    };
+    let select_next_years = move |_| {
+        years.with(|years| {
+            set_years_starting_at.update(|starting| {
+                *starting = match years.len() {
+                    0 => None,
+                    _ => Some(years[years.len() - 1].number + 1),
+                }
+            })
+        })
+    };
+    let select_year = move |year: Year| {
+        if !year.disabled {
+            set_staging
+                .update(|staging| *staging = staging.save_replace_year(year.number).unwrap());
+            set_show.update(|show| *show = Show::MonthSelection);
+        }
+    };
+    let select_month = move |month: Month| {
+        if !month.disabled {
+            set_staging.update(|staging| {
+                *staging = staging
+                    .replace_month(time::Month::try_from(month.index).unwrap())
+                    .unwrap()
+            });
+            set_show.update(|show| *show = Show::DaySelection);
+        }
+    };
+    let select_day = move |day: Day| {
+        if !day.disabled {
+            set_staging.update(|staging| *staging = day.date_time);
+        }
+    };
+
+    view! { cx,
+        <leptonic-datetime>
+        <leptonic-date-selector>
+            <leptonic-calender-month>
+                <div class={"actions"}>
+                    {move || match show.get() {
+                        Show::YearSelection => view! { cx,
+                            <div on:click=select_previous_years
+                                class={"previous arrow-left"}>
+                            </div>
+                            <div on:click=move |_| set_show.update(|show| *show = Show::MonthSelection)
+                                class={"current-date"}>
+                                {years_range}
+                            </div>
+                            <div on:click=select_next_years
+                                class={"next arrow-right"}>
+                            </div>
+                        },
+                        Show::MonthSelection => view! { cx,
+                            <div on:click=select_previous_year
+                                class={"previous arrow-left"}>
+                            </div>
+                            <div on:click=move |_| set_show.update(|show| *show = Show::YearSelection)
+                                class={"current-date"}>
+                                {staging_year}
+                            </div>
+                            <div on:click=select_next_year
+                                class={"next arrow-right"}>
+                            </div>
+                        },
+                        Show::DaySelection => view! { cx,
+                            <div on:click=select_previous_month
+                                class={"previous arrow-left"}>
+                            </div>
+                            <div on:click=move |_| set_show.update(|show| *show = Show::YearSelection)
+                                class={"current-date"}>
+                                {staging_month} " " {staging_year}
+                            </div>
+                            <div on:click=select_next_month
+                                class={"next arrow-right"}>
+                            </div>
+                        },
+                    }}
+                </div>
+
+                <Show when=move || show.get() == Show::YearSelection fallback=|_cx| view! { cx,  }>
+                    <div class={"years"}>
+                        <For
+                            each=years
+                            key=|year| year.number
+                            view=move |cx, year| {
+                                view! { cx,
+                                    <div on:click=move |_e| select_year(year)
+                                        class="year"
+                                        class:is-now=year.is_now
+                                        class:disabled=year.disabled
+                                    >
+                                        {year.number}
+                                    </div>
+                                }
+                            }
+                        />
+                    </div>
+                </Show>
+
+                <Show when=move || show.get() == Show::MonthSelection fallback=|_cx| view! { cx,  }>
+                    <div class={"months"}>
+                        <For
+                            each=months
+                            key=|month| month.index
+                            view=move |cx, month| {
+                                let mon = month.clone();
+                                view! { cx,
+                                    <div on:click=move |_e| select_month(mon.clone())
+                                        class="month"
+                                        class:is-now=month.is_now
+                                        class:disabled=month.disabled>
+                                        {month.name.clone()}
+                                    </div>
+                                }
+                            }
+                        />
+                    </div>
+                </Show>
+
+                <Show when=move || show.get() == Show::DaySelection fallback=|_cx| view! { cx,  }>
+                    <div class={"weekday-names"}>
+                        // Not use For for this...?
+                        <For
+                            each=short_weekday_names
+                            key=|short_weekday_name| short_weekday_name.clone()
+                            view=move |cx, short_weekday_name| {
+                                view! { cx,
+                                    <div class={"weekday-name"}>
+                                        {short_weekday_name}
+                                    </div>
+                                }
+                            }
+                        />
+                    </div>
+
+                    <div class={"weeks"}>
+                        <For
+                            each=weeks
+                            key=|week| week.id
+                            view=move |cx, week| {
+                                view! { cx,
+                                    <div class={"week"}>
+                                        <For
+                                            each=move || week.days.clone()
+                                            key=|day| day.id
+                                            view=move |cx, day| {
+                                                let d = day.clone();
+                                                view! { cx,
+                                                    <div
+                                                        on:click=move |_e| select_day(d.clone())
+                                                        class="day"
+                                                        class:not-in-month=(day.in_month != InMonth::Current)
+                                                        class:disabled=day.disabled
+                                                        class:selected=day.selected
+                                                    >
+                                                        <span class="text" class:is-now=day.is_now>
+                                                            {day.display_name}
+                                                        </span>
+                                                    </div>
+                                                }
+                                            }
+                                        />
+                                    </div>
+                                }
+                            }
+                        />
+                    </div>
+                </Show>
+
+            </leptonic-calender-month>
+        </leptonic-date-selector>
+        </leptonic-datetime>
+    }
+}
+
+pub fn create_week_day_names() -> Vec<String> {
+    //let day_in_month = value.date().day(); // 1 based
+    //let days_from_monday = value.date().weekday().num_days_from_monday(); // 0 based
+    //let monday = value.date().with_day(day_in_month - days_from_monday).format("%a").to_string();
+
+    vec![
+        "Mon".to_owned(),
+        "Tue".to_owned(),
+        "Wed".to_owned(),
+        "Thr".to_owned(),
+        "Fri".to_owned(),
+        "Sat".to_owned(),
+        "Sun".to_owned(),
+    ]
+}
+
+pub fn create_years(
+    staging: &time::OffsetDateTime,
+    starting_year: Option<i32>,
+    min: Option<&time::OffsetDateTime>,
+    max: Option<&time::OffsetDateTime>,
+) -> Vec<Year> {
+    let amount = 3 * 7; // 7 rows of 3 year numbers each.
+    let starting_year = starting_year.unwrap_or_else(|| staging.year() - 4);
+    let mut years = Vec::<Year>::with_capacity(amount);
+    let this_year = staging.year();
+    let min_year = min.map(|it| it.year()).unwrap_or(i32::MIN);
+    let max_year = max.map(|it| it.year()).unwrap_or(i32::MAX);
+
+    for i in 0..amount {
+        let year_number = starting_year + i as i32;
+        years.push(Year {
+            number: year_number,
+            is_now: year_number == this_year,
+            disabled: year_number < min_year || year_number > max_year,
+        });
+    }
+    years
+}
+
+pub fn create_months(
+    value: &time::OffsetDateTime,
+    min: Option<&time::OffsetDateTime>,
+    max: Option<&time::OffsetDateTime>,
+) -> Vec<Month> {
+    let now = time::OffsetDateTime::now_utc();
+    let mut months = Vec::<Month>::with_capacity(12);
+    for i in 1..=12u8 {
+        let month = value
+            .replace_month(time::Month::try_from(i).unwrap())
+            .unwrap();
+        months.push(Month {
+            index: i,
+            name: month.format(format_description!("[month]")).unwrap(),
+            is_now: now.year() == month.year() && now.month() == month.month(),
+            disabled: !is_in_range(&month, max, min),
+        });
+    }
+    assert_eq!(months.len(), 12);
+    months
+}
+
+pub fn is_in_range(
+    date: &time::OffsetDateTime,
+    min: Option<&time::OffsetDateTime>,
+    max: Option<&time::OffsetDateTime>,
+) -> bool {
+    let after_min = match min {
+        Some(min) => date >= min,
+        None => true,
+    };
+    let before_max = match max {
+        Some(max) => date <= max,
+        None => true,
+    };
+    after_min && before_max
+}
+
+/// Might decrease the year to x-1 if in January of year x.
+pub fn start_of_previous_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
+    let start = dt.replace_day(1).unwrap();
+    match start.month() {
+        time::Month::January => start
+            .save_replace_year(start.year() - 1)
+            .unwrap()
+            .replace_month(time::Month::December)
+            .unwrap(),
+        _ => start.replace_month(start.month().previous()).unwrap(),
+    }
+}
+
+/// Might advance the year to x+1 if in December of year x.
+pub fn start_of_next_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
+    let start = dt.replace_day(1).unwrap();
+    match start.month() {
+        time::Month::December => start
+            .save_replace_year(start.year() + 1)
+            .unwrap()
+            .replace_month(time::Month::January)
+            .unwrap(),
+        _ => start.replace_month(start.month().next()).unwrap(),
+    }
+}
+
+pub fn create_weeks(
+    staging: &time::OffsetDateTime,
+    min: Option<&time::OffsetDateTime>,
+    max: Option<&time::OffsetDateTime>,
+) -> Vec<Week> {
+    let now = time::OffsetDateTime::now_utc();
+    // Calculate the index of the first day of the month (in current locale).
+
+    let current_year = now.year();
+    let current_month = now.month();
+    let current_day = now.day();
+    let staging_day = staging.day();
+
+    let first_weekday_index = staging
+        .clone()
+        .replace_day(1)
+        .unwrap()
+        .weekday()
+        .number_days_from_monday(); // in range [0..6]
+    let number_of_days_in_month = whole_days_in(staging.year(), staging.month());
+    let index_of_last_day_in_month = first_weekday_index + number_of_days_in_month;
+
+    let prev_month = start_of_previous_month(staging.clone());
+    let this_month = staging;
+    let next_month = start_of_next_month(staging.clone());
+
+    let days_in_previous_month = whole_days_in(prev_month.year(), prev_month.month());
+    info!(days_in_previous_month, "days_in_previous_month");
+
+    const WEEKS_TO_DISPLAY: u8 = 6;
+    let mut weeks = Vec::<Week>::with_capacity(WEEKS_TO_DISPLAY as usize);
+    for w in 0..WEEKS_TO_DISPLAY {
+        let mut week = Week {
+            id: Uuid::new_v4(),
+            days: Vec::with_capacity(7),
+        };
+        const DAYS_PER_WEEK: u8 = 7;
+        for d in 0..DAYS_PER_WEEK {
+            let i = d + w * DAYS_PER_WEEK;
+
+            let in_month = if i < first_weekday_index {
+                InMonth::Previous
+            } else if i >= first_weekday_index && i < index_of_last_day_in_month {
+                InMonth::Current
+            } else {
+                InMonth::Next
+            };
+
+            // base 1 (!)
+            let day_in_month = match in_month {
+                InMonth::Previous => days_in_previous_month - first_weekday_index + i + 1,
+                InMonth::Current => i - first_weekday_index + 1,
+                InMonth::Next => i - index_of_last_day_in_month + 1,
+            };
+            let relevant_month = match in_month {
+                InMonth::Previous => &prev_month,
+                InMonth::Current => this_month,
+                InMonth::Next => &next_month,
+            };
+            let date_time: time::OffsetDateTime = relevant_month.replace_day(day_in_month).unwrap();
+            let disabled = !is_in_range(&date_time, max, min); // TODO: inversion of min/max correct?
+            let selected = in_month == InMonth::Current && day_in_month == staging_day; // TODO: Can a day form prev not be selected?
+
+            week.days.push(Day {
+                id: Uuid::new_v4(),
+                index: day_in_month,
+                display_name: day_in_month.to_string(),
+                in_month,
+                date_time,
+                disabled,
+                highlighted: false,
+                selected,
+                // TODO: is year check necessary?
+                is_now: current_month == relevant_month.month()
+                    && current_year == relevant_month.year()
+                    && current_day == day_in_month,
+            });
+        }
+        weeks.push(week);
+    }
+    weeks
+}

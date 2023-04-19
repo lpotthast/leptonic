@@ -10,6 +10,8 @@ pub mod card;
 pub mod checkbox;
 pub mod code;
 pub mod collapsible;
+pub mod date;
+pub mod datetime;
 pub mod drawer;
 pub mod grid;
 pub mod icon;
@@ -126,6 +128,8 @@ pub mod prelude {
     pub use super::collapsible::CollapsiblesProps;
     pub use super::collapsible::OnOpen;
     pub use super::create_signal_ls;
+    pub use super::date::DateSelector;
+    pub use super::date::DateSelectorProps;
     pub use super::drawer::Drawer;
     pub use super::drawer::DrawerProps;
     pub use super::grid::Col;

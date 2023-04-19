@@ -24,6 +24,7 @@ leptos_router = { version = "0.2", default-features = false, features = [
     "csr",
 ] }
 leptos-icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "main", features = [
+    "csr",
     "BsSun",
     "BsMoon",
     "BsCheckCircleFill",
@@ -32,6 +33,7 @@ leptos-icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "ma
 ] }
 time = { version = "0.3", features = [
     "wasm-bindgen",
+    "macros",
     "serde",
     "serde-well-known",
 ] }

@@ -1,5 +1,4 @@
 use leptos::*;
-use leptos_icons::*;
 
 use crate::prelude::*;
 
