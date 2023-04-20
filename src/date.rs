@@ -110,7 +110,7 @@ pub fn DateSelector(
         if !month.disabled {
             set_staging.update(|staging| {
                 *staging = staging
-                    .replace_month(time::Month::try_from(month.index).unwrap())
+                    .save_replace_month(time::Month::try_from(month.index).unwrap())
                     .unwrap()
             });
             set_show.update(|show| *show = Show::DaySelection);
@@ -321,8 +321,8 @@ pub fn create_months(
     let staging_month = staging.month();
     let mut months = Vec::<Month>::with_capacity(12);
     for i in 1..=12u8 {
-        let month = staging
-            .replace_month(time::Month::try_from(i).unwrap())
+        let month: time::OffsetDateTime = staging
+            .save_replace_month(time::Month::try_from(i).unwrap())
             .unwrap();
         let month_year = month.year();
         let month_month = month.month();
