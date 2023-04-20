@@ -1,18 +1,25 @@
 use leptos::*;
 
+use crate::Size;
+
 #[component]
 pub fn Skeleton(
     cx: Scope,
-    #[prop(into, optional)] width: Option<String>,
-    #[prop(into, optional)] height: Option<String>,
-    children: Children,
+    #[prop(into, optional)] width: Option<Size>,
+    #[prop(into, optional)] height: Option<Size>,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
-    let width = width.unwrap_or("100%".to_owned());
-    let height = height.unwrap_or("auto".to_owned());
+    let width = width.unwrap_or(Size::Percent(100.0));
+    let height = height.unwrap_or(Size::Auto);
 
     view! { cx,
         <leptonic-skeleton style=format!("--height: {height}; --width: {width}")>
-            { children(cx) }
+            {
+                match children {
+                    Some(children) => children(cx),
+                    None => Fragment::new(vec![]),
+                }
+            }
         </leptonic-skeleton>
     }
 }

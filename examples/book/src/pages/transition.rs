@@ -15,12 +15,12 @@ pub fn PageTransition(cx: Scope) -> impl IntoView {
         <h2>"Transition - Collapse"</h2>
         <Toggle state=transition_collapse on_toggle=set_transition_collapse />
         <Collapse show=transition_collapse axis=CollapseAxis::X>
-            <Skeleton height="5em">"Collapse"</Skeleton>
+            <Skeleton height=Size::Em(5.0)>"Collapse"</Skeleton>
         </Collapse>
 
         <Toggle state=transition_collapse on_toggle=set_transition_collapse />
         <Collapse show=transition_collapse axis=CollapseAxis::Y>
-            <Skeleton height="5em">"Collapse"</Skeleton>
+            <Skeleton height=Size::Em(5.0)>"Collapse"</Skeleton>
         </Collapse>
 
         <Separator />

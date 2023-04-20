@@ -1,7 +1,5 @@
 [watch]
 # Paths to watch. The `build.target`'s parent folder is watched by default.
-#watch = ["./../crud-yew"]
-# Paths to ignore.
 ignore = [
     # These files are generated from our build.rs script, not excluding them would result in an endless restart-cycle!
     # Keep this list in sync with what the build script generates.
@@ -9,14 +7,9 @@ ignore = [
 ]
 
 [serve]
-# The address to serve on.
 address = "127.0.0.1"
-# The port to serve on.
 port = 4001
-# Open a browser tab once the initial build is complete.
-# We do not use this, as we access our app through "local.spinl-cs.de:4000" (hosts!), which is not something that trunk supports at the moment.
 open = false
-# Disable auto-reload of the web app.
 no_autoreload = false
 
 [[hooks]]

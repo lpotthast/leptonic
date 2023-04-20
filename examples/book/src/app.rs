@@ -36,6 +36,14 @@ use crate::pages::overview::PageOverview;
 use crate::pages::overview::PageOverviewProps;
 use crate::pages::progress_indicator::PageProgressIndicator;
 use crate::pages::progress_indicator::PageProgressIndicatorProps;
+use crate::pages::select::PageSelect;
+use crate::pages::select::PageSelectProps;
+use crate::pages::separator::PageSeparator;
+use crate::pages::separator::PageSeparatorProps;
+use crate::pages::skeleton::PageSkeleton;
+use crate::pages::skeleton::PageSkeletonProps;
+use crate::pages::slider::PageSlider;
+use crate::pages::slider::PageSliderProps;
 use crate::pages::stack::PageStack;
 use crate::pages::stack::PageStackProps;
 use crate::pages::tab::PageTab;
@@ -82,6 +90,9 @@ pub enum Routes {
     // Layout
     Stack,
     Grid,
+    Skeleton,
+    AppBar,
+    Drawer,
 
     // Components
     Button,
@@ -89,14 +100,15 @@ pub enum Routes {
     Input,
     DateTime,
     Collapsible,
-    AppBar,
-    Drawer,
     Toast,
     Modal,
     Alert,
     Typography,
     Icon,
     ProgressIndicator,
+    Slider,
+    Separator,
+    Select,
 
     // Animation
     Transition,
@@ -108,25 +120,31 @@ pub enum Routes {
 impl Routes {
     pub fn route(self) -> &'static str {
         match self {
-            Routes::Overview => "overview",
-            Routes::Installation => "installation",
-            Routes::Usage => "usage",
-            Routes::Stack => "stack",
-            Routes::Grid => "grid",
-            Routes::Button => "button",
-            Routes::Tab => "tab",
-            Routes::Input => "input",
-            Routes::DateTime => "date-time",
-            Routes::Collapsible => "collapsible",
-            Routes::AppBar => "app-bar",
-            Routes::Drawer => "drawer",
-            Routes::Toast => "toast",
-            Routes::Modal => "modal",
-            Routes::Alert => "alert",
-            Routes::Typography => "typography",
-            Routes::Icon => "icon",
-            Routes::ProgressIndicator => "progress-indicator",
-            Routes::Transition => "transition",
+            Routes::Overview => "/overview",
+            Routes::Installation => "/installation",
+            Routes::Usage => "/usage",
+
+            Routes::Stack => "/stack",
+            Routes::Grid => "/grid",
+            Routes::Skeleton => "/skeleton",
+            Routes::AppBar => "/app-bar",
+            Routes::Drawer => "/drawer",
+
+            Routes::Button => "/button",
+            Routes::Tab => "/tab",
+            Routes::Input => "/input",
+            Routes::DateTime => "/date-time",
+            Routes::Collapsible => "/collapsible",
+            Routes::Toast => "/toast",
+            Routes::Modal => "/modal",
+            Routes::Alert => "/alert",
+            Routes::Typography => "/typography",
+            Routes::Icon => "/icon",
+            Routes::ProgressIndicator => "/progress-indicator",
+            Routes::Slider => "/slider",
+            Routes::Separator => "/separator",
+            Routes::Select => "/select",
+            Routes::Transition => "/transition",
             Routes::CatchAll => "*",
         }
     }
@@ -164,20 +182,24 @@ pub fn App(cx: Scope) -> impl IntoView {
 
                         <Route path=Routes::Stack view=|cx| view! { cx, <PageStack/> }/>
                         <Route path=Routes::Grid view=|cx| view! { cx, <PageGrid/> }/>
+                        <Route path=Routes::Skeleton view=|cx| view! { cx, <PageSkeleton/> }/>
+                        <Route path=Routes::AppBar view=|cx| view! { cx, <PageAppBar/> }/>
+                        <Route path=Routes::Drawer view=|cx| view! { cx, <PageDrawer/> }/>
 
                         <Route path=Routes::Button view=|cx| view! { cx, <PageButton/> }/>
                         <Route path=Routes::Tab view=|cx| view! { cx, <PageTab/> }/>
                         <Route path=Routes::Input view=|cx| view! { cx, <PageInput/> }/>
                         <Route path=Routes::DateTime view=|cx| view! { cx, <PageDateTime/> }/>
                         <Route path=Routes::Collapsible view=|cx| view! { cx, <PageCollapsible/> }/>
-                        <Route path=Routes::AppBar view=|cx| view! { cx, <PageAppBar/> }/>
-                        <Route path=Routes::Drawer view=|cx| view! { cx, <PageDrawer/> }/>
                         <Route path=Routes::Toast view=|cx| view! { cx, <PageToast/> }/>
                         <Route path=Routes::Modal view=|cx| view! { cx, <PageModal/> }/>
                         <Route path=Routes::Alert view=|cx| view! { cx, <PageAlert/> }/>
                         <Route path=Routes::Typography view=|cx| view! { cx, <PageTypography/> }/>
                         <Route path=Routes::Icon view=|cx| view! { cx, <PageIcon/> }/>
                         <Route path=Routes::ProgressIndicator view=|cx| view! { cx, <PageProgressIndicator/> }/>
+                        <Route path=Routes::Slider view=|cx| view! { cx, <PageSlider/> }/>
+                        <Route path=Routes::Separator view=|cx| view! { cx, <PageSeparator/> }/>
+                        <Route path=Routes::Select view=|cx| view! { cx, <PageSelect/> }/>
 
                         <Route path=Routes::Transition view=|cx| view! { cx, <PageTransition/> }/>
 
@@ -234,6 +256,12 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
                             <Link href=Routes::Stack class="item">"Stack"</Link>
                             <Link href=Routes::Grid class="item">"Grid"</Link>
+                            <Link href=Routes::Separator class="item">"Separator"</Link>
+                            <Link href=Routes::Skeleton class="item">"Skeleton"</Link>
+                            <Link href=Routes::AppBar class="item">"App Bar"</Link>
+                            <Link href=Routes::Drawer class="item">"Drawer"</Link>
+                            <Link href=Routes::Tab class="item">"Tabs"</Link>
+                            <Link href=Routes::Collapsible class="item">"Collapsible"</Link>
                         </Stack>
                     }
                 />
@@ -241,23 +269,43 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                 <Collapsible
                     open=true
                     header=view! {cx,
-                        <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Components"
+                        <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
                             <Link href=Routes::Button class="item">"Button"</Link>
-                            <Link href=Routes::Tab class="item">"Tabs"</Link>
                             <Link href=Routes::Input class="item">"Inputs"</Link>
                             <Link href=Routes::DateTime class="item">"Date & Time"</Link>
-                            <Link href=Routes::Collapsible class="item">"Collapsible"</Link>
-                            <Link href=Routes::AppBar class="item">"App Bar"</Link>
-                            <Link href=Routes::Drawer class="item">"Drawer"</Link>
+                            <Link href=Routes::Slider class="item">"Slider"</Link>
+                            <Link href=Routes::Select class="item">"Select"</Link>
+                        </Stack>
+                    }
+                />
+
+                <Collapsible
+                    open=true
+                    header=view! {cx,
+                        <Icon icon=BsIcon::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
+                    }
+                    body=view! {cx,
+                        <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
+                            <Link href=Routes::Alert class="item">"Alert"</Link>
                             <Link href=Routes::Toast class="item">"Toast"</Link>
                             <Link href=Routes::Modal class="item">"Modal"</Link>
-                            <Link href=Routes::Alert class="item">"Alert"</Link>
+                            <Link href=Routes::ProgressIndicator class="item">"Progress"</Link>
+                        </Stack>
+                    }
+                />
+
+                <Collapsible
+                    open=true
+                    header=view! {cx,
+                        <Icon icon=BsIcon::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
+                    }
+                    body=view! {cx,
+                        <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
                             <Link href=Routes::Typography class="item">"Typography"</Link>
                             <Link href=Routes::Icon class="item">"Icon"</Link>
-                            <Link href=Routes::ProgressIndicator class="item">"Progress"</Link>
                         </Stack>
                     }
                 />

@@ -9,6 +9,7 @@ pub enum TypographyVariant {
     H4,
     H5,
     H6,
+    Paragraph,
     Code,
 }
 
@@ -30,6 +31,7 @@ pub fn Typography(
         TypographyVariant::H4 => view! {cx, <h4 style=style>{children(cx)}</h4>}.into_view(cx),
         TypographyVariant::H5 => view! {cx, <h5 style=style>{children(cx)}</h5>}.into_view(cx),
         TypographyVariant::H6 => view! {cx, <h6 style=style>{children(cx)}</h6>}.into_view(cx),
+        TypographyVariant::Paragraph => view! {cx, <p style=style>{children(cx)}</p>}.into_view(cx),
         TypographyVariant::Code => {
             view! {cx, <leptonic-code style=style>{children(cx)}</leptonic-code>}.into_view(cx)
         }
