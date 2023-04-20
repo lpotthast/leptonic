@@ -1,12 +1,14 @@
 use leptos::*;
 use time::macros::format_description;
-use tracing::info;
 use uuid::Uuid;
 
-use crate::datetime::{Day, InMonth, Month, SaveReplaceYear, Week, Year, whole_days_in};
+use crate::datetime::{
+    is_in_range, start_of_next_month, start_of_previous_month, whole_days_in, Day, GuideMode,
+    InMonth, Month, SaveReplaceYear, Week, Year,
+};
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-pub enum Show {
+enum Show {
     YearSelection,
     MonthSelection,
     DaySelection,
@@ -18,17 +20,31 @@ pub fn DateSelector(
     value: time::OffsetDateTime,
     #[prop(optional)] min: Option<time::OffsetDateTime>,
     #[prop(optional)] max: Option<time::OffsetDateTime>,
+    #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: MaybeSignal<
+        GuideMode,
+    >,
 ) -> impl IntoView {
     let (staging, set_staging) = create_signal(cx, value);
     let staging_year = Signal::derive(cx, move || staging.get().year());
     let staging_month = Signal::derive(cx, move || staging.get().month().to_string());
 
-    let (show, set_show) = create_signal(cx, Show::DaySelection);
+    let (show, set_show) = create_signal(
+        cx,
+        match guide_mode.get() {
+            GuideMode::CalendarFirst => Show::DaySelection,
+            GuideMode::YearFirst => Show::YearSelection,
+        },
+    );
 
     let (years_starting_at, set_years_starting_at) = create_signal(cx, None);
     let years = Signal::derive(cx, move || {
         staging.with(|staging| {
-            create_years(staging, years_starting_at.get(), min.as_ref(), max.as_ref())
+            create_years(
+                *staging,
+                years_starting_at.get(),
+                min.as_ref(),
+                max.as_ref(),
+            )
         })
     });
     let years_range = Signal::derive(cx, move || {
@@ -40,14 +56,9 @@ pub fn DateSelector(
             }
         })
     });
-    let (months, _) = create_signal(
-        cx,
-        create_months(
-            &value, // Should months be derived from staging? No, this was always constructed using the prop value...
-            min.as_ref(),
-            max.as_ref(),
-        ),
-    );
+    let months = Signal::derive(cx, move || {
+        staging.with(|staging| create_months(*staging, min.as_ref(), max.as_ref()))
+    });
     // TODO: Make static. Make i18n.
     let (short_weekday_names, _) = create_signal(cx, create_week_day_names());
     let weeks = Signal::derive(cx, move || {
@@ -165,6 +176,7 @@ pub fn DateSelector(
                                 view! { cx,
                                     <div on:click=move |_e| select_year(year)
                                         class="year"
+                                        class:is-staging=year.is_staging
                                         class:is-now=year.is_now
                                         class:disabled=year.disabled
                                     >
@@ -177,7 +189,7 @@ pub fn DateSelector(
                 </Show>
 
                 <Show when=move || show.get() == Show::MonthSelection fallback=|_cx| view! { cx,  }>
-                    <div class={"months"}>
+                    <div class="months">
                         <For
                             each=months
                             key=|month| month.index
@@ -186,6 +198,7 @@ pub fn DateSelector(
                                 view! { cx,
                                     <div on:click=move |_e| select_month(mon.clone())
                                         class="month"
+                                        class:is-staging=month.is_staging
                                         class:is-now=month.is_now
                                         class:disabled=month.disabled>
                                         {month.name.clone()}
@@ -218,7 +231,7 @@ pub fn DateSelector(
                             key=|week| week.id
                             view=move |cx, week| {
                                 view! { cx,
-                                    <div class={"week"}>
+                                    <div class="week">
                                         <For
                                             each=move || week.days.clone()
                                             key=|day| day.id
@@ -228,12 +241,13 @@ pub fn DateSelector(
                                                     <div
                                                         on:click=move |_e| select_day(d.clone())
                                                         class="day"
+                                                        class:is-staging=day.is_staging
+                                                        class:is-now=day.is_now
                                                         class:not-in-month=(day.in_month != InMonth::Current)
                                                         class:disabled=day.disabled
-                                                        class:selected=day.selected
                                                     >
-                                                        <span class="text" class:is-now=day.is_now>
-                                                            {day.display_name}
+                                                        <span class="text">
+                                                            {day.index}
                                                         </span>
                                                     </div>
                                                 }
@@ -269,15 +283,17 @@ pub fn create_week_day_names() -> Vec<String> {
 }
 
 pub fn create_years(
-    staging: &time::OffsetDateTime,
+    staging: time::OffsetDateTime,
     starting_year: Option<i32>,
     min: Option<&time::OffsetDateTime>,
     max: Option<&time::OffsetDateTime>,
 ) -> Vec<Year> {
-    let amount = 3 * 7; // 7 rows of 3 year numbers each.
+    let amount = 3 * 5; // 5 rows of 3 year numbers each.
     let starting_year = starting_year.unwrap_or_else(|| staging.year() - 4);
     let mut years = Vec::<Year>::with_capacity(amount);
-    let this_year = staging.year();
+    let now = time::OffsetDateTime::now_utc();
+    let this_year = now.year();
+    let staging_year = staging.year();
     let min_year = min.map(|it| it.year()).unwrap_or(i32::MIN);
     let max_year = max.map(|it| it.year()).unwrap_or(i32::MAX);
 
@@ -285,6 +301,7 @@ pub fn create_years(
         let year_number = starting_year + i as i32;
         years.push(Year {
             number: year_number,
+            is_staging: year_number == staging_year,
             is_now: year_number == this_year,
             disabled: year_number < min_year || year_number > max_year,
         });
@@ -293,67 +310,32 @@ pub fn create_years(
 }
 
 pub fn create_months(
-    value: &time::OffsetDateTime,
+    staging: time::OffsetDateTime,
     min: Option<&time::OffsetDateTime>,
     max: Option<&time::OffsetDateTime>,
 ) -> Vec<Month> {
     let now = time::OffsetDateTime::now_utc();
+    let this_year = now.year();
+    let this_month = now.month();
+    let staging_year = staging.year();
+    let staging_month = staging.month();
     let mut months = Vec::<Month>::with_capacity(12);
     for i in 1..=12u8 {
-        let month = value
+        let month = staging
             .replace_month(time::Month::try_from(i).unwrap())
             .unwrap();
+        let month_year = month.year();
+        let month_month = month.month();
         months.push(Month {
             index: i,
-            name: month.format(format_description!("[month]")).unwrap(),
-            is_now: now.year() == month.year() && now.month() == month.month(),
+            name: month.format(format_description!("[month]")).unwrap(), // TODO: format_description does not work!
+            is_staging: staging_year == month_year && staging_month == month_month,
+            is_now: this_year == month_year && this_month == month_month,
             disabled: !is_in_range(&month, max, min),
         });
     }
     assert_eq!(months.len(), 12);
     months
-}
-
-pub fn is_in_range(
-    date: &time::OffsetDateTime,
-    min: Option<&time::OffsetDateTime>,
-    max: Option<&time::OffsetDateTime>,
-) -> bool {
-    let after_min = match min {
-        Some(min) => date >= min,
-        None => true,
-    };
-    let before_max = match max {
-        Some(max) => date <= max,
-        None => true,
-    };
-    after_min && before_max
-}
-
-/// Might decrease the year to x-1 if in January of year x.
-pub fn start_of_previous_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
-    let start = dt.replace_day(1).unwrap();
-    match start.month() {
-        time::Month::January => start
-            .save_replace_year(start.year() - 1)
-            .unwrap()
-            .replace_month(time::Month::December)
-            .unwrap(),
-        _ => start.replace_month(start.month().previous()).unwrap(),
-    }
-}
-
-/// Might advance the year to x+1 if in December of year x.
-pub fn start_of_next_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
-    let start = dt.replace_day(1).unwrap();
-    match start.month() {
-        time::Month::December => start
-            .save_replace_year(start.year() + 1)
-            .unwrap()
-            .replace_month(time::Month::January)
-            .unwrap(),
-        _ => start.replace_month(start.month().next()).unwrap(),
-    }
 }
 
 pub fn create_weeks(
@@ -383,7 +365,6 @@ pub fn create_weeks(
     let next_month = start_of_next_month(staging.clone());
 
     let days_in_previous_month = whole_days_in(prev_month.year(), prev_month.month());
-    info!(days_in_previous_month, "days_in_previous_month");
 
     const WEEKS_TO_DISPLAY: u8 = 6;
     let mut weeks = Vec::<Week>::with_capacity(WEEKS_TO_DISPLAY as usize);
@@ -422,12 +403,11 @@ pub fn create_weeks(
             week.days.push(Day {
                 id: Uuid::new_v4(),
                 index: day_in_month,
-                display_name: day_in_month.to_string(),
                 in_month,
                 date_time,
                 disabled,
                 highlighted: false,
-                selected,
+                is_staging: selected,
                 // TODO: is year check necessary?
                 is_now: current_month == relevant_month.month()
                     && current_year == relevant_month.year()

@@ -3,6 +3,7 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Year {
     pub number: i32,
+    pub is_staging: bool,
     pub is_now: bool,
     pub disabled: bool,
 }
@@ -12,6 +13,7 @@ pub struct Month {
     /// base 1
     pub index: u8,
     pub name: String,
+    pub is_staging: bool,
     pub is_now: bool,
     pub disabled: bool,
 }
@@ -32,13 +34,13 @@ pub enum InMonth {
 #[derive(Debug, Clone, PartialEq)]
 pub struct Day {
     pub id: Uuid,
+    /// base 1
     pub index: u8,
-    pub display_name: String,
     pub in_month: InMonth,
     pub date_time: time::OffsetDateTime,
     pub disabled: bool,
     pub highlighted: bool,
-    pub selected: bool,
+    pub is_staging: bool,
     pub is_now: bool,
 }
 
@@ -113,6 +115,48 @@ pub fn whole_days_in(year: i32, month: time::Month) -> u8 {
     .unwrap()
         - time::Date::from_calendar_date(year, month, 1).unwrap();
     duration.whole_days() as u8
+}
+
+pub fn is_in_range(
+    date: &time::OffsetDateTime,
+    min: Option<&time::OffsetDateTime>,
+    max: Option<&time::OffsetDateTime>,
+) -> bool {
+    let after_min = match min {
+        Some(min) => date >= min,
+        None => true,
+    };
+    let before_max = match max {
+        Some(max) => date <= max,
+        None => true,
+    };
+    after_min && before_max
+}
+
+/// Might decrease the year to x-1 if in January of year x.
+pub fn start_of_previous_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
+    let start = dt.replace_day(1).unwrap();
+    match start.month() {
+        time::Month::January => start
+            .save_replace_year(start.year() - 1)
+            .unwrap()
+            .replace_month(time::Month::December)
+            .unwrap(),
+        _ => start.replace_month(start.month().previous()).unwrap(),
+    }
+}
+
+/// Might advance the year to x+1 if in December of year x.
+pub fn start_of_next_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
+    let start = dt.replace_day(1).unwrap();
+    match start.month() {
+        time::Month::December => start
+            .save_replace_year(start.year() + 1)
+            .unwrap()
+            .replace_month(time::Month::January)
+            .unwrap(),
+        _ => start.replace_month(start.month().next()).unwrap(),
+    }
 }
 
 #[cfg(test)]
