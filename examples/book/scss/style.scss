@@ -27,9 +27,12 @@ body {
     overflow-y: auto;
 }
 
+#app-side-drawer {
+    overflow: auto;
+}
+
 .menu {
     margin-bottom: 0.5em;
-    overflow: auto;
 
     .item {
         width: 100%;

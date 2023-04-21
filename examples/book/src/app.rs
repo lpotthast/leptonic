@@ -255,7 +255,7 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
             </Stack>
         </AppBar>
 
-        <Drawer margin=Margin::Top(app_bar_height)>
+        <Drawer id="app-side-drawer" margin=Margin::Top(app_bar_height)>
             <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">
                 <Quicksearch />
 
