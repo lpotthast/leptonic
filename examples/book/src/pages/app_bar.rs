@@ -6,7 +6,7 @@ use crate::app::AppTheme;
 
 #[component]
 pub fn PageAppBar(cx: Scope) -> impl IntoView {
-    let app_bar_height = Height::Em(2.75);
+    let app_bar_height = Height::Em(3.0);
 
     view! { cx,
         <Typography variant=TypographyVariant::H2>"App Bar"</Typography>

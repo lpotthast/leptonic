@@ -24,6 +24,9 @@ pub fn Link<H>(
     /// Sets the `class` attribute, making it easier to style.
     #[prop(into, optional)]
     class: Option<AttributeValue>,
+    /// Whether or not this link acts as an anchor.
+    #[prop(into, optional, default = false)]
+    is_anchor: bool,
     children: Children,
 ) -> impl IntoView
 where

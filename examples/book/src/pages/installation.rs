@@ -5,7 +5,15 @@ use indoc::indoc;
 #[component]
 pub fn PageInstallation(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Installation"</Typography>
+        <Typography variant=TypographyVariant::H2 id="#installation">
+            "Installation"
+            <Anchor href="#installation" title="Direct link to an overview of installation instructions." />
+
+            //<a href="#adding-the-menu-to-all-windows" 
+            //class="hash-link" 
+            //aria-label="Direct link to Adding the menu to all windows"
+            // title="Direct link to Adding the menu to all windows">&ZeroWidthSpace;</a>
+        </Typography>
 
         <Typography variant=TypographyVariant::Paragraph>
             "Start by adding the leptonic library as a dependency of your app."

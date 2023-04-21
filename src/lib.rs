@@ -3,6 +3,7 @@ use std::fmt::Display;
 use leptos::*;
 
 pub mod alert;
+pub mod anchor;
 pub mod app_bar;
 pub mod r#box;
 pub mod button;
@@ -102,6 +103,8 @@ pub mod prelude {
     pub use super::alert::Alert;
     pub use super::alert::AlertProps;
     pub use super::alert::AlertVariant;
+    pub use super::anchor::Anchor;
+    pub use super::anchor::AnchorProps;
     pub use super::app_bar::AppBar;
     pub use super::app_bar::AppBarProps;
     pub use super::button::Button;

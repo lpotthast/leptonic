@@ -22,9 +22,7 @@ body {
 #content {
     display: block;
     width: 100%;
-    padding: 0.5em;
-    //color: #fff;
-    //background-color: #343434;
+    padding: 1em;
     max-height: calc(100vh - 2.75em);
     overflow-y: auto;
 }
@@ -65,16 +63,16 @@ body {
             a {
                 padding-left: 2.3em;
                 margin: 0.125em 0.5em;
-                border-radius: 5em;
+                border-radius: 0.4em;
                 font-size: 0.9em;
             }
 
             a[aria-current] {
-                background-color: blueviolet;
+                background-color: #e66956;
             }
 
             a:hover {
-                background-color: blueviolet;
+                background-color: #e66956;
             }
         }
     }
@@ -86,6 +84,7 @@ body {
         leptonic-collapsible-header-wrapper {
             background-color: transparent;
             font-weight: 700;
+            padding-left: 1em;
         }
 
         leptonic-collapsible-body {

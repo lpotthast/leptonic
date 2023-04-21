@@ -12,9 +12,5 @@ pub fn PageOverview(cx: Scope) -> impl IntoView {
 
         <Button on_click=increase_counter_by_one>"Click Me: " {count}</Button>
 
-        <h2>"Sliders"</h2>
-
-        <h2>"Separators"</h2>
-        <Separator />
     }
 }

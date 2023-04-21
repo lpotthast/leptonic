@@ -29,6 +29,7 @@ leptos-icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "ma
     "BsColumnsGap",
     "BsToggles",
     "BsChatSquare",
+    "BsCircleSquare",
     "BsArrowsMove",
 ] }
 leptonic = { path = "../.." }

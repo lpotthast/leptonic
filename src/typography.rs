@@ -19,21 +19,24 @@ pub enum TypographyVariant {
 pub fn Typography(
     cx: Scope,
     variant: TypographyVariant,
+    /// Sets the `id` attribute, making it easier to target.
+    #[prop(into, optional)]
+    id: Option<String>,
     #[prop(optional)] margin: Option<Margin>,
     children: Children,
 ) -> impl IntoView {
     let style = margin.map(|it| format!("--margin: {it}"));
 
     match variant {
-        TypographyVariant::H1 => view! {cx, <h1 style=style>{children(cx)}</h1>}.into_view(cx),
-        TypographyVariant::H2 => view! {cx, <h2 style=style>{children(cx)}</h2>}.into_view(cx),
-        TypographyVariant::H3 => view! {cx, <h3 style=style>{children(cx)}</h3>}.into_view(cx),
-        TypographyVariant::H4 => view! {cx, <h4 style=style>{children(cx)}</h4>}.into_view(cx),
-        TypographyVariant::H5 => view! {cx, <h5 style=style>{children(cx)}</h5>}.into_view(cx),
-        TypographyVariant::H6 => view! {cx, <h6 style=style>{children(cx)}</h6>}.into_view(cx),
-        TypographyVariant::Paragraph => view! {cx, <p style=style>{children(cx)}</p>}.into_view(cx),
+        TypographyVariant::H1 => view! {cx, <h1 id=id style=style>{children(cx)}</h1>}.into_view(cx),
+        TypographyVariant::H2 => view! {cx, <h2 id=id style=style>{children(cx)}</h2>}.into_view(cx),
+        TypographyVariant::H3 => view! {cx, <h3 id=id style=style>{children(cx)}</h3>}.into_view(cx),
+        TypographyVariant::H4 => view! {cx, <h4 id=id style=style>{children(cx)}</h4>}.into_view(cx),
+        TypographyVariant::H5 => view! {cx, <h5 id=id style=style>{children(cx)}</h5>}.into_view(cx),
+        TypographyVariant::H6 => view! {cx, <h6 id=id style=style>{children(cx)}</h6>}.into_view(cx),
+        TypographyVariant::Paragraph => view! {cx, <p id=id style=style>{children(cx)}</p>}.into_view(cx),
         TypographyVariant::Code => {
-            view! {cx, <leptonic-code style=style>{children(cx)}</leptonic-code>}.into_view(cx)
+            view! {cx, <leptonic-code id=id style=style>{children(cx)}</leptonic-code>}.into_view(cx)
         }
     }
 }
