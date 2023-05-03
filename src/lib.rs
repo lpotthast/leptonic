@@ -22,6 +22,7 @@ pub mod modal;
 pub mod progress_indicator;
 pub mod quicksearch;
 pub mod root;
+pub mod select;
 pub mod separator;
 pub mod skeleton;
 pub mod stack;
@@ -168,6 +169,8 @@ pub mod prelude {
     pub use super::r#box::BoxProps;
     pub use super::root::Root;
     pub use super::root::RootProps;
+    pub use super::select::Select;
+    pub use super::select::SelectProps;
     pub use super::separator::Separator;
     pub use super::separator::SeparatorProps;
     pub use super::skeleton::Skeleton;
