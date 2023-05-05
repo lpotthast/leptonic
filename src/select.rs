@@ -2,7 +2,12 @@ use std::{collections::hash_map::DefaultHasher, fmt::Debug, hash::Hash, rc::Rc};
 
 use leptos::*;
 
-use crate::Margin;
+use web_sys::HtmlElement;
+
+use crate::{
+    root::{GlobalKeyboardEvent, GlobalMouseEvent},
+    Margin,
+};
 
 pub trait SelectOption: Debug + Clone + PartialEq + Eq + Hash {}
 
@@ -45,7 +50,52 @@ where
         },
     );
 
+    let id: uuid::Uuid = uuid::Uuid::new_v4();
+    let id_string = format!("s-{id}");
+    let id_selector_string = format!("#{id_string}");
+
     let (show_options, set_show_options) = create_signal(cx, false);
+
+    // We need to check for global mouse events.
+    // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
+    let g_mouse_event =
+        use_context::<GlobalMouseEvent>(cx).expect("Must be a child of the Root component.");
+    create_effect(cx, move |_old| {
+        use wasm_bindgen::JsCast;
+        let last_mouse_event = g_mouse_event.read_signal.get();
+        let is_shown = show_options.get_untracked();
+
+        if is_shown {
+            if let Some(e) = last_mouse_event {
+                let target = e.target().unwrap();
+                let target_elem = target.dyn_ref::<HtmlElement>().unwrap().clone();
+                match target_elem.closest(id_selector_string.as_ref()) {
+                    Ok(closest) => {
+                        if let Some(_found) = closest {
+                            // User clicked on the options list. Ignoring this global mouse event.
+                        } else {
+                            // User clicked outside.
+                            set_show_options.set(false);
+                        }
+                    }
+                    Err(err) => {
+                        error!("Error processing latest mouse event: {err:?}");
+                    }
+                }
+            }
+        }
+    });
+
+    let g_keyboard_event =
+        use_context::<GlobalKeyboardEvent>(cx).expect("Must be a child of the Root component.");
+    create_effect(cx, move |_old| {
+        let is_shown = show_options.get_untracked();
+        if let Some(e) = g_keyboard_event.read_signal.get() {
+            if is_shown && e.key().as_str() == "Escape" {
+                set_show_options.set(false);
+            }
+        }
+    });
 
     let toggle_show = move || set_show_options.update(|val| *val = !*val);
 
@@ -59,7 +109,7 @@ where
     };
 
     view! { cx,
-        <leptonic-select aria-haspopup="listbox" style=style>
+        <leptonic-select id=id_string aria-haspopup="listbox" style=style>
             <leptonic-select-selected on:click=move |_| toggle_show()>
                 { move || match selected.get().selection.as_ref().clone() {
                     Selection::None => view! { cx, }.into_view(cx),
