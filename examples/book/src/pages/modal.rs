@@ -68,7 +68,7 @@ where
             <ModalHeader><ModalTitle>"Delete repository"</ModalTitle></ModalHeader>
             <ModalBody>
                 "Please enter \"ok\" to delete the repository."
-                <Input />
+                <Input get=input set=set_input/>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
