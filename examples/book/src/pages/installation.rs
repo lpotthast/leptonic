@@ -1,6 +1,6 @@
+use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
-use indoc::indoc;
 
 #[component]
 pub fn PageInstallation(cx: Scope) -> impl IntoView {
@@ -9,19 +9,19 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
             "Installation"
             <Anchor href="#installation" title="Direct link to an overview of installation instructions." />
 
-            //<a href="#adding-the-menu-to-all-windows" 
-            //class="hash-link" 
+            //<a href="#adding-the-menu-to-all-windows"
+            //class="hash-link"
             //aria-label="Direct link to Adding the menu to all windows"
             // title="Direct link to Adding the menu to all windows">&ZeroWidthSpace;</a>
         </Typography>
 
-        <Typography variant=TypographyVariant::Paragraph>
+        <P>
             "Start by adding the leptonic library as a dependency of your app."
-        </Typography>
+        </P>
 
-        <Typography variant=TypographyVariant::Paragraph>
+        <P>
             "We will see later why the theme dependency should be optional."
-        </Typography>
+        </P>
 
         <Code>
             {indoc!(r#"
@@ -30,13 +30,13 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Typography variant=TypographyVariant::Paragraph>
+        <P>
             "Leptonic comes with styling. In order to build your app with these styles, a build script is required."
-        </Typography>
+        </P>
 
-        <Typography variant=TypographyVariant::Paragraph>
+        <P>
             "But: A normal Rust build-script will not suffice. We want the theme to be build by Trunk.  "
-        </Typography>
+        </P>
 
         <Code>
             {indoc!(r#"
@@ -47,17 +47,17 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Typography variant=TypographyVariant::Paragraph>
+        <P>
             "With the force-build target in place, we can set up a custom Trunk.toml."
-        </Typography>
+        </P>
 
-        <Typography variant=TypographyVariant::Paragraph>
+        <P>
             "The [watch] section is used to ignore changes in the \"./generated\" directory. When omitted, Trunk would recompile our app in an endless loop."
-        </Typography>
+        </P>
 
-        <Typography variant=TypographyVariant::Paragraph>
+        <P>
             "We use the [[hooks]] section to tell Trunk that \"force-build\" must be executed BEFORE building the application."
-        </Typography>
+        </P>
 
         <Code>
             {indoc!(r#"
