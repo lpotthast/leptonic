@@ -23,6 +23,12 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
 
         <Typography variant=TypographyVariant::H3>"Disabled"</Typography>
 
+        <Typography variant=TypographyVariant::Paragraph>
+            "Buttons can be disabled using the "
+            <Code inline=true>"disabled"</Code>
+            " property."
+        </Typography>
+
         <Toggle state=disabled on_toggle=set_disabled/>
 
         <Button on_click=move |_| {} variant=ButtonVariant::Filled disabled=true>"Disabled"</Button>

@@ -59,24 +59,24 @@ impl Display for ButtonColor {
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
-pub enum BtnSize {
+pub enum ButtonSize {
     Small,
     #[default]
     Normal,
     Big,
 }
 
-impl BtnSize {
+impl ButtonSize {
     pub fn as_str(&self) -> &'static str {
         match self {
-            BtnSize::Small => "small",
-            BtnSize::Normal => "normal",
-            BtnSize::Big => "big",
+            ButtonSize::Small => "small",
+            ButtonSize::Normal => "normal",
+            ButtonSize::Big => "big",
         }
     }
 }
 
-impl Display for BtnSize {
+impl Display for ButtonSize {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.as_str())
     }
@@ -88,7 +88,7 @@ pub fn Button<F>(
     on_click: F,
     #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
     #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
-    #[prop(into, optional)] size: OptionalMaybeSignal<BtnSize>,
+    #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     children: Children,
 ) -> impl IntoView
@@ -97,9 +97,9 @@ where
 {
     view! { cx,
         <button class="leptonic-btn"
-            data-variant=move || variant.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
-            data-color=move || color.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
-            data-size=move || size.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
+            variant=move || variant.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
+            color=move || color.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
+            size=move || size.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
             aria-disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
             on:click=on_click
         >

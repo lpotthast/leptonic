@@ -112,6 +112,7 @@ pub mod prelude {
     pub use super::button::ButtonGroup;
     pub use super::button::ButtonGroupProps;
     pub use super::button::ButtonProps;
+    pub use super::button::ButtonSize;
     pub use super::button::ButtonVariant;
     pub use super::button::ButtonWrapper;
     pub use super::button::ButtonWrapperProps;
@@ -207,13 +208,13 @@ pub mod prelude {
     pub use super::transitions::slide::SlideProps;
     pub use super::transitions::zoom::Zoom;
     pub use super::transitions::zoom::ZoomProps;
+    pub use super::typography::Code;
+    pub use super::typography::CodeProps;
+    pub use super::typography::PProps;
     pub use super::typography::Typography;
     pub use super::typography::TypographyProps;
     pub use super::typography::TypographyVariant;
-    pub use super::typography::Code;
-    pub use super::typography::CodeProps;
     pub use super::typography::P;
-    pub use super::typography::PProps;
     pub use super::Active;
     pub use super::Disabled;
     pub use super::FirstOf;
