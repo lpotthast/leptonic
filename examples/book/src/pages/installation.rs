@@ -5,9 +5,9 @@ use leptos::*;
 #[component]
 pub fn PageInstallation(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Typography variant=TypographyVariant::H2 id="#installation">
+        <Typography variant=TypographyVariant::H1 id="#installation">
             "Installation"
-            <Anchor href="#installation" title="Direct link to an overview of installation instructions." />
+            <Anchor href="#installation" title="Direct link to an overview of installation instructions."/>
 
             //<a href="#adding-the-menu-to-all-windows"
             //class="hash-link"

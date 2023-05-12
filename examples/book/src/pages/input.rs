@@ -52,6 +52,12 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
                 let (text, set_text) = create_signal(cx, "".to_owned());
                 view! { cx,
                     <Input get=text set=set_text label="This is my label"/>
+                    <Button
+                        variant=ButtonVariant::Flat
+                        size=ButtonSize::Small
+                        on_click=move |_| set_text.set("".to_owned())>
+                        "Clear input"
+                    </Button>
                 }
             "#)}
         </Code>

@@ -247,6 +247,9 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                     "LEPTONIC"
                 </Typography>
             </Link>
+
+            <Quicksearch />
+
             <Stack orientation=StackOrientation::Horizontal spacing=10 style="margin-right: 1em">
                 "v0.1"
                 <ThemeToggle off=AppTheme::Light on=AppTheme::Dark/>
@@ -257,7 +260,6 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
 
         <Drawer id="app-side-drawer" margin=Margin::Top(app_bar_height)>
             <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">
-                <Quicksearch />
 
                 <Collapsible
                     open=true

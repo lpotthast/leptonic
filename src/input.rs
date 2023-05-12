@@ -1,7 +1,7 @@
 use leptos::*;
 use web_sys::HtmlInputElement;
 
-use crate::Margin;
+use crate::{Margin, OptionalMaybeSignal, OptionalSignal};
 
 pub enum InputType {
     Text,
@@ -16,6 +16,7 @@ pub fn Input<S>(
     #[prop(optional, into)] label: String,
     #[prop(into)] get: Signal<String>,
     set: S,
+    #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView
 where
@@ -38,6 +39,10 @@ where
                 prop:value=move || get.get()
                 on:change=move |e| set(event_target::<HtmlInputElement>(&e).value())
             />
+            {match prepend.0 {
+                Some(view) => view.get(),
+                None => view! {cx, }.into_view(cx),
+            }}
 
             //<LeptosIcon icon=icon />
         </leptonic-input-field>
