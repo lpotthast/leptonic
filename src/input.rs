@@ -35,7 +35,7 @@ where
                 class="leptonic-input"
                 placeholder=label
                 type=ty_str
-                value=move || get.get()
+                prop:value=move || get.get()
                 on:change=move |e| set(event_target::<HtmlInputElement>(&e).value())
             />
 
