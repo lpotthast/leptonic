@@ -9,6 +9,7 @@ pub mod r#box;
 pub mod button;
 pub mod card;
 pub mod checkbox;
+pub mod chip;
 pub mod collapsible;
 pub mod date;
 pub mod datetime;
@@ -120,6 +121,9 @@ pub mod prelude {
     pub use super::card::CardProps;
     pub use super::checkbox::Checkbox;
     pub use super::checkbox::CheckboxProps;
+    pub use super::chip::Chip;
+    pub use super::chip::ChipColor;
+    pub use super::chip::ChipProps;
     pub use super::collapsible::Collapsible;
     pub use super::collapsible::CollapsibleBody;
     pub use super::collapsible::CollapsibleBodyProps;

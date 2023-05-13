@@ -1,7 +1,7 @@
 use leptos::*;
 use web_sys::HtmlInputElement;
 
-use crate::{Margin, OptionalMaybeSignal, OptionalSignal};
+use crate::{Margin, OptionalMaybeSignal};
 
 pub enum InputType {
     Text,
@@ -40,7 +40,11 @@ where
                 on:change=move |e| set(event_target::<HtmlInputElement>(&e).value())
             />
             {match prepend.0 {
-                Some(view) => view.get(),
+                Some(view) => view! { cx,
+                    <div>
+                        { view.get() }
+                    </div>
+                }.into_view(cx),
                 None => view! {cx, }.into_view(cx),
             }}
 

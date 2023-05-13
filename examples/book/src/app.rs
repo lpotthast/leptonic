@@ -16,6 +16,8 @@ use crate::pages::app_bar::PageAppBar;
 use crate::pages::app_bar::PageAppBarProps;
 use crate::pages::button::PageButton;
 use crate::pages::button::PageButtonProps;
+use crate::pages::chip::PageChip;
+use crate::pages::chip::PageChipProps;
 use crate::pages::collapsible::PageCollapsible;
 use crate::pages::collapsible::PageCollapsibleProps;
 use crate::pages::date_time::PageDateTime;
@@ -116,6 +118,7 @@ pub enum Routes {
     Toast,
     Modal,
     ProgressIndicator,
+    Chip,
 
     // General
     Typography,
@@ -157,6 +160,7 @@ impl Routes {
             Routes::Toast => "/toast",
             Routes::Modal => "/modal",
             Routes::ProgressIndicator => "/progress-indicator",
+            Routes::Chip => "/chip",
 
             Routes::Typography => "/typography",
             Routes::Icon => "/icon",
@@ -219,6 +223,7 @@ pub fn App(cx: Scope) -> impl IntoView {
                         <Route path=Routes::Toast view=|cx| view! { cx, <PageToast/> }/>
                         <Route path=Routes::Modal view=|cx| view! { cx, <PageModal/> }/>
                         <Route path=Routes::ProgressIndicator view=|cx| view! { cx, <PageProgressIndicator/> }/>
+                        <Route path=Routes::Chip view=|cx| view! { cx, <PageChip/> }/>
 
                         <Route path=Routes::Typography view=|cx| view! { cx, <PageTypography/> }/>
                         <Route path=Routes::Icon view=|cx| view! { cx, <PageIcon/> }/>
@@ -322,6 +327,7 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                             <Link href=Routes::Toast class="item">"Toast"</Link>
                             <Link href=Routes::Modal class="item">"Modal"</Link>
                             <Link href=Routes::ProgressIndicator class="item">"Progress"</Link>
+                            <Link href=Routes::Chip class="item">"Chip"</Link>
                         </Stack>
                     }
                 />
