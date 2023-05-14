@@ -59,7 +59,7 @@ where
 
     let class = match class {
         Some(attr) => attr.into_attribute_boxed(cx),
-        None => Attribute::String("leptonic-toggle-wrapper".to_owned()),
+        None => Attribute::String(std::borrow::Cow::Borrowed("leptonic-toggle-wrapper")),
     };
 
     view! { cx,

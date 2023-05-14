@@ -15,13 +15,11 @@ keywords = ["leptos", "components"]
 
 [dependencies]
 indexmap = "1"
-leptos = { version = "0.2", default-features = false, features = [
+js-sys = "0.3"
+leptos = { version = "0.3", default-features = false, features = [
     "csr",
     "serde",
     "tracing",
-] }
-leptos_router = { version = "0.2", default-features = false, features = [
-    "csr",
 ] }
 leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
     "csr",
@@ -31,6 +29,12 @@ leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "en
     "BsCaretDownFill",
     "BsCaretUpFill",
 ] }
+leptos_router = { version = "0.3", default-features = false, features = [
+    "csr",
+] }
+serde = "1"
+serde-wasm-bindgen = "0.5"
+serde_json = "1"
 time = { version = "0.3", features = [
     "wasm-bindgen",
     "macros",
@@ -39,11 +43,7 @@ time = { version = "0.3", features = [
 ] }
 tracing = "0.1"
 uuid = { version = "1", features = ["v4", "v7", "js", "serde"] }
-serde = "1"
-serde-wasm-bindgen = "0.5"
-serde_json = "1"
 wasm-bindgen = "0.2"
-js-sys = "0.3"
 # TODO: What of all below is really required?
 web-sys = { version = "0.3", features = ["Storage", "HtmlInputElement", "Event", "EventTarget", "HtmlFormElement"] }
 
