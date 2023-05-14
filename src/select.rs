@@ -1,4 +1,4 @@
-use std::{collections::hash_map::DefaultHasher, fmt::Debug, hash::Hash, rc::Rc};
+use std::{collections::hash_map::DefaultHasher, fmt::Debug, hash::Hash};
 
 use leptos::*;
 
@@ -12,6 +12,13 @@ use crate::{
 pub trait SelectOption: Debug + Clone + PartialEq + Eq + Hash {}
 
 impl<T: Debug + Clone + PartialEq + Eq + Hash> SelectOption for T {}
+
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum SelectMode {
+    #[default]
+    Single,
+    Multiple,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Selection<T: Eq + std::hash::Hash> {
@@ -27,6 +34,7 @@ pub trait HasKey<K: Eq + std::hash::Hash + 'static> {
 #[component]
 pub fn Select<O, S, V>(
     cx: Scope,
+    #[prop(optional)] mode: SelectMode,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     render_option: S,
     #[prop(optional)] margin: Option<Margin>,
@@ -38,17 +46,7 @@ where
 {
     let style = margin.map(|it| format!("--margin: {it}"));
 
-    #[derive(Debug, Clone)]
-    struct Inner<T: Eq + Hash> {
-        selection: Rc<Selection<T>>,
-    }
-
-    let (selected, set_selected) = create_signal(
-        cx,
-        Inner {
-            selection: Rc::new(Selection::None),
-        },
-    );
+    let (selected, set_selected) = create_signal(cx, Selection::None);
 
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -100,9 +98,19 @@ where
     let toggle_show = move || set_show_options.update(|val| *val = !*val);
 
     let select = move |option: O| {
-        set_selected.update(|selected| {
-            *selected = Inner {
-                selection: Rc::new(Selection::Single(option)),
+        set_selected.update(|selected| match mode {
+            SelectMode::Single => *selected = Selection::Single(option),
+            SelectMode::Multiple => {
+                let s = match selected {
+                    Selection::None => vec![option],
+                    Selection::Single(s) => vec![s.clone(), option], // todo
+                    Selection::Multiple(vec) => {
+                        let mut vec = vec.clone();
+                        vec.push(option);
+                        vec // todo
+                    }
+                };
+                *selected = Selection::Multiple(s);
             }
         });
         set_show_options.set(false);
@@ -111,7 +119,7 @@ where
     view! { cx,
         <leptonic-select id=id_string aria-haspopup="listbox" style=style>
             <leptonic-select-selected on:click=move |_| toggle_show()>
-                { move || match selected.get().selection.as_ref().clone() {
+                { move || match selected.get().clone() {
                     Selection::None => view! { cx, }.into_view(cx),
                     Selection::Single(selected) => render_option(cx, &selected).into_view(cx),
                     Selection::Multiple(selected) => view! { cx,
