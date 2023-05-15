@@ -30,7 +30,7 @@ where
 
     view! {cx,
         <leptonic-theme-provider
-            data-theme=move || theme.get().name()
+            theme=move || theme.get().name()
             style="height: 100%; width: auto; display: contents;"
         >
             { children(cx) }

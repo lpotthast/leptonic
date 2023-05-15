@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::Margin;
+use crate::{Margin, Size};
 
 pub enum TypographyVariant {
     H1,
@@ -25,27 +25,67 @@ pub fn Typography(
     #[prop(optional)] margin: Option<Margin>,
     children: Children,
 ) -> impl IntoView {
-    let style = margin.map(|it| format!("--margin: {it}"));
-
     match variant {
-        TypographyVariant::H1 => {
-            view! {cx, <h1 id=id style=style>{children(cx)}</h1>}.into_view(cx)
-        }
-        TypographyVariant::H2 => {
-            view! {cx, <h2 id=id style=style>{children(cx)}</h2>}.into_view(cx)
-        }
-        TypographyVariant::H3 => {
-            view! {cx, <h3 id=id style=style>{children(cx)}</h3>}.into_view(cx)
-        }
-        TypographyVariant::H4 => {
-            view! {cx, <h4 id=id style=style>{children(cx)}</h4>}.into_view(cx)
-        }
-        TypographyVariant::H5 => {
-            view! {cx, <h5 id=id style=style>{children(cx)}</h5>}.into_view(cx)
-        }
-        TypographyVariant::H6 => {
-            view! {cx, <h6 id=id style=style>{children(cx)}</h6>}.into_view(cx)
-        }
+        TypographyVariant::H1 => H1(
+            cx,
+            H1Props {
+                id,
+                margin,
+                font_size: None,
+                children,
+            },
+        )
+        .into_view(cx),
+        TypographyVariant::H2 => H2(
+            cx,
+            H2Props {
+                id,
+                margin,
+                font_size: None,
+                children,
+            },
+        )
+        .into_view(cx),
+        TypographyVariant::H3 => H3(
+            cx,
+            H3Props {
+                id,
+                margin,
+                font_size: None,
+                children,
+            },
+        )
+        .into_view(cx),
+        TypographyVariant::H4 => H4(
+            cx,
+            H4Props {
+                id,
+                margin,
+                font_size: None,
+                children,
+            },
+        )
+        .into_view(cx),
+        TypographyVariant::H5 => H5(
+            cx,
+            H5Props {
+                id,
+                margin,
+                font_size: None,
+                children,
+            },
+        )
+        .into_view(cx),
+        TypographyVariant::H6 => H6(
+            cx,
+            H6Props {
+                id,
+                margin,
+                font_size: None,
+                children,
+            },
+        )
+        .into_view(cx),
         TypographyVariant::Paragraph => P(
             cx,
             PProps {
@@ -65,6 +105,156 @@ pub fn Typography(
             },
         )
         .into_view(cx),
+    }
+}
+
+#[component]
+pub fn H1(
+    cx: Scope,
+    /// Sets the `id` attribute, making it easier to target.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(optional)] margin: Option<Margin>,
+    #[prop(optional)] font_size: Option<Size>,
+    children: Children,
+) -> impl IntoView {
+    let margin = margin.map(|it| format!("--margin: {it}"));
+    let font_size = font_size.map(|it| format!("font-size: {it}"));
+    let style = match (margin, font_size) {
+        (Some(a), Some(b)) => Some(format!("{a}; {b}")),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    view! { cx,
+        <h1 id=id style=style>
+            {children(cx)}
+        </h1>
+    }
+}
+
+#[component]
+pub fn H2(
+    cx: Scope,
+    /// Sets the `id` attribute, making it easier to target.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(optional)] margin: Option<Margin>,
+    #[prop(optional)] font_size: Option<Size>,
+    children: Children,
+) -> impl IntoView {
+    let margin = margin.map(|it| format!("--margin: {it}"));
+    let font_size = font_size.map(|it| format!("font-size: {it}"));
+    let style = match (margin, font_size) {
+        (Some(a), Some(b)) => Some(format!("{a}; {b}")),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    view! { cx,
+        <h2 id=id style=style>
+            {children(cx)}
+        </h2>
+    }
+}
+
+#[component]
+pub fn H3(
+    cx: Scope,
+    /// Sets the `id` attribute, making it easier to target.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(optional)] margin: Option<Margin>,
+    #[prop(optional)] font_size: Option<Size>,
+    children: Children,
+) -> impl IntoView {
+    let margin = margin.map(|it| format!("--margin: {it}"));
+    let font_size = font_size.map(|it| format!("font-size: {it}"));
+    let style = match (margin, font_size) {
+        (Some(a), Some(b)) => Some(format!("{a}; {b}")),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    view! { cx,
+        <h3 id=id style=style>
+            {children(cx)}
+        </h3>
+    }
+}
+
+#[component]
+pub fn H4(
+    cx: Scope,
+    /// Sets the `id` attribute, making it easier to target.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(optional)] margin: Option<Margin>,
+    #[prop(optional)] font_size: Option<Size>,
+    children: Children,
+) -> impl IntoView {
+    let margin = margin.map(|it| format!("--margin: {it}"));
+    let font_size = font_size.map(|it| format!("font-size: {it}"));
+    let style = match (margin, font_size) {
+        (Some(a), Some(b)) => Some(format!("{a}; {b}")),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    view! { cx,
+        <h4 id=id style=style>
+            {children(cx)}
+        </h4>
+    }
+}
+
+#[component]
+pub fn H5(
+    cx: Scope,
+    /// Sets the `id` attribute, making it easier to target.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(optional)] margin: Option<Margin>,
+    #[prop(optional)] font_size: Option<Size>,
+    children: Children,
+) -> impl IntoView {
+    let margin = margin.map(|it| format!("--margin: {it}"));
+    let font_size = font_size.map(|it| format!("font-size: {it}"));
+    let style = match (margin, font_size) {
+        (Some(a), Some(b)) => Some(format!("{a}; {b}")),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    view! { cx,
+        <h5 id=id style=style>
+            {children(cx)}
+        </h5>
+    }
+}
+
+#[component]
+pub fn H6(
+    cx: Scope,
+    /// Sets the `id` attribute, making it easier to target.
+    #[prop(into, optional)]
+    id: Option<String>,
+    #[prop(optional)] margin: Option<Margin>,
+    #[prop(optional)] font_size: Option<Size>,
+    children: Children,
+) -> impl IntoView {
+    let margin = margin.map(|it| format!("--margin: {it}"));
+    let font_size = font_size.map(|it| format!("font-size: {it}"));
+    let style = match (margin, font_size) {
+        (Some(a), Some(b)) => Some(format!("{a}; {b}")),
+        (Some(a), None) => Some(a),
+        (None, Some(b)) => Some(b),
+        (None, None) => None,
+    };
+    view! { cx,
+        <h6 id=id style=style>
+            {children(cx)}
+        </h6>
     }
 }
 
