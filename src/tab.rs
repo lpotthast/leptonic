@@ -43,7 +43,7 @@ where
 
     tabs.set_tab_labels.update(|labels| labels.push(tab_label));
 
-    if tabs.history.get().get_active() == None {
+    if tabs.history.get_untracked().get_active() == None {
         tabs.set_history.update(|history| {
             history.push(name);
         });
