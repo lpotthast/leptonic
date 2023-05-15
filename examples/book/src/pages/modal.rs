@@ -24,7 +24,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
                         //set_show_modal.set(false);
                         set_show_modal2.set(true);
                     } color=ButtonColor::Info>"Next"</Button>
-                    <Button on_click=move |_| set_show_modal.set(false)>"Cancel"</Button>
+                    <Button on_click=move |_| set_show_modal.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
@@ -34,7 +34,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
             <ModalBody>"This overlays..."</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| set_show_modal2.set(false)>"Back"</Button>
+                    <Button on_click=move |_| set_show_modal2.set(false) color=ButtonColor::Secondary>"Back"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
@@ -73,7 +73,7 @@ where
             <ModalFooter>
                 <ButtonWrapper>
                     <Button on_click=move |_| (on_accept)("dummy".to_owned()) color=ButtonColor::Danger>"Accept"</Button>
-                    <Button on_click=move |_| (on_cancel)()>"Cancel"</Button>
+                    <Button on_click=move |_| (on_cancel)() color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
