@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use leptos::*;
 use leptos_icons::*;
-use leptos_meta::{provide_meta_context, Title, TitleProps};
+use leptos_meta::{provide_meta_context, Title};
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 
