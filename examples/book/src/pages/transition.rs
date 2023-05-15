@@ -10,7 +10,7 @@ pub fn PageTransition(cx: Scope) -> impl IntoView {
     let (transition_zoom, set_transition_zoom) = create_signal(cx, false);
 
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Transitions"</Typography>
+        <H2>"Transitions"</H2>
 
         <h2>"Transition - Collapse"</h2>
         <Toggle state=transition_collapse on_toggle=set_transition_collapse />

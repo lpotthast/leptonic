@@ -6,7 +6,7 @@ use crate::app::Routes;
 #[component]
 pub fn PageLink(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Links"</Typography>
+        <H2>"Links"</H2>
 
         <Link href=Routes::Link class="item">"This is a link"</Link>
     }

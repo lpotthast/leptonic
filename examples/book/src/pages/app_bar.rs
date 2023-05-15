@@ -9,7 +9,7 @@ pub fn PageAppBar(cx: Scope) -> impl IntoView {
     let app_bar_height = Height::Em(3.0);
 
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"App Bar"</Typography>
+        <H2>"App Bar"</H2>
 
         <div style="position: relative;">
             <AppBar height=app_bar_height>

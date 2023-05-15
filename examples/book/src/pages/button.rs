@@ -6,7 +6,7 @@ use leptos::*;
 pub fn PageButton(cx: Scope) -> impl IntoView {
     let (disabled, set_disabled) = create_signal(cx, false);
     view! { cx,
-        <Typography variant=TypographyVariant::H1>"Buttons"</Typography>
+        <H1>"Buttons"</H1>
 
         <P>"Buttons are one of the most common input mechanisms with which your users can interact with your software."</P>
         <P>"Buttons only require an action handler and can therefor be created like in this minimal example."</P>
@@ -66,15 +66,15 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
             <Button on_click=move |_| {}>"Button 3"</Button>
         </ButtonGroup>
 
-        <Typography variant=TypographyVariant::H2>"Disabled"</Typography>
+        <H2>"Disabled"</H2>
 
         <P>"Buttons can be set disabled using a signal."</P>
 
-        <Typography variant=TypographyVariant::Paragraph>
+        <P>
             "Buttons can be disabled using the "
             <Code inline=true>"disabled"</Code>
             " property. You can supply anything evaluating to a boolean, including signals."
-        </Typography>
+        </P>
 
         <Code>
             {indoc!(r#"

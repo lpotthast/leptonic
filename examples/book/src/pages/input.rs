@@ -10,7 +10,7 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
     let (label_input, set_label_input) = create_signal(cx, "".to_owned());
 
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Inputs"</Typography>
+        <H2>"Inputs"</H2>
 
         <P>"Creating an input is as simple as doing the following"</P>
         <Code>
@@ -24,8 +24,7 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
 
         <Input get=text set=set_text/>
 
-
-        <Typography variant=TypographyVariant::H2>"Types"</Typography>
+        <H2>"Types"</H2>
 
         <P>"You can use the " <Code inline=true>"InputType"</Code> " enum, to either create a text, password or number input."</P>
 
@@ -42,8 +41,7 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
 
         <Input get=number set=set_number ty=InputType::Number/>
 
-
-        <Typography variant=TypographyVariant::H2>"Label"</Typography>
+        <H2>"Label"</H2>
 
         <P>"You can supply a label to the input. It is shown as the inputs placeholder when the input is empty."</P>
 

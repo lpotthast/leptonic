@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageErr404(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"404 Not Found"</Typography>
+        <H2>"404 Not Found"</H2>
 
         <Link href="">
             <Button on_click=move |_| {} variant=ButtonVariant::Filled>

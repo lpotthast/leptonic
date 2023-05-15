@@ -10,7 +10,7 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
     let (body, set_body) = create_signal(cx, "Body".to_owned());
 
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Toasts"</Typography>
+        <H2>"Toasts"</H2>
 
         <Input label="Header text" get=header set=set_header></Input>
         <Input label="Body text" get=body set=set_body></Input>

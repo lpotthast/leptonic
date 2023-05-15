@@ -11,7 +11,7 @@ enum Foo {
 #[component]
 pub fn PageSelect(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Selects"</Typography>
+        <H2>"Selects"</H2>
 
         <Select options=vec![Foo::A, Foo::B, Foo::C] render_option=move |cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} } />
     }

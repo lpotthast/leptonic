@@ -5,7 +5,7 @@ use leptos::*;
 pub fn PageAlert(cx: Scope) -> impl IntoView {
     let (center_alert, set_center_alert) = create_signal(cx, false);
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Alerts"</Typography>
+        <H2>"Alerts"</H2>
 
         <Button on_click=move |_| set_center_alert.update(|it| *it = !*it)>"Center toggle"</Button>
         <Alert variant=AlertVariant::Success title="asd" centered=center_alert.into()>"Success alert"</Alert>

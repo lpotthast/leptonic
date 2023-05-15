@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageAnchor(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Anchor"</Typography>
+        <H2>"Anchor"</H2>
 
         <Typography variant=TypographyVariant::H3 id="#test-heading">
             "Test Heading"

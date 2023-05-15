@@ -6,7 +6,7 @@ pub fn PageToggle(cx: Scope) -> impl IntoView {
     let (state, set_state) = create_signal(cx, false);
 
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Toggle"</Typography>
+        <H2>"Toggle"</H2>
 
         <Toggle state=state on_toggle=set_state/>
     }

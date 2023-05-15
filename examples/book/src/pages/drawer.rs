@@ -7,8 +7,7 @@ use crate::app::Routes;
 #[component]
 pub fn PageDrawer(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Drawer"</Typography>
-
+        <H2>"Drawer"</H2>
 
         <Drawer>
             <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">

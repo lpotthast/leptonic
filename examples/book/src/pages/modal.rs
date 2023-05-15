@@ -9,7 +9,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
     let (last_input, set_last_input) = create_signal(cx, Option::<String>::None);
 
     view! { cx,
-        <Typography variant=TypographyVariant::H2>"Modals"</Typography>
+        <H2>"Modals"</H2>
 
         <Button on_click=move |_| set_show_modal.set(true)>"Show Modal"</Button>
         <Button on_click=move |_| set_show_input_modal.set(true)>"Show Input Modal"</Button>
