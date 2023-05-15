@@ -13,7 +13,7 @@ pub enum InputType {
 pub fn Input<S>(
     cx: Scope,
     #[prop(optional, default=InputType::Text)] ty: InputType,
-    #[prop(optional, into)] label: String,
+    #[prop(optional, into)] label: OptionalMaybeSignal<String>,
     #[prop(into)] get: Signal<String>,
     set: S,
     #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
@@ -34,7 +34,10 @@ where
         <leptonic-input-field style=style>
             <input
                 class="leptonic-input"
-                placeholder=label
+                placeholder=move || match &label.0 {
+                    Some(label) => std::borrow::Cow::Owned(label.get()),
+                    None => std::borrow::Cow::Borrowed(""),
+                }
                 type=ty_str
                 prop:value=move || get.get()
                 on:change=move |e| set(event_target::<HtmlInputElement>(&e).value())
@@ -45,7 +48,7 @@ where
                         { view.get() }
                     </div>
                 }.into_view(cx),
-                None => view! {cx, }.into_view(cx),
+                None => ().into_view(cx),
             }}
 
             //<LeptosIcon icon=icon />
