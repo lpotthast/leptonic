@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::{prelude::*, toggle::ToggleSize};
+use crate::{prelude::*, toggle::ToggleSize, toggle::ToggleProps};
 
 pub trait Theme:
     Default + PartialEq + Clone + Copy + serde::Serialize + serde::de::DeserializeOwned
