@@ -43,8 +43,8 @@ pub fn Toggle<S>(
     cx: Scope,
     #[prop(into)] state: Signal<bool>,
     on_toggle: S,
-    #[prop(optional)] active: Option<Active>,
-    #[prop(optional)] disabled: Option<Disabled>,
+    #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(optional)] id: Option<Uuid>,
     /// Sets the `class` attribute on the underlying `<Toggle>` tag, making it easier to style.
     #[prop(into, optional)]
@@ -67,14 +67,8 @@ where
             <label
                 id=id.to_string()
                 class=format!("leptonic-toggle {}", size)
-                class:active=move || active.map(|it| match it {
-                    Active::Static(active) => active,
-                    Active::Reactive(active) => active.get(),
-                }).unwrap_or(true)
-                class:disabled=move || disabled.map(|it| match it {
-                    Disabled::Static(disabled) => disabled,
-                    Disabled::Reactive(disabled) => disabled.get(),
-                }).unwrap_or(false)
+                class:active=move || active.0.as_ref().map(|it| it()).unwrap_or(true)
+                class:disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
                 on:click=move |_| (on_toggle)(!state.get())
             >
                 <span class="slider round" class:on=state>

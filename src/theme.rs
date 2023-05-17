@@ -63,8 +63,8 @@ where
                     false => *current = off,
                 })
             },
-            active: None,
-            disabled: None,
+            active: OptionalMaybeSignal(None),
+            disabled: OptionalMaybeSignal(None),
             id: None,
             class: None,
             size: ToggleSize::default(),

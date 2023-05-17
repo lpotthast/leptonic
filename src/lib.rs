@@ -35,42 +35,7 @@ pub mod toggle;
 pub mod transitions;
 pub mod typography;
 
-#[derive(Debug, Clone, Copy)]
-pub enum Bool {
-    Static(bool),
-    Reactive(Signal<bool>),
-}
-
-impl Default for Bool {
-    fn default() -> Self {
-        Self::Static(false)
-    }
-}
-
-impl From<bool> for Bool {
-    fn from(value: bool) -> Self {
-        Self::Static(value)
-    }
-}
-impl From<ReadSignal<bool>> for Bool {
-    fn from(value: ReadSignal<bool>) -> Self {
-        Self::Reactive(value.into())
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Active {
-    Static(bool),
-    Reactive(ReadSignal<bool>),
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Disabled {
-    Static(bool),
-    Reactive(ReadSignal<bool>),
-}
-
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct OptionalSignal<T: 'static>(Option<Signal<T>>);
 
 impl<T> Default for OptionalSignal<T> {
@@ -85,7 +50,7 @@ impl<T: 'static, I: Into<Signal<T>>> From<I> for OptionalSignal<T> {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct OptionalMaybeSignal<T: 'static>(Option<MaybeSignal<T>>);
 
 impl<T> Default for OptionalMaybeSignal<T> {
@@ -124,6 +89,7 @@ pub mod prelude {
     pub use super::date::DateSelector;
     pub use super::drawer::Drawer;
     pub use super::grid::Col;
+    pub use super::grid::ColAlign;
     pub use super::grid::Grid;
     pub use super::grid::Row;
     pub use super::icon::Icon;
@@ -175,8 +141,6 @@ pub mod prelude {
     pub use super::typography::H5;
     pub use super::typography::H6;
     pub use super::typography::P;
-    pub use super::Active;
-    pub use super::Disabled;
     pub use super::FirstOf;
     pub use super::Height;
     pub use super::If;

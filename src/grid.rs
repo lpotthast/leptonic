@@ -23,6 +23,13 @@ pub fn Row(cx: Scope,  children: Children) -> impl IntoView {
     }
 }
 
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ColAlign {
+    #[default]
+    Start,
+    End
+}
+
 #[component]
 pub fn Col(
     cx: Scope,
@@ -36,6 +43,8 @@ pub fn Col(
     lg: Option<u32>,
     #[prop(optional)]
     xl: Option<u32>,
+    #[prop(optional, default = Default::default())]
+    h_align: ColAlign,
     children: Children
 ) -> impl IntoView {
     let mut classes = format!("leptonic-grid-col");
@@ -59,6 +68,11 @@ pub fn Col(
         classes.push_str(" leptonic-grid-col-xl-");
         classes.push_str(&xl.to_string());
     }
+    match h_align {
+        ColAlign::Start => classes.push_str(" leptonic-grid-col-flex-start"),
+        ColAlign::End => classes.push_str(" leptonic-grid-col-flex-end"),
+    }
+
     view! { cx,
         <div class=classes>
             { children(cx) }

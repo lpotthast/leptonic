@@ -1,7 +1,7 @@
 use leptos::*;
 use uuid::Uuid;
 
-use crate::{Disabled, Active};
+use crate::OptionalMaybeSignal;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckboxVariant {
@@ -71,8 +71,8 @@ impl Default for CheckboxSize {
 pub fn Checkbox(
     cx: Scope,
     checked: (ReadSignal<bool>, WriteSignal<bool>),
-    #[prop(optional)] active: Option<Active>,
-    #[prop(optional)] disabled: Option<Disabled>,
+    #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(optional)] id: Option<Uuid>,
     #[prop(optional)] variant: CheckboxVariant,
     #[prop(optional)] size: CheckboxSize,
@@ -84,14 +84,8 @@ pub fn Checkbox(
                 type="checkbox"
                 id=id.to_string()
                 class=format!("{} {}", variant, size)
-                class:active=move || active.map(|it| match it {
-                    Active::Static(active) => active,
-                    Active::Reactive(active) => active.get(),
-                }).unwrap_or(true)
-                class:disabled=move || disabled.map(|it| match it {
-                    Disabled::Static(disabled) => disabled,
-                    Disabled::Reactive(disabled) => disabled.get(),
-                }).unwrap_or(false)
+                class:active=move || active.0.as_ref().map(|it| it()).unwrap_or(true)
+                class:disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
                 on:click=move |_| checked.1.update(|c| *c = !*c)
                 prop:checked=checked.0
             />

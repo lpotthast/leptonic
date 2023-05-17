@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_icons::*;
 
-use crate::{prelude::*, Bool};
+use crate::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AlertVariant {
@@ -27,7 +27,7 @@ pub fn Alert<T>(
     cx: Scope,
     variant: AlertVariant,
     title: T,
-    #[prop(optional_no_strip)] centered: Bool,
+    #[prop(into, optional)] centered: OptionalMaybeSignal<bool>,
     children: Children,
 ) -> impl IntoView
 where
@@ -38,10 +38,7 @@ where
             <div class="prepend">
                 <Icon icon=BsIcon::BsCheckCircleFill />
             </div>
-            <div class="content" class:centered=Signal::derive(cx, move || match centered {
-                Bool::Static(val) => val,
-                Bool::Reactive(sig) => sig.get(),
-            })>
+            <div class="content" class:centered=centered.0.as_ref().map(|it| it()).unwrap_or(false)>
                 <div class="title">
                     { title.into_view(cx) }
                 </div>
