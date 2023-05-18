@@ -68,15 +68,19 @@ impl Default for CheckboxSize {
 }
 
 #[component]
-pub fn Checkbox(
+pub fn Checkbox<T>(
     cx: Scope,
-    checked: (ReadSignal<bool>, WriteSignal<bool>),
+    #[prop(into)] checked: Signal<bool>,
+    on_toggle: T,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(optional)] id: Option<Uuid>,
     #[prop(optional)] variant: CheckboxVariant,
     #[prop(optional)] size: CheckboxSize,
-) -> impl IntoView {
+) -> impl IntoView
+where
+    T: Fn() -> () + 'static,
+{
     let id = id.unwrap_or_else(|| Uuid::new_v4());
     view! { cx,
         <leptonic-checkbox>
@@ -86,8 +90,8 @@ pub fn Checkbox(
                 class=format!("{} {}", variant, size)
                 class:active=move || active.0.as_ref().map(|it| it()).unwrap_or(true)
                 class:disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
-                on:click=move |_| checked.1.update(|c| *c = !*c)
-                prop:checked=checked.0
+                on:click=move |_| on_toggle()
+                prop:checked=checked
             />
         </leptonic-checkbox>
     }

@@ -16,8 +16,8 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
                 on_show=move || {info!("tab1 is now shown!")}
                 on_hide=move || {info!("tab1 is now hidden!")}
             >
-                <Checkbox checked=(test_bool, set_test_bool) />
-                <Checkbox checked=(test_bool, set_test_bool) />
+                <Checkbox checked=test_bool on_toggle=move || set_test_bool.update(|it| *it = !*it) />
+                <Checkbox checked=test_bool on_toggle=move || set_test_bool.update(|it| *it = !*it) />
                 <Toggle state=test_bool on_toggle=set_test_bool />
                 <If sig=test_bool>
                     "asd"

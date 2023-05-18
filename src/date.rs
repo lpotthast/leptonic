@@ -130,45 +130,45 @@ pub fn DateSelector(
                     {move || match show.get() {
                         Show::YearSelection => view! { cx,
                             <div on:click=select_previous_years
-                                class={"previous arrow-left"}>
+                                class="previous arrow-left">
                             </div>
                             <div on:click=move |_| set_show.update(|show| *show = Show::MonthSelection)
-                                class={"current-date"}>
+                                class="current-date">
                                 {years_range}
                             </div>
                             <div on:click=select_next_years
-                                class={"next arrow-right"}>
+                                class="next arrow-right">
                             </div>
                         },
                         Show::MonthSelection => view! { cx,
                             <div on:click=select_previous_year
-                                class={"previous arrow-left"}>
+                                class="previous arrow-left">
                             </div>
                             <div on:click=move |_| set_show.update(|show| *show = Show::YearSelection)
-                                class={"current-date"}>
+                                class="current-date">
                                 {staging_year}
                             </div>
                             <div on:click=select_next_year
-                                class={"next arrow-right"}>
+                                class="next arrow-right">
                             </div>
                         },
                         Show::DaySelection => view! { cx,
                             <div on:click=select_previous_month
-                                class={"previous arrow-left"}>
+                                class="previous arrow-left">
                             </div>
                             <div on:click=move |_| set_show.update(|show| *show = Show::YearSelection)
-                                class={"current-date"}>
+                                class="current-date">
                                 {staging_month} " " {staging_year}
                             </div>
                             <div on:click=select_next_month
-                                class={"next arrow-right"}>
+                                class="next arrow-right">
                             </div>
                         },
                     }}
                 </div>
 
                 <Show when=move || show.get() == Show::YearSelection fallback=|_cx| view! { cx,  }>
-                    <div class={"years"}>
+                    <div class="years">
                         <For
                             each=years
                             key=|year| year.number
