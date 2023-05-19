@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use leptos::*;
 use web_sys::HtmlInputElement;
 
@@ -14,14 +16,19 @@ pub fn Input<S>(
     cx: Scope,
     #[prop(optional, default=InputType::Text)] ty: InputType,
     #[prop(optional, into)] label: OptionalMaybeSignal<String>,
-    #[prop(into)] get: Signal<String>,
+    #[prop(into)] get: MaybeSignal<String>,
     set: S,
     #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
+    #[prop(into, optional)] id: Option<Cow<'static, str>>,
+    #[prop(into, optional)] class: Option<Cow<'static, str>>,
+    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView
 where
     S: Fn(String) + 'static,
 {
+    let id = id.map(|it| it.to_owned().to_string());
+    let class = class.map(|it| format!("leptonic-input {it}"));
     let style = margin.map(|it| format!("--margin: {it}"));
 
     let ty_str = match ty {
@@ -33,14 +40,17 @@ where
     view! { cx,
         <leptonic-input-field style=style>
             <input
-                class="leptonic-input"
+                id=id
+                class=class
                 placeholder=move || match &label.0 {
                     Some(label) => std::borrow::Cow::Owned(label.get()),
                     None => std::borrow::Cow::Borrowed(""),
                 }
                 type=ty_str
+                prop:disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
                 prop:value=move || get.get()
                 on:change=move |e| set(event_target::<HtmlInputElement>(&e).value())
+                //on:keyup=move |e| set2(event_target::<HtmlInputElement>(&e).value()) // TODO: Allow this as well
             />
             {match prepend.0 {
                 Some(view) => view! { cx,

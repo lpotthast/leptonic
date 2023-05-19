@@ -41,7 +41,7 @@ pub struct ToggleIcons {
 #[component]
 pub fn Toggle<S>(
     cx: Scope,
-    #[prop(into)] state: Signal<bool>,
+    #[prop(into)] state: MaybeSignal<bool>,
     on_toggle: S,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,

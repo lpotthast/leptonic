@@ -1,10 +1,17 @@
+use std::borrow::Cow;
+
 use leptos::*;
 
 // TODO: Only allow rows as children.
 #[component]
-pub fn Grid(cx: Scope, spacing: u32, children: Children) -> impl IntoView {
+pub fn Grid(
+    cx: Scope,
+    spacing: u32,
+    #[prop(into, optional)] class: Cow<'static, str>,
+    children: Children
+) -> impl IntoView {
     assert!(spacing <= 10);
-    let classes = format!("leptonic-grid-container spacing-{spacing}");
+    let classes = format!("leptonic-grid-container spacing-{spacing} {class}");
     view! { cx,
         <div class=classes>
             { children(cx) }
