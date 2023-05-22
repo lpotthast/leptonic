@@ -26,8 +26,10 @@ leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "en
     "BsSun",
     "BsMoon",
     "BsCheckCircleFill",
-    "BsCaretDownFill",
+    "BsCaretUp",
     "BsCaretUpFill",
+    "BsCaretDown",
+    "BsCaretDownFill",
 ] }
 leptos_router = { version = "0.3", default-features = false, features = [
     "csr",

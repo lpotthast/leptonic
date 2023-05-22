@@ -91,5 +91,11 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
         <Button on_click=move |_| {} disabled=true>"Disabled"</Button>
         <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
         <Button on_click=move |_| {} disabled=Signal::derive(cx, move || !disabled.get())>"Disabled"</Button>
+
+        <H2>"Variations"</H2>
+
+        <Button on_click=move |_| {} variations=view!{cx, <Button on_click=move |_| {}>"Secondary action"</Button>}.into_view(cx)>
+            "MainAction"
+        </Button>
     }
 }

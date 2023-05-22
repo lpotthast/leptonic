@@ -1,8 +1,9 @@
 use std::fmt::{Display, Formatter};
 
 use leptos::{ev::MouseEvent, *};
+use leptos_icons::BsIcon;
 
-use crate::OptionalMaybeSignal;
+use crate::{OptionalMaybeSignal, icon::Icon};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -90,13 +91,42 @@ pub fn Button<F>(
     #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] variations: OptionalMaybeSignal<View>,
     children: Children,
 ) -> impl IntoView
 where
     F: FnMut(MouseEvent) + 'static,
 {
+    let (dropdown_open, set_dropdown_open): (ReadSignal<bool>, WriteSignal<bool>) = create_signal(cx, false);
+
+    let has_variations = variations.0.as_ref().is_some();
+
+    let variations = move || {
+        if has_variations {
+            Some(view! {cx,
+                <div class="dropdown-trigger" on:click=move |_| set_dropdown_open.update(|it| *it = !*it)>
+                    { move || {
+                        let icon = match dropdown_open.get() {
+                            true => BsIcon::BsCaretUp,
+                            false => BsIcon::BsCaretDown,
+                        };
+                        view! {cx,
+                            <Icon icon=icon/>
+                        }
+                    }}
+                </div>
+
+                <div class="dropdown" class:active=dropdown_open>
+                    { variations.0.as_ref().unwrap().get() }
+                </div>
+            }.into_view(cx))
+        } else {
+            None
+        }
+    };
+
     view! { cx,
-        <button class="leptonic-btn"
+        <button class="leptonic-btn" class:has-variations=has_variations
             variant=move || variant.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
             color=move || color.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
             size=move || size.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
@@ -106,6 +136,8 @@ where
             <div class="name">
                 { children(cx) }
             </div>
+
+            { variations }
         </button>
     }
 }

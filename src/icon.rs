@@ -10,7 +10,6 @@ pub fn Icon(
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView {
     let style = margin.map(|it| format!("--margin: {it}"));
-
     view! { cx,
         <leptonic-icon style=style>
             <LeptosIcon icon=icon />
