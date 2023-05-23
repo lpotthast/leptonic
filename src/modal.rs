@@ -8,16 +8,21 @@ use uuid::Uuid;
 // TODO: Add dialog component, making modal the underlying technology?
 
 #[derive(Clone)]
-pub struct Modal {
+pub struct ModalData {
     pub id: Uuid,
-    pub children: Rc<ChildrenFn>,
-    pub scope: Scope, // TODO: Is this required?
+    pub children: ModalChildren,
+}
+
+#[derive(Clone)]
+pub enum ModalChildren {
+    Once(View),
+    Dynamic(Rc<ChildrenFn>, Scope),
 }
 
 #[derive(Copy, Clone)]
 pub struct ModalRootContext {
-    pub modals: ReadSignal<IndexMap<Uuid, Modal>>,
-    pub set_modals: WriteSignal<IndexMap<Uuid, Modal>>,
+    pub modals: ReadSignal<IndexMap<Uuid, ModalData>>,
+    pub set_modals: WriteSignal<IndexMap<Uuid, ModalData>>,
 }
 
 #[component]
@@ -34,7 +39,10 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
                 <leptonic-modals>
                     {move || modals.get().last().map(|(_, modal)| view! { cx,
                         <leptonic-modal>
-                            { (modal.children)(modal.scope) }
+                            { match &modal.children {
+                                ModalChildren::Once(view) => view.clone(),
+                                ModalChildren::Dynamic(children, cx) => children(*cx).into_view(*cx)
+                            } }
                         </leptonic-modal>
                     })}
                 </leptonic-modals>
@@ -44,20 +52,54 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
 }
 
 #[component]
-pub fn Modal(cx: Scope, display_if: ReadSignal<bool>, children: ChildrenFn) -> impl IntoView {
+pub fn Modal(
+    cx: Scope,
+    #[prop(into)] show_when: MaybeSignal<bool>,
+    children: Children,
+) -> impl IntoView {
+    let modals = use_context::<ModalRootContext>(cx).unwrap();
+    let children = children(cx).into_view(cx); // TODO: Is it ok to build this view once?
+
+    let id = Uuid::new_v4();
+
+    create_effect(cx, move |_| match show_when.get() {
+        true => modals.set_modals.update(|modals| {
+            modals.insert(
+                id,
+                ModalData {
+                    id,
+                    children: ModalChildren::Once(children.clone()),
+                },
+            );
+        }),
+        false => modals.set_modals.update(|modals| {
+            modals.remove(&id);
+        }),
+    });
+
+    // Intentionally empty, as children are rendered using the modal root.
+    view! { cx,
+    }
+}
+
+#[component]
+pub fn ModalFn(
+    cx: Scope,
+    #[prop(into)] show_when: MaybeSignal<bool>,
+    children: ChildrenFn,
+) -> impl IntoView {
     let modals = use_context::<ModalRootContext>(cx).unwrap();
     let children = Rc::new(children);
 
     let id = Uuid::new_v4();
 
-    create_effect(cx, move |_| match display_if.get() {
+    create_effect(cx, move |_| match show_when.get() {
         true => modals.set_modals.update(|modals| {
             modals.insert(
                 id,
-                Modal {
+                ModalData {
                     id,
-                    children: children.clone(),
-                    scope: cx,
+                    children: ModalChildren::Dynamic(children.clone(), cx),
                 },
             );
         }),

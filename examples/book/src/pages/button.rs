@@ -88,9 +88,11 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
             "Disable: " <Toggle state=disabled on_toggle=set_disabled/>
         </div>
 
-        <Button on_click=move |_| {} disabled=true>"Disabled"</Button>
-        <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
-        <Button on_click=move |_| {} disabled=Signal::derive(cx, move || !disabled.get())>"Disabled"</Button>
+        <ButtonWrapper>
+            <Button on_click=move |_| {} disabled=true>"Disabled"</Button>
+            <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
+            <Button on_click=move |_| {} disabled=Signal::derive(cx, move || !disabled.get())>"Disabled"</Button>
+        </ButtonWrapper>
 
         <H2>"Variations"</H2>
 

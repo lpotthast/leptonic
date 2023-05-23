@@ -96,7 +96,9 @@ pub mod prelude {
     pub use super::input::Input;
     pub use super::input::InputType;
     pub use super::link::Link;
+    pub use super::modal::ModalData;
     pub use super::modal::Modal;
+    pub use super::modal::ModalFn;
     pub use super::modal::ModalBody;
     pub use super::modal::ModalFooter;
     pub use super::modal::ModalHeader;
@@ -107,6 +109,7 @@ pub mod prelude {
     pub use super::r#box::Box;
     pub use super::root::Root;
     pub use super::select::Select;
+    pub use super::select::SelectMode;
     pub use super::separator::Separator;
     pub use super::skeleton::Skeleton;
     pub use super::stack::Stack;

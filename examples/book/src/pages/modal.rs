@@ -14,7 +14,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
         <Button on_click=move |_| set_show_modal.set(true)>"Show Modal"</Button>
         <Button on_click=move |_| set_show_input_modal.set(true)>"Show Input Modal"</Button>
 
-        <Modal display_if=show_modal>
+        <Modal show_when=show_modal>
             <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
             <ModalBody>"This ia a test modal."</ModalBody>
             <ModalFooter>
@@ -29,7 +29,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
             </ModalFooter>
         </Modal>
 
-        <Modal display_if=show_modal2>
+        <Modal show_when=show_modal2>
             <ModalHeader><ModalTitle>"Next one"</ModalTitle></ModalHeader>
             <ModalBody>"This overlays..."</ModalBody>
             <ModalFooter>
@@ -40,7 +40,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
         </Modal>
 
         <InputModal
-            display_if=show_input_modal
+            show_when=show_input_modal
             on_accept=move |input| {
                 set_last_input.set(Some(input));
                 set_show_input_modal.set(false);
@@ -56,7 +56,12 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn InputModal<A, C>(cx: Scope, display_if: ReadSignal<bool>, on_accept: A, on_cancel: C) -> impl IntoView
+pub fn InputModal<A, C>(
+    cx: Scope,
+    #[prop(into)] show_when: Signal<bool>,
+    on_accept: A,
+    on_cancel: C,
+) -> impl IntoView
 where
     A: Fn(String) + Copy + 'static,
     C: Fn() + Copy + 'static,
@@ -64,7 +69,7 @@ where
     let (input, set_input) = create_signal(cx, "".to_owned());
 
     view! { cx,
-        <Modal display_if=display_if>
+        <Modal show_when=show_when>
             <ModalHeader><ModalTitle>"Delete repository"</ModalTitle></ModalHeader>
             <ModalBody>
                 "Please enter \"ok\" to delete the repository."
