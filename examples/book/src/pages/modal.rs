@@ -8,11 +8,33 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
     let (show_input_modal, set_show_input_modal) = create_signal(cx, false);
     let (last_input, set_last_input) = create_signal(cx, Option::<String>::None);
 
+    let (a_text, set_a_text) = create_signal(cx, String::new());
+    let a = Signal::derive(cx, move || {
+        let t = a_text.get();
+        match t.len() {
+            0 => None,
+            _ => Some(t),
+        }
+    });
+    let show_a = Signal::derive(cx, move || a.get().is_some());
+
     view! { cx,
         <H2>"Modals"</H2>
 
         <Button on_click=move |_| set_show_modal.set(true)>"Show Modal"</Button>
         <Button on_click=move |_| set_show_input_modal.set(true)>"Show Input Modal"</Button>
+
+        <Input get=a_text set=set_a_text/>
+        <Modal show_when=show_a>
+            <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
+            <ModalBody>"This ia a test modal. Input: " { move || format!("{}", a.get().unwrap_or_default()) }</ModalBody>
+            <ModalFooter>
+                <ButtonWrapper>
+                    <Button on_click=move |_| set_a_text.set(String::new()) color=ButtonColor::Danger>"Accept"</Button>
+                    <Button on_click=move |_| set_a_text.set(String::new()) color=ButtonColor::Secondary>"Cancel"</Button>
+                </ButtonWrapper>
+            </ModalFooter>
+        </Modal>
 
         <Modal show_when=show_modal>
             <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
