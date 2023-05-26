@@ -28,7 +28,7 @@ where
     S: Fn(String) + 'static,
 {
     let id = id.map(|it| it.to_owned().to_string());
-    let class = class.map(|it| format!("leptonic-input {it}"));
+    let class = class.map(|it| Cow::Owned(format!("leptonic-input {it}"))).unwrap_or(Cow::Borrowed("leptonic-input"));
     let style = margin.map(|it| format!("--margin: {it}"));
 
     let ty_str = match ty {
