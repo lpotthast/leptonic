@@ -32,7 +32,7 @@ impl Default for ToastVariant {
     }
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct Toast {
     pub id: uuid::Uuid,
     pub created_at: time::OffsetDateTime,
@@ -42,7 +42,7 @@ pub struct Toast {
     pub timeout: ToastTimeout,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 #[allow(unused)]
 pub enum ToastTimeout {
     None,

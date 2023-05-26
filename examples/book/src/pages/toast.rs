@@ -4,8 +4,6 @@ use uuid::Uuid;
 
 #[component]
 pub fn PageToast(cx: Scope) -> impl IntoView {
-    let toasts = use_context::<Toasts>(cx).unwrap();
-
     let (header, set_header) = create_signal(cx, "Header".to_owned());
     let (body, set_body) = create_signal(cx, "Body".to_owned());
 
@@ -15,7 +13,7 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
         <Input label="Header text" get=header set=set_header></Input>
         <Input label="Body text" get=body set=set_body></Input>
 
-        <Button on_click=move |_| toasts.push(success_toast(cx, header.get(), body.get()))>"Create Toast"</Button>
+        <Button on_click=move |_| expect_context::<Toasts>(cx).push(success_toast(cx, header.get(), body.get()))>"Create Toast"</Button>
     }
 }
 

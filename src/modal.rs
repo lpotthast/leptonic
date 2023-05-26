@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{cell::RefCell, rc::Rc};
 
 use indexmap::IndexMap;
 use leptos::*;
@@ -77,40 +77,70 @@ pub fn Modal(
         }),
     });
 
+    on_cleanup(cx, move || {
+        tracing::info!("cleanup modal");
+    });
+
     // Intentionally empty, as children are rendered using the modal root.
     view! { cx,
     }
 }
 
+// TODO: Show a modal in a different scope. This way, not including a shown modal anymore would remove it.
 #[component]
 pub fn ModalFn(
     cx: Scope,
     #[prop(into)] show_when: MaybeSignal<bool>,
     children: ChildrenFn,
 ) -> impl IntoView {
-    let modals = use_context::<ModalRootContext>(cx).unwrap();
     let children = Rc::new(children);
 
-    let id = Uuid::new_v4();
+    let child_scope = RefCell::new(Option::<Scope>::None);
 
-    create_effect(cx, move |_| match show_when.get() {
-        true => modals.set_modals.update(|modals| {
-            modals.insert(
-                id,
-                ModalData {
+    let router = move || {
+        // Whenever the "show_when" changes, the modal must be re-rendered in a new scope.
+        let show: bool = show_when.get();
+
+        let (view, _) = cx.run_child_scope(|cx| {
+            let prev_cx = std::mem::replace(&mut *child_scope.borrow_mut(), Some(cx));
+            if let Some(prev_cx) = prev_cx {
+                prev_cx.dispose();
+            }
+
+            let modals = use_context::<ModalRootContext>(cx).unwrap();
+            let id = Uuid::new_v4();
+
+            let c_clone = children.clone();
+
+            //if show {
+            modals.set_modals.update(|modals| {
+                modals.insert(
                     id,
-                    children: ModalChildren::Dynamic(children.clone(), cx),
-                },
-            );
-        }),
-        false => modals.set_modals.update(|modals| {
-            modals.remove(&id);
-        }),
-    });
+                    ModalData {
+                        id,
+                        children: ModalChildren::Dynamic(c_clone.clone(), cx),
+                    },
+                );
+            });
 
-    // Intentionally empty, as children are rendered using the modal root.
-    view! { cx,
-    }
+            on_cleanup(cx, move || {
+                tracing::warn!("dispose");
+                modals.set_modals.update(|modals| {
+                    modals.remove(&id);
+                })
+            });
+            //}
+
+            // content(cx, show).into_view(cx)
+            // Intentionally empty, as children are rendered using the modal root.
+            view! { cx,
+            }
+        });
+
+        view
+    };
+
+    router
 }
 
 #[component]
