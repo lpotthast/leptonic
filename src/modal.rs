@@ -143,7 +143,7 @@ pub fn ModalBody(
     #[prop(into, optional)] style: OptionalMaybeSignal<String>,
 ) -> impl IntoView {
     view! { cx,
-        <leptonic-modal-body style=move || style.0.as_ref().map(|it| it.get()).unwrap_or(Default::default())>
+        <leptonic-modal-body style=move || style.0.as_ref().map(|it| it.get())>
             { children(cx) }
         </leptonic-modal-body>
     }
