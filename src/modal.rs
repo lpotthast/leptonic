@@ -87,7 +87,7 @@ pub fn Modal(
 #[component]
 pub fn ModalFn(
     cx: Scope,
-    #[prop(into)] show_when: MaybeSignal<bool>,
+    #[prop(into)] show_when: MaybeSignal<bool>, // TODO: When https://github.com/leptos-rs/leptos/pull/918 is merged, this should receive a rework!
     children: ChildrenFn,
 ) -> impl IntoView {
     tracing::info!("create FnModal");
