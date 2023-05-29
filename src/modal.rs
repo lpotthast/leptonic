@@ -4,6 +4,8 @@ use indexmap::IndexMap;
 use leptos::*;
 use uuid::Uuid;
 
+use crate::OptionalMaybeSignal;
+
 // TODO: Add mount prop.
 // TODO: Add dialog component, making modal the underlying technology?
 
@@ -135,9 +137,13 @@ pub fn ModalTitle(cx: Scope, children: Children) -> impl IntoView {
 }
 
 #[component]
-pub fn ModalBody(cx: Scope, children: Children) -> impl IntoView {
+pub fn ModalBody(
+    cx: Scope,
+    children: Children,
+    #[prop(into, optional)] style: OptionalMaybeSignal<String>,
+) -> impl IntoView {
     view! { cx,
-        <leptonic-modal-body>
+        <leptonic-modal-body style=move || style.0.as_ref().map(|it| it.get()).unwrap_or(Default::default())>
             { children(cx) }
         </leptonic-modal-body>
     }
