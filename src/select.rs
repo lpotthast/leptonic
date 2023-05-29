@@ -136,9 +136,9 @@ where
                     }.into_view(cx),
                 }}
             </leptonic-select-selected>
-            <leptonic-select-options class:shown=show_options>
+            <leptonic-select-options class:shown=move || show_options.get()>
                 <For
-                    each=options
+                    each=move || options.get()
                     key=|option| option.hash(&mut DefaultHasher::new())
                     view=move |cx, option| {
                         let clone = option.clone();

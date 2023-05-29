@@ -12,7 +12,7 @@ pub fn ProgressBar(
         <progress
             class="leptonic-progress-bar"
             max=max
-            value=progress
+            value=move || progress.get()
         />
     }
 }

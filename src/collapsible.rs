@@ -169,7 +169,7 @@ pub fn CollapsibleBody(cx: Scope, children: Children) -> impl IntoView {
         .expect("A CollapsibleHeader musst be placed inside a Collapsible component.");
 
     view! { cx,
-        <leptonic-collapsible-body class:show=collapsible_ctx.show>
+        <leptonic-collapsible-body class:show=move || collapsible_ctx.show.get()>
             { children(cx) }
         </leptonic-collapsible-body>
     }

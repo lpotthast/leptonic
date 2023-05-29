@@ -41,7 +41,7 @@ pub fn Chip(
     children: Children,
 ) -> impl IntoView {
     view! { cx,
-        <leptonic-chip color=move || color.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()>
+        <leptonic-chip color=move || color.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()>
             { children(cx) }
         </leptonic-chip>
     }

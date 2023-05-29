@@ -22,7 +22,7 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Input get=text set=set_text/>
+        <Input get=text set=move |v| set_text.set(v)/>
 
         <H2>"Types"</H2>
 
@@ -37,9 +37,9 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Input get=password set=set_password ty=InputType::Password/>
+        <Input get=password set=move |v| set_password.set(v) ty=InputType::Password/>
 
-        <Input get=number set=set_number ty=InputType::Number/>
+        <Input get=number set=move |v| set_number.set(v) ty=InputType::Number/>
 
         <H2>"Label"</H2>
 
@@ -60,7 +60,7 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Input get=label_input set=set_label_input label="This is my label"/>
+        <Input get=label_input set=move |v| set_label_input.set(v) label="This is my label"/>
         <Button variant=ButtonVariant::Flat size=ButtonSize::Small on_click=move |_| set_label_input.set("".to_owned())>"Clear input"</Button>
     }
 }

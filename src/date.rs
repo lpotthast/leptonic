@@ -170,7 +170,7 @@ pub fn DateSelector(
                 <Show when=move || show.get() == Show::YearSelection fallback=|_cx| view! { cx,  }>
                     <div class="years">
                         <For
-                            each=years
+                            each=move || years.get()
                             key=|year| year.number
                             view=move |cx, year| {
                                 view! { cx,
@@ -191,7 +191,7 @@ pub fn DateSelector(
                 <Show when=move || show.get() == Show::MonthSelection fallback=|_cx| view! { cx,  }>
                     <div class="months">
                         <For
-                            each=months
+                            each=move || months.get()
                             key=|month| month.index
                             view=move |cx, month| {
                                 let mon = month.clone();
@@ -213,7 +213,7 @@ pub fn DateSelector(
                     <div class={"weekday-names"}>
                         // Not use For for this...?
                         <For
-                            each=short_weekday_names
+                            each=move || short_weekday_names.get()
                             key=|short_weekday_name| short_weekday_name.clone()
                             view=move |cx, short_weekday_name| {
                                 view! { cx,
@@ -227,7 +227,7 @@ pub fn DateSelector(
 
                     <div class={"weeks"}>
                         <For
-                            each=weeks
+                            each=move || weeks.get()
                             key=|week| week.id
                             view=move |cx, week| {
                                 view! { cx,

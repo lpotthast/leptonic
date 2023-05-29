@@ -91,7 +91,7 @@ pub fn ToastRoot(cx: Scope, children: Children) -> impl IntoView {
 
         <leptonic-toasts>
             <For
-                each=toasts
+                each=move || toasts.get()
                 key=|toast| toast.id
                 view=move |_cx, toast| {
                     view! { cx,

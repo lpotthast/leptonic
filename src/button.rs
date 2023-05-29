@@ -116,7 +116,7 @@ where
                     }}
                 </div>
 
-                <div class="dropdown" class:active=dropdown_open>
+                <div class="dropdown" class:active=move || dropdown_open.get()>
                     { variations.0.as_ref().unwrap().get() }
                 </div>
             }.into_view(cx))
@@ -127,10 +127,10 @@ where
 
     view! { cx,
         <button class="leptonic-btn" class:has-variations=has_variations
-            variant=move || variant.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
-            color=move || color.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
-            size=move || size.0.as_ref().map(|it| it()).unwrap_or(Default::default()).as_str()
-            aria-disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
+            variant=move || variant.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
+            color=move || color.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
+            size=move || size.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
+            aria-disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
             on:click=on_click
         >
             <div class="name">

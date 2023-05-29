@@ -24,7 +24,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
         <Button on_click=move |_| set_show_modal.set(true)>"Show Modal"</Button>
         <Button on_click=move |_| set_show_input_modal.set(true)>"Show Input Modal"</Button>
 
-        <Input get=a_text set=set_a_text/>
+        <Input get=a_text set=move |v| set_a_text.set(v)/>
         <Modal show_when=show_a>
             <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
             <ModalBody>"This ia a test modal. Input: " { move || format!("{}", a.get().unwrap_or_default()) }</ModalBody>
@@ -95,7 +95,7 @@ where
             <ModalHeader><ModalTitle>"Delete repository"</ModalTitle></ModalHeader>
             <ModalBody>
                 "Please enter \"ok\" to delete the repository."
-                <Input get=input set=set_input/>
+                <Input get=input set=move |v| set_input.set(v)/>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>

@@ -38,7 +38,7 @@ where
             <div class="prepend">
                 <Icon icon=BsIcon::BsCheckCircleFill />
             </div>
-            <div class="content" class:centered=centered.0.as_ref().map(|it| it()).unwrap_or(false)>
+            <div class="content" class:centered=centered.0.as_ref().map(|it| it.get()).unwrap_or(false)>
                 <div class="title">
                     { title.into_view(cx) }
                 </div>

@@ -48,9 +48,9 @@ pub fn Collapse(
         <div class="leptonic-collapse"
             class:width=move || {axis == CollapseAxis::X}
             class:height=move || {axis == CollapseAxis::Y}
-            style=style
+            style=move || style.get()
         >
-            <div class="content" class:show=show node_ref=content>
+            <div class="content" class:show=move || show.get() node_ref=content>
                 { children(cx) }
             </div>
         </div>

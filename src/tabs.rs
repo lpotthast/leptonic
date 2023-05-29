@@ -80,7 +80,7 @@ pub fn TabSelectors(
     view! { cx,
         <leptonic-tab-selectors>
             <For
-                each=tab_labels
+                each=move || tab_labels.get()
                 key=|label| label.id
                 view=move |cx, label| {
                     view! { cx,
@@ -110,7 +110,7 @@ where
     view! { cx,
         <leptonic-tab-selector
             data:for-name=name
-            class:active=is_active
+            class:active=move || is_active.get()
             on:click=move |_event| set_active()
         >
             { label }

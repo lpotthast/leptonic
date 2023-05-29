@@ -10,8 +10,8 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
     view! { cx,
         <H2>"Toasts"</H2>
 
-        <Input label="Header text" get=header set=set_header></Input>
-        <Input label="Body text" get=body set=set_body></Input>
+        <Input label="Header text" get=header set=move |v| set_header.set(v)></Input>
+        <Input label="Body text" get=body set=move |v| set_body.set(v)></Input>
 
         <Button on_click=move |_| { expect_context::<Toasts>(cx).push(success_toast(cx, header.get(), body.get())) }>
             "Create Toast"

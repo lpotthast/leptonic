@@ -8,6 +8,6 @@ pub fn PageToggle(cx: Scope) -> impl IntoView {
     view! { cx,
         <H2>"Toggle"</H2>
 
-        <Toggle state=state on_toggle=set_state/>
+        <Toggle state=state on_toggle=move |s| set_state.set(s)/>
     }
 }

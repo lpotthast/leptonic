@@ -67,18 +67,18 @@ where
             <label
                 id=id.to_string()
                 class=format!("leptonic-toggle {}", size)
-                class:active=move || active.0.as_ref().map(|it| it()).unwrap_or(true)
-                class:disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
+                class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(true)
+                class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 on:click=move |_| (on_toggle)(!state.get())
             >
-                <span class="slider round" class:on=state>
+                <span class="slider round" class:on=move || state.get()>
                     {
                         move || icons.as_ref().map(|icons| {
                             let off_icon = icons.off;
                             let on_icon = icons.on;
                             view! { cx,
                                 <span class="icon-positioner">
-                                    <Show when=state fallback=move |cx| view! {cx, <Icon icon=off_icon/> }>
+                                    <Show when=move || state.get() fallback=move |cx| view! {cx, <Icon icon=off_icon/> }>
                                         <Icon icon=on_icon/>
                                     </Show>
                                 </span>

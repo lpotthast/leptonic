@@ -47,7 +47,7 @@ where
                     None => std::borrow::Cow::Borrowed(""),
                 }
                 type=ty_str
-                prop:disabled=move || disabled.0.as_ref().map(|it| it()).unwrap_or(false)
+                prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 prop:value=move || get.get()
                 on:change=move |e| set(event_target::<HtmlInputElement>(&e).value())
                 //on:keyup=move |e| set2(event_target::<HtmlInputElement>(&e).value()) // TODO: Allow this as well

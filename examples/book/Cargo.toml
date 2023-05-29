@@ -23,6 +23,7 @@ leptonic-theme = { path = "../../../leptonic-theme", optional = true }
 leptos = { version = "0.3", default-features = false, features = [
     "csr",
     "tracing",
+    "stable",
 ] }
 leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
     "csr",
@@ -36,9 +37,13 @@ leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "en
     "BsCircleSquare",
     "BsArrowsMove",
 ] }
-leptos_meta = { version = "0.3", default-features = false, features = ["csr"] }
+leptos_meta = { version = "0.3", default-features = false, features = [
+    "csr",
+    "stable",
+] }
 leptos_router = { version = "0.3", default-features = false, features = [
     "csr",
+    "stable",
 ] }
 log = "0.4"
 serde = "1"
