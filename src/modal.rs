@@ -1,4 +1,4 @@
-use std::{cell::RefCell, rc::Rc};
+use std::rc::Rc;
 
 use indexmap::IndexMap;
 use leptos::*;
@@ -59,7 +59,6 @@ pub fn Modal(
     #[prop(into)] show_when: MaybeSignal<bool>,
     children: Children,
 ) -> impl IntoView {
-    tracing::info!("create Modal");
     let modals = use_context::<ModalRootContext>(cx).unwrap();
     let children = children(cx).into_view(cx); // TODO: Is it ok to build this view once?
 
@@ -92,7 +91,6 @@ pub fn ModalFn(
     #[prop(into)] show_when: MaybeSignal<bool>, // TODO: When https://github.com/leptos-rs/leptos/pull/918 is merged, this should receive a rework!
     children: ChildrenFn,
 ) -> impl IntoView {
-    tracing::info!("create FnModal");
     let modals = use_context::<ModalRootContext>(cx).unwrap();
     let children = Rc::new(children);
 
