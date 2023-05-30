@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::sync::Arc;
 
 use leptos::*;
@@ -10,7 +11,7 @@ use crate::Mount;
 #[derive(Clone)]
 pub struct TabLabel {
     pub id: Uuid,
-    pub name: &'static str,
+    pub name: Cow<'static, str>,
     pub label: Arc<View>,
 }
 
@@ -18,9 +19,10 @@ pub struct TabLabel {
 #[component]
 pub fn Tab<L>(
     cx: Scope,
+    // TODO: Can / should we accept a String instead?
     #[prop(optional)] id: Option<Uuid>,
     /// Uniquely identifies this tab.
-    name: &'static str,
+    name: Cow<'static, str>,
     label: L,
     #[prop(optional)] mount: Option<Mount>,
     #[prop(optional)] children: Option<ChildrenFn>,
@@ -35,24 +37,27 @@ where
 
     let mount = mount.or(tabs.mount).unwrap_or(Mount::Once);
 
-    let tab_label = TabLabel {
-        id,
-        name,
-        label: Arc::new(label.into_view(cx)),
-    };
+    let name = store_value(cx, name);
 
-    tabs.set_tab_labels.update(|labels| labels.push(tab_label));
+    tabs.set_tab_labels.update(|labels| {
+        labels.push(TabLabel {
+            id,
+            name: name.get_value(),
+            label: Arc::new(label.into_view(cx)),
+        })
+    });
 
     if tabs.history.get_untracked().get_active() == None {
         tabs.set_history.update(|history| {
-            history.push(name);
+            history.push(name.get_value());
         });
     }
 
     if let Some(on_show) = on_show {
         create_effect(cx, move |_| {
             let history = tabs.history.get();
-            if history.get_active() == Some(name) && history.get_previous() != Some(name) {
+            let this = name.get_value();
+            if history.get_active() == Some(&this) && history.get_previous() != Some(&this) {
                 on_show();
             }
         });
@@ -61,13 +66,14 @@ where
     if let Some(on_hide) = on_hide {
         create_effect(cx, move |_| {
             let history = tabs.history.get();
-            if history.get_active() != Some(name) && history.get_previous() == Some(name) {
+            let this = name.get_value();
+            if history.get_active() != Some(&this) && history.get_previous() == Some(&this) {
                 on_hide();
             }
         });
     }
 
-    let is_active = move || tabs.history.get().get_active() == Some(name);
+    let is_active = move || tabs.history.get().get_active() == Some(&name.get_value());
 
     on_cleanup(cx, move || {
         info!("cleanup tab");
@@ -77,7 +83,7 @@ where
         Mount::Once | Mount::OnceShown => view! { cx,
             {
                 view! { cx,
-                    <leptonic-tab id=id.to_string() data-name=name aria-hidden=move || if is_active() { "false" } else { "true"} >
+                    <leptonic-tab id=id.to_string() data-name=name.get_value() aria-hidden=move || if is_active() { "false" } else { "true"} >
                         {
                             if let Some(children) = &children {
                                 children(cx)
@@ -93,7 +99,7 @@ where
             {
                 view! { cx,
                     <Show when=is_active fallback=|_cx| view! { cx,  }>
-                        <leptonic-tab id=id.to_string() data:name=name>
+                        <leptonic-tab id=id.to_string() data:name=name.get_value()>
                             {
                                 if let Some(children) = &children {
                                     children(cx)

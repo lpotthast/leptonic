@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use leptos::*;
 
 use crate::Mount;
@@ -6,8 +8,8 @@ use super::tab::TabLabel;
 
 #[derive(Debug, Clone)]
 pub struct TabHistory {
-    active: Option<&'static str>,
-    previous: Option<&'static str>,
+    active: Option<Cow<'static, str>>,
+    previous: Option<Cow<'static, str>>,
 }
 
 impl TabHistory {
@@ -18,16 +20,16 @@ impl TabHistory {
         }
     }
 
-    pub fn get_active(&self) -> Option<&'static str> {
-        self.active
+    pub fn get_active(&self) -> Option<&Cow<'static, str>> {
+        self.active.as_ref()
     }
 
-    pub fn get_previous(&self) -> Option<&'static str> {
-        self.previous
+    pub fn get_previous(&self) -> Option<&Cow<'static, str>> {
+        self.previous.as_ref()
     }
 
-    pub fn push(&mut self, active: &'static str) {
-        self.previous = self.active;
+    pub fn push(&mut self, active: Cow<'static, str>) {
+        self.previous = self.active.clone();
         self.active = Some(active);
     }
 }
@@ -83,11 +85,13 @@ pub fn TabSelectors(
                 each=move || tab_labels.get()
                 key=|label| label.id
                 view=move |cx, label| {
+                    let n1 = label.name.clone();
+                    let n2 = label.name.clone();
                     view! { cx,
                         <TabSelector
-                            is_active=Signal::derive(cx, move || history.get().get_active() == Some(label.name))
-                            set_active=move || set_history.update(|history| history.push(label.name))
-                            name=label.name
+                            is_active=move || history.get().get_active() == Some(&n1.clone())
+                            set_active=move || set_history.update(|history| history.push(n2.clone()))
+                            name=label.name.clone()
                             label=(*label.label).clone() />
                     }
                 }
@@ -97,20 +101,21 @@ pub fn TabSelectors(
 }
 
 #[component]
-pub fn TabSelector<S>(
+fn TabSelector<A, S>(
     cx: Scope,
-    #[prop(into)] is_active: Signal<bool>,
+    is_active: A,
     set_active: S,
-    name: &'static str,
+    name: Cow<'static, str>,
     label: View,
 ) -> impl IntoView
 where
+    A: Fn() -> bool + 'static,
     S: Fn() -> () + 'static,
 {
     view! { cx,
         <leptonic-tab-selector
             data:for-name=name
-            class:active=move || is_active.get()
+            class:active=is_active
             on:click=move |_event| set_active()
         >
             { label }
