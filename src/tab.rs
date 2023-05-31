@@ -22,7 +22,7 @@ pub fn Tab<L>(
     // TODO: Can / should we accept a String instead?
     #[prop(optional)] id: Option<Uuid>,
     /// Uniquely identifies this tab.
-    name: Cow<'static, str>,
+    #[prop(into)] name: Cow<'static, str>,
     label: L,
     #[prop(optional)] mount: Option<Mount>,
     #[prop(optional)] children: Option<ChildrenFn>,
