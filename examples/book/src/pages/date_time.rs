@@ -7,8 +7,8 @@ pub fn PageDateTime(cx: Scope) -> impl IntoView {
     view! { cx,
         <H2>"Date & Time"</H2>
 
-        <DateSelector value=OffsetDateTime::now_utc()/>
+        <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
 
-        <DateSelector value=OffsetDateTime::now_utc() guide_mode=GuideMode::YearFirst/>
+        <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>
     }
 }

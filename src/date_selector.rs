@@ -15,18 +15,25 @@ enum Show {
 }
 
 #[component]
-pub fn DateSelector(
+pub fn DateSelector<C>(
     cx: Scope,
     value: time::OffsetDateTime,
+    on_change: C,
     #[prop(optional)] min: Option<time::OffsetDateTime>,
     #[prop(optional)] max: Option<time::OffsetDateTime>,
     #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: MaybeSignal<
         GuideMode,
     >,
-) -> impl IntoView {
+) -> impl IntoView
+where
+    C: Fn(time::OffsetDateTime) + 'static,
+{
     let (staging, set_staging) = create_signal(cx, value);
     let staging_year = Signal::derive(cx, move || staging.get().year());
     let staging_month = Signal::derive(cx, move || staging.get().month().to_string());
+
+    let selected: Memo<time::OffsetDateTime> = create_memo(cx, move |_| staging.get());
+    create_effect(cx, move |_| on_change(selected.get()));
 
     let (show, set_show) = create_signal(
         cx,
