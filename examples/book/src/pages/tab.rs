@@ -13,8 +13,8 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
             <Tab
                 name="outer-1"
                 label=view! {cx, "Toasts; Count is" {move || count.get()}}
-                on_show=move || {info!("tab1 is now shown!")}
-                on_hide=move || {info!("tab1 is now hidden!")}
+                on_show=Callback::new(cx, move |()| {info!("tab1 is now shown!")})
+                on_hide=Callback::new(cx, move |()| {info!("tab1 is now hidden!")})
             >
                 <Checkbox checked=test_bool on_toggle=move || set_test_bool.update(|it| *it = !*it) />
                 <Checkbox checked=test_bool on_toggle=move || set_test_bool.update(|it| *it = !*it) />

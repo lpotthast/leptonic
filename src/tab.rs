@@ -5,6 +5,7 @@ use leptos::*;
 use tracing::info;
 use uuid::Uuid;
 
+use crate::prelude::{Callback, Callable};
 use crate::tabs::TabsContext;
 use crate::Mount;
 
@@ -26,8 +27,8 @@ pub fn Tab<L>(
     label: L,
     #[prop(optional)] mount: Option<Mount>,
     #[prop(optional)] children: Option<ChildrenFn>,
-    #[prop(optional)] on_show: Option<fn()>,
-    #[prop(optional)] on_hide: Option<fn()>,
+    #[prop(optional)] on_show: Option<Callback<()>>,
+    #[prop(optional)] on_hide: Option<Callback<()>>,
 ) -> impl IntoView
 where
     L: IntoView + 'static,
@@ -58,7 +59,7 @@ where
             let history = tabs.history.get();
             let this = name.get_value();
             if history.get_active() == Some(&this) && history.get_previous() != Some(&this) {
-                on_show();
+                on_show.call(());
             }
         });
     }
@@ -68,7 +69,7 @@ where
             let history = tabs.history.get();
             let this = name.get_value();
             if history.get_active() != Some(&this) && history.get_previous() == Some(&this) {
-                on_hide();
+                on_hide.call(());
             }
         });
     }

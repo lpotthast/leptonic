@@ -153,6 +153,7 @@ pub mod prelude {
     pub use super::typography::H6;
     pub use super::typography::P;
     pub use super::FirstOf;
+    pub use super::FontWeight;
     pub use super::Height;
     pub use super::If;
     pub use super::LastOf;
@@ -334,6 +335,43 @@ impl Display for Size {
 
 pub type Width = Size;
 pub type Height = Size;
+
+#[derive(Debug, Clone, Copy)]
+pub enum FontWeight {
+    W100,
+    W200,
+    W300,
+    W400,
+    W500,
+    W600,
+    W700,
+    W800,
+    W900,
+    WLighter,
+    WNormal,
+    WBold,
+    WBolder,
+}
+
+impl Display for FontWeight {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            FontWeight::W100 => f.write_str("100"),
+            FontWeight::W200 => f.write_str("200"),
+            FontWeight::W300 => f.write_str("300"),
+            FontWeight::W400 => f.write_str("400"),
+            FontWeight::W500 => f.write_str("500"),
+            FontWeight::W600 => f.write_str("600"),
+            FontWeight::W700 => f.write_str("700"),
+            FontWeight::W800 => f.write_str("800"),
+            FontWeight::W900 => f.write_str("900"),
+            FontWeight::WLighter => f.write_str("lighter"),
+            FontWeight::WNormal => f.write_str("normal"),
+            FontWeight::WBold => f.write_str("bold"),
+            FontWeight::WBolder => f.write_str("bolder"),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub enum Margin {

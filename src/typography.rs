@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::{Margin, Size};
+use crate::{Margin, Size, FontWeight};
 
 pub enum TypographyVariant {
     H1,
@@ -42,6 +42,7 @@ pub fn Typography(
                 id,
                 margin,
                 font_size: None,
+                font_weight: None,
                 children,
             },
         )
@@ -141,15 +142,28 @@ pub fn H2(
     id: Option<String>,
     #[prop(optional)] margin: Option<Margin>,
     #[prop(optional)] font_size: Option<Size>,
+    #[prop(optional)] font_weight: Option<FontWeight>,
     children: Children,
 ) -> impl IntoView {
-    let margin = margin.map(|it| format!("--margin: {it}"));
-    let font_size = font_size.map(|it| format!("font-size: {it}"));
-    let style = match (margin, font_size) {
-        (Some(a), Some(b)) => Some(format!("{a}; {b}")),
-        (Some(a), None) => Some(a),
-        (None, Some(b)) => Some(b),
-        (None, None) => None,
+    let mut style = String::new();
+    if let Some(margin) = margin {
+        style.push_str("--margin: ");
+        style.push_str(&margin.to_string()); // TODO: perf
+        style.push_str(";");
+    }
+    if let Some(font_size) = font_size {
+        style.push_str("font-size: ");
+        style.push_str(&font_size.to_string()); // TODO: perf
+        style.push_str(";");
+    }
+    if let Some(font_weight) = font_weight {
+        style.push_str("font-weight: ");
+        style.push_str(&font_weight.to_string()); // TODO: perf
+        style.push_str(";");
+    }
+    let style = match style.is_empty() {
+        true => None,
+        false => Some(style),
     };
     view! { cx,
         <h2 id=id style=style>
