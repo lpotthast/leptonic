@@ -43,6 +43,7 @@ pub fn Typography(
                 margin,
                 font_size: None,
                 font_weight: None,
+                style: None,
                 children,
             },
         )
@@ -143,30 +144,34 @@ pub fn H2(
     #[prop(optional)] margin: Option<Margin>,
     #[prop(optional)] font_size: Option<Size>,
     #[prop(optional)] font_weight: Option<FontWeight>,
+    #[prop(into, optional)] style: Option<String>,
     children: Children,
 ) -> impl IntoView {
-    let mut style = String::new();
+    let mut final_style = String::new();
     if let Some(margin) = margin {
-        style.push_str("--margin: ");
-        style.push_str(&margin.to_string()); // TODO: perf
-        style.push_str(";");
+        final_style.push_str("--margin: ");
+        final_style.push_str(&margin.to_string()); // TODO: perf
+        final_style.push_str(";");
     }
     if let Some(font_size) = font_size {
-        style.push_str("font-size: ");
-        style.push_str(&font_size.to_string()); // TODO: perf
-        style.push_str(";");
+        final_style.push_str("font-size: ");
+        final_style.push_str(&font_size.to_string()); // TODO: perf
+        final_style.push_str(";");
     }
     if let Some(font_weight) = font_weight {
-        style.push_str("font-weight: ");
-        style.push_str(&font_weight.to_string()); // TODO: perf
-        style.push_str(";");
+        final_style.push_str("font-weight: ");
+        final_style.push_str(&font_weight.to_string()); // TODO: perf
+        final_style.push_str(";");
     }
-    let style = match style.is_empty() {
+    if let Some(style) = style {
+        final_style.push_str(&style);
+    }
+    let final_style = match final_style.is_empty() {
         true => None,
-        false => Some(style),
+        false => Some(final_style),
     };
     view! { cx,
-        <h2 id=id style=style>
+        <h2 id=id style=final_style>
             {children(cx)}
         </h2>
     }

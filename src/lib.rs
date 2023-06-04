@@ -141,6 +141,8 @@ pub mod prelude {
     pub use super::toast::Toasts;
     pub use super::toggle::Toggle;
     pub use super::toggle::ToggleIcons;
+    pub use super::toggle::ToggleSize;
+    pub use super::toggle::ToggleVariant;
     pub use super::transitions::collapse::Collapse;
     pub use super::transitions::collapse::CollapseAxis;
     pub use super::transitions::fade::Fade;

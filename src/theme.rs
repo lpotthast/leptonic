@@ -43,6 +43,7 @@ pub fn ThemeToggle<T>(
     cx: Scope,
     off: T,
     on: T,
+    #[prop(optional)] variant: ToggleVariant,
     /// Sets the `class`, making it easier to style.
     #[prop(into, optional)]
     class: Option<AttributeValue>,
@@ -68,6 +69,7 @@ where
             id: None,
             class: None,
             size: ToggleSize::default(),
+            variant,
             icons: Some(ToggleIcons {
                 on: on.icon(),
                 off: off.icon(),

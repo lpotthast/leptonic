@@ -38,6 +38,22 @@ pub struct ToggleIcons {
     pub on: leptos_icons::Icon,
 }
 
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub enum ToggleVariant {
+    #[default]
+    Sliding,
+    Stationary,
+}
+
+impl ToggleVariant {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            ToggleVariant::Sliding => "sliding",
+            ToggleVariant::Stationary => "stationary",
+        }
+    }
+}
+
 #[component]
 pub fn Toggle<S>(
     cx: Scope,
@@ -50,6 +66,7 @@ pub fn Toggle<S>(
     #[prop(into, optional)]
     class: Option<AttributeValue>,
     #[prop(optional)] size: ToggleSize,
+    #[prop(optional)] variant: ToggleVariant,
     #[prop(into, optional)] icons: Option<ToggleIcons>,
 ) -> impl IntoView
 where
@@ -69,6 +86,7 @@ where
                 class=format!("leptonic-toggle {}", size)
                 class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(true)
                 class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                variant=variant.as_str()
                 on:click=move |_| (on_toggle)(!state.get())
             >
                 <span class="slider round" class:on=move || state.get()>
