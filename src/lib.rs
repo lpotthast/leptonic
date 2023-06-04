@@ -25,6 +25,7 @@ pub mod modal;
 pub mod progress_indicator;
 pub mod quicksearch;
 pub mod root;
+pub mod safe_html;
 pub mod select;
 pub mod separator;
 pub mod skeleton;
@@ -119,6 +120,7 @@ pub mod prelude {
     pub use super::quicksearch::Quicksearch;
     pub use super::r#box::Box;
     pub use super::root::Root;
+    pub use super::safe_html::SafeHtml;
     pub use super::select::Select;
     pub use super::select::SelectMode;
     pub use super::separator::Separator;
