@@ -91,6 +91,7 @@ pub fn Button<F>(
     #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] variations: OptionalMaybeSignal<View>,
     children: Children,
 ) -> impl IntoView
@@ -126,7 +127,10 @@ where
     };
 
     view! { cx,
-        <button class="leptonic-btn" class:has-variations=has_variations
+        <button
+            class="leptonic-btn"
+            class:has-variations=has_variations
+            class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(false)
             variant=move || variant.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
             color=move || color.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
             size=move || size.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
