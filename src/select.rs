@@ -4,10 +4,7 @@ use leptos::*;
 
 use web_sys::HtmlElement;
 
-use crate::{
-    root::{GlobalKeyboardEvent, GlobalMouseEvent},
-    Margin,
-};
+use crate::prelude::*;
 
 pub trait SelectOption: Debug + Clone + PartialEq + Eq + Hash {}
 
