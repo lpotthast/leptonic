@@ -1,10 +1,13 @@
-use std::{rc::Rc, sync::Arc};
+use std::{
+    fmt::{Debug, Formatter},
+    rc::Rc,
+    sync::Arc,
+};
 
 pub trait Callable<A> {
     fn call(&self, arg: A);
 }
 
-// TODO: Derive Debug
 /// A callback which...
 /// - ✅ is Clone
 /// - ❌ is not Copy
@@ -37,7 +40,12 @@ impl<T: 'static, R: 'static> Callable<T> for SimpleCallback<T, R> {
     }
 }
 
-// TODO: Derive Debug
+impl<T: 'static, R: 'static> Debug for SimpleCallback<T, R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("SimpleCallback").finish()
+    }
+}
+
 /// A callback which...
 /// - ❌ is Clone
 /// - ✅ is Copy
@@ -72,12 +80,17 @@ impl<T: 'static, R: 'static> Callable<T> for Callback<T, R> {
     }
 }
 
-// TODO: Derive Debug
+impl<T: 'static, R: 'static> Debug for Callback<T, R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("Callback").finish()
+    }
+}
+
 /// A callback which...
 /// - ✅ is Clone
 /// - ✅ is Copy
 /// - ⚠️ requires a leptos context
-pub struct CallbackRc<T: 'static, R: 'static = ()>(leptos::StoredValue<Rc<dyn Fn(T)-> R>>);
+pub struct CallbackRc<T: 'static, R: 'static = ()>(leptos::StoredValue<Rc<dyn Fn(T) -> R>>);
 
 impl<T: 'static, R: 'static> CallbackRc<T, R> {
     pub fn new<F: Fn(T) -> R + 'static>(cx: leptos::Scope, fun: F) -> Self {
@@ -107,7 +120,12 @@ impl<T: 'static, R: 'static> Callable<T> for CallbackRc<T, R> {
     }
 }
 
-// TODO: Derive Debug
+impl<T: 'static, R: 'static> Debug for CallbackRc<T, R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("CallbackRc").finish()
+    }
+}
+
 /// A callback which...
 /// - ✅ is Clone
 /// - ✅ is Copy
@@ -140,5 +158,11 @@ impl<T: 'static, R: 'static> Copy for CallbackArc<T, R> {}
 impl<T: 'static, R: 'static> Callable<T> for CallbackArc<T, R> {
     fn call(&self, arg: T) {
         self.0.with_value(|cb| cb(arg));
+    }
+}
+
+impl<T: 'static, R: 'static> Debug for CallbackArc<T, R> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_tuple("CallbackArc").finish()
     }
 }
