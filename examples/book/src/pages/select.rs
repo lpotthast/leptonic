@@ -1,3 +1,4 @@
+use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
 
@@ -10,9 +11,75 @@ enum Foo {
 
 #[component]
 pub fn PageSelect(cx: Scope) -> impl IntoView {
+    let (options, set_options) = create_signal::<Vec<Foo>>(cx, vec![]);
+
+    let add_option = move || {
+        set_options.update(|options| options.push(Foo::A));
+    };
+
+    let (selected, set_selected) = create_signal(cx, Foo::A);
+    let (selected_opt, set_selected_opt) = create_signal(cx, Option::<Foo>::None);
+    let (selected_multi, set_selected_multi) = create_signal(cx, vec![Foo::A, Foo::B]);
+
     view! { cx,
         <H2>"Selects"</H2>
 
-        <Select options=vec![Foo::A, Foo::B, Foo::C] render_option=move |cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} } />
+        <P>"Select input provide the ability to let your users choose between different predefined values."</P>
+
+        <P>"Lets assume this enum definition."</P>
+
+        <Code>
+            {indoc!(r#"
+                #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+                enum Foo {
+                    A,
+                    B,
+                    C,
+                }
+            "#)}
+        </Code>
+
+        <P>"In its simplest form, the Select component can be created with a static list of options to choose from."</P>
+
+        <Code>
+            {indoc!(r#"
+                <Select
+                    options=vec![Foo::A, Foo::B, Foo::C]
+                    render_option=move |cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} }
+                />
+            "#)}
+        </Code>
+
+        <Select
+            options=vec![Foo::A, Foo::B, Foo::C]
+            render_option=move |cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} }
+            selected=selected
+            set_selected=Callback::new(cx, move |v| set_selected.set(v))
+        />
+
+        <P>"..."</P>
+
+        <OptionalSelect
+            options=vec![Foo::A, Foo::B, Foo::C]
+            render_option=move |cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} }
+            selected=selected_opt
+            set_selected=Callback::new(cx, move |v| set_selected_opt.set(v))
+            allow_deselect=true
+        />
+
+        <P>"..."</P>
+
+        <Multiselect
+            options=vec![Foo::A, Foo::B, Foo::C]
+            render_option=move |_cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} }
+            selected=selected_multi
+            set_selected=Callback::new(cx, move |v| set_selected_multi.set(v))
+        />
+
+        <P>"..."</P>
+
+        <Button on_click=move |_| add_option()>
+            "Add option"
+        </Button>
     }
 }

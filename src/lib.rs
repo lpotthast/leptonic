@@ -121,8 +121,9 @@ pub mod prelude {
     pub use super::r#box::Box;
     pub use super::root::Root;
     pub use super::safe_html::SafeHtml;
+    pub use super::select::Multiselect;
+    pub use super::select::OptionalSelect;
     pub use super::select::Select;
-    pub use super::select::SelectMode;
     pub use super::separator::Separator;
     pub use super::skeleton::Skeleton;
     pub use super::stack::Stack;
