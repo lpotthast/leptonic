@@ -4,8 +4,8 @@ use std::{
     sync::Arc,
 };
 
-pub trait Callable<A> {
-    fn call(&self, arg: A);
+pub trait Callable<A, R = ()> {
+    fn call(&self, arg: A) -> R;
 }
 
 /// A callback which...
@@ -34,9 +34,9 @@ impl<T: 'static, R: 'static> Clone for SimpleCallback<T, R> {
     }
 }
 
-impl<T: 'static, R: 'static> Callable<T> for SimpleCallback<T, R> {
-    fn call(&self, arg: T) {
-        self.0(arg);
+impl<T: 'static, R: 'static> Callable<T, R> for SimpleCallback<T, R> {
+    fn call(&self, arg: T) -> R {
+        self.0(arg)
     }
 }
 
@@ -74,9 +74,9 @@ impl<T: 'static, R: 'static> Clone for Callback<T, R> {
 
 impl<T: 'static, R: 'static> Copy for Callback<T, R> {}
 
-impl<T: 'static, R: 'static> Callable<T> for Callback<T, R> {
-    fn call(&self, arg: T) {
-        self.0.with_value(|cb| cb(arg));
+impl<T: 'static, R: 'static> Callable<T, R> for Callback<T, R> {
+    fn call(&self, arg: T) -> R {
+        self.0.with_value(|cb| cb(arg))
     }
 }
 
@@ -114,9 +114,9 @@ impl<T: 'static, R: 'static> Clone for CallbackRc<T, R> {
 
 impl<T: 'static, R: 'static> Copy for CallbackRc<T, R> {}
 
-impl<T: 'static, R: 'static> Callable<T> for CallbackRc<T, R> {
-    fn call(&self, arg: T) {
-        self.0.with_value(|cb| cb(arg));
+impl<T: 'static, R: 'static> Callable<T, R> for CallbackRc<T, R> {
+    fn call(&self, arg: T) -> R {
+        self.0.with_value(|cb| cb(arg))
     }
 }
 
@@ -155,9 +155,9 @@ impl<T: 'static, R: 'static> Clone for CallbackArc<T, R> {
 
 impl<T: 'static, R: 'static> Copy for CallbackArc<T, R> {}
 
-impl<T: 'static, R: 'static> Callable<T> for CallbackArc<T, R> {
-    fn call(&self, arg: T) {
-        self.0.with_value(|cb| cb(arg));
+impl<T: 'static, R: 'static> Callable<T, R> for CallbackArc<T, R> {
+    fn call(&self, arg: T) -> R {
+        self.0.with_value(|cb| cb(arg))
     }
 }
 
