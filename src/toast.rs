@@ -103,6 +103,22 @@ pub fn ToastRoot(cx: Scope, children: Children) -> impl IntoView {
     }
 }
 
+// TODO: Incorporate
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(dead_code)]
+pub enum ToastHorizontalPosition {
+    Left,
+    Right,
+}
+
+// TODO: Incorporate
+#[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(dead_code)]
+pub enum ToastVerticalPosition {
+    Top,
+    Bottom,
+}
+
 #[component]
 pub fn Toast(cx: Scope, toast: Toast) -> impl IntoView {
     view! { cx,
