@@ -52,7 +52,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <Select
             options=vec![Foo::A, Foo::B, Foo::C]
-            render_option=move |cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} }
+            render_option=Callback::new(cx, move |(cx, o)| format!("{o:?}").into_view(cx))
             selected=selected
             set_selected=Callback::new(cx, move |v| set_selected.set(v))
         />
@@ -61,7 +61,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <OptionalSelect
             options=vec![Foo::A, Foo::B, Foo::C]
-            render_option=move |cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} }
+            render_option=Callback::new(cx, move |(cx, o)| format!("{o:?}").into_view(cx))
             selected=selected_opt
             set_selected=Callback::new(cx, move |v| set_selected_opt.set(v))
             allow_deselect=true
@@ -71,7 +71,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <Multiselect
             options=vec![Foo::A, Foo::B, Foo::C]
-            render_option=move |_cx: Scope, val: &Foo| view! {cx, {format!("{val:?}")} }
+            render_option=Callback::new(cx, move |(cx, o)| format!("{o:?}").into_view(cx))
             selected=selected_multi
             set_selected=Callback::new(cx, move |v| set_selected_multi.set(v))
         />

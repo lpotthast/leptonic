@@ -11,18 +11,16 @@ pub trait SelectOption: Debug + Clone + PartialEq + Eq + Hash {}
 impl<T: Debug + Clone + PartialEq + Eq + Hash> SelectOption for T {}
 
 #[component]
-pub fn Select<O, S, V>(
+pub fn Select<O>(
     cx: Scope,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Callback<O>,
-    render_option: S,
+    #[prop(into)] render_option: Callback<(Scope, O), View>,
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
-    S: Fn(Scope, &O) -> V + Copy + 'static,
-    V: IntoView + 'static,
 {
     let style = margin.map(|it| format!("--margin: {it}"));
 
@@ -57,7 +55,7 @@ where
     view! { cx,
         <leptonic-select id=id_string variant="select" aria-haspopup="listbox" style=style>
             <leptonic-select-selected on:click=move |_| toggle_show()>
-                { move || render_option(cx, &selected.get()) }
+                { move || render_option.call((cx, selected.get())) }
             </leptonic-select-selected>
             <SelectOptions options=options show_options=show_options render_option=render_option select=select/>
         </leptonic-select>
@@ -65,19 +63,17 @@ where
 }
 
 #[component]
-pub fn OptionalSelect<O, S, V>(
+pub fn OptionalSelect<O>(
     cx: Scope,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
     #[prop(into)] set_selected: Callback<Option<O>>,
-    render_option: S,
+    #[prop(into)] render_option: Callback<(Scope, O), View>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
-    S: Fn(Scope, &O) -> V + Copy + 'static,
-    V: IntoView + 'static,
 {
     let style = margin.map(|it| format!("--margin: {it}"));
 
@@ -120,7 +116,7 @@ where
                     None => ().into_view(cx),
                     Some(selected) => view! {cx,
                         <leptonic-select-option>
-                            {render_option(cx, &selected)}
+                            { render_option.call((cx, selected)) }
                         </leptonic-select-option>
                     }.into_view(cx),
                 }}
@@ -144,19 +140,17 @@ where
 }
 
 #[component]
-pub fn Multiselect<O, S, V>(
+pub fn Multiselect<O>(
     cx: Scope,
     #[prop(optional, default=u64::MAX)] max: u64,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Callback<Vec<O>>,
-    render_option: S,
+    #[prop(into)] render_option: Callback<(Scope, O), View>,
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
-    S: Fn(Scope, &O) -> V + Copy + 'static,
-    V: IntoView + 'static,
 {
     let style = margin.map(|it| format!("--margin: {it}"));
 
@@ -198,7 +192,7 @@ where
             <leptonic-select-selected on:click=move |_| toggle_show()>
                 { move || selected.get().into_iter().map(|selected| view! { cx,
                     <leptonic-select-option>
-                        { render_option(cx, &selected) }
+                        { render_option.call((cx, selected)) }
                     </leptonic-select-option>
                 }).collect_view(cx) }
             </leptonic-select-selected>
@@ -209,17 +203,15 @@ where
 }
 
 #[component]
-pub fn SelectOptions<O, S, V>(
+pub fn SelectOptions<O>(
     cx: Scope,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] show_options: Signal<bool>,
-    render_option: S,
-    select: Callback<O>,
+    #[prop(into)] render_option: Callback<(Scope, O), View>,
+    #[prop(into)] select: Callback<O>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
-    S: Fn(Scope, &O) -> V + Copy + 'static,
-    V: IntoView + 'static,
 {
     view! {cx,
         <leptonic-select-options class:shown=move || show_options.get()>
@@ -230,7 +222,7 @@ where
                     let clone = option.clone();
                     view! { cx,
                         <div class="option" on:click=move |_| select.call(clone.clone())>
-                            { render_option(cx, &option) }
+                            { render_option.call((cx, option)) }
                         </div>
                     }
                 }
