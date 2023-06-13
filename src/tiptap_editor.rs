@@ -1,4 +1,5 @@
 use leptos::*;
+use leptos_icons::BsIcon;
 use leptos_tiptap::*;
 use uuid::Uuid;
 
@@ -11,29 +12,88 @@ where
 {
     let (msg, set_msg) = create_signal(cx, TiptapInstanceMsg::Noop);
 
-    let (selection, set_selection) = create_signal(cx, TiptapSelectionState::default());
+    let (selection_state, set_selection_state) = create_signal(cx, TiptapSelectionState::default());
 
     let id = Uuid::new_v4();
 
     view! { cx,
         <leptonic-tiptap-editor>
             <leptonic-tiptap-menu>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H1)>"H1"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H2)>"H2"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H3)>"H3"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H4)>"H4"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H5)>"H5"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H6)>"H6"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Paragraph)>"Paragraph"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Bold)>"Bold"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Italic)>"Italic"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Strike)>"Strike"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Blockquote)>"Blockquote"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Highlight)>"Highlight"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::AlignLeft)>"AlignLeft"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::AlignCenter)>"AlignCenter"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::AlignRight)>"AlignRight"</Button>
-                <Button class=MaybeSignal::from("leptonic-tiptap-btn".to_owned()) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::AlignJustify)>"AlignJustify"</Button>
+                { move || selection_state.with(|state| view! {cx,
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.h1 { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H1)>
+                        "H1"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.h2 { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H2)>
+                        "H2"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.h3 { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H3)>
+                        "H3"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.h4 { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H4)>
+                        "H4"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.h5 { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H5)>
+                        "H5"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.h6 { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::H6)>
+                        "H6"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.paragraph { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Paragraph)>
+                        <Icon icon=BsIcon::BsParagraph/>
+                        "Paragraph"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.bold { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Bold)>
+                        <Icon icon=BsIcon::BsTypeBold/>
+                        "Bold"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.italic { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Italic)>
+                        <Icon icon=BsIcon::BsTypeItalic/>
+                        "Italic"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.strike { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Strike)>
+                        <Icon icon=BsIcon::BsTypeStrikethrough/>
+                        "Strike"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.blockquote { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Blockquote)>
+                        <Icon icon=BsIcon::BsBlockquoteLeft/>
+                        "Blockquote"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.highlight { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::Highlight)>
+                        <Icon icon=BsIcon::BsBrightnessAltHigh/>
+                        "Highlight"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.align_left { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::AlignLeft)>
+                        <Icon icon=BsIcon::BsTextLeft/>
+                        "left"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.align_center { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::AlignCenter)>
+                        <Icon icon=BsIcon::BsTextCenter/>
+                        "center"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.align_right { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::AlignRight)>
+                        <Icon icon=BsIcon::BsTextRight/>
+                        "right"
+                    </Button>
+
+                    <Button class=MaybeSignal::from(format!("leptonic-tiptap-btn {}", if state.align_justify { "active" } else { "" })) size=ButtonSize::Small on_click=move |_| set_msg.set(TiptapInstanceMsg::AlignJustify)>
+                        <Icon icon=BsIcon::BsJustify/>
+                        "justify"
+                    </Button>
+                }) }
             </leptonic-tiptap-menu>
 
             <TiptapInstance
@@ -42,48 +102,13 @@ where
                 disabled=false
                 value=value
                 set_value=set_value
-                on_selection_change=move |state| set_selection.set(state)
+                on_selection_change=move |state| set_selection_state.set(state)
             />
         </leptonic-tiptap-editor>
     }
 }
 
 /*
-
-use yew::{html::Scope, prelude::*};
-use yew_bootstrap_icons::v1_10_3::Bi;
-use yew_tiptap::{
-    tiptap_instance::{Content, Selection, SelectionState, TiptapInstance},
-    ImageResource,
-};
-
-// TODO: Build leptos-tiptap
-
-type TiptapInstanceMsg = <TiptapInstance as Component>::Message;
-
-use crate::prelude::*;
-
-pub enum Msg {
-    InstanceLinked(Option<Scope<TiptapInstance>>),
-    SelectionChanged(Selection),
-    ContentChanged(Content),
-    H1,
-    H2,
-    H3,
-    Paragraph,
-    Bold,
-    Italic,
-    Strike,
-    Blockquote,
-    Highlight,
-    AlignLeft,
-    AlignCenter,
-    AlignRight,
-    AlignJustify,
-    ChooseImage,
-    ChooseImageCanceled,
-    ImageChosen(ImageResource),
-}
 
 #[derive(Properties, PartialEq)]
 pub struct Props {
@@ -101,28 +126,7 @@ pub struct CrudTipTapEditor {
     selection_state: SelectionState,
 }
 
-impl CrudTipTapEditor {
-    fn send_tiptap_msg(&self, msg: TiptapInstanceMsg) -> bool {
-        if let Some(link) = &self.link {
-            link.send_message(msg);
-            true
-        } else {
-            false
-        }
-    }
-}
-
-impl Component for CrudTipTapEditor {
-    type Message = Msg;
-    type Properties = Props;
-
-    fn create(_ctx: &Context<Self>) -> Self {
-        Self {
-            link: None,
-            choose_image: false,
-            selection_state: Default::default(),
-        }
-    }
+choose_image: false,
 
     fn update(&mut self, ctx: &Context<Self>, msg: Self::Message) -> bool {
         match msg {
@@ -138,58 +142,6 @@ impl Component for CrudTipTapEditor {
                 if let Some(onchange) = &ctx.props().onchange {
                     onchange.emit(content.content);
                 }
-                false
-            }
-            Msg::H1 => {
-                self.send_tiptap_msg(TiptapInstanceMsg::H1);
-                false
-            }
-            Msg::H2 => {
-                self.send_tiptap_msg(TiptapInstanceMsg::H2);
-                false
-            }
-            Msg::H3 => {
-                self.send_tiptap_msg(TiptapInstanceMsg::H3);
-                false
-            }
-            Msg::Paragraph => {
-                self.send_tiptap_msg(TiptapInstanceMsg::Paragraph);
-                false
-            }
-            Msg::Bold => {
-                self.send_tiptap_msg(TiptapInstanceMsg::Bold);
-                false
-            }
-            Msg::Italic => {
-                self.send_tiptap_msg(TiptapInstanceMsg::Italic);
-                false
-            }
-            Msg::Strike => {
-                self.send_tiptap_msg(TiptapInstanceMsg::Strike);
-                false
-            }
-            Msg::Blockquote => {
-                self.send_tiptap_msg(TiptapInstanceMsg::Blockquote);
-                false
-            }
-            Msg::Highlight => {
-                self.send_tiptap_msg(TiptapInstanceMsg::Highlight);
-                false
-            }
-            Msg::AlignLeft => {
-                self.send_tiptap_msg(TiptapInstanceMsg::AlignLeft);
-                false
-            }
-            Msg::AlignCenter => {
-                self.send_tiptap_msg(TiptapInstanceMsg::AlignCenter);
-                false
-            }
-            Msg::AlignRight => {
-                self.send_tiptap_msg(TiptapInstanceMsg::AlignRight);
-                false
-            }
-            Msg::AlignJustify => {
-                self.send_tiptap_msg(TiptapInstanceMsg::AlignJustify);
                 false
             }
             Msg::ChooseImage => {
@@ -258,26 +210,6 @@ impl Component for CrudTipTapEditor {
                     <div class={classes!("tiptap-btn", self.selection_state.highlight.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::Highlight)}>
                         <CrudIcon variant={Bi::BrightnessAltHigh}/>
                         {"highlight"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.align_left.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::AlignLeft)}>
-                        <CrudIcon variant={Bi::TextLeft}/>
-                        {"left"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.align_center.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::AlignCenter)}>
-                        <CrudIcon variant={Bi::TextCenter}/>
-                        {"center"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.align_right.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::AlignRight)}>
-                        <CrudIcon variant={Bi::TextRight}/>
-                        {"right"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.align_justify.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::AlignJustify)}>
-                        <CrudIcon variant={Bi::Justify}/>
-                        {"justify"}
                     </div>
 
                     <div class={"tiptap-btn"} onclick={ctx.link().callback(|_| Msg::ChooseImage)}>
