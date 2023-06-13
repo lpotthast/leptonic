@@ -167,51 +167,6 @@ choose_image: false,
 
                 <div class={"tiptap-menu"}>
 
-                    <div class={classes!("tiptap-btn", self.selection_state.h1.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::H1)}>
-                        <CrudIcon variant={Bi::TypeH1}/>
-                        {"h1"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.h2.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::H2)}>
-                        <CrudIcon variant={Bi::TypeH2}/>
-                        {"h2"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.h3.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::H3)}>
-                        <CrudIcon variant={Bi::TypeH3}/>
-                        {"h3"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.paragraph.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::Paragraph)}>
-                        <CrudIcon variant={Bi::Paragraph}/>
-                        {"paragraph"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.bold.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::Bold)}>
-                        <CrudIcon variant={Bi::TypeBold}/>
-                        {"bold"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.italic.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::Italic)}>
-                        <CrudIcon variant={Bi::TypeItalic}/>
-                        {"italic"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.strike.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::Strike)}>
-                        <CrudIcon variant={Bi::TypeStrikethrough}/>
-                        {"strike"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.blockquote.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::Blockquote)}>
-                        <CrudIcon variant={Bi::BlockquoteLeft}/>
-                        {"blockquote"}
-                    </div>
-
-                    <div class={classes!("tiptap-btn", self.selection_state.highlight.then(|| "active"))} onclick={ctx.link().callback(|_| Msg::Highlight)}>
-                        <CrudIcon variant={Bi::BrightnessAltHigh}/>
-                        {"highlight"}
-                    </div>
-
                     <div class={"tiptap-btn"} onclick={ctx.link().callback(|_| Msg::ChooseImage)}>
                         <CrudIcon variant={Bi::Image}/>
                         {"image"}
@@ -252,5 +207,4 @@ choose_image: false,
         }
     }
 }
-
  */
