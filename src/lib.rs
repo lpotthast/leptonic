@@ -34,6 +34,7 @@ pub mod tab;
 pub mod tabs;
 pub mod theme;
 pub mod tile;
+pub mod tiptap_editor;
 pub mod toast;
 pub mod toggle;
 pub mod transitions;
@@ -70,6 +71,8 @@ impl<T: 'static, I: Into<MaybeSignal<T>>> From<I> for OptionalMaybeSignal<T> {
 }
 
 pub mod prelude {
+    pub use leptos_tiptap::*;
+
     pub use super::alert::Alert;
     pub use super::alert::AlertVariant;
     pub use super::anchor::Anchor;
@@ -135,6 +138,7 @@ pub mod prelude {
     pub use super::theme::ThemeProvider;
     pub use super::theme::ThemeToggle;
     pub use super::tile::Tile;
+    pub use super::tiptap_editor::TiptapEditor;
     pub use super::toast::Toast;
     pub use super::toast::ToastRoot;
     pub use super::toast::ToastTimeout;

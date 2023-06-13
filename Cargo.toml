@@ -35,6 +35,7 @@ leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "en
     "BsCaretDown",
     "BsCaretDownFill",
 ] }
+leptos-tiptap = { git = "https://github.com/lpotthast/leptos-tiptap", branch = "main" }
 leptos_router = { version = "0.3", default-features = false, features = [
     "csr",
     "stable",

@@ -37,6 +37,7 @@ leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "en
     "BsCircleSquare",
     "BsArrowsMove",
 ] }
+leptos-tiptap-build = { git = "https://github.com/lpotthast/leptos-tiptap", branch = "main", optional = true }
 leptos_meta = { version = "0.3", default-features = false, features = [
     "csr",
     "stable",
@@ -56,4 +57,4 @@ uuid = { version = "1", features = ["js", "v4", "v7", "serde"] }
 wasm-bindgen = "0.2"
 
 [features]
-build_deps = ["leptonic-theme"]
+build_deps = ["leptonic-theme", "leptos-tiptap-build"]

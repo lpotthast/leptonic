@@ -21,6 +21,7 @@ pub mod skeleton;
 pub mod slider;
 pub mod stack;
 pub mod tab;
+pub mod tiptap_editor;
 pub mod toast;
 pub mod toggle;
 pub mod transition;

@@ -31,6 +31,7 @@ use crate::pages::skeleton::PageSkeleton;
 use crate::pages::slider::PageSlider;
 use crate::pages::stack::PageStack;
 use crate::pages::tab::PageTab;
+use crate::pages::tiptap_editor::PageTiptapEditor;
 use crate::pages::toast::PageToast;
 use crate::pages::toggle::PageToggle;
 use crate::pages::transition::PageTransition;
@@ -80,6 +81,7 @@ pub enum Routes {
     // Input
     Button,
     Input,
+    TiptapEditor,
     DateTime,
     Slider,
     Select,
@@ -123,6 +125,7 @@ impl Routes {
 
             Routes::Button => "/button",
             Routes::Input => "/input",
+            Routes::TiptapEditor => "/tiptap-editor",
             Routes::DateTime => "/date-time",
             Routes::Slider => "/slider",
             Routes::Select => "/select",
@@ -186,6 +189,7 @@ pub fn App(cx: Scope) -> impl IntoView {
 
                         <Route path=Routes::Button view=|cx| view! { cx, <PageButton/> }/>
                         <Route path=Routes::Input view=|cx| view! { cx, <PageInput/> }/>
+                        <Route path=Routes::TiptapEditor view=|cx| view! { cx, <PageTiptapEditor/> }/>
                         <Route path=Routes::DateTime view=|cx| view! { cx, <PageDateTime/> }/>
                         <Route path=Routes::Slider view=|cx| view! { cx, <PageSlider/> }/>
                         <Route path=Routes::Select view=|cx| view! { cx, <PageSelect/> }/>
@@ -280,6 +284,7 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
                             <Link href=Routes::Button class="item">"Button"</Link>
                             <Link href=Routes::Input class="item">"Input"</Link>
+                            <Link href=Routes::TiptapEditor class="item">"Tiptap editor"</Link>
                             <Link href=Routes::DateTime class="item">"Date & Time"</Link>
                             <Link href=Routes::Slider class="item">"Slider"</Link>
                             <Link href=Routes::Select class="item">"Select"</Link>
