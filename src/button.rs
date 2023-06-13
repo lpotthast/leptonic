@@ -1,9 +1,12 @@
-use std::fmt::{Display, Formatter};
+use std::{
+    borrow::Cow,
+    fmt::{Display, Formatter},
+};
 
 use leptos::{ev::MouseEvent, *};
 use leptos_icons::BsIcon;
 
-use crate::{OptionalMaybeSignal, icon::Icon};
+use crate::{icon::Icon, OptionalMaybeSignal};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -93,12 +96,14 @@ pub fn Button<F>(
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] variations: OptionalMaybeSignal<View>,
+    #[prop(into, optional)] class: OptionalMaybeSignal<String>,
     children: Children,
 ) -> impl IntoView
 where
     F: FnMut(MouseEvent) + 'static,
 {
-    let (dropdown_open, set_dropdown_open): (ReadSignal<bool>, WriteSignal<bool>) = create_signal(cx, false);
+    let (dropdown_open, set_dropdown_open): (ReadSignal<bool>, WriteSignal<bool>) =
+        create_signal(cx, false);
 
     let has_variations = variations.0.as_ref().is_some();
 
@@ -128,7 +133,7 @@ where
 
     view! { cx,
         <button
-            class="leptonic-btn"
+            class=move || class.0.as_ref().map(|it| Cow::Owned(format!("{} leptonic-btn", it.get()))).unwrap_or(Cow::Borrowed("leptonic-btn"))
             class:has-variations=has_variations
             class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(false)
             variant=move || variant.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
