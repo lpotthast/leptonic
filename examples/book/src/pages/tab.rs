@@ -7,7 +7,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
     let (count, _set_count) = create_signal_ls(cx, "count", 0u64);
     let (test_bool, set_test_bool) = create_signal(cx, false);
     view! { cx,
-        <H2>"Tabs"</H2>
+        <H1>"Tabs"</H1>
 
         <Tabs mount=Mount::WhenShown>
             <Tab

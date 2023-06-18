@@ -1,8 +1,9 @@
 use std::fmt::{Display, Formatter};
 
 use leptos::*;
+use leptos_icons::BsIcon;
 
-use crate::OptionalMaybeSignal;
+use crate::{OptionalMaybeSignal, icon::Icon, prelude::{Callback, Callable}};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ChipColor {
@@ -38,11 +39,18 @@ impl Display for ChipColor {
 pub fn Chip(
     cx: Scope,
     #[prop(into, optional)] color: OptionalMaybeSignal<ChipColor>,
+    #[prop(into, optional)] dismissible: Option<Callback<()>>,
     children: Children,
 ) -> impl IntoView {
     view! { cx,
         <leptonic-chip color=move || color.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()>
             { children(cx) }
+            { match dismissible {
+                Some(callback) => view! {cx,
+                    <Icon class="dismiss" icon=BsIcon::BsXCircleFill on:click=move |_| callback.call(()) />
+                }.into_view(cx),
+                None => ().into_view(cx),
+            } }
         </leptonic-chip>
     }
 }

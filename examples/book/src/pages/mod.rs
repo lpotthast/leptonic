@@ -2,6 +2,7 @@ pub mod alert;
 pub mod anchor;
 pub mod app_bar;
 pub mod button;
+pub mod changelog;
 pub mod chip;
 pub mod collapsible;
 pub mod date_time;

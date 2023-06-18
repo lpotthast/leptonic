@@ -7,11 +7,13 @@ use crate::Margin;
 pub fn Icon(
     cx: Scope,
     #[prop(into)] icon: Icon,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView {
     let style = margin.map(|it| format!("--margin: {it}"));
     view! { cx,
-        <leptonic-icon style=style>
+        <leptonic-icon id=id class=class style=style>
             <LeptosIcon icon=icon />
         </leptonic-icon>
     }

@@ -1,14 +1,126 @@
-use std::{collections::hash_map::DefaultHasher, fmt::Debug, hash::Hash};
+use std::{
+    fmt::{Debug, Display},
+    hash::Hash,
+};
 
 use leptos::*;
 
+use leptos_icons::BsIcon;
 use web_sys::{HtmlElement, KeyboardEvent};
 
 use crate::prelude::*;
 
-pub trait SelectOption: Debug + Clone + PartialEq + Eq + Hash {}
+pub trait SelectOption: Debug + Clone + PartialEq + Eq + Hash {
+    fn matches_lowercase(&self, search: &str) -> bool;
+}
 
-impl<T: Debug + Clone + PartialEq + Eq + Hash> SelectOption for T {}
+impl<T: Debug + Display + Clone + PartialEq + Eq + Hash> SelectOption for T {
+    fn matches_lowercase(&self, search: &str) -> bool {
+        self.to_string().to_lowercase().contains(search)
+    }
+}
+
+// TODO: select_previous and select_next could be made more efficient.
+// If we would know that the initial vec from which the current preselect'ed option was taken didn't change
+// and if we also keep track of the index of this option in the vec, we can just read the previous / next option
+// be decrementing or incrementing the old index!
+
+// TODO: Prop: close_options_menu_on_selection: bool
+// TODO: Prop: selection_changed: Callback<Selection<T>>
+// TODO: Sort multiselect options
+// TODO: multiselect deselect performance
+
+fn select_previous<O: SelectOption + 'static>(
+    available: &Vec<O>,
+    preselected: ReadSignal<Option<O>>,
+    set_preselected: WriteSignal<Option<O>>,
+) {
+    let previous = preselected.with_untracked(|current| match current {
+        Some(current) => match available.iter().position(|it| it == current) {
+            Some(current_pos) => match current_pos >= 1 {
+                true => Some(available[current_pos - 1].clone()),
+                false => available.last().cloned(),
+            },
+            None => available.last().cloned(),
+        },
+        None => available.last().cloned(),
+    });
+    tracing::info!(?previous, "previous");
+    set_preselected.set(previous);
+}
+
+fn select_next<O: SelectOption + 'static>(
+    available: &Vec<O>,
+    preselected: ReadSignal<Option<O>>,
+    set_preselected: WriteSignal<Option<O>>,
+) {
+    let next = preselected.with_untracked(|current| match current {
+        Some(current) => match available.iter().position(|it| it == current) {
+            Some(current_pos) => match (current_pos + 1) < available.len() {
+                true => Some(available[current_pos + 1].clone()),
+                false => available.first().cloned(),
+            },
+            None => available.first().cloned(),
+        },
+        None => available.first().cloned(),
+    });
+    tracing::info!(?next, "next");
+    set_preselected.set(next);
+}
+
+fn handle_key<O: SelectOption + 'static>(
+    e: KeyboardEvent,
+    show_options: ReadSignal<bool>,
+    set_show_options: WriteSignal<bool>,
+    focus: ReadSignal<bool>,
+    stored_options: StoredValue<MaybeSignal<Vec<O>>>,
+    preselected: ReadSignal<Option<O>>,
+    set_preselected: WriteSignal<Option<O>>,
+    select: Callback<O>,
+) {
+    match (show_options.get_untracked(), focus.get_untracked()) {
+        (true, _) => match e.key().as_str() {
+            "Escape" | "Backspace" => set_show_options.set(false),
+            "ArrowUp" => {
+                e.prevent_default();
+                e.stop_propagation();
+                stored_options.with_value(|options| match options {
+                    MaybeSignal::Static(vec) => select_previous(vec, preselected, set_preselected),
+                    MaybeSignal::Dynamic(sig) => {
+                        sig.with_untracked(|vec| select_previous(vec, preselected, set_preselected))
+                    }
+                });
+            }
+            "ArrowDown" => {
+                e.prevent_default();
+                e.stop_propagation();
+                stored_options.with_value(|options| match options {
+                    MaybeSignal::Static(vec) => select_next(vec, preselected, set_preselected),
+                    MaybeSignal::Dynamic(sig) => {
+                        sig.with_untracked(|vec| select_next(vec, preselected, set_preselected))
+                    }
+                });
+            }
+            "Enter" => {
+                e.prevent_default();
+                e.stop_propagation();
+                if let Some(preselected) = preselected.get_untracked() {
+                    select.call(preselected);
+                }
+            }
+            _ => {}
+        },
+        (false, true) => match e.key().as_str() {
+            "Enter" | "ArrowDown" => {
+                e.prevent_default();
+                e.stop_propagation();
+                set_show_options.set(true);
+            }
+            _ => {}
+        },
+        _ => {}
+    }
+}
 
 #[component]
 pub fn Select<O>(
@@ -17,18 +129,42 @@ pub fn Select<O>(
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Callback<O>,
     #[prop(into)] render_option: Callback<(Scope, O), View>,
-    #[prop(optional)] margin: Option<Margin>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
 {
-    let style = margin.map(|it| format!("--margin: {it}"));
-
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
 
+    let (focus, set_focus) = create_signal(cx, false);
+
     let (show_options, set_show_options) = create_signal(cx, false);
+
+    let stored_options = store_value(cx, options);
+    let (preselected, set_preselected) = create_signal(cx, Option::<O>::None);
+
+    let (search, set_search) = create_signal(cx, "".to_owned());
+
+    let filtered_options = create_memo(cx, move |_| {
+        let search = search.get().to_lowercase();
+        stored_options
+            .get_value()
+            .get()
+            .into_iter()
+            .filter(|it| it.matches_lowercase(search.as_str()))
+            .collect::<Vec<_>>()
+    });
+
+    let has_options = create_memo(cx, move |_| {
+        !filtered_options.with(|options| options.is_empty())
+    });
+
+    let select = Callback::new(cx, move |option: O| {
+        set_selected.call(option);
+        set_show_options.set(false);
+    });
 
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
@@ -39,25 +175,52 @@ where
         move || set_show_options.set(false),
     );
 
-    create_key_down_listener(
-        cx,
-        move |e| show_options.get_untracked() && e.key().as_str() == "Escape",
-        move || set_show_options.set(false),
-    );
+    create_key_down_listener(cx, move |e| {
+        handle_key(
+            e,
+            show_options,
+            set_show_options,
+            focus,
+            stored_options,
+            preselected,
+            set_preselected,
+            select,
+        );
+    });
 
     let toggle_show = move || set_show_options.update(|val| *val = !*val);
 
-    let select = Callback::new(cx, move |option: O| {
-        set_selected.call(option);
-        set_show_options.set(false);
-    });
-
     view! { cx,
-        <leptonic-select id=id_string variant="select" aria-haspopup="listbox" style=style>
+        <leptonic-select
+            on:blur=move |_| set_focus.set(false)
+            on:focus=move |_| set_focus.set(true)
+            tabindex=0
+            id=id_string
+            variant="select"
+            aria-haspopup="listbox"
+            style=style
+        >
             <leptonic-select-selected on:click=move |_| toggle_show()>
                 { move || render_option.call((cx, selected.get())) }
+
+                <leptonic-select-show-trigger>
+                    {move || match show_options.get() {
+                        true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
+                        false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                    }}
+                </leptonic-select-show-trigger>
             </leptonic-select-selected>
-            <SelectOptions options=options show_options=show_options render_option=render_option select=select/>
+
+            <SelectOptions
+                search=search
+                set_search=set_search
+                filtered_options=filtered_options
+                preselected=preselected
+                has_options=has_options
+                show_options=show_options
+                render_option=render_option
+                select=select
+            />
         </leptonic-select>
     }
 }
@@ -70,35 +233,37 @@ pub fn OptionalSelect<O>(
     #[prop(into)] set_selected: Callback<Option<O>>,
     #[prop(into)] render_option: Callback<(Scope, O), View>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
-    #[prop(optional)] margin: Option<Margin>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
 {
-    let style = margin.map(|it| format!("--margin: {it}"));
-
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
 
+    let (focus, set_focus) = create_signal(cx, false);
+
     let (show_options, set_show_options) = create_signal(cx, false);
 
-    // We need to check for global mouse events.
-    // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
-    create_click_away_listener(
-        cx,
-        id_selector_string.clone(),
-        move || show_options.get_untracked(),
-        move || set_show_options.set(false),
-    );
+    let stored_options = store_value(cx, options);
+    let (preselected, set_preselected) = create_signal(cx, Option::<O>::None);
 
-    create_key_down_listener(
-        cx,
-        move |e| show_options.get_untracked() && e.key().as_str() == "Escape",
-        move || set_show_options.set(false),
-    );
+    let (search, set_search) = create_signal(cx, "".to_owned());
 
-    let toggle_show = move || set_show_options.update(|val| *val = !*val);
+    let filtered_options = create_memo(cx, move |_| {
+        let search = search.get().to_lowercase();
+        stored_options
+            .get_value()
+            .get()
+            .into_iter()
+            .filter(|it| it.matches_lowercase(search.as_str()))
+            .collect::<Vec<_>>()
+    });
+
+    let has_options = create_memo(cx, move |_| {
+        !filtered_options.with(|options| options.is_empty())
+    });
 
     let select = Callback::new(cx, move |option: O| {
         set_selected.call(Some(option));
@@ -109,8 +274,40 @@ where
         set_selected.call(None);
     };
 
+    // We need to check for global mouse events.
+    // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
+    create_click_away_listener(
+        cx,
+        id_selector_string.clone(),
+        move || show_options.get_untracked(),
+        move || set_show_options.set(false),
+    );
+
+    create_key_down_listener(cx, move |e| {
+        handle_key(
+            e,
+            show_options,
+            set_show_options,
+            focus,
+            stored_options,
+            preselected,
+            set_preselected,
+            select,
+        );
+    });
+
+    let toggle_show = move || set_show_options.update(|val| *val = !*val);
+
     view! { cx,
-        <leptonic-select id=id_string variant="optional-select" aria-haspopup="listbox" style=style>
+        <leptonic-select
+            on:blur=move |_| set_focus.set(false)
+            on:focus=move |_| set_focus.set(true)
+            tabindex=0
+            id=id_string
+            variant="optional-select"
+            aria-haspopup="listbox"
+            style=style
+        >
             <leptonic-select-selected on:click=move |_| toggle_show()>
                 { move || match selected.get().clone() {
                     None => ().into_view(cx),
@@ -129,12 +326,29 @@ where
                             e.stop_propagation();
                             deselect();
                         }>
-                            "x"
+                            <Icon icon=BsIcon::BsXCircleFill/>
                         </leptonic-select-deselect-trigger>
                     }.into_view(cx),
                 }}
+
+                <leptonic-select-show-trigger>
+                    {move || match show_options.get() {
+                        true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
+                        false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                    }}
+                </leptonic-select-show-trigger>
             </leptonic-select-selected>
-            <SelectOptions options=options show_options=show_options render_option=render_option select=select/>
+
+            <SelectOptions
+                search=search
+                set_search=set_search
+                filtered_options=filtered_options
+                preselected=preselected
+                has_options=has_options
+                show_options=show_options
+                render_option=render_option
+                select=select
+            />
         </leptonic-select>
     }
 }
@@ -147,35 +361,37 @@ pub fn Multiselect<O>(
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Callback<Vec<O>>,
     #[prop(into)] render_option: Callback<(Scope, O), View>,
-    #[prop(optional)] margin: Option<Margin>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
 {
-    let style = margin.map(|it| format!("--margin: {it}"));
-
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
 
+    let (focus, set_focus) = create_signal(cx, false);
+
     let (show_options, set_show_options) = create_signal(cx, false);
 
-    // We need to check for global mouse events.
-    // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
-    create_click_away_listener(
-        cx,
-        id_selector_string.clone(),
-        move || show_options.get_untracked(),
-        move || set_show_options.set(false),
-    );
+    let stored_options = store_value(cx, options);
+    let (preselected, set_preselected) = create_signal(cx, Option::<O>::None);
 
-    create_key_down_listener(
-        cx,
-        move |e| show_options.get_untracked() && e.key().as_str() == "Escape",
-        move || set_show_options.set(false),
-    );
+    let (search, set_search) = create_signal(cx, "".to_owned());
 
-    let toggle_show = move || set_show_options.update(|val| *val = !*val);
+    let filtered_options = create_memo(cx, move |_| {
+        let search = search.get().to_lowercase();
+        stored_options
+            .get_value()
+            .get()
+            .into_iter()
+            .filter(|it| it.matches_lowercase(search.as_str()))
+            .collect::<Vec<_>>()
+    });
+
+    let has_options = create_memo(cx, move |_| {
+        !filtered_options.with(|options| options.is_empty())
+    });
 
     let select = Callback::new(cx, move |option: O| {
         let mut vec = selected.get_untracked();
@@ -187,17 +403,80 @@ where
         set_show_options.set(false);
     });
 
+    let deselect = Callback::new(cx, move |option: O| {
+        let mut vec = selected.get_untracked();
+        if let Some(pos) = vec.iter().position(|it| it == &option) {
+            vec.remove(pos);
+        }
+        tracing::info!(?vec, "deselected");
+        set_selected.call(vec);
+        set_show_options.set(false);
+    });
+
+    // We need to check for global mouse events.
+    // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
+    create_click_away_listener(
+        cx,
+        id_selector_string.clone(),
+        move || show_options.get_untracked(),
+        move || set_show_options.set(false),
+    );
+
+    create_key_down_listener(cx, move |e| {
+        handle_key(
+            e,
+            show_options,
+            set_show_options,
+            focus,
+            stored_options,
+            preselected,
+            set_preselected,
+            select,
+        );
+    });
+
+    let toggle_show = move || set_show_options.update(|val| *val = !*val);
+
     view! { cx,
-        <leptonic-select id=id_string variant="multiselect" aria-haspopup="listbox" style=style>
+        <leptonic-select
+            on:blur=move |_| set_focus.set(false)
+            on:focus=move |_| set_focus.set(true)
+            tabindex=0
+            id=id_string
+            variant="multiselect"
+            aria-haspopup="listbox"
+            style=style
+        >
             <leptonic-select-selected on:click=move |_| toggle_show()>
-                { move || selected.get().into_iter().map(|selected| view! { cx,
-                    <leptonic-select-option>
-                        { render_option.call((cx, selected)) }
-                    </leptonic-select-option>
-                }).collect_view(cx) }
+                { move || selected.get().into_iter().map(|selected| {
+                    let clone = selected.clone();
+                    view! { cx,
+                        <leptonic-select-option>
+                            <Chip color=ChipColor::Secondary dismissible=Callback::new(cx, move |_| deselect.call(clone.clone()))>
+                                { render_option.call((cx, selected)) }
+                            </Chip>
+                        </leptonic-select-option>
+                    }}).collect_view(cx)
+                }
+
+                <leptonic-select-show-trigger>
+                    {move || match show_options.get() {
+                        true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
+                        false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                    }}
+                </leptonic-select-show-trigger>
             </leptonic-select-selected>
 
-            <SelectOptions options=options show_options=show_options render_option=render_option select=select/>
+            <SelectOptions
+                search=search
+                set_search=set_search
+                filtered_options=filtered_options
+                preselected=preselected
+                has_options=has_options
+                show_options=show_options
+                render_option=render_option
+                select=select
+            />
         </leptonic-select>
     }
 }
@@ -205,8 +484,12 @@ where
 #[component]
 pub fn SelectOptions<O>(
     cx: Scope,
-    #[prop(into)] options: MaybeSignal<Vec<O>>,
-    #[prop(into)] show_options: Signal<bool>,
+    #[prop(into)] search: ReadSignal<String>,
+    #[prop(into)] set_search: WriteSignal<String>,
+    #[prop(into)] filtered_options: Memo<Vec<O>>,
+    #[prop(into)] preselected: ReadSignal<Option<O>>,
+    #[prop(into)] has_options: Memo<bool>,
+    #[prop(into)] show_options: ReadSignal<bool>,
     #[prop(into)] render_option: Callback<(Scope, O), View>,
     #[prop(into)] select: Callback<O>,
 ) -> impl IntoView
@@ -215,18 +498,28 @@ where
 {
     view! {cx,
         <leptonic-select-options class:shown=move || show_options.get()>
-            <For
-                each=move || options.get()
-                key=|option| option.hash(&mut DefaultHasher::new())
-                view=move |cx, option| {
+            <Input get=search set=move |s| set_search.set(s)/>
+
+            { move || {
+                let preselected = preselected.get();
+                filtered_options.get().into_iter().map(|option| {
                     let clone = option.clone();
                     view! { cx,
-                        <div class="option" on:click=move |_| select.call(clone.clone())>
+                        <div class="option" class:preselected={preselected.as_ref() == Some(&option)} on:click=move |_| select.call(clone.clone())>
                             { render_option.call((cx, option)) }
                         </div>
                     }
-                }
-            />
+                }).collect_view(cx)
+            } }
+
+            { move || match has_options.get() {
+                true => ().into_view(cx),
+                false => view! {cx,
+                    <div class="option">
+                        "No options..."
+                    </div>
+                }.into_view(cx),
+            } }
         </leptonic-select-options>
     }
 }
@@ -246,19 +539,21 @@ fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
 
         if when() {
             if let Some(e) = last_mouse_event {
-                let target = e.target().unwrap();
-                let target_elem = target.dyn_ref::<HtmlElement>().unwrap().clone();
-                match target_elem.closest(id_selector_string.as_ref()) {
-                    Ok(closest) => {
-                        if let Some(_found) = closest {
-                            // User clicked on the options list. Ignoring this global mouse event.
-                        } else {
-                            // User clicked outside.
-                            on_click_outside();
+                if let Some(target) = e.target() {
+                    if let Some(target_elem) = target.dyn_ref::<HtmlElement>() {
+                        match target_elem.closest(id_selector_string.as_ref()) {
+                            Ok(closest) => {
+                                if let Some(_found) = closest {
+                                    // User clicked on the options list. Ignoring this global mouse event.
+                                } else {
+                                    // User clicked outside.
+                                    on_click_outside();
+                                }
+                            }
+                            Err(err) => {
+                                error!("Error processing latest mouse event: {err:?}");
+                            }
                         }
-                    }
-                    Err(err) => {
-                        error!("Error processing latest mouse event: {err:?}");
                     }
                 }
             }
@@ -266,23 +561,14 @@ fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
     });
 }
 
-fn create_key_down_listener<W: Fn(KeyboardEvent) -> bool + 'static, T: Fn() + 'static>(
-    cx: Scope,
-    when: W,
-    then: T,
-) {
+fn create_key_down_listener<T: Fn(KeyboardEvent) + 'static>(cx: Scope, then: T) {
     let g_keyboard_event =
         use_context::<GlobalKeyboardEvent>(cx).expect("Must be a child of the Root component.");
 
     create_effect(cx, move |_old| {
         let g_keyboard_event = g_keyboard_event.read_signal.get();
         if let Some(e) = g_keyboard_event {
-            if when(e) {
-                then();
-            }
+            then(e);
         }
     });
 }
-
-// TODO: Prop: close_options_menu_on_selection: bool
-// TODO: Prop: selection_changed: Callback<Selection<T>>

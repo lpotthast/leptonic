@@ -10,7 +10,7 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
     let (label_input, set_label_input) = create_signal(cx, "".to_owned());
 
     view! { cx,
-        <H2>"Inputs"</H2>
+        <H1>"Inputs"</H1>
 
         <P>"Creating an input is as simple as doing the following"</P>
         <Code>

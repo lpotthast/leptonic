@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageTypography(cx: Scope) -> impl IntoView {
     view! { cx,
-        <H2>"Typography"</H2>
+        <H1>"Typography"</H1>
 
         <Separator />
 

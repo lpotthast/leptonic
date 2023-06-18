@@ -9,6 +9,16 @@ enum Foo {
     C,
 }
 
+impl std::fmt::Display for Foo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Foo::A => f.write_str("A"),
+            Foo::B => f.write_str("B"),
+            Foo::C => f.write_str("C"),
+        }
+    }
+}
+
 #[component]
 pub fn PageSelect(cx: Scope) -> impl IntoView {
     let (options, set_options) = create_signal::<Vec<Foo>>(cx, vec![]);
@@ -81,5 +91,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
         <Button on_click=move |_| add_option()>
             "Add option"
         </Button>
+
+        <div style="margin-bottom: 10em;"></div>
     }
 }

@@ -17,6 +17,7 @@ use crate::pages::collapsible::PageCollapsible;
 use crate::pages::date_time::PageDateTime;
 use crate::pages::drawer::PageDrawer;
 use crate::pages::err404::PageErr404;
+use crate::pages::changelog::PageChangelog;
 use crate::pages::grid::PageGrid;
 use crate::pages::icon::PageIcon;
 use crate::pages::input::PageInput;
@@ -67,6 +68,7 @@ pub enum Routes {
     Overview,
     Installation,
     Usage,
+    Changelog,
 
     // Layout
     Stack,
@@ -113,6 +115,7 @@ impl Routes {
             Routes::Overview => "/overview",
             Routes::Installation => "/installation",
             Routes::Usage => "/usage",
+            Routes::Changelog => "/changelog",
 
             Routes::Stack => "/stack",
             Routes::Grid => "/grid",
@@ -177,6 +180,7 @@ pub fn App(cx: Scope) -> impl IntoView {
                         <Route path=Routes::Overview view=|cx| view! { cx, <PageOverview/> }/>
                         <Route path=Routes::Installation view=|cx| view! { cx, <PageInstallation/> }/>
                         <Route path=Routes::Usage view=|cx| view! { cx, <PageUsage/> }/>
+                        <Route path=Routes::Changelog view=|cx| view! { cx, <PageChangelog/> }/>
 
                         <Route path=Routes::Stack view=|cx| view! { cx, <PageStack/> }/>
                         <Route path=Routes::Grid view=|cx| view! { cx, <PageGrid/> }/>
@@ -252,6 +256,7 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                             <Link href=Routes::Overview class="item">"Overview"</Link>
                             <Link href=Routes::Installation class="item">"Installation"</Link>
                             <Link href=Routes::Usage class="item">"Usage"</Link>
+                            <Link href=Routes::Changelog class="item">"Changelog"</Link>
                         </Stack>
                     }
                 />
