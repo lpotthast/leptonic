@@ -12,15 +12,15 @@ pub trait Callable<A, R = ()> {
 /// - ✅ is Clone
 /// - ❌ is not Copy
 /// - ✅ requires no leptos context
-pub struct SimpleCallback<T: 'static, R: 'static = ()>(Rc<dyn Fn(T) -> R>);
+pub struct SimpleCallback<T, R = ()>(Rc<dyn Fn(T) -> R>);
 
-impl<T: 'static, R: 'static> SimpleCallback<T, R> {
+impl<T, R> SimpleCallback<T, R> {
     pub fn new<F: Fn(T) -> R + 'static>(fun: F) -> Self {
         Self(Rc::new(fun))
     }
 }
 
-impl<T: 'static, R: 'static> std::ops::Deref for SimpleCallback<T, R> {
+impl<T, R> std::ops::Deref for SimpleCallback<T, R> {
     type Target = Rc<dyn Fn(T) -> R>;
 
     fn deref(&self) -> &Self::Target {
@@ -28,19 +28,19 @@ impl<T: 'static, R: 'static> std::ops::Deref for SimpleCallback<T, R> {
     }
 }
 
-impl<T: 'static, R: 'static> Clone for SimpleCallback<T, R> {
+impl<T, R> Clone for SimpleCallback<T, R> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl<T: 'static, R: 'static> Callable<T, R> for SimpleCallback<T, R> {
+impl<T, R> Callable<T, R> for SimpleCallback<T, R> {
     fn call(&self, arg: T) -> R {
         self.0(arg)
     }
 }
 
-impl<T: 'static, R: 'static> Debug for SimpleCallback<T, R> {
+impl<T, R> Debug for SimpleCallback<T, R> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("SimpleCallback").finish()
     }
