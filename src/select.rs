@@ -73,7 +73,7 @@ fn handle_key<O: SelectOption + 'static>(
     show_options: ReadSignal<bool>,
     set_show_options: WriteSignal<bool>,
     focus: ReadSignal<bool>,
-    stored_options: StoredValue<MaybeSignal<Vec<O>>>,
+    options_available_for_preselect: Signal<Vec<O>>,
     preselected: ReadSignal<Option<O>>,
     set_preselected: WriteSignal<Option<O>>,
     select: Callback<O>,
@@ -84,22 +84,22 @@ fn handle_key<O: SelectOption + 'static>(
             "ArrowUp" => {
                 e.prevent_default();
                 e.stop_propagation();
-                stored_options.with_value(|options| match options {
-                    MaybeSignal::Static(vec) => select_previous(vec, preselected, set_preselected),
-                    MaybeSignal::Dynamic(sig) => {
-                        sig.with_untracked(|vec| select_previous(vec, preselected, set_preselected))
-                    }
-                });
+                // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
+                select_previous(
+                    &options_available_for_preselect.get_untracked(),
+                    preselected,
+                    set_preselected,
+                );
             }
             "ArrowDown" => {
                 e.prevent_default();
                 e.stop_propagation();
-                stored_options.with_value(|options| match options {
-                    MaybeSignal::Static(vec) => select_next(vec, preselected, set_preselected),
-                    MaybeSignal::Dynamic(sig) => {
-                        sig.with_untracked(|vec| select_next(vec, preselected, set_preselected))
-                    }
-                });
+                // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
+                select_next(
+                    &options_available_for_preselect.get_untracked(),
+                    preselected,
+                    set_preselected,
+                );
             }
             "Enter" => {
                 e.prevent_default();
@@ -154,7 +154,7 @@ where
             .get()
             .into_iter()
             .filter(|it| it.matches_lowercase(search.as_str()))
-            .collect::<Vec<_>>()
+            .collect::<Vec<O>>()
     });
 
     let has_options = create_memo(cx, move |_| {
@@ -181,7 +181,7 @@ where
             show_options,
             set_show_options,
             focus,
-            stored_options,
+            filtered_options.into(),
             preselected,
             set_preselected,
             select,
@@ -211,16 +211,37 @@ where
                 </leptonic-select-show-trigger>
             </leptonic-select-selected>
 
-            <SelectOptions
-                search=search
-                set_search=set_search
-                filtered_options=filtered_options
-                preselected=preselected
-                has_options=has_options
-                show_options=show_options
-                render_option=render_option
-                select=select
-            />
+            <leptonic-select-options class:shown=move || show_options.get()>
+                <Input get=search set=move |s| set_search.set(s)/>
+
+                { move || {
+                    filtered_options.get().into_iter().map(|option| move || {
+                        let clone = option.clone();
+                        let clone2 = option.clone();
+                        let is_preselected = preselected.with(|preselected| preselected.as_ref() == Some(&option));
+                        let is_selected = selected.with(|selected| selected == &option);
+                        view! { cx,
+                            <div
+                                class="option"
+                                class:preselected=is_preselected
+                                class:selected=is_selected
+                                on:click=move |_| select.call(clone.clone())
+                            >
+                                { render_option.call((cx, clone2)) }
+                            </div>
+                        }
+                    }).collect_view(cx)
+                } }
+
+                { move || match has_options.get() {
+                    true => ().into_view(cx),
+                    false => view! {cx,
+                        <div class="option">
+                            "No options..."
+                        </div>
+                    }.into_view(cx),
+                } }
+            </leptonic-select-options>
         </leptonic-select>
     }
 }
@@ -289,7 +310,7 @@ where
             show_options,
             set_show_options,
             focus,
-            stored_options,
+            filtered_options.into(),
             preselected,
             set_preselected,
             select,
@@ -339,16 +360,37 @@ where
                 </leptonic-select-show-trigger>
             </leptonic-select-selected>
 
-            <SelectOptions
-                search=search
-                set_search=set_search
-                filtered_options=filtered_options
-                preselected=preselected
-                has_options=has_options
-                show_options=show_options
-                render_option=render_option
-                select=select
-            />
+            <leptonic-select-options class:shown=move || show_options.get()>
+                <Input get=search set=move |s| set_search.set(s)/>
+
+                { move || {
+                    filtered_options.get().into_iter().map(|option| move || {
+                        let clone = option.clone();
+                        let clone2 = option.clone();
+                        let is_preselected = preselected.with(|preselected| preselected.as_ref() == Some(&option));
+                        let is_selected = selected.with(|selected| selected.as_ref() == Some(&option));
+                        view! { cx,
+                            <div
+                                class="option"
+                                class:preselected=is_preselected
+                                class:selected=is_selected
+                                on:click=move |_| select.call(clone.clone())
+                            >
+                                { render_option.call((cx, clone2)) }
+                            </div>
+                        }
+                    }).collect_view(cx)
+                } }
+
+                { move || match has_options.get() {
+                    true => ().into_view(cx),
+                    false => view! {cx,
+                        <div class="option">
+                            "No options..."
+                        </div>
+                    }.into_view(cx),
+                } }
+            </leptonic-select-options>
         </leptonic-select>
     }
 }
@@ -428,7 +470,7 @@ where
             show_options,
             set_show_options,
             focus,
-            stored_options,
+            filtered_options.into(),
             preselected,
             set_preselected,
             select,
@@ -452,7 +494,10 @@ where
                     let clone = selected.clone();
                     view! { cx,
                         <leptonic-select-option>
-                            <Chip color=ChipColor::Secondary dismissible=Callback::new(cx, move |_| deselect.call(clone.clone()))>
+                            <Chip
+                                color=ChipColor::Secondary
+                                on:click=move |e| { e.stop_propagation(); }
+                                dismissible=Callback::new(cx, move |_| deselect.call(clone.clone()))>
                                 { render_option.call((cx, selected)) }
                             </Chip>
                         </leptonic-select-option>
@@ -467,60 +512,38 @@ where
                 </leptonic-select-show-trigger>
             </leptonic-select-selected>
 
-            <SelectOptions
-                search=search
-                set_search=set_search
-                filtered_options=filtered_options
-                preselected=preselected
-                has_options=has_options
-                show_options=show_options
-                render_option=render_option
-                select=select
-            />
-        </leptonic-select>
-    }
-}
+            <leptonic-select-options class:shown=move || show_options.get()>
+                <Input get=search set=move |s| set_search.set(s)/>
 
-#[component]
-pub fn SelectOptions<O>(
-    cx: Scope,
-    #[prop(into)] search: ReadSignal<String>,
-    #[prop(into)] set_search: WriteSignal<String>,
-    #[prop(into)] filtered_options: Memo<Vec<O>>,
-    #[prop(into)] preselected: ReadSignal<Option<O>>,
-    #[prop(into)] has_options: Memo<bool>,
-    #[prop(into)] show_options: ReadSignal<bool>,
-    #[prop(into)] render_option: Callback<(Scope, O), View>,
-    #[prop(into)] select: Callback<O>,
-) -> impl IntoView
-where
-    O: SelectOption + 'static,
-{
-    view! {cx,
-        <leptonic-select-options class:shown=move || show_options.get()>
-            <Input get=search set=move |s| set_search.set(s)/>
+                { move || {
+                    filtered_options.get().into_iter().map(|option| move || {
+                        let clone = option.clone();
+                        let clone2 = option.clone();
+                        let is_preselected = preselected.with(|preselected| preselected.as_ref() == Some(&option));
+                        let is_selected = selected.with(|selected| selected.contains(&option));
+                        view! { cx,
+                            <div
+                                class="option"
+                                class:preselected=is_preselected
+                                class:selected=is_selected
+                                on:click=move |_| select.call(clone.clone())
+                            >
+                                { render_option.call((cx, clone2)) }
+                            </div>
+                        }
+                    }).collect_view(cx)
+                } }
 
-            { move || {
-                let preselected = preselected.get();
-                filtered_options.get().into_iter().map(|option| {
-                    let clone = option.clone();
-                    view! { cx,
-                        <div class="option" class:preselected={preselected.as_ref() == Some(&option)} on:click=move |_| select.call(clone.clone())>
-                            { render_option.call((cx, option)) }
+                { move || match has_options.get() {
+                    true => ().into_view(cx),
+                    false => view! {cx,
+                        <div class="option">
+                            "No options..."
                         </div>
-                    }
-                }).collect_view(cx)
-            } }
-
-            { move || match has_options.get() {
-                true => ().into_view(cx),
-                false => view! {cx,
-                    <div class="option">
-                        "No options..."
-                    </div>
-                }.into_view(cx),
-            } }
-        </leptonic-select-options>
+                    }.into_view(cx),
+                } }
+            </leptonic-select-options>
+        </leptonic-select>
     }
 }
 
