@@ -406,7 +406,7 @@ pub fn Multiselect<O>(
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
-    O: SelectOption + 'static,
+    O: SelectOption + PartialOrd + Ord + 'static,
 {
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -440,6 +440,7 @@ where
         if !vec.contains(&option) {
             vec.push(option); // TODO
         }
+        vec.sort();
         tracing::info!(?vec, "selected");
         set_selected.call(vec);
         set_show_options.set(false);
