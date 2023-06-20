@@ -88,6 +88,16 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <P>"..."</P>
 
+        <Multiselect
+            options=vec![Foo::A, Foo::B, Foo::C]
+            max=2
+            render_option=Callback::new(cx, move |(cx, o)| format!("{o:?}").into_view(cx))
+            selected=selected_multi
+            set_selected=Callback::new(cx, move |v| set_selected_multi.set(v))
+        />
+
+        <P>"..."</P>
+        
         <Button on_click=move |_| add_option()>
             "Add option"
         </Button>
