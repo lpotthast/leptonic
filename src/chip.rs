@@ -2,6 +2,7 @@ use std::fmt::{Display, Formatter};
 
 use leptos::*;
 use leptos_icons::BsIcon;
+use web_sys::MouseEvent;
 
 use crate::{OptionalMaybeSignal, icon::Icon, prelude::{Callback, Callable}};
 
@@ -39,7 +40,7 @@ impl Display for ChipColor {
 pub fn Chip(
     cx: Scope,
     #[prop(into, optional)] color: OptionalMaybeSignal<ChipColor>,
-    #[prop(into, optional)] dismissible: Option<Callback<()>>,
+    #[prop(into, optional)] dismissible: Option<Callback<MouseEvent>>,
     children: Children,
 ) -> impl IntoView {
     view! { cx,
@@ -47,7 +48,7 @@ pub fn Chip(
             { children(cx) }
             { match dismissible {
                 Some(callback) => view! {cx,
-                    <Icon class="dismiss" icon=BsIcon::BsXCircleFill on:click=move |_| callback.call(()) />
+                    <Icon class="dismiss" icon=BsIcon::BsXCircleFill on:click=move |e| callback.call(e) />
                 }.into_view(cx),
                 None => ().into_view(cx),
             } }
