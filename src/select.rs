@@ -616,27 +616,26 @@ where
                     >
                         { move || {
                             filtered_options.get().into_iter().map(|option| {
-                                let clone = option.clone();
+                                let clone1 = option.clone();
                                 let clone2 = option.clone();
                                 let clone3 = option.clone();
-                                // Accessing `selected` here will lead to all options rerendering when `selected` changes. But we are fine with that.
-                                let is_selected = is_selected(&option);
-                                let is_disabled = is_disabled(&option);
+                                let clone4 = option.clone();
+                                let clone5 = option.clone();
                                 view! { cx,
                                     <leptonic-select-option
                                         class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
-                                        class:selected=is_selected
-                                        class:disabled=is_disabled
+                                        class:selected=move || is_selected(&clone4)
+                                        class:disabled=move || is_disabled(&clone5)
                                         on:mouseenter=move |_e| {
                                             set_preselected.set(Some(clone3.clone()));
                                         }
                                         on:click=move |_e| {
-                                            if !is_disabled {
+                                            if !is_disabled_untracked(&clone2) {
                                                 select.call(clone2.clone())
                                             }
                                         }
                                     >
-                                        { render_option.call((cx, clone)) }
+                                        { render_option.call((cx, clone1)) }
                                     </leptonic-select-option>
                                 }
                             }).collect_view(cx)
