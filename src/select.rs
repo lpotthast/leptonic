@@ -6,7 +6,7 @@ use std::{
 use leptos::*;
 
 use leptos_icons::BsIcon;
-use web_sys::{HtmlElement, KeyboardEvent};
+use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
 use crate::prelude::*;
 
@@ -452,7 +452,7 @@ where
         vec.sort();
         tracing::info!(?vec, "selected");
         set_selected.call(vec);
-        set_show_options.set(false);
+        set_show_options.set(false); // TODO: Make this optional.
     });
 
     let deselect = Callback::new(cx, move |option: O| {
@@ -462,19 +462,18 @@ where
         }
         tracing::info!(?vec, "deselected");
         set_selected.call(vec);
-        set_show_options.set(false);
+        // set_show_options.set(false); // TODO: Make this optional.
     });
 
-    let is_selected = move |option: &O| {
-        selected.with(|selected| selected.contains(&option))
-    };
+    let is_selected = move |option: &O| selected.with(|selected| selected.contains(&option));
 
     let is_disabled = move |option: &O| {
         selected.with(|selected| selected.contains(&option) || selected.len() == max as usize)
     };
 
     let is_disabled_untracked = move |option: &O| {
-        selected.with_untracked(|selected| selected.contains(&option) || selected.len() == max as usize)
+        selected
+            .with_untracked(|selected| selected.contains(&option) || selected.len() == max as usize)
     };
 
     // We need to check for global mouse events.
@@ -569,15 +568,23 @@ where
                 aria-haspopup="listbox"
                 style=style
             >
-                <leptonic-select-selected on:click=move |_| toggle_show()>
+                <leptonic-select-selected on:click=move |_| {
+                    tracing::info!("toggle");
+                    toggle_show();
+                }>
                     { move || selected.get().into_iter().map(|selected| {
                         let clone = selected.clone();
                         view! { cx,
                             <leptonic-select-option>
                                 <Chip
                                     color=ChipColor::Secondary
-                                    on:click=move |e| { e.stop_propagation(); }
-                                    dismissible=Callback::new(cx, move |_| deselect.call(clone.clone()))>
+                                    on:click=move |e| {
+                                        e.stop_propagation();
+                                    }
+                                    dismissible=Callback::new(cx, move |e: MouseEvent| {
+                                        e.stop_propagation();
+                                        deselect.call(clone.clone());
+                                    })>
                                     { render_option.call((cx, selected)) }
                                 </Chip>
                             </leptonic-select-option>
@@ -614,8 +621,10 @@ where
                         when=move || show_options.get()
                         fallback=move |_| ()
                     >
-                        { move || {
-                            filtered_options.get().into_iter().map(|option| {
+                        <For
+                            each=move || filtered_options.get()
+                            key=move |option| option.clone() // Lets use the full option as the hash
+                            view=move |cx, option| {
                                 let clone1 = option.clone();
                                 let clone2 = option.clone();
                                 let clone3 = option.clone();
@@ -638,8 +647,8 @@ where
                                         { render_option.call((cx, clone1)) }
                                     </leptonic-select-option>
                                 }
-                            }).collect_view(cx)
-                        } }
+                            }
+                        />
 
                         { move || match has_options.get() {
                             true => ().into_view(cx),
