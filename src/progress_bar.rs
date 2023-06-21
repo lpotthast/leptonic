@@ -13,10 +13,10 @@ pub fn ProgressBar(
 
     // Calculates the percentage done in range [0, 1].
     let percentage_done = Signal::derive(cx, move || {
-        progress.get().map(f64::abs).map(|progress| {
-            let percentage = match progress == 0.0 {
+        progress.get().map(|it| f64::max(it, 0.0)).map(|pos_progress| {
+            let percentage = match max == 0.0 {
                 true => 0.0,
-                false => progress / max,
+                false => pos_progress / max,
             };
             f64::max(f64::min(percentage, 1.0), 0.0)
         })
