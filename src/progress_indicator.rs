@@ -29,6 +29,7 @@ pub fn ProgressBar(
         <leptonic-progress-bar node_ref=el>
             <leptonic-progress-bar-background>
                 <leptonic-progress-bar-fill style=move || fill_style.get() />
+                <leptonic-progress-bar-fill-overlay style=move || fill_style.get() />
                 <leptonic-progress-info>
                     { move || format!("{:.2} %", (percentage_done.get() * 100.0)) }
                 </leptonic-progress-info>
