@@ -27,8 +27,8 @@ impl<T: Debug + Display + Clone + PartialEq + Eq + Hash> SelectOption for T {
 
 // TODO: Prop: close_options_menu_on_selection: bool
 // TODO: Prop: selection_changed: Callback<Selection<T>>
-// TODO: Sort multiselect options
 // TODO: multiselect deselect performance
+// TODO: remove code duplication between select variants
 
 fn select_previous<O: SelectOption + 'static>(
     available: &Vec<O>,
@@ -45,7 +45,6 @@ fn select_previous<O: SelectOption + 'static>(
         },
         None => available.last().cloned(),
     });
-    tracing::info!(?previous, "previous");
     set_preselected.set(previous);
 }
 
@@ -64,68 +63,7 @@ fn select_next<O: SelectOption + 'static>(
         },
         None => available.first().cloned(),
     });
-    tracing::info!(?next, "next");
     set_preselected.set(next);
-}
-
-fn handle_key<O: SelectOption + 'static>(
-    e: KeyboardEvent,
-    show_options: ReadSignal<bool>,
-    set_show_options: WriteSignal<bool>,
-    focus: Signal<bool>,
-    search_focused: Signal<bool>,
-    options_available_for_preselect: Signal<Vec<O>>,
-    preselected: ReadSignal<Option<O>>,
-    set_preselected: WriteSignal<Option<O>>,
-    select: Callback<O>,
-) {
-    match (show_options.get_untracked(), focus.get_untracked()) {
-        (true, _) => match e.key().as_str() {
-            "Escape" => set_show_options.set(false),
-            "Backspace" => {
-                if !search_focused.get_untracked() {
-                    set_show_options.set(false)
-                }
-            }
-            "ArrowUp" => {
-                e.prevent_default();
-                e.stop_propagation();
-                // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
-                select_previous(
-                    &options_available_for_preselect.get_untracked(),
-                    preselected,
-                    set_preselected,
-                );
-            }
-            "ArrowDown" => {
-                e.prevent_default();
-                e.stop_propagation();
-                // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
-                select_next(
-                    &options_available_for_preselect.get_untracked(),
-                    preselected,
-                    set_preselected,
-                );
-            }
-            "Enter" => {
-                e.prevent_default();
-                e.stop_propagation();
-                if let Some(preselected) = preselected.get_untracked() {
-                    select.call(preselected);
-                }
-            }
-            _ => {}
-        },
-        (false, true) => match e.key().as_str() {
-            "Enter" | "ArrowDown" => {
-                e.prevent_default();
-                e.stop_propagation();
-                set_show_options.set(true);
-            }
-            _ => {}
-        },
-        _ => {}
-    }
 }
 
 #[component]
@@ -144,12 +82,15 @@ where
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
 
-    let (focus, set_focus) = create_signal(cx, false);
-
+    let (focused, set_focused) = create_signal(cx, false);
     let (show_options, set_show_options) = create_signal(cx, false);
+
+    let search_should_be_focused = Signal::derive(cx, move || show_options.get());
+    let (search_is_focused, set_search_is_focused) = create_signal(cx, false);
 
     let stored_options = store_value(cx, options);
     let (preselected, set_preselected) = create_signal(cx, Option::<O>::None);
+    let memoized_preselected = create_memo(cx, move |_| preselected.get());
 
     let (search, set_search) = create_signal(cx, "".to_owned());
 
@@ -172,6 +113,13 @@ where
         set_show_options.set(false);
     });
 
+    let is_selected = move |option: &O| selected.with(|selected| selected == option);
+
+    let is_disabled = move |option: &O| selected.with(|selected| selected == option);
+
+    let is_disabled_untracked =
+        move |option: &O| selected.with_untracked(|selected| selected == option);
+
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
@@ -182,73 +130,159 @@ where
     );
 
     create_key_down_listener(cx, move |e| {
-        handle_key(
-            e,
-            show_options,
-            set_show_options,
-            focus.into(),
-            focus.into(), //TODO fix
-            filtered_options.into(),
-            preselected,
-            set_preselected,
-            select,
-        );
+        match (show_options.get_untracked(), focused.get_untracked()) {
+            (true, _) => match e.key().as_str() {
+                "Escape" => set_show_options.set(false),
+                "Backspace" => {
+                    if !search_is_focused.get_untracked() {
+                        set_show_options.set(false)
+                    }
+                }
+                "ArrowUp" => {
+                    e.prevent_default();
+                    e.stop_propagation();
+                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
+                    select_previous(
+                        &filtered_options.get_untracked(),
+                        preselected,
+                        set_preselected,
+                    );
+                }
+                "ArrowDown" => {
+                    e.prevent_default();
+                    e.stop_propagation();
+                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
+                    select_next(
+                        &filtered_options.get_untracked(),
+                        preselected,
+                        set_preselected,
+                    );
+                }
+                "Enter" => {
+                    e.prevent_default();
+                    e.stop_propagation();
+                    if let Some(preselected) = preselected.get_untracked() {
+                        if !is_disabled_untracked(&preselected) {
+                            select.call(preselected)
+                        }
+                    }
+                }
+                _ => {}
+            },
+            (false, true) => match e.key().as_str() {
+                "Enter" | "ArrowDown" => {
+                    e.prevent_default();
+                    e.stop_propagation();
+                    set_show_options.set(true);
+                }
+                _ => {}
+            },
+            _ => {}
+        }
     });
 
     let toggle_show = move || set_show_options.update(|val| *val = !*val);
 
+    let wrapper: NodeRef<html::Div> = create_node_ref(cx);
+
+    // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
+    create_effect(cx, move |_| {
+        if show_options.get() == false && search_is_focused.get_untracked() {
+            // TODO: Use with() when available.
+            if let Some(wrapper) = wrapper.get() {
+                wrapper.focus().unwrap();
+            } else {
+                tracing::warn!("missing node_ref");
+            }
+        }
+    });
+
     view! { cx,
-        <leptonic-select
-            on:blur=move |_| set_focus.set(false)
-            on:focus=move |_| set_focus.set(true)
+        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
+        <div
+            node_ref=wrapper
+            class="leptonic-select-wrapper"
             tabindex=0
-            id=id_string
-            variant="select"
-            aria-haspopup="listbox"
-            style=style
+            on:blur=move |_| set_focused.set(false)
+            on:focus=move |_| set_focused.set(true)
         >
-            <leptonic-select-selected on:click=move |_| toggle_show()>
-                { move || render_option.call((cx, selected.get())) }
+            <leptonic-select
+                id=id_string
+                variant="select"
+                aria-haspopup="listbox"
+                style=style
+            >
+                <leptonic-select-selected on:click=move |_| toggle_show()>
+                    { move || render_option.call((cx, selected.get())) }
 
-                <leptonic-select-show-trigger>
-                    {move || match show_options.get() {
-                        true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
-                        false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
-                    }}
-                </leptonic-select-show-trigger>
-            </leptonic-select-selected>
+                    <leptonic-select-show-trigger>
+                        {move || match show_options.get() {
+                            true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
+                            false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                        }}
+                    </leptonic-select-show-trigger>
+                </leptonic-select-selected>
 
-            <leptonic-select-options class:shown=move || show_options.get()>
-                <Input get=search set=move |s| set_search.set(s)/>
+                <leptonic-select-options class:shown=move || show_options.get()>
+                    <Input
+                        get=search
+                        set=move |s| set_search.set(s)
+                        should_be_focused=search_should_be_focused
+                        on_focus_change=Callback::new(cx, move |focused| {
+                            // We only update our state as long as show_options is true.
+                            // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
+                            // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
+                            // When storing the received `false` in `search_is_focused` before our effect above, resetting focus on our wrapper may, runs,
+                            // that create_effect will not be able to set the focus. We accept not setting `search_is_focused` all the time
+                            // for the create_effect above to work reliably.
+                            if show_options.get_untracked() {
+                                set_search_is_focused.set(focused);
+                            }
+                        })
+                    />
 
-                { move || {
-                    filtered_options.get().into_iter().map(|option| move || {
-                        let clone = option.clone();
-                        let clone2 = option.clone();
-                        let is_preselected = preselected.with(|preselected| preselected.as_ref() == Some(&option));
-                        let is_selected = selected.with(|selected| selected == &option);
-                        view! { cx,
-                            <leptonic-select-option
-                                class:preselected=is_preselected
-                                class:selected=is_selected
-                                on:click=move |_| select.call(clone.clone())
-                            >
-                                { render_option.call((cx, clone2)) }
-                            </leptonic-select-option>
-                        }
-                    }).collect_view(cx)
-                } }
+                    <Show
+                        when=move || show_options.get()
+                        fallback=move |_| ()
+                    >
+                        // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
+                        { filtered_options.get().into_iter().map(|option| {
+                            let clone1 = option.clone();
+                            let clone2 = option.clone();
+                            let clone3 = option.clone();
+                            let clone4 = option.clone();
+                            let clone5 = option.clone();
+                            view! { cx,
+                                <leptonic-select-option
+                                    class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
+                                    class:selected=move || is_selected(&clone4)
+                                    class:disabled=move || is_disabled(&clone5)
+                                    on:mouseenter=move |_e| {
+                                        set_preselected.set(Some(clone3.clone()));
+                                    }
+                                    on:click=move |_e| {
+                                        if !is_disabled_untracked(&clone2) {
+                                            select.call(clone2.clone())
+                                        }
+                                    }
+                                >
+                                    { render_option.call((cx, clone1)) }
+                                </leptonic-select-option>
+                            }
+                        }).collect_view(cx) }
 
-                { move || match has_options.get() {
-                    true => ().into_view(cx),
-                    false => view! {cx,
-                        <div class="option">
-                            "No options..."
-                        </div>
-                    }.into_view(cx),
-                } }
-            </leptonic-select-options>
-        </leptonic-select>
+                        { move || match has_options.get() {
+                            true => ().into_view(cx),
+                            false => view! {cx,
+                                <div class="option">
+                                    "No options..."
+                                </div>
+                            }.into_view(cx),
+                        } }
+                    </Show>
+                </leptonic-select-options>
+            </leptonic-select>
+        </div>
     }
 }
 
@@ -269,12 +303,15 @@ where
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
 
-    let (focus, set_focus) = create_signal(cx, false);
-
+    let (focused, set_focused) = create_signal(cx, false);
     let (show_options, set_show_options) = create_signal(cx, false);
+
+    let search_should_be_focused = Signal::derive(cx, move || show_options.get());
+    let (search_is_focused, set_search_is_focused) = create_signal(cx, false);
 
     let stored_options = store_value(cx, options);
     let (preselected, set_preselected) = create_signal(cx, Option::<O>::None);
+    let memoized_preselected = create_memo(cx, move |_| preselected.get());
 
     let (search, set_search) = create_signal(cx, "".to_owned());
 
@@ -301,6 +338,13 @@ where
         set_selected.call(None);
     };
 
+    let is_selected = move |option: &O| selected.with(|selected| selected.as_ref() == Some(option));
+
+    let is_disabled = move |option: &O| selected.with(|selected| selected.as_ref() == Some(option));
+
+    let is_disabled_untracked =
+        move |option: &O| selected.with_untracked(|selected| selected.as_ref() == Some(option));
+
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
@@ -311,93 +355,180 @@ where
     );
 
     create_key_down_listener(cx, move |e| {
-        handle_key(
-            e,
-            show_options,
-            set_show_options,
-            focus.into(),
-            focus.into(), //TODO fix
-            filtered_options.into(),
-            preselected,
-            set_preselected,
-            select,
-        );
+        match (show_options.get_untracked(), focused.get_untracked()) {
+            (true, _) => match e.key().as_str() {
+                "Escape" => set_show_options.set(false),
+                "Backspace" => {
+                    if !search_is_focused.get_untracked() {
+                        set_show_options.set(false)
+                    }
+                }
+                "ArrowUp" => {
+                    e.prevent_default();
+                    e.stop_propagation();
+                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
+                    select_previous(
+                        &filtered_options.get_untracked(),
+                        preselected,
+                        set_preselected,
+                    );
+                }
+                "ArrowDown" => {
+                    e.prevent_default();
+                    e.stop_propagation();
+                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
+                    select_next(
+                        &filtered_options.get_untracked(),
+                        preselected,
+                        set_preselected,
+                    );
+                }
+                "Enter" => {
+                    e.prevent_default();
+                    e.stop_propagation();
+                    if let Some(preselected) = preselected.get_untracked() {
+                        if !is_disabled_untracked(&preselected) {
+                            select.call(preselected)
+                        }
+                    }
+                }
+                _ => {}
+            },
+            (false, true) => match e.key().as_str() {
+                "Enter" | "ArrowDown" => {
+                    e.prevent_default();
+                    e.stop_propagation();
+                    set_show_options.set(true);
+                }
+                _ => {}
+            },
+            _ => {}
+        }
     });
 
     let toggle_show = move || set_show_options.update(|val| *val = !*val);
 
+    let wrapper: NodeRef<html::Div> = create_node_ref(cx);
+
+    // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
+    create_effect(cx, move |_| {
+        if show_options.get() == false && search_is_focused.get_untracked() {
+            // TODO: Use with() when available.
+            if let Some(wrapper) = wrapper.get() {
+                wrapper.focus().unwrap();
+            } else {
+                tracing::warn!("missing node_ref");
+            }
+        }
+    });
+
     view! { cx,
-        <leptonic-select
-            on:blur=move |_| set_focus.set(false)
-            on:focus=move |_| set_focus.set(true)
+
+        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
+        <div
+            node_ref=wrapper
+            class="leptonic-select-wrapper"
             tabindex=0
-            id=id_string
-            variant="optional-select"
-            aria-haspopup="listbox"
-            style=style
+            on:blur=move |_| set_focused.set(false)
+            on:focus=move |_| set_focused.set(true)
         >
-            <leptonic-select-selected on:click=move |_| toggle_show()>
-                { move || match selected.get().clone() {
-                    None => ().into_view(cx),
-                    Some(selected) => view! {cx,
-                        <leptonic-select-option>
-                            { render_option.call((cx, selected)) }
-                        </leptonic-select-option>
-                    }.into_view(cx),
-                }}
-
-                { match allow_deselect.get() {
-                    false => ().into_view(cx),
-                    true => view! {cx,
-                        <leptonic-select-deselect-trigger on:click=move |e| {
-                            e.prevent_default();
-                            e.stop_propagation();
-                            deselect();
-                        }>
-                            <Icon icon=BsIcon::BsXCircleFill/>
-                        </leptonic-select-deselect-trigger>
-                    }.into_view(cx),
-                }}
-
-                <leptonic-select-show-trigger>
-                    {move || match show_options.get() {
-                        true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
-                        false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
-                    }}
-                </leptonic-select-show-trigger>
-            </leptonic-select-selected>
-
-            <leptonic-select-options class:shown=move || show_options.get()>
-                <Input get=search set=move |s| set_search.set(s)/>
-
-                { move || {
-                    filtered_options.get().into_iter().map(|option| move || {
-                        let clone = option.clone();
-                        let clone2 = option.clone();
-                        let is_preselected = preselected.with(|preselected| preselected.as_ref() == Some(&option));
-                        let is_selected = selected.with(|selected| selected.as_ref() == Some(&option));
-                        view! { cx,
-                            <leptonic-select-option
-                                class:preselected=is_preselected
-                                class:selected=is_selected
-                                on:click=move |_| select.call(clone.clone())
-                            >
-                                { render_option.call((cx, clone2)) }
+            <leptonic-select
+                id=id_string
+                variant="optional-select"
+                aria-haspopup="listbox"
+                style=style
+            >
+                <leptonic-select-selected on:click=move |_| toggle_show()>
+                    { move || match selected.get().clone() {
+                        None => ().into_view(cx),
+                        Some(selected) => view! {cx,
+                            <leptonic-select-option>
+                                { render_option.call((cx, selected)) }
                             </leptonic-select-option>
-                        }
-                    }).collect_view(cx)
-                } }
+                        }.into_view(cx),
+                    }}
 
-                { move || match has_options.get() {
-                    true => ().into_view(cx),
-                    false => view! {cx,
-                        <div class="option">
-                            "No options..."
-                        </div>
-                    }.into_view(cx),
-                } }
-            </leptonic-select-options>
-        </leptonic-select>
+                    { match allow_deselect.get() {
+                        false => ().into_view(cx),
+                        true => view! {cx,
+                            <leptonic-select-deselect-trigger on:click=move |e| {
+                                e.prevent_default();
+                                e.stop_propagation();
+                                deselect();
+                            }>
+                                <Icon icon=BsIcon::BsXCircleFill/>
+                            </leptonic-select-deselect-trigger>
+                        }.into_view(cx),
+                    }}
+
+                    <leptonic-select-show-trigger>
+                        {move || match show_options.get() {
+                            true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
+                            false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                        }}
+                    </leptonic-select-show-trigger>
+                </leptonic-select-selected>
+
+                <leptonic-select-options class:shown=move || show_options.get()>
+                    <Input
+                        get=search
+                        set=move |s| set_search.set(s)
+                        should_be_focused=search_should_be_focused
+                        on_focus_change=Callback::new(cx, move |focused| {
+                            // We only update our state as long as show_options is true.
+                            // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
+                            // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
+                            // When storing the received `false` in `search_is_focused` before our effect above, resetting focus on our wrapper may, runs,
+                            // that create_effect will not be able to set the focus. We accept not setting `search_is_focused` all the time
+                            // for the create_effect above to work reliably.
+                            if show_options.get_untracked() {
+                                set_search_is_focused.set(focused);
+                            }
+                        })
+                    />
+
+                    <Show
+                        when=move || show_options.get()
+                        fallback=move |_| ()
+                    >
+                        // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
+                        { filtered_options.get().into_iter().map(|option| {
+                            let clone1 = option.clone();
+                            let clone2 = option.clone();
+                            let clone3 = option.clone();
+                            let clone4 = option.clone();
+                            let clone5 = option.clone();
+                            view! { cx,
+                                <leptonic-select-option
+                                    class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
+                                    class:selected=move || is_selected(&clone4)
+                                    class:disabled=move || is_disabled(&clone5)
+                                    on:mouseenter=move |_e| {
+                                        set_preselected.set(Some(clone3.clone()));
+                                    }
+                                    on:click=move |_e| {
+                                        if !is_disabled_untracked(&clone2) {
+                                            select.call(clone2.clone())
+                                        }
+                                    }
+                                >
+                                    { render_option.call((cx, clone1)) }
+                                </leptonic-select-option>
+                            }
+                        }).collect_view(cx) }
+
+                        { move || match has_options.get() {
+                            true => ().into_view(cx),
+                            false => view! {cx,
+                                <div class="option">
+                                    "No options..."
+                                </div>
+                            }.into_view(cx),
+                        } }
+                    </Show>
+                </leptonic-select-options>
+            </leptonic-select>
+        </div>
     }
 }
 
@@ -554,7 +685,7 @@ where
     });
 
     view! { cx,
-        // TODO: Move this focus-tracking functionality to our main leptonic-select component, when https://github.com/leptos-rs/leptos/issues/1215 is resolved.
+        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
         <div
             node_ref=wrapper
             class="leptonic-select-wrapper"
@@ -572,6 +703,7 @@ where
                     tracing::info!("toggle");
                     toggle_show();
                 }>
+                    // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
                     { move || selected.get().into_iter().map(|selected| {
                         let clone = selected.clone();
                         view! { cx,
@@ -621,34 +753,31 @@ where
                         when=move || show_options.get()
                         fallback=move |_| ()
                     >
-                        <For
-                            each=move || filtered_options.get()
-                            key=move |option| option.clone() // Lets use the full option as the hash
-                            view=move |cx, option| {
-                                let clone1 = option.clone();
-                                let clone2 = option.clone();
-                                let clone3 = option.clone();
-                                let clone4 = option.clone();
-                                let clone5 = option.clone();
-                                view! { cx,
-                                    <leptonic-select-option
-                                        class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
-                                        class:selected=move || is_selected(&clone4)
-                                        class:disabled=move || is_disabled(&clone5)
-                                        on:mouseenter=move |_e| {
-                                            set_preselected.set(Some(clone3.clone()));
+                        // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
+                        { filtered_options.get().into_iter().map(|option| {
+                            let clone1 = option.clone();
+                            let clone2 = option.clone();
+                            let clone3 = option.clone();
+                            let clone4 = option.clone();
+                            let clone5 = option.clone();
+                            view! { cx,
+                                <leptonic-select-option
+                                    class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
+                                    class:selected=move || is_selected(&clone4)
+                                    class:disabled=move || is_disabled(&clone5)
+                                    on:mouseenter=move |_e| {
+                                        set_preselected.set(Some(clone3.clone()));
+                                    }
+                                    on:click=move |_e| {
+                                        if !is_disabled_untracked(&clone2) {
+                                            select.call(clone2.clone())
                                         }
-                                        on:click=move |_e| {
-                                            if !is_disabled_untracked(&clone2) {
-                                                select.call(clone2.clone())
-                                            }
-                                        }
-                                    >
-                                        { render_option.call((cx, clone1)) }
-                                    </leptonic-select-option>
-                                }
+                                    }
+                                >
+                                    { render_option.call((cx, clone1)) }
+                                </leptonic-select-option>
                             }
-                        />
+                        }).collect_view(cx) }
 
                         { move || match has_options.get() {
                             true => ().into_view(cx),
