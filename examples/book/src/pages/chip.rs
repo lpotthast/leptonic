@@ -24,9 +24,11 @@ pub fn PageChip(cx: Scope) -> impl IntoView {
 
         <H2>"Dismissible chips"</H2>
 
-        <P>"As chips are often used to convey mutable state, we allow chips to be dismissible."</P>
-        <P>"Dismissible chips display an X icon which lets the user dismiss the chip."</P>
-        <P>"The component embedding the chip is responsible of actually removing it, e.g. not rendering it again."</P>
+        <P>
+            "As chips are often used to convey mutable state, we allow chips to be dismissible. "
+            "Dismissible chips display an "<Code inline=true>"X"</Code>" icon which lets the user dismiss the chip. "
+            "The component embedding the chip is responsible of actually removing it, e.g. not rendering it again."
+        </P>
 
         <Code>
             {indoc!(r#"
