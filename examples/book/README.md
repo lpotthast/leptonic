@@ -1,4 +1,4 @@
-# Simple Example
+# Leptonic book
 
 this example is a simple demonstration of how one would add an icon to his application.
 
