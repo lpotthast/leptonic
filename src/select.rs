@@ -67,16 +67,17 @@ fn select_next<O: SelectOption + 'static>(
 }
 
 #[component]
-pub fn Select<O>(
+pub fn Select<O, V>(
     cx: Scope,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Callback<O>,
-    #[prop(into)] render_option: Callback<(Scope, O), View>,
+    #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
+    V: IntoView + 'static,
 {
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -287,17 +288,18 @@ where
 }
 
 #[component]
-pub fn OptionalSelect<O>(
+pub fn OptionalSelect<O, V>(
     cx: Scope,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
     #[prop(into)] set_selected: Callback<Option<O>>,
-    #[prop(into)] render_option: Callback<(Scope, O), View>,
+    #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
+    V: IntoView + 'static,
 {
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -533,17 +535,18 @@ where
 }
 
 #[component]
-pub fn Multiselect<O>(
+pub fn Multiselect<O, V>(
     cx: Scope,
     #[prop(optional, default=u64::MAX)] max: u64,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Callback<Vec<O>>,
-    #[prop(into)] render_option: Callback<(Scope, O), View>,
+    #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + PartialOrd + Ord + 'static,
+    V: IntoView + 'static,
 {
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
