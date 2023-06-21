@@ -22,7 +22,7 @@ pub mod icon;
 pub mod input;
 pub mod link;
 pub mod modal;
-pub mod progress_indicator;
+pub mod progress_bar;
 pub mod quicksearch;
 pub mod root;
 pub mod safe_html;
@@ -119,7 +119,7 @@ pub mod prelude {
     pub use super::modal::ModalHeader;
     pub use super::modal::ModalRoot;
     pub use super::modal::ModalTitle;
-    pub use super::progress_indicator::ProgressBar;
+    pub use super::progress_bar::ProgressBar;
     pub use super::quicksearch::Quicksearch;
     pub use super::r#box::Box;
     pub use super::root::Root;
