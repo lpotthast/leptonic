@@ -41,12 +41,14 @@ pub fn ProgressBar(
                     <leptonic-progress-bar-fill-overlay />
                 </leptonic-progress-bar-fill>
 
-                <leptonic-progress-info>
-                    { move || match percentage_done.get() {
-                        Some(percentage_done) => format!("{:.2} %", (percentage_done * 100.0)),
-                        None => "".to_owned()
-                    } }
-                </leptonic-progress-info>
+                <Show when=move || percentage_done.get().is_some() fallback=|_| ()>
+                    <leptonic-progress-info>
+                        { move || match percentage_done.get() {
+                            Some(percentage_done) => format!("{:.2} %", (percentage_done * 100.0)),
+                            None => "".to_owned()
+                        } }
+                    </leptonic-progress-info>
+                </Show>
             </leptonic-progress-bar-background>
         </leptonic-progress-bar>
     }
