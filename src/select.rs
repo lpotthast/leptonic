@@ -702,10 +702,7 @@ where
                 aria-haspopup="listbox"
                 style=style
             >
-                <leptonic-select-selected on:click=move |_| {
-                    tracing::info!("toggle");
-                    toggle_show();
-                }>
+                <leptonic-select-selected on:click=move |_| toggle_show()>
                     // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
                     { move || selected.get().into_iter().map(|selected| {
                         let clone = selected.clone();
