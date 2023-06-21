@@ -5,7 +5,7 @@ use web_sys::HtmlInputElement;
 
 use crate::{
     prelude::{Callable, Callback},
-    Margin, OptionalMaybeSignal,
+    OptionalMaybeSignal,
 };
 
 // TODO: Consider merging this component with DateTimeInput if that does not impose a performance regression when using standard text inputs.
@@ -60,7 +60,7 @@ pub fn Input<S>(
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
-    #[prop(optional)] margin: Option<Margin>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     S: Fn(String) + Clone + 'static,
@@ -68,7 +68,6 @@ where
     let class = class
         .map(|it| Cow::Owned(format!("leptonic-input {it}")))
         .unwrap_or(Cow::Borrowed("leptonic-input"));
-    let style = margin.map(|it| format!("--margin: {it}"));
 
     let ty_str = match ty {
         InputType::Text => "text",
