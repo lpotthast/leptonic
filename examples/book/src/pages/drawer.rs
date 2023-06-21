@@ -59,7 +59,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                             <Link href=Routes::Alert class="item">"Alert"</Link>
                             <Link href=Routes::Typography class="item">"Typography"</Link>
                             <Link href=Routes::Icon class="item">"Icon"</Link>
-                            <Link href=Routes::ProgressIndicator class="item">"Progress"</Link>
+                            <Link href=Routes::Progress class="item">"Progress"</Link>
                         </Stack>
                     }
                 />

@@ -15,7 +15,7 @@ pub mod installation;
 pub mod link;
 pub mod modal;
 pub mod overview;
-pub mod progress_indicator;
+pub mod progress;
 pub mod select;
 pub mod separator;
 pub mod skeleton;

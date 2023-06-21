@@ -2,7 +2,7 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageProgressIndicator(cx: Scope) -> impl IntoView {
+pub fn PageProgress(cx: Scope) -> impl IntoView {
     let (progress, set_progress) = create_signal(cx, Some(34.0));
     let (progress2, set_progres2s) = create_signal(cx, None);
 
@@ -14,7 +14,9 @@ pub fn PageProgressIndicator(cx: Scope) -> impl IntoView {
     });
 
     view! { cx,
-        <H2>"Progress bar"</H2>
+        <H1>"Progress"</H1>
+
+
 
         <ProgressBar progress=progress/>
 

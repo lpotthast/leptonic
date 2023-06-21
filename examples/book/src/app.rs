@@ -25,7 +25,7 @@ use crate::pages::installation::PageInstallation;
 use crate::pages::link::PageLink;
 use crate::pages::modal::PageModal;
 use crate::pages::overview::PageOverview;
-use crate::pages::progress_indicator::PageProgressIndicator;
+use crate::pages::progress::PageProgress;
 use crate::pages::select::PageSelect;
 use crate::pages::separator::PageSeparator;
 use crate::pages::skeleton::PageSkeleton;
@@ -93,7 +93,7 @@ pub enum Routes {
     Alert,
     Toast,
     Modal,
-    ProgressIndicator,
+    Progress,
     Chip,
 
     // General
@@ -137,7 +137,7 @@ impl Routes {
             Routes::Alert => "/alert",
             Routes::Toast => "/toast",
             Routes::Modal => "/modal",
-            Routes::ProgressIndicator => "/progress-indicator",
+            Routes::Progress => "/progress",
             Routes::Chip => "/chip",
 
             Routes::Typography => "/typography",
@@ -202,7 +202,7 @@ pub fn App(cx: Scope) -> impl IntoView {
                         <Route path=Routes::Alert view=|cx| view! { cx, <PageAlert/> }/>
                         <Route path=Routes::Toast view=|cx| view! { cx, <PageToast/> }/>
                         <Route path=Routes::Modal view=|cx| view! { cx, <PageModal/> }/>
-                        <Route path=Routes::ProgressIndicator view=|cx| view! { cx, <PageProgressIndicator/> }/>
+                        <Route path=Routes::Progress view=|cx| view! { cx, <PageProgress/> }/>
                         <Route path=Routes::Chip view=|cx| view! { cx, <PageChip/> }/>
 
                         <Route path=Routes::Typography view=|cx| view! { cx, <PageTypography/> }/>
@@ -308,7 +308,7 @@ pub fn Layout(cx: Scope, children: Children) -> impl IntoView {
                             <Link href=Routes::Alert class="item">"Alert"</Link>
                             <Link href=Routes::Toast class="item">"Toast"</Link>
                             <Link href=Routes::Modal class="item">"Modal"</Link>
-                            <Link href=Routes::ProgressIndicator class="item">"Progress"</Link>
+                            <Link href=Routes::Progress class="item">"Progress"</Link>
                             <Link href=Routes::Chip class="item">"Chip"</Link>
                         </Stack>
                     }
