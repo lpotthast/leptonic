@@ -1,0 +1,154 @@
+stages:
+  - build
+  - test
+  - package
+  - deploy
+
+variables:
+  CARGO_HOME: "${CI_PROJECT_DIR}/cargo"
+  RULES_CHANGES_PATH: "**/*"
+  RULES_ONLY: "ALL"
+  GIT_SUBMODULE_STRATEGY: recursive
+
+.deploy-configuration: &deploy_configuration
+  image: registry.gitlab.com/lukaspotthast/docker-images/nomad-deployment:latest
+  before_script:
+    - export NOMAD_ADDR=${NOMAD_ADDR}
+    - export NOMAD_CACERT=${NOMAD_CA_PEM}
+    - export NOMAD_CLIENT_CERT=${NOMAD_CLI_PEM}
+    - export NOMAD_CLIENT_KEY=${NOMAD_CLI_KEY_PEM}
+    # Required as of: https://github.com/hashicorp/nomad/issues/7529
+    # We otherwise get the error: x509: certificate is valid for 127.0.0.1, not [...]
+    - export NOMAD_TLS_SERVER_NAME="server.global.nomad"
+
+.base-rules:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RULES_ONLY == "ALL"
+      when: always
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH && $RULES_ONLY == $RULES_SUBJECT
+      when: always
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+      when: never
+    - if: $CI_COMMIT_TAG
+      when: never
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - $RULES_CHANGES_PATH
+    - when: manual
+      allow_failure: true
+
+.book:
+  extends: .base-rules
+  variables:
+    RULES_SUBJECT: "book"
+    RULES_CHANGES_PATH: "*"
+
+.book-with-cache:
+  extends: .book
+  cache:
+    key:
+      files:
+        - Cargo.lock
+        - examples/book/Cargo.lock
+    paths:
+      - cargo/
+      - target/
+      - examples/book/target/
+
+book-build:
+  stage: build
+  extends: .book-with-cache
+  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:latest
+  needs: []
+  artifacts:
+    paths:
+      - examples/book/dist/
+  script:
+    - cd examples/book
+    # This is only required because the build.rs file is not run when only calling `trunk build`... This might change in the future.
+    - cargo build --release
+    - trunk build --release --public-url "/leptonic"
+
+book-test:
+  stage: test
+  extends: .book-with-cache
+  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:latest
+  needs: []
+  script:
+    - cd examples/book
+    - cargo test --target x86_64-unknown-linux-gnu
+
+book-package:
+  stage: package
+  extends: .book
+  image: docker:latest
+  services:
+    - docker:dind
+  needs:
+    - book-build
+    - book-test
+  artifacts:
+    paths:
+      - examples/book/deployment/leptonic-book.jobspec.final.hcl
+  before_script:
+    - echo -n "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+  script:
+    - cd examples/book
+    - image="${CI_REGISTRY_IMAGE}/leptonic-book"
+    - tag="${CI_COMMIT_SHA}"
+    - echo "Building docker image '${image}:${tag}'"
+    - docker pull "${image}:latest" || true
+    - sed -i "s/{{LEPTONIC_DEV_CERT_PEM_FILE}}/${LEPTONIC_DEV_CERT_PEM_FILE}/g" "Dockerfile"
+    - sed -i "s/{{LEPTONIC_DEV_KEY_PEM_FILE}}/${LEPTONIC_DEV_KEY_PEM_FILE}/g" "Dockerfile"
+    - >
+      docker build
+      --pull
+      --cache-from "${image}:${tag}"
+      --tag "${image}:${tag}"
+      .
+    - docker tag "${image}:${tag}" "${image}:latest"
+    - docker push "${image}:${tag}"
+    - docker push "${image}:latest"
+    - echo "Creating final deployment spec..."
+    - cp deployment/leptonic-book.jobspec.hcl deployment/leptonic-book.jobspec.final.hcl
+    - sed -i "s/{{TAG}}/${tag}/g" "deployment/leptonic-book.jobspec.final.hcl"
+    - sed -i "s/{{REGISTRY_USERNAME}}/${REGISTRY_USERNAME}/g" "deployment/leptonic-book.jobspec.final.hcl"
+    - sed -i "s/{{REGISTRY_TOKEN}}/${REGISTRY_TOKEN}/g" "deployment/leptonic-book.jobspec.final.hcl"
+
+book-validate-deployment:
+  <<: *deploy_configuration
+  stage: deploy
+  extends: .book
+  needs:
+    - book-package
+  script:
+    - cd examples/book/deployment
+    - nomad job validate leptonic-book.jobspec.final.hcl
+
+book-plan-deployment:
+  <<: *deploy_configuration
+  stage: deploy
+  extends: .book
+  needs:
+    - book-package
+    - book-validate-deployment
+  script:
+    - cd examples/book/deployment
+    # Plan will return one of the following exit codes:
+    #   0: No allocations created or destroyed.
+    #   1: Allocations created or destroyed.
+    # 255: Error determining plan results.
+    - nomad job plan leptonic-book.jobspec.final.hcl
+  allow_failure:
+    exit_codes: 1
+
+book-run-deployment:
+  <<: *deploy_configuration
+  stage: deploy
+  extends: .book
+  needs:
+    - book-package
+    - book-plan-deployment
+  script:
+    - cd examples/book/deployment
+    - nomad job run leptonic-book.jobspec.final.hcl
