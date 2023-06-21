@@ -34,7 +34,6 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
                 </Tabs>
             </Tab>
             <Tab name="outer-3" label="Tab2Label">
-                <ProgressBar progress=create_signal(cx, 34).0/>
             </Tab>
             <Tab name="outer-4" label="Tab4Label">
             </Tab>

@@ -1,0 +1,3 @@
+[build]
+# The 'web_sys_unstable_apis' flag is required, because we use https://leptos-use.rs/elements/use_element_size.html which states this requirement. This might change in the future.
+rustflags = ["--cfg=web_sys_unstable_apis"]
