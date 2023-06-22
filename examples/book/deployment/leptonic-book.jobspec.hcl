@@ -29,7 +29,7 @@ job "leptonic-book" {
       }
 
       config {
-        image = "registry.gitlab.com/lukaspotthast/fcs/leptonic-book:{{TAG}}"
+        image = "registry.gitlab.com/lukaspotthast/leptonic/leptonic-book:{{TAG}}"
         auth {
           username = "{{REGISTRY_USERNAME}}"
           password = "{{REGISTRY_TOKEN}}"
