@@ -1,0 +1,13 @@
+leptonic-skeleton {
+    --width: 100%;
+    --height: initial;
+
+    display: flex;
+    background-color: #3c3c3c;
+    padding: 0.2em;
+    border-radius: 0.2em;
+    width: var(--width);
+    height: var(--height);
+    justify-content: center;
+    align-items: center;
+}

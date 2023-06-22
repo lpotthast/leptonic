@@ -1,0 +1,62 @@
+.leptonic-quicksearch {
+    position: relative;
+
+    .search-input {
+        background-color: rgb(240, 240, 240);
+        border-color: #565656;
+        color: #4b4b4b;
+    }
+
+    .input-with-btn {
+        position: relative;
+        width: 100%;
+        display: flex;
+
+        input {
+            border-top-left-radius: 0.25em;
+            border-bottom-left-radius: 0.25em;
+            min-height: unset;
+            background-color: rgb(240, 240, 240);
+            color: #4b4b4b;
+            border: 1px solid;
+            border-right: 0;
+            border-color: #565656;
+            cursor: pointer;
+        }
+
+        .leptonic-btn {
+            border-top-left-radius: 0;
+            border-bottom-left-radius: 0;
+            background-color: #787878;
+            border-left: 0;
+            border-color: #565656;
+            cursor: pointer;
+
+            leptonic-icon {
+                margin: 0;
+            }
+        }
+    }
+
+    .dropdown {
+        position: absolute;
+        background-color: rgb(240, 240, 240);
+        width: 100%;
+        border: 1px solid grey;
+        border-radius: 0.25em;
+        margin-top: 0.5em;
+    }
+
+    .option {
+        padding: 0.75em;
+        color: black;
+        border-top: 1px solid transparent;
+        border-bottom: 1px solid grey;
+        cursor: pointer;
+
+        &.preselected {
+            background-color: #008de7;
+            color: #fafafa;
+        }
+    }
+}

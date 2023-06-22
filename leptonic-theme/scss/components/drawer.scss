@@ -1,0 +1,12 @@
+leptonic-drawer {
+    --margin: 0;
+    display: flex;
+    flex-direction: column;
+    width: 17em;
+    max-height: 100%;
+    margin: var(--margin);
+    background-color: var(--drawer-background-color);
+    box-shadow: var(--drawer-box-shadow);
+    z-index: 999;
+    transition: color 250ms ease-in-out, background-color 250ms ease-in-out, border 200ms ease-in-out;
+}

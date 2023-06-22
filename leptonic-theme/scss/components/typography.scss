@@ -1,0 +1,75 @@
+*,
+::after,
+::before {
+  font-family: var(--typography-font-family);
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: bold;
+  margin: var(--margin);
+}
+
+h1 {
+  --margin: 0.67em 0 0.67em 0;
+  font-size: 2em;
+}
+
+h2 {
+  --margin: 0.83em 0 0.83em 0;
+  font-size: 1.5em;
+}
+
+h3 {
+  --margin: 1em 0 1em 0;
+  font-size: 1.17em;
+}
+
+h4 {
+  --margin: 1.33em 0 1.33em 0;
+  font-size: 1em;
+}
+
+h5 {
+  --margin: 1.67em 0 1.67em 0;
+  font-size: 0.83em;
+}
+
+h6 {
+  --margin: 2.33em 0 2.33em 0;
+  font-size: 0.67em;
+}
+
+p {
+  --margin: 1em 0 1em 0;
+  margin: var(--margin);
+  line-height: 1.8em; // This specific value results in <Code inline=true> elements not pushing lines of a <P> further apart as they would normally be!
+}
+
+leptonic-code {
+  font-family: monospace;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: flex-start;
+  font-size: 0.9em;
+  margin: 1.1111em 0;
+  padding: 1em;
+  border: none;
+  border-radius: 0.25em;
+  background-color: var(--typography-code-background-color);
+  color: var(--typography-code-color);
+  white-space: pre;
+  overflow: auto;
+
+  &[inline="true"] {
+    display: inline-flex;
+    padding: 0.5em;
+    margin: 0;
+    line-height: normal; // We do not want to inherit line-hight changes from a <P> for example, as we increased the line-height specifically, to not let any <Code> element inside push lines apart!
+  }
+}

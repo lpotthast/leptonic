@@ -1,73 +1,19 @@
-[package]
-name = "leptonic"
-version = "0.0.2"
-edition = "2021"
-rust-version = "1.56"
-authors = ["Lukas Potthast <privat@lukas-potthast.de>"]
-license = "MIT OR Apache-2.0"
-readme = "README.md"
-repository = "https://github.com/lpotthast/leptonic"
-description = """
-The Leptos component library.
-"""
-categories = ["gui"]
-keywords = ["leptos", "components", "component-library"]
+[workspace]
+resolver="2"
+members = [
+  "leptonic",
+  "leptonic-theme",
+]
+exclude = ["examples"]
 
-[dependencies]
-indexmap = "1"
-js-sys = "0.3"
-leptos = { version = "0.3", default-features = false, features = [
-    "csr",
-    "serde",
-    "tracing",
-    "stable",
-] }
-leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
-    "csr",
-    "BsSun",
-    "BsMoon",
-    "BsCheckCircleFill",
-    "BsInfoCircleFill",
-    "BsExclamationCircleFill",
-    "BsExclamationTriangleFill",
-    "BsCaretUp",
-    "BsCaretUpFill",
-    "BsCaretDown",
-    "BsCaretDownFill",
-    "BsParagraph",
-    "BsTypeBold",
-    "BsTypeItalic",
-    "BsTypeStrikethrough",
-    "BsBlockquoteLeft",
-    "BsBrightnessAltHigh",
-    "BsTextLeft",
-    "BsTextCenter",
-    "BsTextRight",
-    "BsJustify",
-    "BsXCircleFill",
-] }
-leptos-tiptap = { git = "https://github.com/lpotthast/leptos-tiptap", branch = "main" }
-leptos-use = { git = "https://github.com/lpotthast/leptos-use", branch = "use-stable", features = ["docs", "math", "stable"] }
-leptos_router = { version = "0.3", default-features = false, features = [
-    "csr",
-    "stable",
-] }
-serde = "1"
-serde-wasm-bindgen = "0.5"
-serde_json = "1"
-time = { version = "0.3", features = [
-    "wasm-bindgen",
-    "macros",
-    "serde",
-    "serde-well-known",
-] }
-tracing = "0.1"
-uuid = { version = "1", features = ["v4", "v7", "js", "serde"] }
-wasm-bindgen = "0.2"
-# TODO: What of all below is really required?
-web-sys = { version = "0.3", features = ["Storage", "HtmlInputElement", "Event", "EventTarget", "HtmlFormElement"] }
+[workspace.package]
+version = "0.0.1"
 
-[dev-dependencies]
-wasm-bindgen = "0.2"
-wasm-bindgen-test = "0.3"
-web-sys = "0.3"
+[workspace.dependencies]
+leptonic = { path = "./leptonic", default-features = false }
+leptonic_theme = { path = "./leptonic-theme", default-features = false, version = "0.0.1" }
+
+[profile.release]
+opt-level = 'z'
+lto = true
+codegen-units = 1

@@ -1,0 +1,46 @@
+leptonic-toasts {
+    position: fixed;
+    bottom: 2.5em;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 9999;
+}
+
+leptonic-toast {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 0.75em 1.5em;
+    max-width: 95%;
+    margin: 0.25em 1em;
+    background-color: rgb(76, 76, 76);
+    border-radius: 0.25em;
+    color: white;
+    pointer-events: all;
+
+    leptonic-toast-heading {
+        font-weight: 900;
+        margin-bottom: 0.25em;
+    }
+
+    &[variant="info"] {
+        background-color: #2290d4;
+    }
+
+    &[variant="success"] {
+        background-color: #2aa547;
+    }
+
+    &[variant="warn"] {
+        background-color: #fbc744;
+        color: black;
+    }
+
+    &[variant="error"] {
+        background-color: #c62820;
+    }
+}

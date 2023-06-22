@@ -1,0 +1,64 @@
+leptonic-chip {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.9em;
+    margin: 0 0.3em 0.3em 0;
+    padding: 0.4em 0.7em;
+    border-radius: 1em;
+
+    &[color="primary"] {
+        color: var(--chip-primary-text-color);
+        background-color: var(--chip-primary-background-color);
+        &:hover {
+            color: var(--chip-primary-text-color-hover);
+            background-color: var(--chip-primary-background-color-hover);
+        }
+    }
+    &[color="secondary"] {
+        color: var(--chip-secondary-text-color);
+        background-color: var(--chip-secondary-background-color);
+        &:hover {
+            color: var(--chip-secondary-text-color-hover);
+            background-color: var(--chip-secondary-background-color-hover);
+        }
+    }
+    &[color="success"] {
+        color: var(--chip-success-text-color);
+        background-color: var(--chip-success-background-color);
+        &:hover {
+            color: var(--chip-success-text-color-hover);
+            background-color: var(--chip-success-background-color-hover);
+        }
+    }
+    &[color="info"] {
+        color: var(--chip-info-text-color);
+        background-color: var(--chip-info-background-color);
+        &:hover {
+            color: var(--chip-info-text-color-hover);
+            background-color: var(--chip-info-background-color-hover);
+        }
+    }
+    &[color="warn"] {
+        color: var(--chip-warn-text-color);
+        background-color: var(--chip-warn-background-color);
+        &:hover {
+            color: var(--chip-warn-text-color-hover);
+            background-color: var(--chip-warn-background-color-hover);
+        }
+    }
+    &[color="danger"] {
+        color: var(--chip-danger-text-color);
+        background-color: var(--chip-danger-background-color);
+        &:hover {
+            color: var(--chip-danger-text-color-hover);
+            background-color: var(--chip-danger-background-color-hover);
+        }
+    }
+
+    leptonic-icon.dismiss {
+        margin-left: 0.4em;
+        font-size: 1.1em;
+        cursor: pointer;
+    }
+}

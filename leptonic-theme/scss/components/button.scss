@@ -1,0 +1,296 @@
+.leptonic-btn {
+  position: relative;
+  display: inline-flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0.1em solid transparent;
+  font-size: 1em;
+  font-weight: 400;
+  line-height: 1.25;
+  border-radius: var(--button-border-radius);
+  transition: all 0.1s ease-in-out;
+  user-select: none;
+  cursor: pointer;
+
+  &::before {
+    content: "";
+    height: calc(99% + var(--button-border-size) * 2);
+    width: calc(99% + var(--button-border-size) * 2);
+    position: absolute;
+    border-radius: var(--button-border-radius);
+    transition: all 0.1s ease-in-out;
+    opacity: var(--button-box-shadow-opacity);
+  }
+
+  &.has-variations {
+    padding-right: 1.5em;
+  }
+
+  &[size="small"] {
+    .name {
+      padding: 0.35em 0.6em;
+    }
+    font-size: 0.9em;
+    border-radius: 0.2em;
+  }
+
+  &:focus {
+    outline: none;
+  }
+
+  // BTN-PRIMARY
+  &[color="primary"] {
+    color: var(--button-primary-text-color);
+    background-color: var(--button-primary-background-color);
+    border-color: var(--button-primary-border-color);
+
+    &:hover,
+    &:active,
+    &.active,
+    &:focus {
+      color: var(--button-primary-text-color-hover);
+      background-color: var(--button-primary-background-color-hover);
+      border-color: var(--button-primary-border-color-hover);
+    }
+
+    &:active {
+      &::before {
+        box-shadow: 0 0 0 0.2em var(--button-primary-box-shadow-color);
+      }
+    }
+  }
+
+  // BTN-DEFAULT
+  &[color="secondary"] {
+    color: var(--button-secondary-text-color);
+    background-color: var(--button-secondary-background-color);
+    border-color: var(--button-secondary-border-color);
+
+    &:hover,
+    &:active,
+    &.active,
+    &:focus {
+      color: var(--button-secondary-text-color-hover);
+      background-color: var(--button-secondary-background-color-hover);
+      border-color: var(--button-secondary-border-color-hover);
+    }
+
+    &:active {
+      &::before {
+        box-shadow: 0 0 0 0.2em var(--button-secondary-box-shadow-color);
+      }
+    }
+  }
+
+  // BTN-SUCCESS
+  &[color="success"] {
+    color: var(--button-success-text-color);
+    background-color: var(--button-success-background-color);
+    border-color: var(--button-success-border-color);
+
+    &:hover,
+    &:active,
+    &.active,
+    &:focus {
+      color: var(--button-success-text-color-hover);
+      background-color: var(--button-success-background-color-hover);
+      border-color: var(--button-success-border-color-hover);
+    }
+
+    &:active {
+      &::before {
+        box-shadow: 0 0 0 0.2em var(--button-success-box-shadow-color);
+      }
+    }
+  }
+
+  // BTN-INFO
+  &[color="info"] {
+    color: var(--button-info-text-color);
+    background-color: var(--button-info-background-color);
+    border-color: var(--button-info-border-color);
+
+    &:hover,
+    &:active,
+    &.active,
+    &:focus {
+      color: var(--button-info-text-color-hover);
+      background-color: var(--button-info-background-color-hover);
+      border-color: var(--button-info-border-color-hover);
+    }
+
+    &:active {
+      &::before {
+        box-shadow: 0 0 0 0.2em var(--button-info-box-shadow-color);
+      }
+    }
+  }
+
+  // BTN-WARNING
+  &[color="warn"] {
+    color: var(--button-warning-text-color);
+    background-color: var(--button-warning-background-color);
+    border-color: var(--button-warning-border-color);
+
+    &:hover,
+    &:active,
+    &.active,
+    &:focus {
+      color: var(--button-warning-text-color-hover);
+      background-color: var(--button-warning-background-color-hover);
+      border-color: var(--button-warning-border-color-hover);
+    }
+
+    &:active {
+      &::before {
+        box-shadow: 0 0 0 0.2em var(--button-warning-box-shadow-color);
+      }
+    }
+  }
+
+  // BTN-DANGER
+  &[color="danger"] {
+    color: var(--button-danger-text-color);
+    background-color: var(--button-danger-background-color);
+    border-color: var(--button-danger-border-color);
+
+    &:hover,
+    &:active,
+    &.active,
+    &:focus {
+      color: var(--button-danger-text-color-hover);
+      background-color: var(--button-danger-background-color-hover);
+      border-color: var(--button-danger-border-color-hover);
+    }
+
+    // We purposefully only render the box-shadow when the "real" active property is set,
+    // and not as well when the button was programmatically set to be active.
+    &:active {
+      &::before {
+        box-shadow: 0 0 0 0.2em var(--button-danger-box-shadow-color);
+      }
+    }
+  }
+
+  &[aria-disabled],
+  &[aria-disabled]:hover,
+  &[aria-disabled]:focus,
+  &[aria-disabled]:active {
+    background-color: #e2e2e2;
+    border-color: #e2e2e2;
+    color: #9a9a9a;
+    cursor: default;
+  }
+
+  &[variant="outlined"] {
+    border: 0.1em solid;
+    background-color: transparent;
+  }
+
+  &[variant="flat"] {
+    .name {
+      text-transform: uppercase;
+    }
+    background-color: transparent;
+  }
+
+  leptonic-icon {
+    font-size: 0.9em;
+    margin-right: 0.3em;
+  }
+
+  .name {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5em 0.75em;
+    line-height: 1em;
+  }
+
+  .dropdown-trigger {
+    position: absolute;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding-left: 0.25em;
+    padding-right: 0.25em;
+    border-left: 1px solid;
+    height: 100%;
+    cursor: pointer;
+
+    leptonic-icon {
+      margin: 0;
+    }
+  }
+
+  .dropdown {
+    display: none;
+    /* flex-direction: column; */
+    position: absolute;
+    top: 2.3em;
+    z-index: 999;
+    background-color: #1476cc3d;
+    padding: 0.25em;
+    left: 0em;
+    border-radius: 0.3em;
+
+    &.active {
+      display: flex;
+    }
+  }
+}
+
+leptonic-btn-wrapper {
+  // Remove the gaps between the inline-block level buttons by using flexbox.
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  height: fit-content;
+
+  // Compensate outer button margins.
+  margin: -0.125em;
+
+  .leptonic-btn {
+    // Buttons should not stretch their height to fill the flexbox container.
+    height: fit-content;
+
+    // Button margin when in a group.
+    margin: 0.125em;
+  }
+}
+
+leptonic-btn-group {
+  // Remove the gaps between the inline-block level buttons by using flexbox.
+  display: inline-flex;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  align-content: flex-start;
+  height: fit-content;
+
+  margin: 0;
+
+  // Buttons in a group should be attached.
+  .leptonic-btn {
+    margin: 0;
+
+    &:first-child:not(:last-child) {
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    &:not(:first-child):not(:last-child) {
+      border-radius: 0;
+    }
+
+    &:last-child:not(:first-child) {
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+    }
+  }
+}

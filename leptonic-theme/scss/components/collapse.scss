@@ -1,0 +1,19 @@
+.leptonic-collapse {
+  overflow: hidden;
+
+  &.width {
+    transition: width 0.3s cubic-bezier(0.42, 0, 0.58, 1);
+  }
+
+  &.height {
+    transition: height 0.3s cubic-bezier(0.42, 0, 0.58, 1);
+  }
+
+  .content {
+    visibility: hidden;
+
+    &.show {
+      visibility: visible;
+    }
+  }
+}

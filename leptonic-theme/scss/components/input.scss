@@ -1,0 +1,67 @@
+@mixin input-field() {
+  display: flex;
+  position: relative;
+  z-index: 2;
+
+  width: 100%;
+
+  padding: var(--input-padding);
+  margin: 0;
+
+  color: var(--input-color);
+  background-color: var(--input-background-color);
+  -webkit-background-clip: padding-box;
+  background-clip: padding-box;
+  border: var(--input-border);
+  border-bottom: var(--input-border-bottom);
+  border-radius: var(--input-border-radius);
+
+  -webkit-transition: border-color ease-in-out 0.15s, -webkit-box-shadow ease-in-out 0.15s;
+  -o-transition: border-color ease-in-out 0.15s, box-shadow ease-in-out 0.15s;
+  transition: border-color ease-in-out 0.15s, box-shadow ease-in-out 0.15s;
+
+  &,
+  &:focus,
+  &:active {
+    outline: none;
+  }
+}
+
+leptonic-input-field {
+  display: flex;
+}
+
+[data-input] {
+  position: relative;
+  z-index: 2;
+  line-height: inherit;
+}
+
+.leptonic-input {
+  @include input-field();
+}
+
+textarea.leptonic-input {
+  height: auto;
+  max-height: 25em;
+}
+
+.leptonic-limit {
+  position: relative;
+  float: right;
+  right: 0.5em;
+  top: -2.3em;
+  margin-bottom: -1000px;
+  color: darkgrey;
+  z-index: 3;
+  font-size: 0.9em;
+}
+
+.leptonic-form-group {
+  margin-bottom: 1em;
+}
+
+.leptonic-form-label {
+  padding: 0.4em 0;
+  margin-bottom: 0;
+}
