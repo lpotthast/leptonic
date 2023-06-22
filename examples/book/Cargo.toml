@@ -19,7 +19,7 @@ console_error_panic_hook = "0.1"
 console_log = "1"
 indoc = "2.0.1"
 leptonic = { path = "../.." }
-leptonic-theme = { path = "../../../leptonic-theme", optional = true }
+leptonic-theme = { version = "0.0.1", path = "../../../leptonic-theme", optional = true }
 leptos = { version = "0.3", default-features = false, features = [
     "csr",
     "tracing",

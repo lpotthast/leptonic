@@ -1,6 +1,6 @@
 [package]
 name = "leptonic"
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
 rust-version = "1.56"
 authors = ["Lukas Potthast <privat@lukas-potthast.de>"]
@@ -11,7 +11,7 @@ description = """
 The Leptos component library.
 """
 categories = ["gui"]
-keywords = ["leptos", "components"]
+keywords = ["leptos", "components", "component-library"]
 
 [dependencies]
 indexmap = "1"
