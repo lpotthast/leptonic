@@ -98,12 +98,8 @@ book-package:
     - tag="${CI_COMMIT_SHA}"
     - echo "Building docker image '${image}:${tag}'"
     - docker pull "${image}:latest" || true
-    - echo "CERT file is"
-    - echo ${LEPTONIC_DEV_CERT_PEM_FILE}
-    - echo "KEY file is"
-    - echo ${LEPTONIC_DEV_KEY_PEM_FILE}
-    - sed -i "s/{{LEPTONIC_DEV_CERT_PEM_FILE}}/${LEPTONIC_DEV_CERT_PEM_FILE}/g" "Dockerfile"
-    - sed -i "s/{{LEPTONIC_DEV_KEY_PEM_FILE}}/${LEPTONIC_DEV_KEY_PEM_FILE}/g" "Dockerfile"
+    - sed -i "s|{{LEPTONIC_DEV_CERT_PEM_FILE}}|${LEPTONIC_DEV_CERT_PEM_FILE}|g" "Dockerfile"
+    - sed -i "s|{{LEPTONIC_DEV_KEY_PEM_FILE}}|${LEPTONIC_DEV_KEY_PEM_FILE}|g" "Dockerfile"
     - >
       docker build
       --pull
