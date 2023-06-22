@@ -19,9 +19,8 @@ pub fn PageAppBar(cx: Scope) -> impl IntoView {
                     </Typography>
                 </Link>
                 <Stack orientation=StackOrientation::Horizontal spacing=10 style="margin-right: 1em">
+                    <Icon icon=BsIcon::BsGithub></Icon>
                     <ThemeToggle off=AppTheme::Light on=AppTheme::Dark/>
-                    <Icon icon=BsIcon::BsFolder></Icon>
-                    <Icon icon=BsIcon::BsPower></Icon>
                 </Stack>
             </AppBar>
         </div>

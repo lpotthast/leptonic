@@ -47,9 +47,9 @@
 
     // App bar
     --app-bar-height: 2.75em;
-    --app-bar-background-color: #323232;
-    --app-bar-border-bottom: none; // 2px solid #828282,
-    --app-bar-box-shadow: 1px 0px 15px 0px #9a9abc;
+    --app-bar-background-color: #f9f7f6;
+    --app-bar-border-bottom: none;
+    --app-bar-box-shadow: 6px 0px 30px -15px #c09575;
 
     // Box
     --box-background-color: #efebe8;
@@ -171,8 +171,8 @@
     --datetime-disabled-day-hover-background-color: var(--grey-3);
 
     // Drawer
-    --drawer-background-color: #c7c7c7;
-    --drawer-box-shadow: none; // 1px 15px 15px 0px #0d0d0d
+    --drawer-background-color: #f9f7f6;
+    --drawer-box-shadow: 0px 30px 30px -15px #c09575;
 
     // Field label
     --field-label-color: #767676;
@@ -282,7 +282,7 @@
     --toggle-icon-color: #303030;
 
     // Typography
-    --typography-font-family: var(--font-family); // TODO: Inline?
-    --typography-code-background-color: #2d2f34;
-    --typography-code-color: #fff5e2;
+    --typography-font-family: var(--font-family);
+    --typography-code-background-color: #d3d3d3;
+    --typography-code-color: #3a3732;
 }

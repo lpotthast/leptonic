@@ -9,7 +9,7 @@ pub fn Quicksearch(cx: Scope) -> impl IntoView {
             get=input
             set=move |new_value| set_input.set(new_value)
             label="Search..."
-            prepend=view! {cx, "Cmd+Shift+F"}.into_view(cx)
+            prepend=view! {cx, ""}.into_view(cx)
         />
     }
 }

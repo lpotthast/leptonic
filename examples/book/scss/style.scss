@@ -5,7 +5,7 @@ $brand-color: #10428c;
 }
 
 html {
-    font-size: 18px;
+    font-size: 16px;
     height: 100%;
 }
 
@@ -19,84 +19,122 @@ body {
 
 @import "../generated/leptonic/leptonic-themes";
 
+[theme="light"] {
+    //--box-background-color: #efebe8;
+    //--app-bar-background-color: #383838;
+    //--app-bar-border-bottom: none;
+    --drawer-background-color: none;
+    --drawer-box-shadow: none;
+
+    --book-menu-header-color: #3e3434;
+    --book-menu-item-color: #3e3434;
+    --book-menu-item-active-color: var(--std-text-bright);
+    --book-menu-item-hover-color: var(--std-text-bright);
+}
+
+[theme="dark"] {
+    //--box-background-color: #121212;
+    //--app-bar-background-color: #1d1d1d;
+    //--app-bar-border-bottom: none;
+    --drawer-background-color: none;
+    --drawer-box-shadow: none;
+
+    --book-menu-header-color: var(--std-text-bright);
+    --book-menu-item-color: var(--std-text-bright);
+    --book-menu-item-active-color: var(--std-text-bright);
+    --book-menu-item-hover-color: var(--std-text-bright);
+}
+
+#app-bar {
+    display: flex;
+    justify-content: center;
+
+    #app-bar-content {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        max-width: 1450px;
+    }
+
+    #logo {
+        display: inline-flex;
+        height: 2.5em;
+        margin-left: 0.5em;
+    }
+
+    #github-icon {
+        font-size: 1.25em;
+    }
+}
+
 #content {
-    display: block;
     width: 100%;
-    padding: 0 1.5em;
-    max-height: calc(100vh - 2.75em);
+    padding: 0;
     overflow-y: auto;
 }
 
-#app-side-drawer {
-    overflow: auto;
-}
+#doc-layout {
+    display: flex;
+    flex-direction: row;
+    max-width: 1400px;
+    margin: auto;
 
-.menu {
-    margin-bottom: 0.5em;
+    #doc-drawer {
+        overflow: auto;
+        padding: 1em 0;
 
-    .item {
-        width: 100%;
-        a {
+        .drawer-section {
             width: 100%;
-            display: flex;
-            justify-content: flex-start;
-            align-items: center;
-            color: #fff;
-            padding: 0.75em;
-            font-weight: 400;
-            padding-left: 0.5em;
-            border-left: 5px solid rgba(0, 0, 0, 0);
-            border-bottom: 1px solid #4a4a4a;
-            cursor: pointer;
-            user-select: none;
-        }
-    }
+            margin: 1em 0;
+            padding-left: 2em;
+            font-size: 0.9em;
 
-    &.dense {
-        .item {
-            a {
-                padding: 0.2em;
-                border-bottom: none;
-            }
-        }
-    }
-
-    &.nested {
-        .item {
-            a {
-                padding-left: 2.3em;
-                margin: 0.125em 0.5em;
-                border-radius: 0.4em;
-                font-size: 0.9em;
+            .section-header {
+                display: flex;
+                flex-direction: row;
+                justify-content: flex-start;
+                align-items: center;
+                color: var(--book-menu-header-color);
+                font-weight: 900;
+                padding-left: 1em;
+                margin-bottom: 0.25em;
+                font-size: 1.1em;
             }
 
-            a[aria-current] {
-                background-color: #e66956;
-            }
-
-            a:hover {
-                background-color: #e66956;
-            }
-        }
-    }
-
-    leptonic-collapsible {
-        width: 100%;
-        border-bottom: 1px solid #4a4a4a;
-
-        leptonic-collapsible-header-wrapper {
-            background-color: transparent;
-            font-weight: 700;
-            padding-left: 1em;
-        }
-
-        leptonic-collapsible-body {
-            background-color: transparent;
-            padding: 0;
-
-            leptonic-stack {
+            .item {
                 width: 100%;
+
+                a {
+                    display: flex;
+                    justify-content: flex-start;
+                    align-items: center;
+                    color: var(--book-menu-item-color);
+                    font-weight: 400;
+                    border-radius: 0.4em;
+                    padding: 0.25em 0.75em;
+                    margin: 0.075em 0.75em;
+                    margin-left: 2.6em;
+                    cursor: pointer;
+                    user-select: none;
+                }
+
+                a[aria-current] {
+                    background-color: #e66956;
+                    color: var(--book-menu-item-active-color);
+                }
+
+                a:hover {
+                    background-color: #e66956;
+                    color: var(--book-menu-item-hover-color);
+                }
             }
         }
+    }
+
+    #doc-content {
+        display: block;
+        width: 100%;
+        padding: 0 1.5em;
+        overflow-y: auto;
     }
 }

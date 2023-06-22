@@ -111,6 +111,8 @@ pub mod prelude {
     pub use super::input::Input;
     pub use super::input::InputType;
     pub use super::link::Link;
+    pub use super::link::LinkExt;
+    pub use super::link::LinkExtTarget;
     pub use super::modal::Modal;
     pub use super::modal::ModalBody;
     pub use super::modal::ModalData;

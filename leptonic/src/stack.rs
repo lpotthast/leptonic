@@ -1,8 +1,4 @@
-use std::borrow::Cow;
-
 use leptos::*;
-
-use crate::OptionDeref;
 
 #[derive(Debug, Default)]
 pub enum StackOrientation {
@@ -23,20 +19,21 @@ impl StackOrientation {
 #[component]
 pub fn Stack(
     cx: Scope,
-    #[prop(into, optional)] class: Option<Cow<'static, str>>,
-    #[prop(optional)] orientation: StackOrientation,
     spacing: u32,
-    #[prop(into, optional)] style: Option<Cow<'static, str>>,
+    #[prop(optional)] orientation: StackOrientation,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     let gap = spacing as f32 / 10.0;
-    let style = style.deref_or("");
-    let class = class.map(|it| it.to_owned().to_string());
     view! { cx,
         <leptonic-stack
+            id=id
             class=class
             orientation=orientation.as_str()
-            style=format!("--gap: {gap}em; {style}")
+            style=style
+            style=("--gap", format!("{gap}em"))
         >
             { children(cx) }
         </leptonic-stack>

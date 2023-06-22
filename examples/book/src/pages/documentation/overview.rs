@@ -1,7 +1,7 @@
 use leptonic::prelude::*;
 use leptos::*;
 
-use crate::app::Routes;
+use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
 pub fn PageOverview(cx: Scope) -> impl IntoView {
@@ -15,10 +15,9 @@ pub fn PageOverview(cx: Scope) -> impl IntoView {
         <P>"Leptonic is a component library for Leptos. This site was built using Leptonic."</P>
         <P>"Explore the available components and other features using the side menu."</P>
         <P>
-            "If you want to dive right in, follow our " <Link href=Routes::Installation>"Installation"</Link> " instructions."
+            "If you want to dive right in, follow our " <Link href=DocRoutes::Installation>"Installation"</Link> " instructions."
         </P>
 
         <Button on_click=increase_counter_by_one>"Click Me: " {count}</Button>
-
     }
 }

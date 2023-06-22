@@ -47,7 +47,7 @@ h6 {
 p {
   --margin: 1em 0 1em 0;
   margin: var(--margin);
-  line-height: 1.8em; // This specific value results in <Code inline=true> elements not pushing lines of a <P> further apart as they would normally be!
+  line-height: 1.6em; // This specific value results in <Code inline=true> elements not pushing lines of a <P> further apart as they would normally be!
 }
 
 leptonic-code {
@@ -68,8 +68,8 @@ leptonic-code {
 
   &[inline="true"] {
     display: inline-flex;
-    padding: 0.5em;
+    padding: 0.28em;
     margin: 0;
-    line-height: normal; // We do not want to inherit line-hight changes from a <P> for example, as we increased the line-height specifically, to not let any <Code> element inside push lines apart!
+    line-height: 1.0em;
   }
 }

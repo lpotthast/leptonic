@@ -2,7 +2,7 @@ use leptonic::prelude::*;
 use leptos::*;
 use leptos_icons::BsIcon;
 
-use crate::app::Routes;
+use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
 pub fn PageDrawer(cx: Scope) -> impl IntoView {
@@ -20,9 +20,9 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
-                            <Link href=Routes::Overview class="item">"Overview"</Link>
-                            <Link href=Routes::Installation class="item">"Installation"</Link>
-                            <Link href=Routes::Usage class="item">"Usage"</Link>
+                            <Link href=DocRoutes::Overview class="item">"Overview"</Link>
+                            <Link href=DocRoutes::Installation class="item">"Installation"</Link>
+                            <Link href=DocRoutes::Usage class="item">"Usage"</Link>
                         </Stack>
                     }
                 />
@@ -34,8 +34,8 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
-                            <Link href=Routes::Stack class="item">"Stack"</Link>
-                            <Link href=Routes::Grid class="item">"Grid"</Link>
+                            <Link href=DocRoutes::Stack class="item">"Stack"</Link>
+                            <Link href=DocRoutes::Grid class="item">"Grid"</Link>
                         </Stack>
                     }
                 />
@@ -47,19 +47,19 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
-                            <Link href=Routes::Button class="item">"Button"</Link>
-                            <Link href=Routes::Tab class="item">"Tabs"</Link>
-                            <Link href=Routes::Input class="item">"Inputs"</Link>
-                            <Link href=Routes::DateTime class="item">"Date & Time"</Link>
-                            <Link href=Routes::Collapsible class="item">"Collapsible"</Link>
-                            <Link href=Routes::AppBar class="item">"App Bar"</Link>
-                            <Link href=Routes::Drawer class="item">"Drawer"</Link>
-                            <Link href=Routes::Toast class="item">"Toast"</Link>
-                            <Link href=Routes::Modal class="item">"Modal"</Link>
-                            <Link href=Routes::Alert class="item">"Alert"</Link>
-                            <Link href=Routes::Typography class="item">"Typography"</Link>
-                            <Link href=Routes::Icon class="item">"Icon"</Link>
-                            <Link href=Routes::Progress class="item">"Progress"</Link>
+                            <Link href=DocRoutes::Button class="item">"Button"</Link>
+                            <Link href=DocRoutes::Tab class="item">"Tabs"</Link>
+                            <Link href=DocRoutes::Input class="item">"Inputs"</Link>
+                            <Link href=DocRoutes::DateTime class="item">"Date & Time"</Link>
+                            <Link href=DocRoutes::Collapsible class="item">"Collapsible"</Link>
+                            <Link href=DocRoutes::AppBar class="item">"App Bar"</Link>
+                            <Link href=DocRoutes::Drawer class="item">"Drawer"</Link>
+                            <Link href=DocRoutes::Toast class="item">"Toast"</Link>
+                            <Link href=DocRoutes::Modal class="item">"Modal"</Link>
+                            <Link href=DocRoutes::Alert class="item">"Alert"</Link>
+                            <Link href=DocRoutes::Typography class="item">"Typography"</Link>
+                            <Link href=DocRoutes::Icon class="item">"Icon"</Link>
+                            <Link href=DocRoutes::Progress class="item">"Progress"</Link>
                         </Stack>
                     }
                 />
@@ -71,7 +71,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                     }
                     body=view! {cx,
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
-                            <Link href=Routes::Transition class="item">"Transitions"</Link>
+                            <Link href=DocRoutes::Transition class="item">"Transitions"</Link>
                         </Stack>
                     }
                 />
