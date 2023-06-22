@@ -119,12 +119,12 @@ body {
                 }
 
                 a[aria-current] {
-                    background-color: #e66956;
+                    background-color: var(--brand-color);
                     color: var(--book-menu-item-active-color);
                 }
 
                 a:hover {
-                    background-color: #e66956;
+                    background-color: var(--brand-color);
                     color: var(--book-menu-item-hover-color);
                 }
             }
