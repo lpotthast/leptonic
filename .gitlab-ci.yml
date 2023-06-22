@@ -96,10 +96,13 @@ book-package:
     - cd examples/book
     - image="${CI_REGISTRY_IMAGE}/leptonic-book"
     - tag="${CI_COMMIT_SHA}"
-    - echo "Building docker image '${image}:${tag}'"
     - docker pull "${image}:latest" || true
-    - sed -i "s|{{LEPTONIC_DEV_CERT_PEM_FILE}}|${LEPTONIC_DEV_CERT_PEM_FILE}|g" "Dockerfile"
-    - sed -i "s|{{LEPTONIC_DEV_KEY_PEM_FILE}}|${LEPTONIC_DEV_KEY_PEM_FILE}|g" "Dockerfile"
+    - echo "Finalizing Dockerfile"
+    - cat "${LEPTONIC_DEV_CERT_PEM_FILE}" > "ssl_cert.pem"
+    - cat "${LEPTONIC_DEV_KEY_PEM_FILE}" > "ssl_key.pem"
+    - sed -i "s|{{LEPTONIC_DEV_CERT_PEM_FILE}}|ssl_cert.pem|g" "Dockerfile"
+    - sed -i "s|{{LEPTONIC_DEV_KEY_PEM_FILE}}|ssl_key.pem|g" "Dockerfile"
+    - echo "Building docker image '${image}:${tag}'"
     - >
       docker build
       --pull
