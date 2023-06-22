@@ -25,7 +25,7 @@ job "leptonic-book" {
         CONSUL_HTTP_ADDR = "172.17.0.1:8500"
         HTTP_PORT = "${NOMAD_PORT_http}"
         HTTPS_PORT = "${NOMAD_PORT_https}"
-        URL_PREFIX = "/leptonic"
+        URL_PREFIX = "/"
       }
 
       config {
@@ -45,9 +45,10 @@ job "leptonic-book" {
       service {
         name = "leptonic-book"
         tags = [
+          # Redirect HTTP to HTTPS
           "urlprefix-leptonic.dev:80/ redirect=301,https://leptonic.dev/",
-          "urlprefix-/ redirect=301,/leptonic/",
-          "urlprefix-${URL_PREFIX} proto=https tlsskipverify=true"
+          # Serve the app using delayed SSL termination
+          "urlprefix-leptonic.dev/ proto=https tlsskipverify=true",
         ]
         port = "https"
 

@@ -67,7 +67,7 @@ book-build:
     - cd examples/book
     # This is only required because the build.rs file is not run when only calling `trunk build`... This might change in the future.
     - cargo build --release
-    - trunk build --release --public-url "/leptonic"
+    - trunk build --release --public-url "/"
 
 book-test:
   stage: test
