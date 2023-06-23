@@ -85,12 +85,16 @@ where
 
     let clipped_value = Signal::derive(cx, move || {
         let value = value.get();
-        if value < min || value > max {
+        if !(min..=max).contains(&value) && !(max..=min).contains(&value) {
             tracing::warn!(
-                "Slider was given the value {value} which is outside the allowed range [{min}-{max}]. Value will be clipped on first use of this slider."
+                "Slider was given the value {value} which is outside the range [{min}, {max}]. Value will be clipped on first use of this slider."
             );
         }
-        let clipped: f64 = f64::min(f64::max(value, min), max);
+        let clipped: f64 = if min < max {
+            f64::min(f64::max(value, min), max)
+        } else {
+            f64::min(f64::max(value, max), min)
+        };
         (clipped / step).round() * step
     });
 
