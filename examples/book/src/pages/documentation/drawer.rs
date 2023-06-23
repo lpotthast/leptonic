@@ -7,7 +7,7 @@ use crate::pages::documentation::doc_root::DocRoutes;
 #[component]
 pub fn PageDrawer(cx: Scope) -> impl IntoView {
     view! { cx,
-        <H2>"Drawer"</H2>
+        <H1>"Drawer"</H1>
 
         <Drawer>
             <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">

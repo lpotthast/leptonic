@@ -4,7 +4,7 @@ use leptos::*;
 #[component]
 pub fn PageCollapsible(cx: Scope) -> impl IntoView {
     view! { cx,
-        <H2>"Collapsibles"</H2>
+        <H1>"Collapsibles"</H1>
 
         <Collapsibles default_on_open=OnOpen::CloseOthers>
             <Stack spacing=6>

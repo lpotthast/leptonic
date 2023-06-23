@@ -10,7 +10,7 @@ pub fn PageOverview(cx: Scope) -> impl IntoView {
     let increase_counter_by_one = move |_| set_count.update(|count| *count += 1);
 
     view! { cx,
-        <Typography variant=TypographyVariant::H1>"Overview"</Typography>
+        <H1>"Overview"</H1>
 
         <P>"Leptonic is a component library for Leptos. This site was built using Leptonic."</P>
         <P>"Explore the available components and other features using the side menu."</P>

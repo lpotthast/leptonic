@@ -98,8 +98,8 @@ pub mod prelude {
     pub use super::collapsible::CollapsibleHeader;
     pub use super::collapsible::Collapsibles;
     pub use super::collapsible::OnOpen;
-    pub use super::contexts::global_keyboard_event::GlobalKeyboardEvent;
     pub use super::contexts::global_click_event::GlobalClickEvent;
+    pub use super::contexts::global_keyboard_event::GlobalKeyboardEvent;
     pub use super::create_signal_ls;
     pub use super::date_selector::DateSelector;
     pub use super::datetime_input::DateTimeInput;

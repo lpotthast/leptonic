@@ -8,9 +8,10 @@ use serde::{Deserialize, Serialize};
 
 use leptonic::prelude::*;
 
-use crate::pages::{documentation::{
-    doc_root::DocRoutes, err404::PageErr404, overview::PageOverview,
-}, welcome::PageWelcome};
+use crate::pages::{
+    documentation::{doc_root::DocRoutes, err404::PageErr404},
+    welcome::PageWelcome,
+};
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum AppTheme {
@@ -65,7 +66,7 @@ impl Display for AppRoutes {
 /// Required so that `Routes` variants can be used in `<Link href=Routes::Foo ...>` definitions.
 impl ToHref for AppRoutes {
     fn to_href(&self) -> Box<dyn Fn() -> String + '_> {
-        Box::new(move || self.route().to_owned())
+        Box::new(move || format!("/{}", self.route()))
     }
 }
 
@@ -115,7 +116,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                     "v0.1"
 
                     <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
-                        <Icon id="github-icon" icon=BsIcon::BsGithub></Icon>
+                        <Icon id="github-icon" icon=BsIcon::BsGithub/>
                     </LinkExt>
 
                     <ThemeToggle off=AppTheme::Light on=AppTheme::Dark/>

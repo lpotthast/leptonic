@@ -5,7 +5,7 @@ use time::OffsetDateTime;
 #[component]
 pub fn PageDateTime(cx: Scope) -> impl IntoView {
     view! { cx,
-        <H2>"Date & Time"</H2>
+        <H1>"Date & Time"</H1>
 
         <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
 

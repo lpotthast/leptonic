@@ -22,7 +22,7 @@ pub fn PageWelcome(cx: Scope) -> impl IntoView {
                 " and you are ready to go."
             </P>
 
-            <Link href=AppRoutes::Doc>  
+            <Link href=AppRoutes::Doc>
                 <Button on_click=move |_| {}>
                     "Read the docs"
                 </Button>

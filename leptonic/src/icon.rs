@@ -9,11 +9,11 @@ pub fn Icon(
     #[prop(into)] icon: Icon,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView {
-    let style = margin.map(|it| format!("--margin: {it}"));
     view! { cx,
-        <leptonic-icon id=id class=class style=style>
+        <leptonic-icon id=id class=class style=style style=("--margin", move || margin.map(|it| format!("{it}")))>
             <LeptosIcon icon=icon />
         </leptonic-icon>
     }

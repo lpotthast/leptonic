@@ -5,6 +5,7 @@ use leptos::*;
 use leptos_icons::BsIcon;
 use leptos_router::*;
 
+use crate::app::AppRoutes;
 use crate::pages::documentation::alert::PageAlert;
 use crate::pages::documentation::anchor::PageAnchor;
 use crate::pages::documentation::app_bar::PageAppBar;
@@ -136,7 +137,7 @@ impl Display for DocRoutes {
 /// Required so that `Routes` variants can be used in `<Link href=Routes::Foo ...>` definitions.
 impl ToHref for DocRoutes {
     fn to_href(&self) -> Box<dyn Fn() -> String + '_> {
-        Box::new(move || self.route().to_owned())
+        Box::new(move || format!("/{}/{}", AppRoutes::Doc.route(), self.route()))
     }
 }
 

@@ -7,7 +7,7 @@ pub fn PageChip(cx: Scope) -> impl IntoView {
     let (dismissed, set_dismissed) = create_signal(cx, false);
 
     view! { cx,
-        <Typography variant=TypographyVariant::H1>"Chips"</Typography>
+        <H1>"Chips"</H1>
 
         <Code>
             {indoc!(r#"

@@ -1,3 +1,4 @@
+use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
 
@@ -19,7 +20,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
     let show_a = Signal::derive(cx, move || a.get().is_some());
 
     view! { cx,
-        <H2>"Modals"</H2>
+        <H1>"Modals"</H1>
 
         <Button on_click=move |_| set_show_modal.set(true)>"Show Modal"</Button>
         <Button on_click=move |_| set_show_input_modal.set(true)>"Show Input Modal"</Button>
@@ -74,6 +75,26 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
             "Last input: "
             { move || last_input.get() }
         </div>
+
+        <H2>"Styling"</H2>
+
+        <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+
+        <Code>
+            {indoc!(r#"
+                --modal-color
+                --modal-background-color
+                --modal-padding
+                --modal-font-size
+                --modal-header-padding
+                --modal-body-padding
+                --modal-footer-padding
+                --modal-border-radius
+                --modal-box-shadow
+            "#)}
+        </Code>
+
+        <div style="margin-bottom: 5em;"></div>
     }
 }
 
