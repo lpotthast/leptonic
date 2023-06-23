@@ -5,13 +5,13 @@ use wasm_bindgen::prelude::Closure;
 use web_sys::MouseEvent;
 
 #[derive(Debug, Clone)]
-pub struct GlobalMouseEvent {
+pub struct GlobalMouseupEvent {
     _closure: Rc<Box<Closure<dyn FnMut(MouseEvent)>>>,
     pub read_signal: ReadSignal<Option<MouseEvent>>,
     pub write_signal: WriteSignal<Option<MouseEvent>>,
 }
 
-impl GlobalMouseEvent {
+impl GlobalMouseupEvent {
     pub fn new(
         _closure: Rc<Box<Closure<dyn FnMut(MouseEvent)>>>,
         read_signal: ReadSignal<Option<MouseEvent>>,

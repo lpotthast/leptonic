@@ -5,7 +5,7 @@ use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::{
-    contexts::{global_keyboard_event::GlobalKeyboardEvent, global_mouse_event::GlobalMouseEvent},
+    contexts::{global_keyboard_event::GlobalKeyboardEvent, global_click_event::GlobalClickEvent, global_mouseup_event::GlobalMouseupEvent},
     prelude::*,
 };
 
@@ -40,14 +40,25 @@ where
     );
 
     // CLICK
-    let (g_mouse_event, set_g_mouse_event) = create_signal::<Option<MouseEvent>>(cx, None);
+    let (g_click_event, set_g_click_event) = create_signal::<Option<MouseEvent>>(cx, None);
     let onclick = Closure::wrap(
-        Box::new(move |e| set_g_mouse_event.set(Some(e))) as Box<dyn FnMut(MouseEvent)>
+        Box::new(move |e| set_g_click_event.set(Some(e))) as Box<dyn FnMut(MouseEvent)>
     );
     doc.set_onclick(Some(onclick.as_ref().unchecked_ref()));
     provide_context(
         cx,
-        GlobalMouseEvent::new(Rc::new(Box::new(onclick)), g_mouse_event, set_g_mouse_event),
+        GlobalClickEvent::new(Rc::new(Box::new(onclick)), g_click_event, set_g_click_event),
+    );
+
+    // MOUSE UP
+    let (g_mouseup_event, set_g_mouseup_event) = create_signal::<Option<MouseEvent>>(cx, None);
+    let onmouseup = Closure::wrap(
+        Box::new(move |e| set_g_mouseup_event.set(Some(e))) as Box<dyn FnMut(MouseEvent)>
+    );
+    doc.set_onmouseup(Some(onmouseup.as_ref().unchecked_ref()));
+    provide_context(
+        cx,
+        GlobalMouseupEvent::new(Rc::new(Box::new(onmouseup)), g_mouseup_event, set_g_mouseup_event),
     );
 
     view! {cx,

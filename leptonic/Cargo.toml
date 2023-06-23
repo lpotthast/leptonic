@@ -47,7 +47,11 @@ leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "en
     "BsXCircleFill",
 ] }
 leptos-tiptap = { git = "https://github.com/lpotthast/leptos-tiptap", branch = "main" }
-leptos-use = { git = "https://github.com/lpotthast/leptos-use", branch = "use-stable", features = ["docs", "math", "stable"] }
+leptos-use = { git = "https://github.com/lpotthast/leptos-use", branch = "use-stable", features = [
+    "docs",
+    "math",
+    "stable",
+] }
 leptos_router = { version = "0.3", default-features = false, features = [
     "csr",
     "stable",
@@ -65,7 +69,14 @@ tracing = "0.1"
 uuid = { version = "1", features = ["v4", "v7", "js", "serde"] }
 wasm-bindgen = "0.2"
 # TODO: What of all below is really required?
-web-sys = { version = "0.3", features = ["Storage", "HtmlInputElement", "Event", "EventTarget", "HtmlFormElement"] }
+web-sys = { version = "0.3", features = [
+    "DomRect",
+    "Event",
+    "EventTarget",
+    "HtmlFormElement",
+    "HtmlInputElement",
+    "Storage",
+] }
 
 [dev-dependencies]
 wasm-bindgen = "0.2"

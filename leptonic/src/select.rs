@@ -801,7 +801,7 @@ fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
     on_click_outside: O,
 ) {
     let g_mouse_event =
-        use_context::<GlobalMouseEvent>(cx).expect("Must be a child of the Root component.");
+        use_context::<GlobalClickEvent>(cx).expect("Must be a child of the Root component.");
 
     create_effect(cx, move |_old| {
         use wasm_bindgen::JsCast;

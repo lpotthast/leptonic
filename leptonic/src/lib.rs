@@ -29,6 +29,7 @@ pub mod safe_html;
 pub mod select;
 pub mod separator;
 pub mod skeleton;
+pub mod slider;
 pub mod stack;
 pub mod tab;
 pub mod tabs;
@@ -98,7 +99,7 @@ pub mod prelude {
     pub use super::collapsible::Collapsibles;
     pub use super::collapsible::OnOpen;
     pub use super::contexts::global_keyboard_event::GlobalKeyboardEvent;
-    pub use super::contexts::global_mouse_event::GlobalMouseEvent;
+    pub use super::contexts::global_click_event::GlobalClickEvent;
     pub use super::create_signal_ls;
     pub use super::date_selector::DateSelector;
     pub use super::datetime_input::DateTimeInput;
@@ -131,6 +132,8 @@ pub mod prelude {
     pub use super::select::Select;
     pub use super::separator::Separator;
     pub use super::skeleton::Skeleton;
+    pub use super::slider::Slider;
+    pub use super::slider::SliderVariant;
     pub use super::stack::Stack;
     pub use super::stack::StackOrientation;
     pub use super::tab::Tab;

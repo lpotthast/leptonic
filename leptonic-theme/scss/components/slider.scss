@@ -3,7 +3,7 @@
 $bar-height: 0.75em;
 $knob-size: 1.75em;
 
-.leptonic-slider {
+leptonic-slider {
     display: inline-flex;
     justify-content: center;
     align-items: center;
@@ -22,7 +22,7 @@ $knob-size: 1.75em;
         transition: 0s;
 
         &:focus {
-            box-shadow: 0 0 0.1em #2196f3;
+            box-shadow: 0 0 0.1em var(--brand-color);
         }
     }
 
@@ -39,12 +39,12 @@ $knob-size: 1.75em;
         position: absolute;
         height: $knob-size;
         width: $knob-size;
-        background-color: #2196f3;
+        background-color: var(--brand-color);
         transition: 0s;
         // The knob position is determined by setting the "left" attribute programmatically with a percentage value.
     }
 
-    &.round {
+    &[variant="round"] {
         .bar {
             border-radius: math.div($bar-height, 2);
         }
