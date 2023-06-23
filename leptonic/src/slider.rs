@@ -136,19 +136,5 @@ where
                 </div>
             </div>
         </leptonic-slider>
-        // <div>"cursor_x: " { move || cursor_x.get() }</div>
-        // <div>"cursor_y: " { move || cursor_y.get() }</div>
-        // <div>"bar_left: " { move || bar_left.get() }</div>
-        // <div>"bar_top: " { move || bar_top.get() }</div>
-        // <div>"bar_width: " { move || bar_width.get() }</div>
-        // <div>"bar_height: " { move || bar_height.get() }</div>
-        // <div>"cursor_rel_pos_percent: " { move || cursor_rel_pos_percent.get() }</div>
-        // <div>"min: " { move || min }</div>
-        // <div>"max: " { move || max }</div>
-        // <div>"range: " { move || range.get() }</div>
-        // <div>"step: " { move || step }</div>
-        // <div>"clipped_value_from_cursor: " { move || clipped_value_from_cursor.get() }</div>
-        // <div>"clipped_value: " { move || clipped_value.get() }</div>
-        // <div>"clipped_value_percent: " { move || clipped_value_percent.get() }</div>
     }
 }
