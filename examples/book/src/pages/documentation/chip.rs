@@ -34,7 +34,7 @@ pub fn PageChip(cx: Scope) -> impl IntoView {
             {indoc!(r#"
                 <Chip
                     color=ChipColor::Secondary
-                    dismissible=Callback::new(cx, move |_| set_dismissed.set(true))
+                    dismissible=create_callback(cx, move |_| set_dismissed.set(true))
                 >
                     "Dismissible"
                 </Chip>
@@ -45,7 +45,7 @@ pub fn PageChip(cx: Scope) -> impl IntoView {
             when=move || !dismissed.get()
             fallback=move |cx| view! {cx, <Button on_click=move |_| set_dismissed.set(false)>"Reveal chip"</Button>}
         >
-            <Chip color=ChipColor::Secondary dismissible=Callback::new(cx, move |_| set_dismissed.set(true))>
+            <Chip color=ChipColor::Secondary dismissible=create_callback(cx, move |_| set_dismissed.set(true))>
                 "Dismissible"
             </Chip>
         </Show>

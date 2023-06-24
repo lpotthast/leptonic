@@ -3,9 +3,9 @@
     --brand-color: #e66956;
     --primary-color: var(--brand-color);
     --secondary-color: #6c6c6c;
-    --info-color: #0275d8;
-    --success-color: #43b543;
-    --warn-color: rgb(251, 140, 0);
+    --info-color: #2181d4; //#0275d8;
+    --success-color: #4bb24b; //#43b543;
+    --warn-color: #f29826; //rgb(251, 140, 0);
     --danger-color: #d9534f;
 
     --grey-0: #f8f8f8;
@@ -235,6 +235,13 @@
     --select-item-preselected-background-color: rgb(56, 121, 192);
     --select-item-hover-background-color: color-mix(in srgb, white 20%, var(--input-background-color));
     --select-item-selected-background-color: color-mix(in srgb, white 30%, var(--input-background-color));
+
+    // Skeleton
+    --skeleton-background-color: #3c3c3c;
+    --skeleton-animation-highlight-color: #454545;
+    --skeleton-border-radius: 0.2em;
+    --skeleton-padding: 0.2em;
+    --skeleton-cursor: progress;
 
     // Tab selector
     --tab-selector-background-color: #474747;

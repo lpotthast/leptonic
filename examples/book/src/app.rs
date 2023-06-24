@@ -6,7 +6,10 @@ use leptos_meta::{provide_meta_context, Title};
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 
-use leptonic::prelude::*;
+use leptonic::{
+    prelude::*,
+    quicksearch::{QuicksearchOption, QuicksearchResult},
+};
 
 use crate::pages::{
     documentation::{doc_root::DocRoutes, err404::PageErr404},
@@ -110,7 +113,18 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                     </Link>
                 </Stack>
 
-                <Quicksearch />
+                <Quicksearch query=create_callback(cx, move |search| {
+                    vec![
+                        QuicksearchOption {
+                            view: create_callback(cx, move |cx| view! {cx,
+                                <Link href=DocRoutes::Overview class="search-link">
+                                    "Overview"
+                                </Link>
+                            }.into_view(cx)),
+                            on_select: create_callback(cx, move |_| {})
+                        }
+                    ]
+                })/>
 
                 <Stack id="actions" orientation=StackOrientation::Horizontal spacing=10 style="margin-right: 1em">
                     "v0.1"

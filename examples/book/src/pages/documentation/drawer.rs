@@ -11,8 +11,6 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
 
         <Drawer>
             <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">
-                <Quicksearch />
-
                 <Collapsible
                     open=true
                     header=view! {cx,

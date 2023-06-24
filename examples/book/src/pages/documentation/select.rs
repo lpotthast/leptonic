@@ -59,9 +59,9 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                 view! {cx,
                     <Select
                         options=vec![Foo::A, Foo::B, Foo::C]
-                        render_option=Callback::new(cx, move |(_cx, o)| format!("{o:?}"))
+                        render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
                         selected=selected
-                        set_selected=Callback::new(cx, move |v| set_selected.set(v))
+                        set_selected=create_callback(cx, move |v| set_selected.set(v))
                     />
                 }
             "#)}
@@ -69,9 +69,9 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <Select
             options=vec![Foo::A, Foo::B, Foo::C]
-            render_option=Callback::new(cx, move |(_cx, o)| format!("{o:?}"))
+            render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             selected=selected
-            set_selected=Callback::new(cx, move |v| set_selected.set(v))
+            set_selected=create_callback(cx, move |v| set_selected.set(v))
         />
 
         <H3>"OptionalSelect"</H3>
@@ -85,9 +85,9 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                 view! {cx,
                     <OptionalSelect
                         options=vec![Foo::A, Foo::B, Foo::C]
-                        render_option=Callback::new(cx, move |(_cx, o)| format!("{o:?}"))
+                        render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
                         selected=selected_opt
-                        set_selected=Callback::new(cx, move |v| set_selected_opt.set(v))
+                        set_selected=create_callback(cx, move |v| set_selected_opt.set(v))
                         allow_deselect=true
                     />
                 }
@@ -96,9 +96,9 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <OptionalSelect
             options=vec![Foo::A, Foo::B, Foo::C]
-            render_option=Callback::new(cx, move |(_cx, o)| format!("{o:?}"))
+            render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             selected=selected_opt
-            set_selected=Callback::new(cx, move |v| set_selected_opt.set(v))
+            set_selected=create_callback(cx, move |v| set_selected_opt.set(v))
             allow_deselect=true
         />
 
@@ -113,9 +113,9 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                 view! {cx,
                     <Multiselect
                         options=vec![Foo::A, Foo::B, Foo::C]
-                        render_option=Callback::new(cx, move |(_cx, o)| format!("{o:?}"))
+                        render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
                         selected=selected_multi
-                        set_selected=Callback::new(cx, move |v| set_selected_multi.set(v))
+                        set_selected=create_callback(cx, move |v| set_selected_multi.set(v))
                     />
                 }
             "#)}
@@ -123,9 +123,9 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <Multiselect
             options=vec![Foo::A, Foo::B, Foo::C]
-            render_option=Callback::new(cx, move |(_cx, o)| format!("{o:?}"))
+            render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             selected=selected_multi
-            set_selected=Callback::new(cx, move |v| set_selected_multi.set(v))
+            set_selected=create_callback(cx, move |v| set_selected_multi.set(v))
         />
 
         <P>"Using the "<Code inline=true>"max"</Code>" prop, a maximum number of selectable elements can be specified. Here: 2"</P>
@@ -133,9 +133,9 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
         <Multiselect
             options=vec![Foo::A, Foo::B, Foo::C]
             max=2
-            render_option=Callback::new(cx, move |(_cx, o)| format!("{o:?}"))
+            render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             selected=selected_multi2
-            set_selected=Callback::new(cx, move |v| set_selected_multi2.set(v))
+            set_selected=create_callback(cx, move |v| set_selected_multi2.set(v))
         />
 
         <H2>"Keyboard navigation"</H2>

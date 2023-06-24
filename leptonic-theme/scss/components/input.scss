@@ -27,18 +27,18 @@
   }
 }
 
-leptonic-input-field {
+leptonic-input {
   display: flex;
+
+  input {
+    @include input-field();
+  }
 }
 
 [data-input] {
   position: relative;
   z-index: 2;
   line-height: inherit;
-}
-
-.leptonic-input {
-  @include input-field();
 }
 
 textarea.leptonic-input {

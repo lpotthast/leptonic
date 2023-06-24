@@ -138,3 +138,16 @@ body {
         overflow-y: auto;
     }
 }
+
+.search-link {
+    width: 100%;
+    height: 100%;
+
+    a {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: flex-start;
+        padding: 1em;
+    }
+}

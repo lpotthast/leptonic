@@ -11,7 +11,9 @@ use crate::OptionalMaybeSignal;
 
 #[derive(Clone)]
 pub struct ModalData {
-    pub id: Uuid,
+    pub internal_id: Uuid,
+    pub id: Option<String>,
+    pub class: Option<String>,
     pub children: ModalChildren,
 }
 
@@ -40,7 +42,7 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
 
                 <leptonic-modals>
                     {move || modals.get().last().map(|(_, modal)| view! { cx,
-                        <leptonic-modal>
+                        <leptonic-modal id=modal.id.clone() class=modal.class.clone()>
                             { match &modal.children {
                                 ModalChildren::Once(view) => view.clone(),
                                 ModalChildren::Dynamic(children, cx) => children(*cx).into_view(*cx)
@@ -57,25 +59,29 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
 pub fn Modal(
     cx: Scope,
     #[prop(into)] show_when: MaybeSignal<bool>,
+    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] class: Option<String>,
     children: Children,
 ) -> impl IntoView {
     let modals = use_context::<ModalRootContext>(cx).unwrap();
     let children = children(cx).into_view(cx); // TODO: Is it ok to build this view once?
 
-    let id = Uuid::new_v4();
+    let internal_id = Uuid::new_v4();
 
     create_effect(cx, move |_| match show_when.get() {
         true => modals.set_modals.update(|modals| {
             modals.insert(
-                id,
+                internal_id,
                 ModalData {
-                    id,
+                    internal_id,
+                    id: id.clone(),
+                    class: class.clone(),
                     children: ModalChildren::Once(children.clone()),
                 },
             );
         }),
         false => modals.set_modals.update(|modals| {
-            modals.remove(&id);
+            modals.remove(&internal_id);
         }),
     });
 
@@ -89,25 +95,29 @@ pub fn Modal(
 pub fn ModalFn(
     cx: Scope,
     #[prop(into)] show_when: MaybeSignal<bool>, // TODO: When https://github.com/leptos-rs/leptos/pull/918 is merged, this should receive a rework!
+    #[prop(into, optional)] id: Option<String>,
+    #[prop(into, optional)] class: Option<String>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let modals = use_context::<ModalRootContext>(cx).unwrap();
     let children = Rc::new(children);
 
-    let id = Uuid::new_v4();
+    let internal_id = Uuid::new_v4();
 
     create_effect(cx, move |_| match show_when.get() {
         true => modals.set_modals.update(|modals| {
             modals.insert(
-                id,
+                internal_id,
                 ModalData {
-                    id,
+                    internal_id,
+                    id: id.clone(),
+                    class: class.clone(),
                     children: ModalChildren::Dynamic(children.clone(), cx),
                 },
             );
         }),
         false => modals.set_modals.update(|modals| {
-            modals.remove(&id);
+            modals.remove(&internal_id);
         }),
     });
 

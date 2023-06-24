@@ -24,6 +24,8 @@ pub fn Link<H>(
     /// Sets the `class` attribute, making it easier to style.
     #[prop(into, optional)]
     class: Option<AttributeValue>,
+    #[prop(into, optional)]
+    style: Option<AttributeValue>,
     /// Whether or not this link acts as an anchor.
     #[prop(into, optional, default = false)]
     is_anchor: bool,
@@ -46,7 +48,7 @@ where
     )
     .into_view(cx);
     view! { cx,
-        <leptonic-link id=id class=class>
+        <leptonic-link id=id class=class style=style>
             { a }
         </leptonic-link>
     }

@@ -1,4 +1,4 @@
-use std::{borrow::Cow, ops::Deref};
+use std::ops::Deref;
 
 use leptos::{html::ElementDescriptor, *};
 use web_sys::HtmlInputElement;
@@ -56,7 +56,7 @@ pub fn Input<S>(
     set: S,
     #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
     #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<Cow<'static, str>>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
@@ -65,10 +65,6 @@ pub fn Input<S>(
 where
     S: Fn(String) + Clone + 'static,
 {
-    let class = class
-        .map(|it| Cow::Owned(format!("leptonic-input {it}")))
-        .unwrap_or(Cow::Borrowed("leptonic-input"));
-
     let ty_str = match ty {
         InputType::Text => "text",
         InputType::Password => "password",
@@ -84,7 +80,7 @@ where
     let set_clone = set.clone();
 
     view! { cx,
-        <leptonic-input-field style=style>
+        <leptonic-input style=style>
             <input
                 node_ref=node_ref
                 id=id
@@ -112,6 +108,6 @@ where
             }}
 
             //<LeptosIcon icon=icon />
-        </leptonic-input-field>
+        </leptonic-input>
     }
 }

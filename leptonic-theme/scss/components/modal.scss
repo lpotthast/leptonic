@@ -27,6 +27,7 @@ leptonic-modal-backdrop {
 
 leptonic-modals {
   display: block;
+  width: 100%;
   z-index: 1;
 }
 
@@ -39,6 +40,8 @@ leptonic-modal {
   padding: var(--modal-padding);
   z-index: 1;
   margin: auto;
+  width: fit-content;
+  min-width: 30%;
   max-height: 88vh;
   border-radius: var(--modal-border-radius);
   box-shadow: var(--modal-box-shadow);

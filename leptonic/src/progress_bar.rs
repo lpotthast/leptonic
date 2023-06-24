@@ -5,7 +5,7 @@ use leptos_use::{use_element_size, UseElementSizeReturn};
 pub fn ProgressBar(
     cx: Scope,
     #[prop(default = 100.0)] max: f64,
-    #[prop(into)] progress: Signal<Option<f64>>,
+    #[prop(into)] progress: Signal<Option<f64>>, // TODO: MaybeSignal
 ) -> impl IntoView {
     let el = create_node_ref(cx);
 

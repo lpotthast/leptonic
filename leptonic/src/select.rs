@@ -109,7 +109,7 @@ where
         !filtered_options.with(|options| options.is_empty())
     });
 
-    let select = Callback::new(cx, move |option: O| {
+    let select = create_callback(cx, move |option: O| {
         set_selected.call(option);
         set_show_options.set(false);
     });
@@ -229,7 +229,7 @@ where
                         get=search
                         set=move |s| set_search.set(s)
                         should_be_focused=search_should_be_focused
-                        on_focus_change=Callback::new(cx, move |focused| {
+                        on_focus_change=create_callback(cx, move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
@@ -331,7 +331,7 @@ where
         !filtered_options.with(|options| options.is_empty())
     });
 
-    let select = Callback::new(cx, move |option: O| {
+    let select = create_callback(cx, move |option: O| {
         set_selected.call(Some(option));
         set_show_options.set(false);
     });
@@ -476,7 +476,7 @@ where
                         get=search
                         set=move |s| set_search.set(s)
                         should_be_focused=search_should_be_focused
-                        on_focus_change=Callback::new(cx, move |focused| {
+                        on_focus_change=create_callback(cx, move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
@@ -578,7 +578,7 @@ where
         !filtered_options.with(|options| options.is_empty())
     });
 
-    let select = Callback::new(cx, move |option: O| {
+    let select = create_callback(cx, move |option: O| {
         let mut vec = selected.get_untracked();
         if !vec.contains(&option) {
             vec.push(option); // TODO
@@ -589,7 +589,7 @@ where
         set_show_options.set(false); // TODO: Make this optional.
     });
 
-    let deselect = Callback::new(cx, move |option: O| {
+    let deselect = create_callback(cx, move |option: O| {
         let mut vec = selected.get_untracked();
         if let Some(pos) = vec.iter().position(|it| it == &option) {
             vec.remove(pos);
@@ -713,7 +713,7 @@ where
                                     on:click=move |e| {
                                         e.stop_propagation();
                                     }
-                                    dismissible=Callback::new(cx, move |e: MouseEvent| {
+                                    dismissible=create_callback(cx, move |e: MouseEvent| {
                                         e.stop_propagation();
                                         deselect.call(clone.clone());
                                     })>
@@ -736,7 +736,7 @@ where
                         get=search
                         set=move |s| set_search.set(s)
                         should_be_focused=search_should_be_focused
-                        on_focus_change=Callback::new(cx, move |focused| {
+                        on_focus_change=create_callback(cx, move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.

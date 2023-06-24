@@ -84,6 +84,10 @@ pub mod prelude {
     pub use super::button::ButtonSize;
     pub use super::button::ButtonVariant;
     pub use super::button::ButtonWrapper;
+    pub use super::callback::create_callback;
+    pub use super::callback::create_callback_arc;
+    pub use super::callback::create_callback_rc;
+    pub use super::callback::create_simple_callback;
     pub use super::callback::Callable;
     pub use super::callback::Callback;
     pub use super::callback::CallbackArc;
