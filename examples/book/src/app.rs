@@ -256,14 +256,11 @@ pub fn Layout(cx: Scope) -> impl IntoView {
 
                 <Stack id="right" orientation=StackOrientation::Horizontal spacing=10>
                     { move || match (is_doc.get(), is_small.get()) {
-                        (false, true) => view! {cx,
-                            <Link href="">
-                                <img src="/res/leptonic.svg" id="logo"/>
-                            </Link>
+                        (_, true) => view! {cx,
+                            <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| {
+                                set_main_drawer_closed.set(!main_drawer_closed.get_untracked())
+                            }/>
                         }.into_view(cx),
-                        (_, true) => view! {cx, <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| {
-                            set_main_drawer_closed.set(!main_drawer_closed.get_untracked())
-                        }/>}.into_view(cx),
                         (_, false) => view! {cx,
                             "v0.1"
 
