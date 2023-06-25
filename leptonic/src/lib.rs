@@ -108,6 +108,7 @@ pub mod prelude {
     pub use super::date_selector::DateSelector;
     pub use super::datetime_input::DateTimeInput;
     pub use super::drawer::Drawer;
+    pub use super::drawer::DrawerSide;
     pub use super::grid::Col;
     pub use super::grid::ColAlign;
     pub use super::grid::Grid;
@@ -129,6 +130,7 @@ pub mod prelude {
     pub use super::progress_bar::ProgressBar;
     pub use super::quicksearch::Quicksearch;
     pub use super::quicksearch::QuicksearchOption;
+    pub use super::quicksearch::QuicksearchTrigger;
     pub use super::r#box::Box;
     pub use super::root::Root;
     pub use super::safe_html::SafeHtml;

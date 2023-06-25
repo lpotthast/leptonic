@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::{prelude::*, toggle::ToggleSize, toggle::ToggleProps};
+use crate::{prelude::*, toggle::ToggleProps, toggle::ToggleSize};
 
 pub trait Theme:
     Default + PartialEq + Clone + Copy + serde::Serialize + serde::de::DeserializeOwned
@@ -44,9 +44,8 @@ pub fn ThemeToggle<T>(
     off: T,
     on: T,
     #[prop(optional)] variant: ToggleVariant,
-    /// Sets the `class`, making it easier to style.
-    #[prop(into, optional)]
-    class: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     T: Theme + 'static,
@@ -78,7 +77,7 @@ where
     );
 
     view! {cx,
-        <leptonic-theme-toggle class=class>
+        <leptonic-theme-toggle class=class style=style>
             { toggle }
         </leptonic-theme-toggle>
     }

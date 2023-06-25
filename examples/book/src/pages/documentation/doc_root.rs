@@ -5,7 +5,7 @@ use leptos::*;
 use leptos_icons::BsIcon;
 use leptos_router::*;
 
-use crate::app::AppRoutes;
+use crate::app::{AppLayoutContext, AppRoutes};
 use crate::pages::documentation::alert::PageAlert;
 use crate::pages::documentation::anchor::PageAnchor;
 use crate::pages::documentation::app_bar::PageAppBar;
@@ -193,19 +193,38 @@ where
 
 #[component]
 pub fn DocLayout(cx: Scope) -> impl IntoView {
+    let app_layout_context = expect_context::<AppLayoutContext>(cx);
+
+    let drawer_class = move || match app_layout_context.is_small.get() {
+        true => "mobile",
+        false => "",
+    };
+
+    let close_doc_drawer_on_mobile = move || {
+        let ctx = expect_context::<AppLayoutContext>(cx);
+        if ctx.is_small.get_untracked() {
+            ctx.close_doc_drawer();
+        }
+    };
+
     view! { cx,
         <Box id="doc-layout" style=format!("height: calc(100vh - {APP_BAR_HEIGHT}); max-height: calc(100vh - {APP_BAR_HEIGHT});")>
-            <Drawer id="doc-drawer">
+            <Drawer
+                id="doc-drawer"
+                shown=Signal::derive(cx, move || !app_layout_context.doc_drawer_closed.get())
+                class=drawer_class
+                style=format!("top: {APP_BAR_HEIGHT}")
+            >
                 <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">
 
                     <DrawerSection header=move |cx| view! {cx,
                         <Icon icon=BsIcon::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
                     }>
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
-                            <Link href=DocRoutes::Overview class="item">"Overview"</Link>
-                            <Link href=DocRoutes::Installation class="item">"Installation"</Link>
-                            <Link href=DocRoutes::Usage class="item">"Usage"</Link>
-                            <Link href=DocRoutes::Changelog class="item">"Changelog"</Link>
+                            <Link href=DocRoutes::Overview class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
+                            <Link href=DocRoutes::Installation class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
+                            <Link href=DocRoutes::Usage class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Usage"</Link>
+                            <Link href=DocRoutes::Changelog class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
                         </Stack>
                     </DrawerSection>
 
@@ -213,14 +232,14 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                         <Icon icon=BsIcon::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
                     }>
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
-                            <Link href=DocRoutes::Stack class="item">"Stack"</Link>
-                            <Link href=DocRoutes::Grid class="item">"Grid"</Link>
-                            <Link href=DocRoutes::Separator class="item">"Separator"</Link>
-                            <Link href=DocRoutes::Skeleton class="item">"Skeleton"</Link>
-                            <Link href=DocRoutes::AppBar class="item">"App Bar"</Link>
-                            <Link href=DocRoutes::Drawer class="item">"Drawer"</Link>
-                            <Link href=DocRoutes::Tab class="item">"Tabs"</Link>
-                            <Link href=DocRoutes::Collapsible class="item">"Collapsible"</Link>
+                            <Link href=DocRoutes::Stack class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
+                            <Link href=DocRoutes::Grid class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
+                            <Link href=DocRoutes::Separator class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
+                            <Link href=DocRoutes::Skeleton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Skeleton"</Link>
+                            <Link href=DocRoutes::AppBar class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
+                            <Link href=DocRoutes::Drawer class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
+                            <Link href=DocRoutes::Tab class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
+                            <Link href=DocRoutes::Collapsible class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
                         </Stack>
                     </DrawerSection>
 
@@ -228,13 +247,13 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                         <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
                     }>
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
-                            <Link href=DocRoutes::Button class="item">"Button"</Link>
-                            <Link href=DocRoutes::Input class="item">"Input"</Link>
-                            <Link href=DocRoutes::TiptapEditor class="item">"Tiptap editor"</Link>
-                            <Link href=DocRoutes::DateTime class="item">"Date & Time"</Link>
-                            <Link href=DocRoutes::Slider class="item">"Slider"</Link>
-                            <Link href=DocRoutes::Select class="item">"Select"</Link>
-                            <Link href=DocRoutes::Toggle class="item">"Toggle"</Link>
+                            <Link href=DocRoutes::Button class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
+                            <Link href=DocRoutes::Input class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Input"</Link>
+                            <Link href=DocRoutes::TiptapEditor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tiptap editor"</Link>
+                            <Link href=DocRoutes::DateTime class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Date & Time"</Link>
+                            <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
+                            <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
+                            <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
                         </Stack>
                     </DrawerSection>
 
@@ -242,11 +261,11 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                         <Icon icon=BsIcon::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
                     }>
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
-                            <Link href=DocRoutes::Alert class="item">"Alert"</Link>
-                            <Link href=DocRoutes::Toast class="item">"Toast"</Link>
-                            <Link href=DocRoutes::Modal class="item">"Modal"</Link>
-                            <Link href=DocRoutes::Progress class="item">"Progress"</Link>
-                            <Link href=DocRoutes::Chip class="item">"Chip"</Link>
+                            <Link href=DocRoutes::Alert class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
+                            <Link href=DocRoutes::Toast class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
+                            <Link href=DocRoutes::Modal class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
+                            <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
+                            <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
                         </Stack>
                     </DrawerSection>
 
@@ -254,10 +273,10 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                         <Icon icon=BsIcon::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
                     }>
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
-                            <Link href=DocRoutes::Typography class="item">"Typography"</Link>
-                            <Link href=DocRoutes::Icon class="item">"Icon"</Link>
-                            <Link href=DocRoutes::Link class="item">"Link"</Link>
-                            <Link href=DocRoutes::Anchor class="item">"Anchor"</Link>
+                            <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
+                            <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
+                            <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
+                            <Link href=DocRoutes::Anchor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Anchor"</Link>
                         </Stack>
                     </DrawerSection>
 
@@ -265,13 +284,15 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                         <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
                     }>
                         <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
-                            <Link href=DocRoutes::Transition class="item">"Transitions"</Link>
+                            <Link href=DocRoutes::Transition class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Transitions"</Link>
                         </Stack>
                     </DrawerSection>
                 </Stack>
             </Drawer>
 
             <Box id="doc-content">
+
+
                 // <Outlet/> will show nested child routes.
                 <Outlet/>
             </Box>

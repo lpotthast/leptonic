@@ -2,22 +2,44 @@ use crate::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn Quicksearch(
+pub fn Quicksearch<T, IV>(
     cx: Scope,
+    trigger: T,
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
-) -> impl IntoView {
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
+) -> impl IntoView
+where
+    T: Fn(Scope, WriteSignal<bool>) -> IV + 'static,
+    IV: IntoView + 'static,
+{
     let (show_modal, set_show_modal) = create_signal(cx, false);
     view! { cx,
-        <leptonic-quicksearch>
-            <leptonic-quicksearch-trigger on:click=move |_| set_show_modal.set(true)>
-                "Search"
-            </leptonic-quicksearch-trigger>
+        <leptonic-quicksearch id=id class=class style=style>
+            { trigger(cx, set_show_modal) }
             <QuicksearchModal
                 show_when=show_modal
                 query=query
                 on_cancel=move || set_show_modal.set(false)
             />
         </leptonic-quicksearch>
+    }
+}
+
+#[component]
+pub fn QuicksearchTrigger(
+    cx: Scope,
+    #[prop(into)] set_quicksearch: WriteSignal<bool>,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
+    children: Children,
+) -> impl IntoView {
+    view! { cx,
+        <leptonic-quicksearch-trigger id=id class=class style=style on:click=move |_| set_quicksearch.set(true)>
+            { children(cx) }
+        </leptonic-quicksearch-trigger>
     }
 }
 

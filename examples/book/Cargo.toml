@@ -28,6 +28,9 @@ leptos = { version = "0.3", default-features = false, features = [
 leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
     "csr",
     "BsGithub",
+    "BsSearch",
+    "BsList",
+    "BsThreeDots",
     "BsFolder",
     "BsFolderFill",
     "BsBook",
@@ -37,6 +40,7 @@ leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "en
     "BsCircleSquare",
     "BsArrowsMove",
 ] }
+leptos-use = { version = "^0.3.3", features = ["stable"] }
 leptos-tiptap-build = { version = "0.1", optional = true }
 leptos_meta = { version = "0.3", default-features = false, features = [
     "csr",

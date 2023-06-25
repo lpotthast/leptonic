@@ -40,11 +40,11 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <div>
+        <Stack orientation=StackOrientation::Horizontal spacing=6 style="justify-content: flex-start;">
             <Button on_click=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
             <Button on_click=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
             <Button on_click=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
-        </div>
+        </Stack>
 
         <h2>"Button group"</h2>
 
@@ -99,5 +99,67 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
         <Button on_click=move |_| {} variations=view!{cx, <Button on_click=move |_| {}>"Secondary action"</Button>}.into_view(cx)>
             "MainAction"
         </Button>
+
+        <H2>"Styling"</H2>
+
+        <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+
+        <Code>
+            {indoc!(r#"
+                --button-border-size
+                --button-border-radius
+                --button-box-shadow-opacity
+
+                --button-primary-text-color
+                --button-primary-text-color-hover
+                --button-primary-background-color
+                --button-primary-background-color-hover
+                --button-primary-border-color
+                --button-primary-border-color-hover
+                --button-primary-box-shadow-color
+
+                --button-secondary-text-color
+                --button-secondary-text-color-hover
+                --button-secondary-background-color
+                --button-secondary-background-color-hover
+                --button-secondary-border-color
+                --button-secondary-border-color-hover
+                --button-secondary-box-shadow-color
+
+                --button-success-text-color
+                --button-success-text-color-hover
+                --button-success-background-color
+                --button-success-background-color-hover
+                --button-success-border-color
+                --button-success-border-color-hover
+                --button-success-box-shadow-color
+
+                --button-info-text-color
+                --button-info-text-color-hover
+                --button-info-background-color
+                --button-info-background-color-hover
+                --button-info-border-color
+                --button-info-border-color-hover
+                --button-info-box-shadow-color
+
+                --button-warning-text-color
+                --button-warning-text-color-hover
+                --button-warning-background-color
+                --button-warning-background-color-hover
+                --button-warning-border-color
+                --button-warning-border-color-hover
+                --button-warning-box-shadow-color
+
+                --button-danger-text-color
+                --button-danger-text-color-hover
+                --button-danger-background-color
+                --button-danger-background-color-hover
+                --button-danger-border-color
+                --button-danger-border-color-hover
+                --button-danger-box-shadow-color
+            "#)}
+        </Code>
+
+        <div style="margin-bottom: 5em;"></div>
     }
 }
