@@ -5,7 +5,7 @@ use leptos::*;
 #[component]
 pub fn PageInstallation(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Typography variant=TypographyVariant::H1 id="#installation">
+        <H1 id="#installation">
             "Installation"
             <Anchor href="#installation" title="Direct link to an overview of installation instructions."/>
 
@@ -13,7 +13,7 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
             //class="hash-link"
             //aria-label="Direct link to Adding the menu to all windows"
             // title="Direct link to Adding the menu to all windows">&ZeroWidthSpace;</a>
-        </Typography>
+        </H1>
 
         <P>
             "Start by adding the leptonic library as a dependency of your app."

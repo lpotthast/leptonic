@@ -128,6 +128,7 @@ pub mod prelude {
     pub use super::modal::ModalTitle;
     pub use super::progress_bar::ProgressBar;
     pub use super::quicksearch::Quicksearch;
+    pub use super::quicksearch::QuicksearchOption;
     pub use super::r#box::Box;
     pub use super::root::Root;
     pub use super::safe_html::SafeHtml;

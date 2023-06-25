@@ -20,7 +20,6 @@ leptos = { version = "0.3", default-features = false, features = [
     "csr",
     "serde",
     "tracing",
-    "stable",
 ] }
 leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
     "csr",
@@ -46,15 +45,10 @@ leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "en
     "BsJustify",
     "BsXCircleFill",
 ] }
-leptos-tiptap = { git = "https://github.com/lpotthast/leptos-tiptap", branch = "main" }
-leptos-use = { git = "https://github.com/lpotthast/leptos-use", branch = "use-stable", features = [
-    "docs",
-    "math",
-    "stable",
-] }
+leptos-tiptap = { version = "0.1", features = ["stable"] }
+leptos-use = { version = "^0.3.3", features = ["docs", "math"] }
 leptos_router = { version = "0.3", default-features = false, features = [
     "csr",
-    "stable",
 ] }
 serde = "1"
 serde-wasm-bindgen = "0.5"
@@ -77,6 +71,14 @@ web-sys = { version = "0.3", features = [
     "HtmlInputElement",
     "Storage",
 ] }
+
+[features]
+stable = [
+    "leptos/stable",
+    "leptos_router/stable",
+    "leptos-use/stable",
+    "leptos-tiptap/stable",
+]
 
 [dev-dependencies]
 wasm-bindgen = "0.2"

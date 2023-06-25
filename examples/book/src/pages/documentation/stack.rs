@@ -9,6 +9,8 @@ pub fn PageStack(cx: Scope) -> impl IntoView {
 
         <H2>"Vertical stacks"</H2>
 
+        <P>"Use a stack to create a container displaying its list of children one after the other while spacing them out by a predefined distance."</P>
+
         <Code>
             {indoc!(r#"
                 <Stack spacing=6>
@@ -26,6 +28,12 @@ pub fn PageStack(cx: Scope) -> impl IntoView {
         </Stack>
 
         <H2>"Horizontal stacks"</H2>
+
+        <P>
+            "A stacks default orientation is "<Code inline=true>"StackOrientation::Vertical"</Code>". "
+            "You can explicitly set the orientation to be "<Code inline=true>"StackOrientation::Horizontal"</Code>" "
+            "to let the stack display its children horizontally."
+        </P>
 
         <Code>
             {indoc!(r#"

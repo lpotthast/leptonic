@@ -6,10 +6,7 @@ use leptos_meta::{provide_meta_context, Title};
 use leptos_router::*;
 use serde::{Deserialize, Serialize};
 
-use leptonic::{
-    prelude::*,
-    quicksearch::{QuicksearchOption, QuicksearchResult},
-};
+use leptonic::prelude::*;
 
 use crate::pages::{
     documentation::{doc_root::DocRoutes, err404::PageErr404},
@@ -98,6 +95,51 @@ pub const APP_BAR_HEIGHT: Height = Height::Em(3.5);
 
 #[component]
 pub fn Layout(cx: Scope) -> impl IntoView {
+    let search_options = vec![
+        (
+            "overview",
+            QuicksearchOption {
+                view: create_callback(cx, move |cx| {
+                    view! {cx,
+                        <Link href=DocRoutes::Overview class="search-link">
+                            "Overview"
+                        </Link>
+                    }
+                    .into_view(cx)
+                }),
+                on_select: create_callback(cx, move |_| {}),
+            },
+        ),
+        (
+            "installation",
+            QuicksearchOption {
+                view: create_callback(cx, move |cx| {
+                    view! {cx,
+                        <Link href=DocRoutes::Installation class="search-link">
+                            "Installation"
+                        </Link>
+                    }
+                    .into_view(cx)
+                }),
+                on_select: create_callback(cx, move |_| {}),
+            },
+        ),
+        (
+            "usage",
+            QuicksearchOption {
+                view: create_callback(cx, move |cx| {
+                    view! {cx,
+                        <Link href=DocRoutes::Usage class="search-link">
+                            "Usage"
+                        </Link>
+                    }
+                    .into_view(cx)
+                }),
+                on_select: create_callback(cx, move |_| {}),
+            },
+        ),
+    ];
+
     view! { cx,
         <AppBar id="app-bar" height=APP_BAR_HEIGHT>
             <div id="app-bar-content">
@@ -113,17 +155,15 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                     </Link>
                 </Stack>
 
-                <Quicksearch query=create_callback(cx, move |search| {
-                    vec![
-                        QuicksearchOption {
-                            view: create_callback(cx, move |cx| view! {cx,
-                                <Link href=DocRoutes::Overview class="search-link">
-                                    "Overview"
-                                </Link>
-                            }.into_view(cx)),
-                            on_select: create_callback(cx, move |_| {})
-                        }
-                    ]
+                <Quicksearch query=create_callback(cx, move |search: String| {
+                    if search.is_empty() {
+                        return vec![];
+                    }
+                    let lower_search = search.to_lowercase();
+                    search_options.iter()
+                        .filter(|it| it.0.to_lowercase().contains(&lower_search))
+                        .map(|it| it.1.clone())
+                        .collect::<Vec<_>>()
                 })/>
 
                 <Stack id="actions" orientation=StackOrientation::Horizontal spacing=10 style="margin-right: 1em">

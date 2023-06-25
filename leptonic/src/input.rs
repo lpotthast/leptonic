@@ -15,7 +15,9 @@ pub enum InputType {
     Number,
 }
 
-fn autofocus<T: ElementDescriptor + Clone + Deref<Target = web_sys::HtmlInputElement> + 'static>(
+fn prepare_autofocus<
+    T: ElementDescriptor + Clone + Deref<Target = web_sys::HtmlInputElement> + 'static,
+>(
     cx: Scope,
     node_ref: NodeRef<T>,
 ) {
@@ -33,8 +35,8 @@ fn use_focus<T: ElementDescriptor + Clone + Deref<Target = web_sys::HtmlInputEle
     node_ref: NodeRef<T>,
 ) {
     create_effect(cx, move |_prev| {
-        let focus = focus.get(); // tracks
-        let elem = node_ref.get(); // tracks
+        let focus = focus.get();
+        let elem = node_ref.get();
         if let Some(elem) = elem {
             let outcome = match focus {
                 true => elem.focus(),
@@ -60,6 +62,7 @@ pub fn Input<S>(
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
+    #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
@@ -72,6 +75,10 @@ where
     };
 
     let node_ref: NodeRef<leptos::html::Input> = create_node_ref(cx);
+
+    if autofocus {
+        prepare_autofocus(cx, node_ref);
+    }
 
     if let Some(focus) = should_be_focused {
         use_focus(cx, focus, node_ref);

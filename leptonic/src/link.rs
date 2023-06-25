@@ -7,6 +7,8 @@ pub fn Link<H>(
     /// Used to calculate the link's `href` attribute. Will be resolved relative
     /// to the current route.
     href: H,
+    #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
+    #[prop(into, optional)] title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
@@ -20,15 +22,11 @@ pub fn Link<H>(
     replace: bool,
     /// Sets the `id` attribute, making it easier to target.
     #[prop(into, optional)]
-    id: Option<String>,
+    id: Option<AttributeValue>,
     /// Sets the `class` attribute, making it easier to style.
     #[prop(into, optional)]
     class: Option<AttributeValue>,
-    #[prop(into, optional)]
-    style: Option<AttributeValue>,
-    /// Whether or not this link acts as an anchor.
-    #[prop(into, optional, default = false)]
-    is_anchor: bool,
+    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView
 where
@@ -91,9 +89,10 @@ pub fn LinkExt<H>(
 where
     H: ToHref + 'static,
 {
+    // NOTE(lukas): rel="noopener" is added for security reasons. See: https://developer.chrome.com/docs/lighthouse/best-practices/external-anchors-use-rel-noopener/
     view! { cx,
         <leptonic-link id=id class=class style=style>
-            <a href={move || href.to_href()()} target=format!("{target}")>
+            <a href={move || href.to_href()()} target=format!("{target}") rel={match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }>
                 { children(cx) }
             </a>
         </leptonic-link>

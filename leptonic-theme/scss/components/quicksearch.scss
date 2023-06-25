@@ -44,13 +44,20 @@ leptonic-modal.quicksearch-modal {
 }
 
 leptonic-quicksearch {
-    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 
-    input.search-input {
+    leptonic-quicksearch-trigger {
+        display: flex;
+        padding: var(--input-padding);
+        color: #7c7c7c;
+        margin: auto;
         background-color: transparent;
         border: 1px solid lightgrey;
         border-radius: 0.4em;
         cursor: pointer;
+        user-select: none;
     }
 
     .input-with-btn {

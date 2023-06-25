@@ -9,17 +9,9 @@ pub fn Quicksearch(
     let (show_modal, set_show_modal) = create_signal(cx, false);
     view! { cx,
         <leptonic-quicksearch>
-            <Input
-                get=""
-                set=move |_| {}
-                label="Search"
-                class="search-input"
-                on_focus_change=create_callback(cx, move |focus| if focus {
-                    set_show_modal.set(true);
-                })
-                prepend=view! {cx, ""}.into_view(cx)
-            />
-
+            <leptonic-quicksearch-trigger on:click=move |_| set_show_modal.set(true)>
+                "Search"
+            </leptonic-quicksearch-trigger>
             <QuicksearchModal
                 show_when=show_modal
                 query=query
@@ -47,7 +39,7 @@ where
 {
     let (input, set_input) = create_signal(cx, "".to_owned());
 
-    let options = Signal::derive(cx, move || query.call(input.get()));
+    let options = move || query.call(input.get());
 
     let g_keyboard_event: GlobalKeyboardEvent = expect_context::<GlobalKeyboardEvent>(cx);
     create_effect(cx, move |_old| {
@@ -66,12 +58,13 @@ where
                     set=move |v| set_input.set(v)
                     label="Search"
                     class="search-input"
+                    should_be_focused=show_when
                     prepend=view! {cx, ""}.into_view(cx)
                 />
             </ModalHeader>
             <ModalBody>
                 <leptonic-quicksearch-results>
-                    { options.get().into_iter().map(|option| view! {cx,
+                    { move || options().into_iter().map(|option| view! {cx,
                         <leptonic-quicksearch-result on:click=move |_| {
                                 option.on_select.call(());
                                 on_cancel();
@@ -87,14 +80,5 @@ where
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
-    }
-}
-
-#[component]
-pub fn QuicksearchResult(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
-        <leptonic-quicksearch-result>
-            { children(cx) }
-        </leptonic-quicksearch-result>
     }
 }
