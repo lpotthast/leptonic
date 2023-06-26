@@ -93,8 +93,6 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
                 --modal-box-shadow
             "#)}
         </Code>
-
-        <div style="margin-bottom: 5em;"></div>
     }
 }
 

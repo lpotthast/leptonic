@@ -15,7 +15,6 @@ use crate::pages::documentation::chip::PageChip;
 use crate::pages::documentation::collapsible::PageCollapsible;
 use crate::pages::documentation::date_time::PageDateTime;
 use crate::pages::documentation::drawer::PageDrawer;
-use crate::pages::documentation::err404::PageErr404;
 use crate::pages::documentation::grid::PageGrid;
 use crate::pages::documentation::icon::PageIcon;
 use crate::pages::documentation::input::PageInput;
@@ -37,6 +36,7 @@ use crate::pages::documentation::transition::PageTransition;
 use crate::pages::documentation::typography::PageTypography;
 use crate::pages::documentation::usage::PageUsage;
 use crate::APP_BAR_HEIGHT;
+use crate::pages::err404::PageErr404;
 
 #[derive(Debug, Copy, Clone)]
 pub enum DocRoutes {
@@ -208,7 +208,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
     };
 
     view! { cx,
-        <Box id="doc-layout" style=format!("height: calc(100vh - {APP_BAR_HEIGHT}); max-height: calc(100vh - {APP_BAR_HEIGHT});")>
+        <Box id="doc-layout">
             <Drawer
                 id="doc-drawer"
                 shown=Signal::derive(cx, move || !app_layout_context.doc_drawer_closed.get())

@@ -62,7 +62,5 @@ pub fn PageProgress(cx: Scope) -> impl IntoView {
                 --progress-bar-color
             "#)}
         </Code>
-
-        <div style="margin-bottom: 5em;"></div>
     }
 }

@@ -9,10 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use leptonic::prelude::*;
 
-use crate::pages::{
-    documentation::{doc_root::DocRoutes, err404::PageErr404},
-    welcome::PageWelcome,
-};
+use crate::pages::{documentation::doc_root::DocRoutes, err404::PageErr404, welcome::PageWelcome};
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum AppTheme {

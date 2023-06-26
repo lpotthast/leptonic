@@ -188,7 +188,5 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                 --select-item-selected-background-color
             "#)}
         </Code>
-
-        <div style="margin-bottom: 5em;"></div>
     }
 }

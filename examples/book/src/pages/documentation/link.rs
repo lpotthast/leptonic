@@ -74,7 +74,5 @@ pub fn PageLink(cx: Scope) -> impl IntoView {
                 --link-color
             "#)}
         </Code>
-
-        <div style="margin-bottom: 5em;"></div>
     }
 }

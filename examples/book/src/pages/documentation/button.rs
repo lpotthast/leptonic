@@ -159,7 +159,5 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
                 --button-danger-box-shadow-color
             "#)}
         </Code>
-
-        <div style="margin-bottom: 5em;"></div>
     }
 }

@@ -87,7 +87,5 @@ pub fn PageSkeleton(cx: Scope) -> impl IntoView {
                 --skeleton-cursor
             "#)}
         </Code>
-
-        <div style="margin-bottom: 5em;"></div>
     }
 }

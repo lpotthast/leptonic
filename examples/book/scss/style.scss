@@ -103,7 +103,6 @@ body {
     flex-direction: row;
     width: 100%;
     max-width: 1400px;
-    margin: auto;
 
     #doc-drawer {
         overflow: auto;
@@ -111,10 +110,10 @@ body {
         min-width: 15em;
         padding: 1em 0;
         transition: min-width 0.2s;
+        margin: 0;
 
         &.mobile {
             min-width: 100%;
-
 
             overflow: none;
 
@@ -182,6 +181,7 @@ body {
         display: block;
         width: 100%;
         padding: 0 1.5em;
+        padding-bottom: 6em;
         overflow-y: auto;
     }
 }

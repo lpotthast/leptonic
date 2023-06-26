@@ -8,7 +8,6 @@ pub mod collapsible;
 pub mod date_time;
 pub mod doc_root;
 pub mod drawer;
-pub mod err404;
 pub mod grid;
 pub mod icon;
 pub mod input;

@@ -12,6 +12,5 @@ pub fn PageUsage(cx: Scope) -> impl IntoView {
             <Code inline=true>"use leptonic::prelude::*;"</Code>
             " and you are ready to go."
         </P>
-
     }
 }

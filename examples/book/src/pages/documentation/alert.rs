@@ -43,6 +43,5 @@ pub fn PageAlert(cx: Scope) -> impl IntoView {
                 --alert-danger-color
             "#)}
         </Code>
-
     }
 }
