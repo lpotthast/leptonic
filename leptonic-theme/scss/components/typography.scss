@@ -65,6 +65,8 @@ leptonic-code {
   color: var(--typography-code-color);
   white-space: pre;
   overflow: auto;
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
 
   &[inline="true"] {
     display: inline-flex;
