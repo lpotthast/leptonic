@@ -67,7 +67,7 @@ body {
     }
 
     #github-icon {
-        font-size: 1.25em;
+        font-size: 1.5em;
     }
 }
 
@@ -127,11 +127,26 @@ body {
             padding: 1em 0;
         }
 
+        @media only screen and (max-width: 600px) {
+            .menu {
+                display: block;
+                height: 100%;
+                column-count: 2;
+                column-gap: 0;
+                column-fill: auto;
+            }
+        }
+
         .drawer-section {
+            display: inline-block;
             width: 100%;
             margin: 1em 0;
             padding-left: 2em;
             font-size: 0.9em;
+
+            @media only screen and (max-width: 600px) {
+                padding-left: 1em;
+            }
 
             .section-header {
                 display: flex;
