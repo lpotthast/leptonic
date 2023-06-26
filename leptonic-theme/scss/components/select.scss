@@ -1,4 +1,9 @@
+.leptonic-select-wrapper {
+    display: contents;
+}
+
 leptonic-select {
+    display: block;
     position: relative;
     border: none;
     cursor: pointer;
@@ -30,15 +35,15 @@ leptonic-select {
         }
 
         leptonic-select-deselect-trigger {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             position: absolute;
             right: 2.2em;
             color: #878787;
             background-color: #353535;
             border-radius: 1em;
             font-size: 1.2em;
-            display: flex;
-            justify-content: center;
-            align-items: center;
 
             &:hover {
                 color: var(--input-color);
@@ -46,15 +51,15 @@ leptonic-select {
         }
 
         leptonic-select-show-trigger {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             position: absolute;
             right: 0.75em;
             margin-top: 0.1em;
             color: #bfbfbf;
             border-radius: 1em;
             font-size: 1.1em;
-            display: flex;
-            justify-content: center;
-            align-items: center;
 
             &:hover {
                 color: var(--input-color);
@@ -74,14 +79,11 @@ leptonic-select {
     }
 
     leptonic-select-options {
+        display: none;
         position: absolute;
         top: 100%;
         left: 0;
-        right: auto;
-        bottom: auto;
-        display: none;
         flex-direction: column;
-        /* max-width: 30em; */
         width: 100%;
         background-color: var(--select-dropdown-background-color);
         box-shadow: var(--select-dropdown-shadow); // 6px 8px 20px -7px #0d0d0d
