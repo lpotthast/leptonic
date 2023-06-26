@@ -11,9 +11,10 @@ leptonic-slider {
     user-select: none;
     height: $knob-size;
     width: 100%;
+    touch-action: none;
+    cursor: pointer;
 
     .bar {
-        cursor: pointer;
         position: relative;
         display: inline-flex;
         width: calc(100% - #{$knob-size});
