@@ -41,6 +41,19 @@
     outline: none;
   }
 
+  &[variant="flat"] {
+    border: none;
+    background-color: transparent;
+    .name {
+      text-transform: uppercase;
+    }
+  }
+
+  &[variant="outlined"] {
+    border: 0.1em solid;
+    background-color: transparent;
+  }
+
   // BTN-PRIMARY
   &[color="primary"] {
     color: var(--button-primary-text-color);
@@ -60,6 +73,13 @@
       &::before {
         box-shadow: 0 0 0 0.2em var(--button-primary-box-shadow-color);
       }
+    }
+
+    &[variant="flat"] {
+      color: var(--button-flat-primary-text-color);
+    }
+    &[variant="outlined"] {
+      color: var(--button-outlined-primary-text-color);
     }
   }
 
@@ -185,17 +205,6 @@
     cursor: default;
   }
 
-  &[variant="outlined"] {
-    border: 0.1em solid;
-    background-color: transparent;
-  }
-
-  &[variant="flat"] {
-    .name {
-      text-transform: uppercase;
-    }
-    background-color: transparent;
-  }
 
   leptonic-icon {
     font-size: 0.9em;
