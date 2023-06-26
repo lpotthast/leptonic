@@ -11,7 +11,11 @@ leptonic-progress-bar {
 
     &[indeterminate] {
         leptonic-progress-bar-background {
+            display: block;
+
             leptonic-progress-bar-fill {
+                display: block;
+
                 -webkit-animation: animate-move 1.3s cubic-bezier(0.29, 0.63, 0.81, 0.07) infinite;
                 animation: animate-move 1.3s cubic-bezier(0.29, 0.63, 0.81, 0.07) infinite;
 
@@ -20,6 +24,7 @@ leptonic-progress-bar {
                         left: 100%;
                     }
                 }
+
                 @keyframes animate-move {
                     100% {
                         left: 100%;
@@ -27,6 +32,7 @@ leptonic-progress-bar {
                 }
 
                 leptonic-progress-bar-fill-overlay {
+                    display: block;
                     background: none;
                     animation: none;
                 }
@@ -62,13 +68,11 @@ leptonic-progress-bar {
             leptonic-progress-bar-fill-overlay {
                 display: inline-flex;
                 width: 100%;
-                background-image: -webkit-linear-gradient(
-                    -45deg,
-                    transparent 33%,
-                    rgba(0, 0, 0, 0.1) 33%,
-                    rgba(0, 0, 0, 0.1) 66%,
-                    transparent 66%
-                );
+                background-image: -webkit-linear-gradient(-45deg,
+                        transparent 33%,
+                        rgba(0, 0, 0, 0.1) 33%,
+                        rgba(0, 0, 0, 0.1) 66%,
+                        transparent 66%);
                 height: 100%;
                 border-radius: var(--progress-bar-border-radius);
                 background-size: calc(var(--progress-bar-height) * 2), 1em, 100% 100%, 100% 100%;
@@ -80,6 +84,7 @@ leptonic-progress-bar {
                         background-position: -40px 0px;
                     }
                 }
+
                 @keyframes animate-stripes {
                     100% {
                         background-position: -40px 0px;

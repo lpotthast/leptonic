@@ -23,6 +23,8 @@ leptonic-datetime {
     }
 
     leptonic-date-selector {
+        display: block;
+
         leptonic-calendar-month {
             display: flex;
             flex-direction: column;

@@ -3,8 +3,8 @@ use leptos::*;
 #[component]
 pub fn Card(cx: Scope, children: Children) -> impl IntoView {
     view! { cx,
-        <div class="leptonic-card">
+        <leptonic-card>
             { children(cx) }
-        </div>
+        </leptonic-card>
     }
 }
