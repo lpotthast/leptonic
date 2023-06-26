@@ -1,5 +1,3 @@
-$brand-color: #10428c;
-
 * {
     font-family: Roboto, sans-serif;
 }
@@ -20,9 +18,8 @@ body {
 @import "../generated/leptonic/leptonic-themes";
 
 [theme="light"] {
-    //--box-background-color: #efebe8;
-    //--app-bar-background-color: #383838;
-    //--app-bar-border-bottom: none;
+    --brand-color: #e66956;
+
     --drawer-background-color: none;
     --drawer-box-shadow: none;
 
@@ -34,9 +31,8 @@ body {
 }
 
 [theme="dark"] {
-    //--box-background-color: #121212;
-    //--app-bar-background-color: #1d1d1d;
-    //--app-bar-border-bottom: none;
+    --brand-color: #e66956;
+
     --drawer-background-color: none;
     --drawer-box-shadow: none;
 
