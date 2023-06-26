@@ -5,34 +5,10 @@ use leptos_icons::*;
 use leptos_meta::{provide_meta_context, Title};
 use leptos_router::*;
 use leptos_use::use_media_query;
-use serde::{Deserialize, Serialize};
 
 use leptonic::prelude::*;
 
 use crate::pages::{documentation::doc_root::DocRoutes, err404::PageErr404, welcome::PageWelcome};
-
-#[derive(Default, Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
-pub enum AppTheme {
-    #[default]
-    Light,
-    Dark,
-}
-
-impl Theme for AppTheme {
-    fn name(&self) -> &'static str {
-        match self {
-            AppTheme::Light => "light",
-            AppTheme::Dark => "dark",
-        }
-    }
-
-    fn icon(&self) -> leptos_icons::Icon {
-        match self {
-            AppTheme::Light => BsIcon::BsSun.into(),
-            AppTheme::Dark => BsIcon::BsMoon.into(),
-        }
-    }
-}
 
 #[derive(Debug, Copy, Clone)]
 pub enum AppRoutes {
@@ -75,7 +51,7 @@ pub fn App(cx: Scope) -> impl IntoView {
     view! {
         cx,
         <Title text="Leptonic"/>
-        <Root default_theme=AppTheme::default()>
+        <Root default_theme=LeptonicTheme::default()>
             <Router>
                 <Routes>
                     <Route path="" view=|cx| view! { cx, <Layout/> }>
@@ -277,7 +253,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                                 <Icon id="github-icon" icon=BsIcon::BsGithub/>
                             </LinkExt>
 
-                            <ThemeToggle off=AppTheme::Light on=AppTheme::Dark style="margin-right: 1em"/>
+                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
                         }.into_view(cx),
                     } }
                 </Stack>
@@ -295,7 +271,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                         <Icon id="github-icon" icon=BsIcon::BsGithub/>
                     </LinkExt>
 
-                    <ThemeToggle off=AppTheme::Light on=AppTheme::Dark style="margin-right: 1em"/>
+                    <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
 
                     "Currently - v0.1"
                 </Stack>

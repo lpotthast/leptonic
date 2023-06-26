@@ -1,6 +1,31 @@
 use leptos::*;
+use leptos_icons::BsIcon;
 
 use crate::{prelude::*, toggle::ToggleProps, toggle::ToggleSize};
+
+/// Leptonic's default themes. You may want to create your own theme-defining-type if you have additional or differently named themes.
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum LeptonicTheme {
+    #[default]
+    Light,
+    Dark,
+}
+
+impl Theme for LeptonicTheme {
+    fn name(&self) -> &'static str {
+        match self {
+            LeptonicTheme::Light => "light",
+            LeptonicTheme::Dark => "dark",
+        }
+    }
+
+    fn icon(&self) -> leptos_icons::Icon {
+        match self {
+            LeptonicTheme::Light => BsIcon::BsSun.into(),
+            LeptonicTheme::Dark => BsIcon::BsMoon.into(),
+        }
+    }
+}
 
 pub trait Theme:
     Default + PartialEq + Clone + Copy + serde::Serialize + serde::de::DeserializeOwned

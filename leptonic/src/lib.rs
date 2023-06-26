@@ -146,6 +146,7 @@ pub mod prelude {
     pub use super::stack::StackOrientation;
     pub use super::tab::Tab;
     pub use super::tabs::Tabs;
+    pub use super::theme::LeptonicTheme;
     pub use super::theme::Theme;
     pub use super::theme::ThemeContext;
     pub use super::theme::ThemeProvider;

@@ -29,6 +29,7 @@ use crate::pages::documentation::skeleton::PageSkeleton;
 use crate::pages::documentation::slider::PageSlider;
 use crate::pages::documentation::stack::PageStack;
 use crate::pages::documentation::tab::PageTab;
+use crate::pages::documentation::themes::PageThemes;
 use crate::pages::documentation::tiptap_editor::PageTiptapEditor;
 use crate::pages::documentation::toast::PageToast;
 use crate::pages::documentation::toggle::PageToggle;
@@ -44,6 +45,7 @@ pub enum DocRoutes {
     Overview,
     Installation,
     Usage,
+    Themes,
     Changelog,
 
     // Layout
@@ -91,6 +93,7 @@ impl DocRoutes {
             DocRoutes::Overview => "overview",
             DocRoutes::Installation => "installation",
             DocRoutes::Usage => "usage",
+            DocRoutes::Themes => "themes",
             DocRoutes::Changelog => "changelog",
 
             DocRoutes::Stack => "stack",
@@ -154,6 +157,7 @@ where
             <Route path=DocRoutes::Overview view=|cx| view! { cx, <PageOverview/> }/>
             <Route path=DocRoutes::Installation view=|cx| view! { cx, <PageInstallation/> }/>
             <Route path=DocRoutes::Usage view=|cx| view! { cx, <PageUsage/> }/>
+            <Route path=DocRoutes::Themes view=|cx| view! { cx, <PageThemes/> }/>
             <Route path=DocRoutes::Changelog view=|cx| view! { cx, <PageChangelog/> }/>
 
             <Route path=DocRoutes::Stack view=|cx| view! { cx, <PageStack/> }/>
@@ -224,6 +228,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                             <Link href=DocRoutes::Overview class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
                             <Link href=DocRoutes::Installation class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
                             <Link href=DocRoutes::Usage class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Usage"</Link>
+                            <Link href=DocRoutes::Themes class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
                             <Link href=DocRoutes::Changelog class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
                         </Stack>
                     </DrawerSection>

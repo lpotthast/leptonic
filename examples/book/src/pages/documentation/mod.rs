@@ -7,6 +7,7 @@ pub mod chip;
 pub mod collapsible;
 pub mod date_time;
 pub mod doc_root;
+pub mod themes;
 pub mod drawer;
 pub mod grid;
 pub mod icon;

@@ -2,8 +2,6 @@ use leptonic::prelude::*;
 use leptos::*;
 use leptos_icons::BsIcon;
 
-use crate::app::AppTheme;
-
 #[component]
 pub fn PageAppBar(cx: Scope) -> impl IntoView {
     let app_bar_height = Height::Em(3.0);
@@ -20,7 +18,7 @@ pub fn PageAppBar(cx: Scope) -> impl IntoView {
                 </Link>
                 <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
                     <Icon icon=BsIcon::BsGithub></Icon>
-                    <ThemeToggle off=AppTheme::Light on=AppTheme::Dark/>
+                    <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
                 </Stack>
             </AppBar>
         </div>
