@@ -212,6 +212,7 @@ where
             on:blur=move |_| set_focused.set(false)
             on:focus=move |_| set_focused.set(true)
         >
+            { move || show_options.get() }
             <leptonic-select
                 id=id_string
                 variant="select"
