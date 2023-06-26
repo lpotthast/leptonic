@@ -208,11 +208,39 @@ body {
     align-items: center;
     width: 100%;
     max-width: 1200px;
+    margin: 0 auto;
     padding: 1em;
 
-    #leptonic {
+    #big-logo {
+        height: 10em;
+        width: 10em;
+        margin: 3.5em 0;
+    }
+
+    #slogan {
         font-family: monospace;
         font-size: 4em;
         letter-spacing: 0.2em;
+        margin-top: 0em;
+    }
+
+    #sub-slogan {
+        font-size: 1.75em;
+        max-width: 75%;
+        text-align: center;
+    }
+
+    @media only screen and (max-width: 600px) {
+        #big-logo {
+            margin: 2.5em 0;
+        }
+
+        #slogan {
+            font-size: 3em;
+        }
+
+        #sub-slogan {
+            font-size: 1.5em;
+        }
     }
 }

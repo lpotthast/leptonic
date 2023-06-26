@@ -97,6 +97,7 @@ pub fn Button<F>(
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] variations: OptionalMaybeSignal<View>,
     #[prop(into, optional)] class: OptionalMaybeSignal<String>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView
 where
@@ -139,6 +140,7 @@ where
             variant=move || variant.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
             color=move || color.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
             size=move || size.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()
+            style=style
             aria-disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
             on:click=on_click
         >

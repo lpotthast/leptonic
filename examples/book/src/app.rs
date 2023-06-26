@@ -131,7 +131,7 @@ impl AppLayoutContext {
 pub fn Layout(cx: Scope) -> impl IntoView {
     let is_small = use_media_query(cx, "(max-width: 800px)");
     let router_context = use_router(cx);
-    let is_doc = Signal::derive(cx, move || {
+    let is_doc = create_memo(cx, move |_| {
         router_context.pathname().get().starts_with("/doc")
     });
 
@@ -266,11 +266,11 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                 </Stack>
 
                 <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
-                    { move || match (is_doc.get(), is_small.get()) {
-                        (_, true) => view! {cx,
+                    { move || match is_small.get() {
+                        true => view! {cx,
                             <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
                         }.into_view(cx),
-                        (_, false) => view! {cx,
+                        false => view! {cx,
                             "v0.1"
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
@@ -289,14 +289,15 @@ pub fn Layout(cx: Scope) -> impl IntoView {
             <Outlet/>
 
             <Drawer id="main-drawer" shown=Signal::derive(cx, move || !main_drawer_closed.get()) side=DrawerSide::Right style=format!("top: {APP_BAR_HEIGHT}")>
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
-                    "v0.1"
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) class="menu">
 
-                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
+                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank style="font-size: 3em;">
                         <Icon id="github-icon" icon=BsIcon::BsGithub/>
                     </LinkExt>
 
                     <ThemeToggle off=AppTheme::Light on=AppTheme::Dark style="margin-right: 1em"/>
+
+                    "Currently - v0.1"
                 </Stack>
             </Drawer>
         </Box>
