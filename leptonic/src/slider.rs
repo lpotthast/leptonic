@@ -132,7 +132,15 @@ where
             variant=variant.to_str()
             class:active=active
             class:disabled=disabled
-            on:mousedown=move |_| set_listening.set(true)
+            on:mousedown=move |_e| set_listening.set(true)
+            on:touchstart=move |_e| set_listening.set(true)
+            on:touchmove=move |e| {
+                if listening.get_untracked() {
+                    e.prevent_default();
+                    e.stop_propagation();
+                }
+            }
+            on:touchend=move |_e| set_listening.set(false)
         >
             <div node_ref=el id=id class="bar">
                 <div class="knob-wrapper">
