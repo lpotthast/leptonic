@@ -6,14 +6,17 @@ use crate::app::AppRoutes;
 #[component]
 pub fn PageWelcome(cx: Scope) -> impl IntoView {
     view! { cx,
-        <Box style="max-width: 1200px; padding: 1em; margin: auto;">
-            <Box style="">
-
-                <H1>"LEPTONIC"</H1>
-
-                <img src="/res/leptonic.svg" style="height: 10em;"/>
-
-            </Box>
+        <Box id="welcome-page">
+            <Grid spacing=Size::Em(0.6)>
+                <Row>
+                    <Col md=5 sm=5 xs=12>
+                        <H1 id="leptonic">"LEPTONIC"</H1>
+                    </Col>
+                    <Col md=6 sm=6 xs=12>
+                        <img src="/res/leptonic.svg" style="height: 10em; width: 10em;"/>
+                    </Col>
+                </Row>
+            </Grid>
 
             <P>"Similar to Leptos, this crate comes with a prelude module."</P>
             <P>

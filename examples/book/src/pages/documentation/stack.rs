@@ -13,7 +13,7 @@ pub fn PageStack(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Stack spacing=6>
+                <Stack spacing=Size::Em(0.6)>
                     <Skeleton animated=false>"Item 1"</Skeleton>
                     <Skeleton animated=false>"Item 2"</Skeleton>
                     <Skeleton animated=false>"Item 3"</Skeleton>
@@ -21,7 +21,7 @@ pub fn PageStack(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Stack spacing=6>
+        <Stack spacing=Size::Em(0.6)>
             <Skeleton animated=false>"Item 1"</Skeleton>
             <Skeleton animated=false>"Item 2"</Skeleton>
             <Skeleton animated=false>"Item 3"</Skeleton>
@@ -37,7 +37,7 @@ pub fn PageStack(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Stack orientation=StackOrientation::Horizontal spacing=6>
+                <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6)>
                     <Skeleton animated=false>"Item 1"</Skeleton>
                     <Skeleton animated=false>"Item 2"</Skeleton>
                     <Skeleton animated=false>"Item 3"</Skeleton>
@@ -45,7 +45,7 @@ pub fn PageStack(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Stack orientation=StackOrientation::Horizontal spacing=6>
+        <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6)>
             <Skeleton animated=false>"Item 1"</Skeleton>
             <Skeleton animated=false>"Item 2"</Skeleton>
             <Skeleton animated=false>"Item 3"</Skeleton>

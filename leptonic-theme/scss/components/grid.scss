@@ -23,6 +23,7 @@ $-gutter-compensation: 0;
   @if map-has-key($-tiers, $tier) {
     @return map-get($-tiers, $tier);
   }
+
   @warn "Unknown `#{$tier}` in $tiers.";
   @return null;
 }
@@ -33,9 +34,11 @@ $-gutter-compensation: 0;
     @media only screen and (min-width: #{map-get($-tiers, $tier)}) {
       @content;
     }
-  } @else {
+  }
+
+  @else {
     @warn "Unfortunately, no value could be retrieved from `#{$-tiers}`. "
-        + "Please make sure it is defined in the `$tiers` map.";
+    +"Please make sure it is defined in the `$tiers` map.";
   }
 }
 
@@ -101,12 +104,14 @@ $-gutter-compensation: 0;
 }
 
 @mixin produce {
+
   // General styling
   .#{$-class-prefix}container,
   .#{$-class-prefix}container-fluid {
     display: flex;
     flex-direction: column;
-    gap: 0.5em;
+    gap: var(--leptonic-grid-spacing);
+    width: 100%;
 
     //position: relative;
     //margin-right: auto;
@@ -124,7 +129,7 @@ $-gutter-compensation: 0;
     margin-right: $-gutter-compensation;
     margin-left: $-gutter-compensation;
 
-    gap: 0.5em;
+    gap: var(--leptonic-grid-spacing);
 
     &.crud-row-flex-row-reverse {
       flex-direction: row-reverse;
@@ -203,7 +208,9 @@ $-gutter-compensation: 0;
   /*
    * Generates classes and media queries for each defined tier:
    */
-  @each $tier-name, $tier-min in $-tiers {
+  @each $tier-name,
+  $tier-min in $-tiers {
+
     /*
      * All col- classes of tiers (sm and up) need to be of 100% width until their tier is reached.
      */
@@ -214,12 +221,15 @@ $-gutter-compensation: 0;
         max-width: 100%;
       }
     }
+
     @for $i from 0 to $-grid-columns {
       .#{$-class-prefix}col-#{$tier-name}-offset-#{$i} {
         margin-left: 0;
       }
     }
+
     @media only screen and (min-width: $tier-min) {
+
       // This ruleset would limit the grid to a certain width on each tier.
       /*.#{$-class-prefix}container {
         width: $tier-min + $-gutter-width;
@@ -229,15 +239,17 @@ $-gutter-compensation: 0;
         // Double specificity (DS)
         @include col;
       }
+
       @for $i from 1 through $-grid-columns {
         .#{$-class-prefix}col-#{$tier-name}-#{$i}.#{$-class-prefix}col-#{$tier-name}-#{$i} {
           // DS
           @extend .#{$-class-prefix}col-#{$tier-name};
           $percentage: percentage(math.div($i, $-grid-columns));
-          flex-basis: calc($percentage - 0.5em); // TODO: Use gap variable!
+          flex-basis: calc($percentage - var(--leptonic-grid-spacing));
           //max-width: $percentage;
         }
       }
+
       @for $i from 0 to $-grid-columns {
         .#{$-class-prefix}col-#{$tier-name}-offset-#{$i}.#{$-class-prefix}col-#{$tier-name}-offset-#{$i} {
           // DS
@@ -245,33 +257,43 @@ $-gutter-compensation: 0;
           margin-left: percentage(math.div($i, $-grid-columns));
         }
       }
+
       .#{$-class-prefix}col-flex-start-#{$tier-name} {
         @include flex-start;
       }
+
       .#{$-class-prefix}col-flex-center-#{$tier-name} {
         @include flex-center;
       }
+
       .#{$-class-prefix}col-flex-end-#{$tier-name} {
         @include flex-end;
       }
+
       .#{$-class-prefix}col-flex-top-#{$tier-name} {
         @include flex-top;
       }
+
       .#{$-class-prefix}col-flex-middle-#{$tier-name} {
         @include flex-middle;
       }
+
       .#{$-class-prefix}col-flex-bottom-#{$tier-name} {
         @include flex-bottom;
       }
+
       .#{$-class-prefix}col-flex-around-#{$tier-name} {
         @include flex-around;
       }
+
       .#{$-class-prefix}col-flex-between-#{$tier-name} {
         @include flex-between;
       }
+
       .#{$-class-prefix}col-flex-first-#{$tier-name} {
         @include flex-first;
       }
+
       .#{$-class-prefix}col-flex-last-#{$tier-name} {
         @include flex-last;
       }
@@ -285,7 +307,7 @@ $-gutter-compensation: 0;
     .#{$-class-prefix}col-#{$i} {
       @extend .#{$-class-prefix}col;
       $percentage: percentage(math.div($i, $-grid-columns));
-      flex-basis: calc($percentage - 0.5em); // TODO: Use gap variable!
+      flex-basis: calc($percentage - var(--leptonic-grid-spacing));
       //max-width: $percentage;
     }
   }

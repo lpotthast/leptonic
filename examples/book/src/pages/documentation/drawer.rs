@@ -10,14 +10,14 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
         <H1>"Drawer"</H1>
 
         <Drawer>
-            <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
                 <Collapsible
                     open=true
                     header=view! {cx,
                         <Icon icon=BsIcon::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
                     }
                     body=view! {cx,
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu nested dense">
                             <Link href=DocRoutes::Overview class="item">"Overview"</Link>
                             <Link href=DocRoutes::Installation class="item">"Installation"</Link>
                             <Link href=DocRoutes::Usage class="item">"Usage"</Link>
@@ -31,7 +31,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                         <Icon icon=BsIcon::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
                     }
                     body=view! {cx,
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu nested dense">
                             <Link href=DocRoutes::Stack class="item">"Stack"</Link>
                             <Link href=DocRoutes::Grid class="item">"Grid"</Link>
                         </Stack>
@@ -44,7 +44,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                         <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Components"
                     }
                     body=view! {cx,
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu nested dense">
                             <Link href=DocRoutes::Button class="item">"Button"</Link>
                             <Link href=DocRoutes::Tab class="item">"Tabs"</Link>
                             <Link href=DocRoutes::Input class="item">"Inputs"</Link>
@@ -68,7 +68,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                         <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
                     }
                     body=view! {cx,
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="menu nested dense">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu nested dense">
                             <Link href=DocRoutes::Transition class="item">"Transitions"</Link>
                         </Stack>
                     }

@@ -214,7 +214,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
     view! { cx,
         <AppBar id="app-bar" height=APP_BAR_HEIGHT>
             <div id="app-bar-content">
-                <Stack id="left" orientation=StackOrientation::Horizontal spacing=0>
+                <Stack id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
                     { move || match (is_doc.get(), is_small.get()) {
                         (false, true) => view! {cx,
                             <Link href="">
@@ -241,7 +241,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                     } }
                 </Stack>
 
-                <Stack id="center" orientation=StackOrientation::Horizontal spacing=10>
+                <Stack id="center" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     <Quicksearch
                         id="quicksearch"
                         trigger=move |cx, set_quicksearch| view! {cx,
@@ -265,7 +265,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                     />
                 </Stack>
 
-                <Stack id="right" orientation=StackOrientation::Horizontal spacing=10>
+                <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     { move || match (is_doc.get(), is_small.get()) {
                         (_, true) => view! {cx,
                             <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
@@ -289,7 +289,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
             <Outlet/>
 
             <Drawer id="main-drawer" shown=Signal::derive(cx, move || !main_drawer_closed.get()) side=DrawerSide::Right style=format!("top: {APP_BAR_HEIGHT}")>
-                <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
                     "v0.1"
 
                     <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>

@@ -18,7 +18,7 @@ pub fn PageAppBar(cx: Scope) -> impl IntoView {
                         "Leptonic  -  v0.1"
                     </Typography>
                 </Link>
-                <Stack orientation=StackOrientation::Horizontal spacing=10 style="margin-right: 1em">
+                <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
                     <Icon icon=BsIcon::BsGithub></Icon>
                     <ThemeToggle off=AppTheme::Light on=AppTheme::Dark/>
                 </Stack>

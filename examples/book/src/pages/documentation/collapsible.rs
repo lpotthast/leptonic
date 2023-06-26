@@ -7,7 +7,7 @@ pub fn PageCollapsible(cx: Scope) -> impl IntoView {
         <H1>"Collapsibles"</H1>
 
         <Collapsibles default_on_open=OnOpen::CloseOthers>
-            <Stack spacing=6>
+            <Stack spacing=Size::Em(0.6)>
                 <Collapsible
                     header="Header1"
                     body=view! {cx, "Body1"} />

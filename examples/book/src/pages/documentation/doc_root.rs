@@ -215,12 +215,12 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                 class=drawer_class
                 style=format!("top: {APP_BAR_HEIGHT}")
             >
-                <Stack orientation=StackOrientation::Vertical spacing=0 class="menu">
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
 
                     <DrawerSection header=move |cx| view! {cx,
                         <Icon icon=BsIcon::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
                     }>
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                             <Link href=DocRoutes::Overview class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
                             <Link href=DocRoutes::Installation class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
                             <Link href=DocRoutes::Usage class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Usage"</Link>
@@ -231,7 +231,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                     <DrawerSection header=move |cx| view! {cx,
                         <Icon icon=BsIcon::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
                     }>
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                             <Link href=DocRoutes::Stack class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
                             <Link href=DocRoutes::Grid class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
                             <Link href=DocRoutes::Separator class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
@@ -246,7 +246,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                     <DrawerSection header=move |cx| view! {cx,
                         <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
                     }>
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                             <Link href=DocRoutes::Button class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
                             <Link href=DocRoutes::Input class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Input"</Link>
                             <Link href=DocRoutes::TiptapEditor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tiptap editor"</Link>
@@ -260,7 +260,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                     <DrawerSection header=move |cx| view! {cx,
                         <Icon icon=BsIcon::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
                     }>
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                             <Link href=DocRoutes::Alert class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
                             <Link href=DocRoutes::Toast class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
                             <Link href=DocRoutes::Modal class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
@@ -272,7 +272,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                     <DrawerSection header=move |cx| view! {cx,
                         <Icon icon=BsIcon::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
                     }>
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                             <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
                             <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
                             <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
@@ -283,7 +283,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                     <DrawerSection header=move |cx| view! {cx,
                         <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
                     }>
-                        <Stack orientation=StackOrientation::Vertical spacing=0 class="link-stack">
+                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                             <Link href=DocRoutes::Transition class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Transitions"</Link>
                         </Stack>
                     </DrawerSection>

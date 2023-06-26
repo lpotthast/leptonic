@@ -36,7 +36,7 @@ pub fn PageGrid(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Grid spacing=6>
+        <Grid spacing=Size::Em(0.6)>
             <Row>
                 <Col md=3 sm=4 xs=6>
                     <Skeleton animated=false>"Item 1"</Skeleton>

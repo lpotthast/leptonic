@@ -1,19 +1,25 @@
-use std::borrow::Cow;
-
 use leptos::*;
+
+use crate::Size;
 
 // TODO: Only allow rows as children.
 #[component]
 pub fn Grid(
     cx: Scope,
-    spacing: u32,
-    #[prop(into, optional)] class: Cow<'static, str>,
-    children: Children
+    spacing: Size,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
+    children: Children,
 ) -> impl IntoView {
-    assert!(spacing <= 10);
-    let classes = format!("leptonic-grid-container spacing-{spacing} {class}");
     view! { cx,
-        <div class=classes>
+        <div
+            id=id
+            class=class
+            class="leptonic-grid-container"
+            style=style
+            style=("--leptonic-grid-spacing", format!("{spacing}"))
+        >
             { children(cx) }
         </div>
     }
@@ -21,10 +27,22 @@ pub fn Grid(
 
 // TODO: Only allow columns as children.
 #[component]
-pub fn Row(cx: Scope,  children: Children) -> impl IntoView {
-    let classes = format!("leptonic-grid-row");
+pub fn Row(
+    cx: Scope,
+    #[prop(into, optional)] spacing: Option<Size>,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
+    children: Children,
+) -> impl IntoView {
     view! { cx,
-        <div class=classes>
+        <div
+            id=id
+            class=class
+            class="leptonic-grid-row"
+            style=style
+            style=("--leptonic-grid-spacing", spacing.map(|spacing| format!("{spacing}")))
+        >
             { children(cx) }
         </div>
     }
@@ -34,25 +52,19 @@ pub fn Row(cx: Scope,  children: Children) -> impl IntoView {
 pub enum ColAlign {
     #[default]
     Start,
-    End
+    End,
 }
 
 #[component]
 pub fn Col(
     cx: Scope,
-    #[prop(optional)]
-    xs: Option<u32>,
-    #[prop(optional)]
-    sm: Option<u32>,
-    #[prop(optional)]
-    md: Option<u32>,
-    #[prop(optional)]
-    lg: Option<u32>,
-    #[prop(optional)]
-    xl: Option<u32>,
-    #[prop(optional, default = Default::default())]
-    h_align: ColAlign,
-    children: Children
+    #[prop(optional)] xs: Option<u32>,
+    #[prop(optional)] sm: Option<u32>,
+    #[prop(optional)] md: Option<u32>,
+    #[prop(optional)] lg: Option<u32>,
+    #[prop(optional)] xl: Option<u32>,
+    #[prop(optional, default = Default::default())] h_align: ColAlign,
+    children: Children,
 ) -> impl IntoView {
     let mut classes = format!("leptonic-grid-col");
     if let Some(xs) = xs {

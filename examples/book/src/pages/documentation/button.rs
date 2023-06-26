@@ -40,7 +40,7 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Stack orientation=StackOrientation::Horizontal spacing=6 style="justify-content: flex-start;">
+        <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) style="justify-content: flex-start;">
             <Button on_click=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
             <Button on_click=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
             <Button on_click=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>

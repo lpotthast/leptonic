@@ -200,3 +200,18 @@ body {
         padding: 1em;
     }
 }
+
+#welcome-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    max-width: 1200px;
+    padding: 1em;
+
+    #leptonic {
+        font-family: monospace;
+        font-size: 4em;
+        letter-spacing: 0.2em;
+    }
+}
