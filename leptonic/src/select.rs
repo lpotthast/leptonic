@@ -1,7 +1,4 @@
-use std::{
-    fmt::{Debug, Display},
-    hash::Hash,
-};
+use std::fmt::{Debug, Display};
 
 use leptos::*;
 
@@ -10,11 +7,11 @@ use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
 use crate::prelude::*;
 
-pub trait SelectOption: Debug + Clone + PartialEq + Eq + Hash {
+pub trait SelectOption: Debug + Clone + PartialEq + Eq {
     fn matches_lowercase(&self, search: &str) -> bool;
 }
 
-impl<T: Debug + Display + Clone + PartialEq + Eq + Hash> SelectOption for T {
+impl<T: Debug + Display + Clone + PartialEq + Eq> SelectOption for T {
     fn matches_lowercase(&self, search: &str) -> bool {
         self.to_string().to_lowercase().contains(search)
     }

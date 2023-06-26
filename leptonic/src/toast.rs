@@ -1,7 +1,10 @@
 use leptos::*;
+use leptos_icons::BsIcon;
+use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-#[allow(unused)]
+use crate::icon::Icon;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter)]
 pub enum ToastVariant {
     Success,
     Info,
@@ -42,12 +45,22 @@ pub struct Toast {
     pub timeout: ToastTimeout,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[allow(unused)]
 pub enum ToastTimeout {
     None,
     DefaultDelay,
     CustomDelay(time::Duration),
+}
+
+impl std::fmt::Display for ToastTimeout {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ToastTimeout::None => f.write_str("None"),
+            ToastTimeout::DefaultDelay => f.write_str("Default delay"),
+            ToastTimeout::CustomDelay(_) => f.write_str("Custom delay"),
+        }
+    }
 }
 
 #[derive(Copy, Clone)]
@@ -61,22 +74,60 @@ impl Toasts {
     pub fn push(&self, toast: Toast) {
         let t_id = toast.id.clone();
         let setter = self.set_toasts;
+
+        // Prepare cleanup. We do it before adding the toast so that we can save a clone.
+        // Display durations for toasts are generally high (order of seconds), so this is not a problem.
+        if toast.timeout != ToastTimeout::None {
+            set_timeout(
+                move || {
+                    setter.update(|toasts| {
+                        if let Some(idx) = toasts.iter().position(|it| it.id == t_id) {
+                            toasts.remove(idx);
+                        }
+                    });
+                },
+                match &toast.timeout {
+                    ToastTimeout::None => panic!("unreachable"),
+                    ToastTimeout::DefaultDelay => std::time::Duration::from_secs(3),
+                    ToastTimeout::CustomDelay(delay) => std::time::Duration::from_nanos(
+                        delay.whole_nanoseconds().try_into().unwrap_or(u64::MAX),
+                    ),
+                },
+            );
+        }
+
         setter.update(|toasts| toasts.push(toast));
-        set_timeout(
-            move || {
-                setter.update(|toasts| {
-                    if let Some(idx) = toasts.iter().position(|it| it.id == t_id) {
-                        toasts.remove(idx);
-                    }
-                });
-            },
-            std::time::Duration::from_secs(3),
-        );
+    }
+
+    pub fn try_remove(&self, id: Uuid) -> Option<Toast> {
+        self.set_toasts.update_ret(|toasts| {
+            if let Some(idx) = toasts.iter().position(|it| it.id == id) {
+                Some(toasts.remove(idx))
+            } else {
+                None
+            }
+        })
     }
 
     /// Removes all toasts. Does not interfere with scheduled removals of pushed toasts.
     pub fn clear(&self) {
         self.set_toasts.update(|toasts| toasts.clear())
+    }
+}
+
+pub trait SignalUpdateExt<T> {
+    fn update_ret<O>(&self, f: impl FnOnce(&mut T) -> Option<O>) -> Option<O>;
+}
+
+impl<T> SignalUpdateExt<T> for WriteSignal<T> {
+    fn update_ret<O>(&self, f: impl FnOnce(&mut T) -> Option<O>) -> Option<O> {
+        match self.try_update(f) {
+            Some(value) => value,
+            None => {
+                tracing::warn!("Attempted to update a signal after it was disposed.");
+                None
+            }
+        }
     }
 }
 
@@ -121,11 +172,30 @@ pub enum ToastVerticalPosition {
 
 #[component]
 pub fn Toast(cx: Scope, toast: Toast) -> impl IntoView {
+    let manually_closable = match toast.timeout {
+        ToastTimeout::None => true,
+        ToastTimeout::DefaultDelay => false,
+        ToastTimeout::CustomDelay(duration) => duration.whole_seconds() > 10,
+    };
+
     view! { cx,
         <leptonic-toast id=toast.id.to_string() variant=toast.variant.as_str()>
-            <leptonic-toast-heading>
+            <leptonic-toast-header>
                 { toast.header }
-            </leptonic-toast-heading>
+
+                { match manually_closable {
+                    true => view! {cx,
+                        <div>
+                            <Icon
+                                class="dismiss"
+                                icon=BsIcon::BsXCircleFill
+                                on:click=move |_e| { expect_context::<Toasts>(cx).try_remove(toast.id); }
+                            />
+                        </div>
+                    }.into_view(cx),
+                    false => ().into_view(cx),
+                } }
+            </leptonic-toast-header>
             <leptonic-toast-message>
                 { toast.body }
             </leptonic-toast-message>

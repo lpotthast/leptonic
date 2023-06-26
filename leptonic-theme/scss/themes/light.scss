@@ -282,6 +282,28 @@
     --tiptap-editor-instance-background-color: transparent;
     --tiptap-editor-border-color: #c9c9c9;
 
+    // Toast
+    --toast-border-radius: 0.25em;
+    --toast-header-border-bottom: 0.1em solid #e4e4e4;
+    --toast-header-padding: 0.75em;
+    --toast-message-padding: 0.75em;
+    --toast-info-header-background-color: var(--info-color);
+    --toast-info-header-color: var(--std-text-bright);
+    --toast-info-message-background-color: var(--info-color);
+    --toast-info-message-color: var(--std-text-bright);
+    --toast-success-header-background-color: var(--success-color);
+    --toast-success-header-color: var(--std-text-bright);
+    --toast-success-message-background-color: var(--success-color);
+    --toast-success-message-color: var(--std-text-bright);
+    --toast-warn-header-background-color: var(--warn-color);
+    --toast-warn-header-color: var(--std-text-bright);
+    --toast-warn-message-background-color: var(--warn-color);
+    --toast-warn-message-color: var(--std-text-bright);
+    --toast-error-header-background-color: var(--danger-color);
+    --toast-error-header-color: var(--std-text-bright);
+    --toast-error-message-background-color: var(--danger-color);
+    --toast-error-message-color: var(--std-text-bright);
+
     // Toggle
     --toggle-slider-off-background-color: #ccc;
     --toggle-slider-on-background-color: var(--brand-color);

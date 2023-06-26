@@ -14,7 +14,8 @@ pub fn PageWelcome(cx: Scope) -> impl IntoView {
             </H1>
 
             <H2 id="sub-slogan">
-                "Elevate Web Development with Unleashed Performance, Ergonomic Design, and Reactive Delight!"
+                "Build blazingly fast, ergonomic sites with an outstanding developer experience."
+                //"Elevate Web Development with Unleashed Performance and Ergonomic Design using Leptos!"
             </H2>
 
             <Link href=AppRoutes::Doc>

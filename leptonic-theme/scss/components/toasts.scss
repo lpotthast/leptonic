@@ -14,33 +14,88 @@ leptonic-toast {
     position: relative;
     display: flex;
     flex-direction: column;
-    padding: 0.75em 1.5em;
+    min-width: 15em;
     max-width: 95%;
     margin: 0.25em 1em;
-    background-color: rgb(76, 76, 76);
-    border-radius: 0.25em;
+    background-color: transparent;
+    border-radius: var(--toast-border-radius);
     color: white;
     pointer-events: all;
 
-    leptonic-toast-heading {
+    leptonic-toast-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+
+        padding: var(--toast-header-padding);
+        border-bottom: var(--toast-header-border-bottom);
+        border-top-left-radius: var(--toast-border-radius);
+        border-top-right-radius: var(--toast-border-radius);
+
         font-weight: 900;
-        margin-bottom: 0.25em;
+
+        leptonic-icon.dismiss {
+            font-size: 1.15em;
+            margin: -0.5em;
+            margin-left: 0.5em;
+            padding: 0.5em;
+            cursor: pointer;
+        }
+    }
+
+    leptonic-toast-message {
+        display: block;
+        padding: var(--toast-message-padding);
+
+        border-bottom-left-radius: var(--toast-border-radius);
+        border-bottom-right-radius: var(--toast-border-radius);
     }
 
     &[variant="info"] {
-        background-color: #2290d4;
+        leptonic-toast-header {
+            background-color: var(--toast-info-header-background-color);
+            color: var(--toast-info-header-color);
+        }
+
+        leptonic-toast-message {
+            background-color: var(--toast-info-message-background-color);
+            color: var(--toast-info-message-color);
+        }
     }
 
     &[variant="success"] {
-        background-color: #2aa547;
+        leptonic-toast-header {
+            background-color: var(--toast-success-header-background-color);
+            color: var(--toast-success-header-color);
+        }
+
+        leptonic-toast-message {
+            background-color: var(--toast-success-message-background-color);
+            color: var(--toast-success-message-color);
+        }
     }
 
     &[variant="warn"] {
-        background-color: #fbc744;
-        color: black;
+        leptonic-toast-header {
+            background-color: var(--toast-warn-header-background-color);
+            color: var(--toast-warn-header-color);
+        }
+
+        leptonic-toast-message {
+            background-color: var(--toast-warn-message-background-color);
+            color: var(--toast-warn-message-color);
+        }
     }
 
     &[variant="error"] {
-        background-color: #c62820;
+        leptonic-toast-header {
+            background-color: var(--toast-error-header-background-color);
+            color: var(--toast-error-header-color);
+        }
+
+        leptonic-toast-message {
+            background-color: var(--toast-error-message-background-color);
+            color: var(--toast-error-message-color);
+        }
     }
 }
