@@ -127,7 +127,7 @@ body {
             padding: 1em 0;
         }
 
-        @media only screen and (max-width: 600px) {
+        @media only screen and (max-width: 800px) {
             .menu {
                 display: block;
                 height: 100%;
@@ -144,7 +144,7 @@ body {
             padding-left: 2em;
             font-size: 0.9em;
 
-            @media only screen and (max-width: 600px) {
+            @media only screen and (max-width: 800px) {
                 padding-left: 1em;
             }
 
