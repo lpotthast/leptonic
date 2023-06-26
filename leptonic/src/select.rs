@@ -73,6 +73,7 @@ pub fn Select<O, V>(
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Callback<O>,
     #[prop(into)] render_option: Callback<(Scope, O), V>,
+    #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
@@ -86,7 +87,11 @@ where
     let (focused, set_focused) = create_signal(cx, false);
     let (show_options, set_show_options) = create_signal(cx, false);
 
-    let search_should_be_focused = Signal::derive(cx, move || show_options.get());
+    let autofocus_search =
+        autofocus_search.unwrap_or(expect_context::<Leptonic>(cx).is_desktop_device);
+
+    let search_should_be_focused =
+        Signal::derive(cx, move || show_options.get() && autofocus_search.get());
     let (search_is_focused, set_search_is_focused) = create_signal(cx, false);
 
     let stored_options = store_value(cx, options);
@@ -295,6 +300,7 @@ pub fn OptionalSelect<O, V>(
     #[prop(into)] set_selected: Callback<Option<O>>,
     #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
+    #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
@@ -308,7 +314,11 @@ where
     let (focused, set_focused) = create_signal(cx, false);
     let (show_options, set_show_options) = create_signal(cx, false);
 
-    let search_should_be_focused = Signal::derive(cx, move || show_options.get());
+    let autofocus_search =
+        autofocus_search.unwrap_or(expect_context::<Leptonic>(cx).is_desktop_device);
+
+    let search_should_be_focused =
+        Signal::derive(cx, move || show_options.get() && autofocus_search.get());
     let (search_is_focused, set_search_is_focused) = create_signal(cx, false);
 
     let stored_options = store_value(cx, options);
@@ -542,6 +552,7 @@ pub fn Multiselect<O, V>(
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Callback<Vec<O>>,
     #[prop(into)] render_option: Callback<(Scope, O), V>,
+    #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
@@ -555,7 +566,11 @@ where
     let (focused, set_focused) = create_signal(cx, false);
     let (show_options, set_show_options) = create_signal(cx, false);
 
-    let search_should_be_focused = Signal::derive(cx, move || show_options.get());
+    let autofocus_search =
+        autofocus_search.unwrap_or(expect_context::<Leptonic>(cx).is_desktop_device);
+
+    let search_should_be_focused =
+        Signal::derive(cx, move || show_options.get() && autofocus_search.get());
     let (search_is_focused, set_search_is_focused) = create_signal(cx, false);
 
     let stored_options = store_value(cx, options);

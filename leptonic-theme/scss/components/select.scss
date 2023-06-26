@@ -75,6 +75,8 @@ leptonic-select {
 
     leptonic-select-options {
         position: absolute;
+        top: 100%;
+        bottom: auto;
         display: none;
         flex-direction: column;
         /* max-width: 30em; */

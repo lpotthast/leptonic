@@ -13,18 +13,26 @@ use crate::{
     prelude::*,
 };
 
+/// Leptonic's root context. Always available in components under <Root>.
 #[derive(Debug, Clone)]
-struct RootContext {}
+pub struct Leptonic {
+    /// Whether or not the users device should be considered 'mobile'.
+    /// Please read: https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent
+    /// and prefer other detection methods for selective functionality or styling.
+    pub is_mobile_device: Signal<bool>,
+
+    /// Always provides the inverse of `is_mobile_device`.
+    pub is_desktop_device: Signal<bool>,
+}
 
 #[component]
 pub fn Root<T>(cx: Scope, default_theme: T, children: Children) -> impl IntoView
 where
     T: Theme + 'static,
 {
-    if let Some(_root_context) = use_context::<RootContext>(cx) {
+    if let Some(_root_context) = use_context::<Leptonic>(cx) {
         tracing::warn!("The <Root> component must only be used once! Detected that <Root> was rendered when it was already rendered higher up the stack. Remove this usage.");
     }
-    provide_context(cx, RootContext {});
 
     let doc = document();
 
@@ -101,6 +109,26 @@ where
             tracing::warn!(?err, "Could not calculate real viewport height");
         }
     });
+
+    // Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent
+    let (is_mobile_device, _set_is_mobile_device) = create_signal(
+        cx,
+        window()
+            .navigator()
+            .user_agent()
+            .unwrap()
+            .to_lowercase()
+            .contains("mobi"),
+    );
+
+    // Adding this context also serves the check at the start of this component!
+    provide_context(
+        cx,
+        Leptonic {
+            is_mobile_device: is_mobile_device.into(),
+            is_desktop_device: Signal::derive(cx, move || !is_mobile_device.get()),
+        },
+    );
 
     // NOTE: --leptonic-vh can be used like this in CSS code: height: var(--leptonic-vh, 100vh);
 

@@ -132,6 +132,7 @@ pub mod prelude {
     pub use super::quicksearch::QuicksearchOption;
     pub use super::quicksearch::QuicksearchTrigger;
     pub use super::r#box::Box;
+    pub use super::root::Leptonic;
     pub use super::root::Root;
     pub use super::safe_html::SafeHtml;
     pub use super::select::Multiselect;
