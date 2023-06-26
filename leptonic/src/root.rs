@@ -1,11 +1,15 @@
 use std::rc::Rc;
 
 use leptos::*;
+use leptos_use::use_event_listener;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::{
-    contexts::{global_keyboard_event::GlobalKeyboardEvent, global_click_event::GlobalClickEvent, global_mouseup_event::GlobalMouseupEvent},
+    contexts::{
+        global_click_event::GlobalClickEvent, global_keyboard_event::GlobalKeyboardEvent,
+        global_mouseup_event::GlobalMouseupEvent,
+    },
     prelude::*,
 };
 
@@ -58,14 +62,53 @@ where
     doc.set_onmouseup(Some(onmouseup.as_ref().unchecked_ref()));
     provide_context(
         cx,
-        GlobalMouseupEvent::new(Rc::new(Box::new(onmouseup)), g_mouseup_event, set_g_mouseup_event),
+        GlobalMouseupEvent::new(
+            Rc::new(Box::new(onmouseup)),
+            g_mouseup_event,
+            set_g_mouseup_event,
+        ),
     );
+
+    let update_vh = move || {
+        #[derive(Debug)]
+        enum Error {
+            InnerHeightIndeterminable,
+            InnerHeightNotNumber,
+            DocumentIndeterminable,
+            SetPropertyFailed,
+        }
+        type Result = std::result::Result<(), Error>;
+        let inner_height = window()
+            .inner_height()
+            .map_err(|_| Error::InnerHeightIndeterminable)?;
+        let inner_height = inner_height.as_f64().ok_or(Error::InnerHeightNotNumber)?;
+        document()
+            .document_element()
+            .ok_or(Error::DocumentIndeterminable)?
+            .unchecked_into::<web_sys::HtmlElement>()
+            .style()
+            .set_property("--leptonic-vh", format!("{inner_height}px").as_str())
+            .map_err(|_| Error::SetPropertyFailed)?;
+        Result::Ok(())
+    };
+
+    if let Err(err) = update_vh() {
+        tracing::warn!(?err, "Could not calculate real viewport height");
+    }
+
+    let _cleanup = use_event_listener(cx, window(), leptos::ev::resize, move |_e| {
+        if let Err(err) = update_vh() {
+            tracing::warn!(?err, "Could not calculate real viewport height");
+        }
+    });
+
+    // NOTE: --leptonic-vh can be used like this in CSS code: height: var(--leptonic-vh, 100vh);
 
     view! {cx,
         <ThemeProvider theme=create_signal_ls(cx, "theme", default_theme)>
             <ToastRoot>
                 <ModalRoot>
-                    <Box style="min-height: 100vh; min-width: 100vw; display: flex; flex-direction: row;">
+                    <Box style="min-height: 100%; min-width: 100%; display: flex; flex-direction: row;">
                         { children(cx) }
                     </Box>
                 </ModalRoot>

@@ -91,7 +91,7 @@ pub fn App(cx: Scope) -> impl IntoView {
 
 pub const APP_BAR_HEIGHT: Height = Height::Em(3.5);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct AppLayoutContext {
     pub is_small: Signal<bool>,
     pub main_drawer_closed: Signal<bool>,
@@ -105,8 +105,25 @@ impl AppLayoutContext {
     pub fn close_main_drawer(&self) {
         self.set_main_drawer_closed.set(true);
     }
+
     pub fn close_doc_drawer(&self) {
         self.set_doc_drawer_closed.set(true);
+    }
+
+    pub fn toggle_main_drawer(&self) {
+        let currently_closed = self.main_drawer_closed.get_untracked();
+        self.set_main_drawer_closed.set(!currently_closed);
+        if currently_closed {
+            self.close_doc_drawer();
+        }
+    }
+
+    pub fn toggle_doc_drawer(&self) {
+        let currently_closed = self.doc_drawer_closed.get_untracked();
+        self.set_doc_drawer_closed.set(!currently_closed);
+        if currently_closed {
+            self.close_main_drawer();
+        }
     }
 }
 
@@ -139,16 +156,15 @@ pub fn Layout(cx: Scope) -> impl IntoView {
         }
     });
 
-    provide_context(
-        cx,
-        AppLayoutContext {
-            is_small,
-            main_drawer_closed: main_drawer_closed.into(),
-            set_main_drawer_closed,
-            doc_drawer_closed: doc_drawer_closed.into(),
-            set_doc_drawer_closed,
-        },
-    );
+    let ctx = AppLayoutContext {
+        is_small,
+        main_drawer_closed: main_drawer_closed.into(),
+        set_main_drawer_closed,
+        doc_drawer_closed: doc_drawer_closed.into(),
+        set_doc_drawer_closed,
+    };
+
+    provide_context(cx, ctx.clone());
 
     let search_options = vec![
         (
@@ -206,9 +222,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                             </Link>
                         }.into_view(cx),
                         (true, true) => view! {cx,
-                            <Icon id="mobile-menu-trigger" icon=BsIcon::BsList on:click=move |_| {
-                                set_doc_drawer_closed.set(!doc_drawer_closed.get_untracked())
-                            }/>
+                            <Icon id="mobile-menu-trigger" icon=BsIcon::BsList on:click=move |_| ctx.toggle_doc_drawer()/>
                             <Link href="">
                                 <img src="/res/leptonic.svg" id="logo"/>
                             </Link>
@@ -254,9 +268,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                 <Stack id="right" orientation=StackOrientation::Horizontal spacing=10>
                     { move || match (is_doc.get(), is_small.get()) {
                         (_, true) => view! {cx,
-                            <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| {
-                                set_main_drawer_closed.set(!main_drawer_closed.get_untracked())
-                            }/>
+                            <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
                         }.into_view(cx),
                         (_, false) => view! {cx,
                             "v0.1"
@@ -272,7 +284,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
             </div>
         </AppBar>
 
-        <Box id="content" style=format!("margin-top: {APP_BAR_HEIGHT}; height: calc(100vh - {APP_BAR_HEIGHT}); max-height: calc(100vh - {APP_BAR_HEIGHT});")>
+        <Box id="content" style=format!("margin-top: {APP_BAR_HEIGHT}; height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT}); max-height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT});")>
             // <Outlet/> will show nested child routes.
             <Outlet/>
 

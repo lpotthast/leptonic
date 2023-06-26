@@ -101,6 +101,7 @@ body {
 #doc-layout {
     display: flex;
     flex-direction: row;
+    height: 100%;
     width: 100%;
     max-width: 1400px;
 
@@ -179,6 +180,7 @@ body {
 
     #doc-content {
         display: block;
+        height: 100%;
         width: 100%;
         padding: 0 1.5em;
         padding-bottom: 6em;
