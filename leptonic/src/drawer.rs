@@ -1,8 +1,6 @@
 use leptos::*;
 use leptos_use::{use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
 
-use crate::Margin;
-
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DrawerSide {
     #[default]
@@ -30,12 +28,11 @@ enum DrawerAnimationState {
 #[component]
 pub fn Drawer(
     cx: Scope,
+    #[prop(into, optional)] side: DrawerSide,
+    #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    #[prop(optional)] margin: Option<Margin>,
-    #[prop(into, optional)] side: DrawerSide,
-    #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
     children: Children,
 ) -> impl IntoView {
     let memoized_shown = create_memo(cx, move |_| shown.get());
@@ -113,7 +110,6 @@ pub fn Drawer(
             class:hiding=move || anim_state.get() == DrawerAnimationState::Hiding
             class:hidden=move || anim_state.get() == DrawerAnimationState::Hidden
             style=style
-            style=("--margin", margin.map(|it| format!("--margin: {it}")))
             side=side.to_str()
         >
             { children(cx) }
