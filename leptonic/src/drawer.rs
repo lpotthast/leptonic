@@ -35,7 +35,7 @@ pub fn Drawer(
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(optional)] margin: Option<Margin>,
     #[prop(into, optional)] side: DrawerSide,
-    #[prop(into, optional, default = false.into())] shown: MaybeSignal<bool>,
+    #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
     children: Children,
 ) -> impl IntoView {
     let memoized_shown = create_memo(cx, move |_| shown.get());
