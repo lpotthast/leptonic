@@ -115,8 +115,8 @@ pub fn Layout(cx: Scope) -> impl IntoView {
     let (main_drawer_closed, set_main_drawer_closed) = create_signal(cx, true);
     let (doc_drawer_closed, set_doc_drawer_closed) = create_signal(cx, false);
 
-    // Always re-close the doc-drawer when the application is now small.
-    // Always re-open the doc-drawer when the application is no longer small.
+    // Always close the doc-drawer when the application is now small.
+    // Always open the doc-drawer when the application is no longer small.
     create_effect(cx, move |_| {
         if is_small.get() {
             set_doc_drawer_closed.set(true);

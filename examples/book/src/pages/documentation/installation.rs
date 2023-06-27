@@ -8,34 +8,31 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
         <H1 id="#installation">
             "Installation"
             <Anchor href="#installation" title="Direct link to an overview of installation instructions."/>
-
-            //<a href="#adding-the-menu-to-all-windows"
-            //class="hash-link"
-            //aria-label="Direct link to Adding the menu to all windows"
-            // title="Direct link to Adding the menu to all windows">&ZeroWidthSpace;</a>
         </H1>
 
         <P>
-            "Start by adding the leptonic library as a dependency of your app."
-        </P>
-
-        <P>
-            "We will see later why the theme dependency should be optional."
+            "Start by adding both "<Code inline=true>"leptonic"</Code>", "<Code inline=true>"leptonic-theme"</Code>" and "<Code inline=true>"leptos-tiptap-build"</Code>" as dependencies of your app. "
+            "We will see later why the theme and tiptap dependencies should be optional."
         </P>
 
         <Code>
             {indoc!(r#"
                 cargo add leptonic
                 cargo add --optional leptonic-theme
+                cargo add --optional leptos-tiptap-build
             "#)}
         </Code>
 
         <P>
-            "Leptonic comes with styling. In order to build your app with these styles, a build script is required."
+            "Leptonic comes with default styling in form of the "<Code inline=true>"leptonic-theme"</Code>" crate. "
+            "In order to build your app with these styles, a build script is required. "
+            "Currently, Leptonic focuses on integration with client-side-rendering and building with Trunk. "
+            "When building our application with Trunk, the build.rs script should executed before the Trunk build runs. "
+            "For us to be able to explicitly run the build script, we define it as a [[bin]] target."
         </P>
 
         <P>
-            "But: A normal Rust build-script will not suffice. We want the theme to be build by Trunk.  "
+            "Add this to your Cargo.toml:"
         </P>
 
         <Code>
@@ -47,15 +44,51 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <P>
-            "With the force-build target in place, we can set up a custom Trunk.toml."
-        </P>
+        <P>"Our build.rs script needs access to our previously added, optional dependencies. Let's define that at the end of our Cargo.toml:"</P>
+
+        <Code>
+            {indoc!(r#"
+                [features]
+                build_deps = ["leptonic-theme", "leptos-tiptap-build"]
+            "#)}
+        </Code>
+
+        <P>"Let's create the actual build.rs file"</P>
+
+        <Code>
+            {indoc!(r#"
+                use std::io::Write;
+                use std::path::{Path, PathBuf};
+
+                pub fn main() {
+                    let root_dir: std::path::PathBuf = std::env::var("CARGO_MANIFEST_DIR").unwrap().into();
+                    let generated_dir = root_dir.join("generated");
+                    let js_dir = generated_dir.join("js");
+
+                    leptonic_theme::generate(generated_dir.join("leptonic"));
+                    println!("cargo:warning=theme written");
+
+                    std::fs::create_dir_all(js_dir.clone()).unwrap();
+                    println!("cargo:warning=js dir created");
+
+                    std::fs::File::create(js_dir.join("tiptap-bundle.min.js"))
+                        .unwrap()
+                        .write(leptos_tiptap_build::TIPTAP_BUNDLE_MIN_JS.as_bytes())
+                        .unwrap();
+                    println!("cargo:warning=tiptap-bundle.min.js written");
+
+                    std::fs::File::create(js_dir.join("tiptap.js"))
+                        .unwrap()
+                        .write(leptos_tiptap_build::TIPTAP_JS.as_bytes())
+                        .unwrap();
+                    println!("cargo:warning=tiptap.js written");
+                }
+            "#)}
+        </Code>
 
         <P>
-            "The [watch] section is used to ignore changes in the \"./generated\" directory. When omitted, Trunk would recompile our app in an endless loop."
-        </P>
-
-        <P>
+            "With the force-build target and build script in place, we can set up a custom Trunk.toml."<br />
+            "The [watch] section is used to ignore changes in the \"./generated\" directory. When omitted, Trunk would recompile our app in an endless loop!"<br />
             "We use the [[hooks]] section to tell Trunk that \"force-build\" must be executed BEFORE building the application."
         </P>
 
@@ -82,31 +115,37 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-
-
-
-
+        <P>"Make sure that you are using a reasonable index.html file like the following"</P>
 
         <Code>
-            {indoc!(r#"
-                leptonic = { path = "../.." }
-                leptonic-theme = { path = "../../../leptonic-theme", optional = true }
-            "#)}
-        </Code>
-        <Code>
-            {indoc!(r#"
-                [features]
-                build_deps = ["leptonic-theme"]
-            "#)}
-        </Code>
-        <Code>
-            {indoc!(r#"
-                pub fn main() {
-                    let root: std::path::PathBuf = std::env::var("CARGO_MANIFEST_DIR").unwrap().into();
-                    leptonic_theme::generate(root.join("generated").join("leptonic"));
-                    println!("cargo:warning=theme written")
-                }
-            "#)}
+            {indoc!(r##"
+                <!DOCTYPE html>
+                <html lang="en">
+
+                <head>
+                    <meta charset="UTF-8" />
+
+                    <meta name="description" content="Leptonic" />
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                    <meta name="theme-color" content="#e66956" />
+
+                    <title>Leptonic</title>
+
+                    <script type="module" src="/js/tiptap-bundle.min.js"></script>
+                    <script type="module" src="/js/tiptap.js"></script>
+
+                    <!-- <link rel="icon" href="/res/icon/leptonic_x64.png" /> -->
+
+                    <link data-trunk rel="rust" data-wasm-opt="z" />
+                    <link data-trunk rel="scss" href="scss/style.scss" />
+                    <link data-trunk rel="copy-dir" href="generated/js/" />
+                    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto&display=swap">
+                </head>
+
+                <body></body>
+
+                </html>
+            "##)}
         </Code>
     }
 }
