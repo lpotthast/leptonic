@@ -84,7 +84,7 @@ where
         Mount::Once | Mount::OnceShown => view! { cx,
             {
                 view! { cx,
-                    <leptonic-tab id=id.to_string() data-name=name.get_value() aria-hidden=move || if is_active() { "false" } else { "true"} >
+                    <leptonic-tab id=id.to_string() data-name=name.get_value() role="tabpanel" aria-hidden=move || if is_active() { "false" } else { "true"} >
                         {
                             if let Some(children) = &children {
                                 children(cx)
@@ -100,7 +100,7 @@ where
             {
                 view! { cx,
                     <Show when=is_active fallback=|_cx| view! { cx,  }>
-                        <leptonic-tab id=id.to_string() data:name=name.get_value()>
+                        <leptonic-tab id=id.to_string() data:name=name.get_value() role="tabpanel">
                             {
                                 if let Some(children) = &children {
                                     children(cx)

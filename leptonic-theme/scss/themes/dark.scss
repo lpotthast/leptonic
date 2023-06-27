@@ -56,7 +56,7 @@
     --box-color: var(--std-text-bright);
 
     // Button
-    --button-border-size: 0.1em;
+    --button-border-size: 0.125em;
     --button-border-radius: 0.25em;
     --button-box-shadow-opacity: 0.3;
 
@@ -183,13 +183,14 @@
     --field-label-color: #aaaaaa;
 
     // Input
-    --input-padding: 0.5em 2em 0.5em 0.5em;
+    --input-padding: 0.75em 2em 0.75em 0.75em;
     --input-color: var(--std-text-bright);
     --input-background-color: #0f0f0f; // 202020
     --input-border: none;
-    --input-border-bottom: 0.1em solid rgb(255 255 255 / 15%);
-    --input-border-radius: 0;
-    --input-min-height: 2.5em;
+    --input-border-bottom: 0.125em solid rgb(255 255 255 / 15%);
+    --input-border-radius: 0.25em;
+    --input-min-height: 2.75em;
+    --input-focused-border-color: var(--brand-color);
 
     // Links
     --link-color: var(--brand-color);
@@ -225,7 +226,7 @@
     --select-selected-badge-color: var(--std-text-bright);
     --select-selected-badge-background-color: #12d4e7;
     --select-selected-placeholder-color: var(--grey-4);
-    --select-focus-highlight-background-color: var(--grey-4);
+    --select-focused-border-color: var(--brand-color);
     --select-dropdown-background-color: var(--input-background-color);
     --select-dropdown-shadow: 2px 3px 18px -3px var(--input-background-color);
     --select-search-color: var(--std-text-bright);
@@ -289,7 +290,7 @@
 
     // Toast
     --toast-border-radius: 0.25em;
-    --toast-header-border-bottom: 0.1em solid #e4e4e4;
+    --toast-header-border-bottom: 0.125em solid #e4e4e4;
     --toast-header-padding: 0.75em;
     --toast-message-padding: 0.75em;
     --toast-info-header-background-color: var(--info-color);

@@ -62,5 +62,22 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
 
         <Input get=label_input set=move |v| set_label_input.set(v) label="This is my label"/>
         <Button variant=ButtonVariant::Flat size=ButtonSize::Small on_click=move |_| set_label_input.set("".to_owned())>"Clear input"</Button>
+
+        <H2>"Styling"</H2>
+
+        <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+
+        <Code>
+            {indoc!(r#"
+                --input-padding
+                --input-color
+                --input-background-color
+                --input-border:
+                --input-border-bottom
+                --input-border-radius
+                --input-min-height
+                --input-focused-border-color
+            "#)}
+        </Code>
     }
 }

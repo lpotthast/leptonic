@@ -171,7 +171,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                 --select-selected-badge-color
                 --select-selected-badge-background-color
                 --select-selected-placeholder-color
-                --select-focus-highlight-background-color
+                --select-focused-border-color
                 --select-dropdown-background-color
                 --select-dropdown-shadow
                 --select-search-color

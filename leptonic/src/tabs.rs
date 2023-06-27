@@ -80,7 +80,7 @@ pub fn TabSelectors(
     set_history: WriteSignal<TabHistory>,
 ) -> impl IntoView {
     view! { cx,
-        <leptonic-tab-selectors>
+        <leptonic-tab-selectors role="tablist">
             <For
                 each=move || tab_labels.get()
                 key=|label| label.id
@@ -117,6 +117,7 @@ where
             data:for-name=name
             class:active=is_active
             on:click=move |_event| set_active()
+            role="tab"
         >
             { label }
         </leptonic-tab-selector>

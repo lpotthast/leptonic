@@ -1,5 +1,26 @@
 .leptonic-select-wrapper {
-    display: contents;
+    display: inline; // Most not be `contents` or item would not be focusable.
+
+    &,
+    &:focus,
+    &:active {
+        outline: none;
+    }
+
+    &:focus,
+    &:active {
+        leptonic-select {
+            leptonic-select-selected {
+                border-color: var(--select-focused-border-color);
+            }
+        }
+    }
+
+    leptonic-select.active {
+        leptonic-select-selected {
+            border-color: var(--select-focused-border-color);
+        }
+    }
 }
 
 leptonic-select {
@@ -28,11 +49,6 @@ leptonic-select {
         border: var(--select-selected-border);
         border-bottom: var(--select-selected-border-bottom);
         border-radius: var(--select-selected-border-radius);
-
-        &:focus {
-            outline: none;
-            border-bottom: var(--select-focus-highlight-background-color);
-        }
 
         leptonic-select-deselect-trigger {
             display: flex;
@@ -86,19 +102,30 @@ leptonic-select {
         flex-direction: column;
         width: 100%;
         background-color: var(--select-dropdown-background-color);
-        box-shadow: var(--select-dropdown-shadow); // 6px 8px 20px -7px #0d0d0d
-        border: none; //0.1em solid #242424;
+        box-shadow: var(--select-dropdown-shadow);
+        border: none;
         border-top: none;
-        max-height: 12em;
+        max-height: 14em;
         overflow-y: scroll;
         z-index: 999;
+
+        box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 5px -3px, rgba(0, 0, 0, 0.14) 0px 8px 10px 1px, rgba(0, 0, 0, 0.12) 0px 3px 14px 2px;
+        border-radius: 0.25em;
 
         &.shown {
             display: flex;
         }
 
+        leptonic-input {
+            input.search {
+                margin: 0.3em;
+                border: 1px solid lightgray;
+                padding: 0.5em 0.75em;
+            }
+        }
+
         leptonic-select-option {
-            padding: 0.5em;
+            padding: 0.6em;
             user-select: none;
 
             &:hover {
@@ -113,6 +140,12 @@ leptonic-select {
             &.preselected {
                 background-color: var(--select-item-preselected-background-color);
             }
+        }
+
+        leptonic-select-no-search-results {
+            padding: 0.6em;
+            user-select: none;
+            cursor: default;
         }
     }
 }

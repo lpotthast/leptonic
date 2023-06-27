@@ -16,14 +16,19 @@
   border-bottom: var(--input-border-bottom);
   border-radius: var(--input-border-radius);
 
-  -webkit-transition: border-color ease-in-out 0.15s, -webkit-box-shadow ease-in-out 0.15s;
-  -o-transition: border-color ease-in-out 0.15s, box-shadow ease-in-out 0.15s;
-  transition: border-color ease-in-out 0.15s, box-shadow ease-in-out 0.15s;
+  -webkit-transition: border-color ease-in-out 0.1s, -webkit-box-shadow ease-in-out 0.1s;
+  -o-transition: border-color ease-in-out 0.1s, box-shadow ease-in-out 0.1s;
+  transition: border-color ease-in-out 0.1s, box-shadow ease-in-out 0.1s;
 
   &,
   &:focus,
   &:active {
     outline: none;
+  }
+
+  &:focus,
+  &:active {
+    border-color: var(--input-focused-border-color);
   }
 }
 

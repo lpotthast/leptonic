@@ -213,6 +213,7 @@ where
                 id=id_string
                 variant="select"
                 aria-haspopup="listbox"
+                class:active=move || show_options.get()
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
@@ -242,6 +243,7 @@ where
                                 set_search_is_focused.set(focused);
                             }
                         })
+                        class="search"
                     />
 
                     <Show
@@ -277,9 +279,9 @@ where
                         { move || match has_options.get() {
                             true => ().into_view(cx),
                             false => view! {cx,
-                                <div class="option">
+                                <leptonic-select-no-search-results>
                                     "No options..."
-                                </div>
+                                </leptonic-select-no-search-results>
                             }.into_view(cx),
                         } }
                     </Show>
@@ -494,6 +496,7 @@ where
                                 set_search_is_focused.set(focused);
                             }
                         })
+                        class="search"
                     />
 
                     <Show
@@ -759,6 +762,7 @@ where
                                 set_search_is_focused.set(focused);
                             }
                         })
+                        class="search"
                     />
 
                     <Show

@@ -12,16 +12,17 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
     let (body, set_body) = create_signal(cx, "Body".to_owned());
 
     view! { cx,
-        <H2>"Toasts"</H2>
+        <H1>"Toasts"</H1>
 
-        <Input label="Header text" get=header set=move |v| set_header.set(v)></Input>
-        <Input label="Body text" get=body set=move |v| set_body.set(v)></Input>
+        <Input label="Header text" get=header set=move |v| set_header.set(v) style="margin-bottom: 1em;"></Input>
+        <Input label="Body text" get=body set=move |v| set_body.set(v) style="margin-bottom: 1em;"></Input>
 
         <Select
             options={ToastVariant::iter().collect::<Vec<_>>()}
             selected=variant
             set_selected=create_callback(cx, move |v| set_variant.set(v))
             render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
+            style="margin-bottom: 1em;"
         />
 
         <Select
@@ -29,6 +30,7 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
             selected=timeout
             set_selected=create_callback(cx, move |v| set_timeout.set(v))
             render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
+            style="margin-bottom: 1em;"
         />
 
         <Button on_click=move |_| { expect_context::<Toasts>(cx).push(
@@ -43,6 +45,21 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
             "Create Toast"
         </Button>
 
+        <Code>
+            {indoc!(r#"
+                <Button on_click=move |_| { expect_context::<Toasts>(cx).push(
+                    Toast {
+                        id: Uuid::new_v4(),
+                        created_at: time::OffsetDateTime::now_utc(),
+                        variant: variant.get_untracked(),
+                        header: header.get_untracked().into_view(cx),
+                        body: body.get_untracked().into_view(cx),
+                        timeout: timeout.get_untracked(),
+                    }) }>
+                    "Create Toast"
+                </Button>
+            "#)}
+        </Code>
 
         <H2>"Styling"</H2>
 

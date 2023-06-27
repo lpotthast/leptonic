@@ -2,7 +2,7 @@ leptonic-link {
     display: inline-flex;
     color: var(--link-color);
 
-    &.anchor::before {
+    &.leptonic-anchor::before {
         content: "\00a0";
     }
 
