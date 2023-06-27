@@ -127,26 +127,12 @@ body {
             padding: 1em 0;
         }
 
-        @media only screen and (max-width: 800px) {
-            .menu {
-                display: block;
-                height: 100%;
-                column-count: 2;
-                column-gap: 0;
-                column-fill: auto;
-            }
-        }
-
         .drawer-section {
             display: inline-block;
             width: 100%;
             margin: 1em 0;
-            padding-left: 2em;
+            padding-left: 3.5em;
             font-size: 0.9em;
-
-            @media only screen and (max-width: 800px) {
-                padding-left: 1em;
-            }
 
             .section-header {
                 display: flex;
@@ -155,7 +141,6 @@ body {
                 align-items: center;
                 color: var(--book-menu-header-color);
                 font-weight: 900;
-                padding-left: 1em;
                 margin-bottom: 0.25em;
                 font-size: 1.1em;
             }
@@ -172,7 +157,7 @@ body {
                     border-radius: 0.4em;
                     padding: 0.25em 0.75em;
                     margin: 0.075em 0.75em;
-                    margin-left: 2.6em;
+                    margin-left: 1.5em;
                     cursor: pointer;
                     user-select: none;
                 }
@@ -186,6 +171,20 @@ body {
                     background-color: var(--brand-color);
                     color: var(--book-menu-item-hover-color);
                 }
+            }
+        }
+
+        @media only screen and (max-width: 800px) {
+            .menu {
+                display: block;
+                column-count: 2;
+                column-gap: 0;
+                column-fill: balance;
+
+            }
+
+            .drawer-section {
+                padding-left: 1.5em;
             }
         }
     }
