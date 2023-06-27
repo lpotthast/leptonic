@@ -1,7 +1,7 @@
 use leptonic::prelude::*;
 use leptos::*;
 
-use crate::app::AppRoutes;
+use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
 pub fn PageWelcome(cx: Scope) -> impl IntoView {
@@ -18,7 +18,8 @@ pub fn PageWelcome(cx: Scope) -> impl IntoView {
                 //"Elevate Web Development with Unleashed Performance and Ergonomic Design using Leptos!"
             </H2>
 
-            <Link href=AppRoutes::Doc>
+            // TODO: Investigae: When using AppRoutes::Doc, browser navigation (back) does nothing...
+            <Link href=DocRoutes::Overview>
                 <Button size=ButtonSize::Big on_click=move |_| {} style="font-size: 1.5em; margin: 2em;">
                     "Read the docs"
                 </Button>

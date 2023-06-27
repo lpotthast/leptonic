@@ -17,9 +17,12 @@
 
   &::before {
     content: "";
-    height: calc(99% + var(--button-border-size) * 2);
-    width: calc(99% + var(--button-border-size) * 2);
+    height: calc(100% + var(--button-border-size) * 2);
+    width: calc(100% + var(--button-border-size) * 2);
     position: absolute;
+    top: calc(var(--button-border-size) * -1);
+    left: calc(var(--button-border-size) * -1);
+
     border-radius: var(--button-border-radius);
     transition: all 0.1s ease-in-out;
     opacity: var(--button-box-shadow-opacity);

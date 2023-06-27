@@ -2,10 +2,11 @@ leptonic-chip {
     display: inline-flex;
     justify-content: center;
     align-items: center;
-    font-size: 0.9em;
-    margin: 0 0.3em 0.3em 0;
-    padding: 0.4em 0.7em;
-    border-radius: 1em;
+    font-size: var(--chip-font-size)0.9em;
+    margin: var(--chip-margin)0 0.3em 0.3em 0;
+    padding: var(--chip-padding)0.4em 0.7em;
+    border: var(--chip-border);
+    border-radius: var(--chip-border-radius)1em;
 
     &[color="primary"] {
         color: var(--chip-primary-text-color);

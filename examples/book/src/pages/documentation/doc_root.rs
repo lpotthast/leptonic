@@ -10,6 +10,7 @@ use crate::pages::documentation::alert::PageAlert;
 use crate::pages::documentation::anchor::PageAnchor;
 use crate::pages::documentation::app_bar::PageAppBar;
 use crate::pages::documentation::button::PageButton;
+use crate::pages::documentation::callback::PageCallback;
 use crate::pages::documentation::changelog::PageChangelog;
 use crate::pages::documentation::chip::PageChip;
 use crate::pages::documentation::collapsible::PageCollapsible;
@@ -79,6 +80,7 @@ pub enum DocRoutes {
     Icon,
     Link,
     Anchor,
+    Callback,
 
     // Animation
     Transition,
@@ -123,6 +125,7 @@ impl DocRoutes {
             DocRoutes::Icon => "icon",
             DocRoutes::Link => "link",
             DocRoutes::Anchor => "anchor",
+            DocRoutes::Callback => "callback",
 
             DocRoutes::Transition => "transition",
             DocRoutes::CatchAll => "*",
@@ -187,6 +190,7 @@ where
             <Route path=DocRoutes::Icon view=|cx| view! { cx, <PageIcon/> }/>
             <Route path=DocRoutes::Link view=|cx| view! { cx, <PageLink/> }/>
             <Route path=DocRoutes::Anchor view=|cx| view! { cx, <PageAnchor/> }/>
+            <Route path=DocRoutes::Callback view=|cx| view! { cx, <PageCallback/> }/>
 
             <Route path=DocRoutes::Transition view=|cx| view! { cx, <PageTransition/> }/>
 
@@ -282,6 +286,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                             <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
                             <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
                             <Link href=DocRoutes::Anchor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Anchor"</Link>
+                            <Link href=DocRoutes::Callback class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Callback"</Link>
                         </Stack>
                     </DrawerSection>
 

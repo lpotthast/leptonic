@@ -17,7 +17,7 @@ pub fn PageThemes(cx: Scope) -> impl IntoView {
         </P>
 
         <P>
-            "All styling is provided though the "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkExtTarget::Blank>"leptonic-theme"</LinkExt>" crate. "
+            "All styling is provided through the "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkExtTarget::Blank>"leptonic-theme"</LinkExt>" crate. "
             "When used as a build.rs dependency, this crate can write out SCSS code, styling the Leptonic components in two themes: "<Code inline=true>"light"</Code>" and "<Code inline=true>"dark"</Code>"."
         </P>
 
@@ -36,11 +36,25 @@ pub fn PageThemes(cx: Scope) -> impl IntoView {
         </Code>
 
         <P>
-            "All components make broad use of CSS variables, with which many aspects of the two default themes can be changed."
+            "We are using the "<Code inline=true>"<LeptonicTheme>"</Code>" enum here, which describes the two out-of-the-box themes (light and dark). "
+            "This is not mandatory though as you could create your own theme-defining type and your own theme toggle components."
+        </P>
+
+        <H2>"Customization"</H2>
+
+        <P>
+            "Having a theme, even better a theme provided by default is, is great, but only if that them can be customized in a meaningful way."
         </P>
 
         <P>
-            "For example, this excerpt from the main "<Code inline=true>"style.scss"</Code>" of this book shows you how we include the leptonic theme and overwrite a few variables."
+            "All components styles therefore make broad use of CSS variables, with which many aspects of the two default themes can be changed. "
+            "In every page of this book explaining a component, we hint you to the styles you might want to override. A theme generator may come in the future..."
+        </P>
+
+        <P>
+            "Have a look at this excerpt from this book's main "<Code inline=true>"style.scss"</Code>" file, "
+            "showing you how we include the leptonic standard themes previously written by our build script "
+            "and overwrite a few variables to meet our design needs."
         </P>
 
         <Code>

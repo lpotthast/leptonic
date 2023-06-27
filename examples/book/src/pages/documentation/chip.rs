@@ -56,6 +56,11 @@ pub fn PageChip(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
+                --chip-font-size
+                --chip-margin
+                --chip-padding
+                --chip-border
+                --chip-border-radius
                 --chip-primary-text-color
                 --chip-primary-text-color-hover
                 --chip-primary-background-color

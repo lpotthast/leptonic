@@ -3,9 +3,9 @@
     --brand-color: #e66956;
     --primary-color: var(--brand-color);
     --secondary-color: #9d9b9b;
-    --info-color: #2181d4; //#0275d8;
-    --success-color: #4bb24b; //#43b543;
-    --warn-color: #f29826; //rgb(251, 140, 0);
+    --info-color: #2181d4;
+    --success-color: #4bb24b;
+    --warn-color: #f29826;
     --danger-color: #d9534f;
 
     --grey-0: #f8f8f8;
@@ -113,6 +113,11 @@
     --card-box-shadow-color: #666666;
 
     // Chip
+    --chip-font-size: 0.9em;
+    --chip-margin: 0 0.3em 0.3em 0;
+    --chip-padding: 0.4em 0.7em;
+    --chip-border: none;
+    --chip-border-radius: 1em;
     --chip-primary-text-color: var(--std-text-bright);
     --chip-primary-text-color-hover: var(--std-text-bright);
     --chip-primary-background-color: var(--primary-color);

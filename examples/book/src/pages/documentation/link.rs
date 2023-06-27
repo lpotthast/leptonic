@@ -4,7 +4,7 @@ use leptos::*;
 use leptos_icons::BsIcon;
 use leptos_router::ToHref;
 
-use crate::{app::AppRoutes, pages::documentation::doc_root::DocRoutes};
+use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
 pub fn PageLink(cx: Scope) -> impl IntoView {
@@ -51,7 +51,7 @@ pub fn PageLink(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Link href=AppRoutes::Doc>
+                <Link href=DocRoutes::Overview>
                     <Button on_click=move |_| {}>
                         "Read the docs"
                     </Button>
@@ -59,7 +59,7 @@ pub fn PageLink(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Link href=AppRoutes::Doc>
+        <Link href=DocRoutes::Overview>
             <Button on_click=move |_| {}>
                 "Read the docs"
             </Button>
