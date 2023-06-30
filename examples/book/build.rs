@@ -1,5 +1,4 @@
 use std::io::Write;
-use std::path::{Path, PathBuf};
 
 pub fn main() {
     let root: std::path::PathBuf = std::env::var("CARGO_MANIFEST_DIR").unwrap().into();

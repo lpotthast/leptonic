@@ -12,9 +12,7 @@ pub fn PageAppBar(cx: Scope) -> impl IntoView {
         <div style="position: relative;">
             <AppBar height=app_bar_height>
                 <Link href="">
-                    <Typography variant=TypographyVariant::H3 margin=Margin::Left(Size::Em(1.0))>
-                        "Leptonic  -  v0.1"
-                    </Typography>
+                    <H3>"Leptonic  -  v0.1"</H3>
                 </Link>
                 <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
                     <Icon icon=BsIcon::BsGithub></Icon>

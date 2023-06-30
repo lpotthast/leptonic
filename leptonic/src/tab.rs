@@ -5,7 +5,7 @@ use leptos::*;
 use tracing::info;
 use uuid::Uuid;
 
-use crate::prelude::{Callback, Callable};
+use crate::prelude::{Callable, Callback};
 use crate::tabs::TabsContext;
 use crate::Mount;
 
@@ -23,7 +23,8 @@ pub fn Tab<L>(
     // TODO: Can / should we accept a String instead?
     #[prop(optional)] id: Option<Uuid>,
     /// Uniquely identifies this tab.
-    #[prop(into)] name: Cow<'static, str>,
+    #[prop(into)]
+    name: Cow<'static, str>,
     label: L,
     #[prop(optional)] mount: Option<Mount>,
     #[prop(optional)] children: Option<ChildrenFn>,
@@ -99,7 +100,7 @@ where
         Mount::WhenShown => view! { cx,
             {
                 view! { cx,
-                    <Show when=is_active fallback=|_cx| view! { cx,  }>
+                    <Show when=is_active fallback=|_| ()>
                         <leptonic-tab id=id.to_string() data:name=name.get_value() role="tabpanel">
                             {
                                 if let Some(children) = &children {

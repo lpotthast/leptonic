@@ -209,9 +209,9 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                             </Link>
 
                             <Link href=AppRoutes::Doc>
-                                <Typography variant=TypographyVariant::H3 margin=Margin::Left(Size::Em(0.5))>
+                                <H3 style="margin: 0 0 0 0.5em">
                                     "Docs"
-                                </Typography>
+                                </H3>
                             </Link>
                         }.into_view(cx),
                     } }

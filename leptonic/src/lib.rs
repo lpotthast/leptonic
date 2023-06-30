@@ -193,9 +193,10 @@ pub mod prelude {
     pub use super::With;
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Mount {
     /// Mount the child view once. Then keep it mounted as long as the parent lives.
+    #[default]
     Once,
     /// Mount the child view once. May defer mounting to the point where the view is first needed. Then keep it mounted as long as the parent lives.
     OnceShown,

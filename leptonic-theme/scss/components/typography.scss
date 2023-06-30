@@ -4,50 +4,47 @@
   font-family: var(--typography-font-family);
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-weight: bold;
-  margin: var(--margin);
-}
-
 h1 {
-  --margin: 0.67em 0 0.67em 0;
-  font-size: 2em;
+  margin: var(--typography-h1-margin);
+  font-size: var(--typography-h1-font-size);
+  font-weight: var(--typography-h1-font-weight);
 }
 
 h2 {
-  --margin: 0.83em 0 0.83em 0;
-  font-size: 1.5em;
+  margin: var(--typography-h2-margin);
+  font-size: var(--typography-h2-font-size);
+  font-weight: var(--typography-h2-font-weight);
 }
 
 h3 {
-  --margin: 1em 0 1em 0;
-  font-size: 1.17em;
+  margin: var(--typography-h3-margin);
+  font-size: var(--typography-h3-font-size);
+  font-weight: var(--typography-h3-font-weight);
 }
 
 h4 {
-  --margin: 1.33em 0 1.33em 0;
-  font-size: 1em;
+  margin: var(--typography-h4-margin);
+  font-size: var(--typography-h4-font-size);
+  font-weight: var(--typography-h4-font-weight);
 }
 
 h5 {
-  --margin: 1.67em 0 1.67em 0;
-  font-size: 0.83em;
+  margin: var(--typography-h5-margin);
+  font-size: var(--typography-h5-font-size);
+  font-weight: var(--typography-h5-font-weight);
 }
 
 h6 {
-  --margin: 2.33em 0 2.33em 0;
-  font-size: 0.67em;
+  margin: var(--typography-h6-margin);
+  font-size: var(--typography-h6-font-size);
+  font-weight: var(--typography-h6-font-weight);
 }
 
 p {
-  --margin: 1em 0 1em 0;
-  margin: var(--margin);
-  line-height: 1.6em; // This specific value results in <Code inline=true> elements not pushing lines of a <P> further apart as they would normally be!
+  margin: var(--typography-p-margin);
+  font-size: var(--typography-p-font-size);
+  font-weight: var(--typography-p-font-weight);
+  line-height: var(--typography-p-line-height);
 }
 
 leptonic-code {
@@ -56,11 +53,13 @@ leptonic-code {
   justify-content: center;
   align-items: flex-start;
   font-family: monospace;
-  font-size: 0.9em;
-  margin: 1.1111em 0;
-  padding: 1em;
+  font-size: var(--typography-code-font-size);
+  font-weight: var(--typography-code-font-weight);
+  line-height: var(--typography-line-height);
+  margin: var(--typography-code-margin);
+  padding: var(--typography-code-padding);
   border: none;
-  border-radius: 0.25em;
+  border-radius: var(--typography-code-border-radius);
   background-color: var(--typography-code-background-color);
   color: var(--typography-code-color);
   white-space: pre;
@@ -70,8 +69,8 @@ leptonic-code {
 
   &[inline="true"] {
     display: inline-flex;
-    padding: 0.28em;
-    margin: 0;
-    line-height: 1.0em;
+    margin: var(--typography-inline-code-margin);
+    padding: var(--typography-inline-code-padding);
+    line-height: var(--typography-inline-code-line-height);
   }
 }

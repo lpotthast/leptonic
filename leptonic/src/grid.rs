@@ -66,7 +66,7 @@ pub fn Col(
     #[prop(optional, default = Default::default())] h_align: ColAlign,
     children: Children,
 ) -> impl IntoView {
-    let mut classes = format!("leptonic-grid-col");
+    let mut classes = "leptonic-grid-col".to_owned();
     if let Some(xs) = xs {
         classes.push_str(" leptonic-grid-col-");
         classes.push_str(&xs.to_string());

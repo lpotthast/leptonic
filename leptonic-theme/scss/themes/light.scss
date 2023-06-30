@@ -318,6 +318,37 @@
 
     // Typography
     --typography-font-family: var(--font-family);
+    --typography-h1-margin: 0.67em 0 0.67em 0;
+    --typography-h1-font-size: 2em;
+    --typography-h1-font-weight: bold;
+    --typography-h2-margin: 0.83em 0 0.83em 0;
+    --typography-h2-font-size: 1.5em;
+    --typography-h2-font-weight: bold;
+    --typography-h3-margin: 1em 0 1em 0;
+    --typography-h3-font-size: 1.17em;
+    --typography-h3-font-weight: bold;
+    --typography-h4-margin: 1.33em 0 1.33em 0;
+    --typography-h4-font-size: 1em;
+    --typography-h4-font-weight: bold;
+    --typography-h5-margin: 1.67em 0 1.67em 00;
+    --typography-h5-font-size: 0.83em;
+    --typography-h5-font-weight: bold;
+    --typography-h6-margin: 2.33em 0 2.33em 0;
+    --typography-h6-font-size: 0.67em;
+    --typography-h6-font-weight: bold;
+    --typography-p-margin: 1em 0 1em 0;
+    --typography-p-font-size: 1em;
+    --typography-p-font-weight: normal;
+    --typography-p-line-height: 1.6em; // This specific value results in <Code inline=true> elements not pushing lines of a <P> further apart as they would normally be!
+    --typography-code-margin: 1.1111em 0;
+    --typography-code-padding: 1em;
+    --typography-code-font-size: 0.9em;
+    --typography-code-font-weight: normal;
+    --typography-code-line-height: normal;
+    --typography-code-border-radius: 0.25em;
     --typography-code-background-color: #d3d3d3;
     --typography-code-color: #3a3732;
+    --typography-inline-code-margin: 0;
+    --typography-inline-code-padding: 0.28em;
+    --typography-inline-code-line-height: 1em;
 }

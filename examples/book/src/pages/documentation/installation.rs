@@ -58,7 +58,6 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
         <Code>
             {indoc!(r#"
                 use std::io::Write;
-                use std::path::{Path, PathBuf};
 
                 pub fn main() {
                     let root_dir: std::path::PathBuf = std::env::var("CARGO_MANIFEST_DIR").unwrap().into();
