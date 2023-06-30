@@ -1,4 +1,5 @@
-use leptonic::{prelude::*, datetime::GuideMode};
+use indoc::indoc;
+use leptonic::{datetime::GuideMode, prelude::*};
 use leptos::*;
 use time::OffsetDateTime;
 
@@ -7,8 +8,28 @@ pub fn PageDateTime(cx: Scope) -> impl IntoView {
     view! { cx,
         <H1>"Date & Time"</H1>
 
+        <P>"Leptonic includes a calendar-like date selector component."</P>
+
+        <Code>
+            {indoc!(r#"
+                <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
+            "#)}
+        </Code>
+
         <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
 
+        <P>"The date selector can also start with the year selection."</P>
+
+        <Code>
+            {indoc!(r#"
+                <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>
+            "#)}
+        </Code>
+
         <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>
+
+        <H2>"Input fields"</H2>
+
+        <P>"Selecting dates and times through input fields will be supported soon. Stay tuned."</P>
     }
 }

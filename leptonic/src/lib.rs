@@ -140,6 +140,7 @@ pub mod prelude {
     pub use super::select::Select;
     pub use super::separator::Separator;
     pub use super::skeleton::Skeleton;
+    pub use super::slider::RangeSlider;
     pub use super::slider::Slider;
     pub use super::slider::SliderVariant;
     pub use super::stack::Stack;

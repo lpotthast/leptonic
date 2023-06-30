@@ -27,6 +27,12 @@ leptonic-slider {
         }
     }
 
+    .range {
+        position: absolute;
+        height: $bar-height;
+        background-color: var(--brand-color);
+    }
+
     .knob-wrapper {
         position: absolute;
         width: 100%;

@@ -29,6 +29,7 @@ where
     C: Fn(time::OffsetDateTime) + 'static,
 {
     let (staging, set_staging) = create_signal(cx, value);
+
     let staging_year = Signal::derive(cx, move || staging.get().year());
     let staging_month = Signal::derive(cx, move || staging.get().month().to_string());
 

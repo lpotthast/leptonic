@@ -7,6 +7,8 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
     let (value2, set_value2) = create_signal(cx, 4.2);
     let (value3, set_value3) = create_signal(cx, -3.0);
     let (value4, set_value4) = create_signal(cx, 0.5);
+    let (range_a, set_range_a) = create_signal(cx, 0.5);
+    let (range_b, set_range_b) = create_signal(cx, 0.75);
 
     view! { cx,
         <H1>"Slider"</H1>
@@ -30,5 +32,20 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
         <P>"Value: "{move || format!("{:.4}", value4.get())}</P>
 
         <Slider value=value4 set_value=move |v| set_value4.set(v) min=0.0 max=1.0 step=0.0001 />
+
+        <H2>"Range sliders"</H2>
+
+        <P>"Value A: "{move || format!("{:.4}", range_a.get())}</P>
+        <P>"Value B: "{move || format!("{:.4}", range_b.get())}</P>
+
+        <RangeSlider
+            value_a=range_a
+            value_b=range_b
+            set_value_a=move |v| set_range_a.set(v)
+            set_value_b=move |v| set_range_b.set(v)
+            min=0.0
+            max=1.0
+            step=0.0001
+        />
     }
 }
