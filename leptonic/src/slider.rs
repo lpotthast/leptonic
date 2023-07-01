@@ -132,6 +132,8 @@ where
             variant=variant.to_str()
             class:active=active
             class:disabled=disabled
+            // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
+            // as the user may click, drag and move the cursor outside of this element.
             on:mousedown=move |_e| set_listening.set(true)
             on:touchstart=move |_e| set_listening.set(true)
             on:touchmove=move |e| {
@@ -324,6 +326,8 @@ where
             variant=variant.to_str()
             class:active=active
             class:disabled=disabled
+            // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
+            // as the user may click, drag and move the cursor outside of this element.
             on:mousedown=move |_e| {
                 let could_be = clipped_value_from_cursor.get();
                 let distance_to_a = (value_a.get() - could_be).abs();
@@ -334,24 +338,28 @@ where
                     set_listening_b.set(true)
                 }
             }
-            on:touchstart=move |_e| {
-                let could_be = clipped_value_from_cursor.get();
-                let distance_to_a = (value_a.get() - could_be).abs();
-                let distance_to_b = (value_b.get() - could_be).abs();
-                if distance_to_a < distance_to_b {
-                    set_listening_a.set(true)
-                } else {
-                    set_listening_b.set(true)
-                }
-            }
+            // Note(lukas): We do not use on:touchstart event here to trigger the listening functionality.
+            // Instead, the code handling it lives in on:touchmove.
+            // The reason for this is that the use_mouse function must receive the initial on:touchstart event FIRST,
+            // so that a correct clipped_value_from_cursor can be computed. We can only then check whether or not the user
+            // touched more towards the left or right knob.
+            // Limitation: The initial touch event no longer results in a direct value change. But the value is set after touchmove or touchend.
             on:touchmove=move |e| {
                 if listening_a.get_untracked() {
                     e.prevent_default();
                     e.stop_propagation();
-                }
-                if listening_b.get_untracked() {
+                } else if listening_b.get_untracked() {
                     e.prevent_default();
                     e.stop_propagation();
+                } else {
+                    let could_be = clipped_value_from_cursor.get();
+                    let distance_to_a = (value_a.get() - could_be).abs();
+                    let distance_to_b = (value_b.get() - could_be).abs();
+                    if distance_to_a < distance_to_b {
+                        set_listening_a.set(true)
+                    } else {
+                        set_listening_b.set(true)
+                    }
                 }
             }
             on:touchend=move |_e| {
