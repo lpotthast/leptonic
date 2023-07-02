@@ -1,7 +1,7 @@
 use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::*;
+use leptos_icons::BsIcon;
 
 #[component]
 pub fn PageIcon(cx: Scope) -> impl IntoView {

@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use leptos::*;
-use leptos_icons::*;
+use leptos_icons::BsIcon;
 use leptos_meta::{provide_meta_context, Title};
 use leptos_router::*;
 use leptos_use::use_media_query;

@@ -1,7 +1,7 @@
 use std::sync::{Arc, RwLock};
 
 use leptos::*;
-use leptos_icons::*;
+use leptos_icons::BsIcon;
 use tracing::warn;
 use uuid::Uuid;
 

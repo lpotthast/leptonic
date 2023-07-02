@@ -25,8 +25,8 @@ leptos = { version = "0.3", default-features = false, features = [
     "tracing",
     "stable",
 ] }
-leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
-    "csr",
+#leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
+leptos_icons = { version = "0.0.14", features = [
     "BsGithub",
     "BsSearch",
     "BsList",
