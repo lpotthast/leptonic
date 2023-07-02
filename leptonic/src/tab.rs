@@ -82,7 +82,7 @@ where
     });
 
     match mount {
-        Mount::Once | Mount::OnceShown => view! { cx,
+        Mount::Once => view! { cx,
             {
                 view! { cx,
                     <leptonic-tab id=id.to_string() data-name=name.get_value() role="tabpanel" aria-hidden=move || if is_active() { "false" } else { "true"} >

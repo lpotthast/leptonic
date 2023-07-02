@@ -179,11 +179,8 @@ pub mod prelude {
     pub use super::typography::H5;
     pub use super::typography::H6;
     pub use super::typography::P;
-    pub use super::FirstOf;
     pub use super::FontWeight;
     pub use super::Height;
-    pub use super::If;
-    pub use super::LastOf;
     pub use super::Margin;
     pub use super::Mount;
     pub use super::OptionDeref;
@@ -191,7 +188,6 @@ pub mod prelude {
     pub use super::OptionalSignal;
     pub use super::Size;
     pub use super::Width;
-    pub use super::With;
 }
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
@@ -200,79 +196,9 @@ pub enum Mount {
     #[default]
     Once,
     /// Mount the child view once. May defer mounting to the point where the view is first needed. Then keep it mounted as long as the parent lives.
-    OnceShown,
+    // OnceShown, // TODO: Implement this variant in tabs.
     /// Always re-mount the child view when it is needed.
     WhenShown,
-}
-
-#[component]
-pub fn If<IF>(cx: Scope, sig: IF, children: ChildrenFn) -> impl IntoView
-where
-    IF: Fn() -> bool + 'static,
-{
-    move || sig().then(|| children(cx))
-}
-
-#[component]
-pub fn IfEl<IF, THEN, ELSE, T, E>(cx: Scope, sig: IF, then: THEN, el: ELSE) -> impl IntoView
-where
-    IF: Fn() -> bool + 'static,
-    THEN: Fn() -> T + 'static,
-    ELSE: Fn() -> E + 'static,
-    T: IntoView + 'static,
-    E: IntoView + 'static,
-{
-    move || match sig() {
-        true => (then()).into_view(cx),
-        false => (el()).into_view(cx),
-    }
-}
-
-#[component]
-pub fn FirstOf<IF, I, T, EF, N>(cx: Scope, iter: IF, view: EF) -> impl IntoView
-where
-    IF: Fn() -> I + 'static,
-    I: IntoIterator<Item = T>,
-    EF: Fn(Scope, T) -> N + 'static,
-    N: IntoView,
-    T: 'static,
-{
-    move || iter().into_iter().next().map(|t| view(cx, t))
-}
-
-#[component]
-pub fn LastOf<IF, I, T, EF, N>(cx: Scope, iter: IF, view: EF) -> impl IntoView
-where
-    IF: Fn() -> I + 'static,
-    I: IntoIterator<Item = T>,
-    EF: Fn(Scope, T) -> N + 'static,
-    N: IntoView,
-    T: 'static,
-{
-    move || iter().into_iter().last().map(|t| view(cx, t))
-}
-
-#[component]
-pub fn LastOfRef<'a, IF, I, T, EF, N>(cx: Scope, iter: IF, view: EF) -> impl IntoView
-where
-    IF: Fn() -> I + 'static,
-    I: IntoIterator<Item = &'a T> + 'a,
-    EF: Fn(Scope, &'a T) -> N + 'static,
-    N: IntoView + 'a,
-    T: 'static,
-{
-    move || iter().into_iter().last().map(|t| view(cx, t))
-}
-
-#[component]
-pub fn With<'t, IF, T, EF, N>(cx: Scope, item: IF, view: EF) -> impl IntoView
-where
-    IF: Fn() -> Option<&'t T> + 'static,
-    EF: Fn(Scope, &'t T) -> N + 'static,
-    N: IntoView + 't,
-    T: 't,
-{
-    move || item().map(|t| view(cx, t))
 }
 
 pub fn create_signal_ls<T: Clone + serde::Serialize + serde::de::DeserializeOwned>(

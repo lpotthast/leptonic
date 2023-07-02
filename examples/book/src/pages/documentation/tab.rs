@@ -5,8 +5,6 @@ use leptos::*;
 #[component]
 pub fn PageTab(cx: Scope) -> impl IntoView {
     let (test_reactive_label_bool, set_test_reactive_label_bool) = create_signal(cx, false);
-    let (test_bool, set_test_bool) = create_signal(cx, false);
-    let (bool, set_bool) = create_signal(cx, false);
     view! { cx,
         <H1>"Tabs"</H1>
 
@@ -17,7 +15,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Tabs mount=Mount::WhenShown>
+                <Tabs mount=Mount::Once>
                     <Tab name="tab-1" label="Tab 1">"Content of tab 1"</Tab>
                     <Tab name="tab-2" label="Tab 2">"Content of tab 2"</Tab>
                     <Tab name="tab-3" label="Tab 3">"Content of tab 3"</Tab>
@@ -25,7 +23,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Tabs mount=Mount::WhenShown>
+        <Tabs mount=Mount::Once>
             <Tab name="tab-1" label="Tab 1">"Content of tab 1"</Tab>
             <Tab name="tab-2" label="Tab 2">"Content of tab 2"</Tab>
             <Tab name="tab-3" label="Tab 3">"Content of tab 3"</Tab>
@@ -42,7 +40,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
                 let (bool, set_bool) = create_signal(cx, false);
 
                 view! {cx,
-                    <Tabs mount=Mount::WhenShown>
+                    <Tabs mount=Mount::Once>
                         <Tab name="tab-1" label=view! {cx, "State: " {move || bool.get()}}>
                             <Toggle state=bool on_toggle=move |s| set_bool.set(s) />
                         </Tab>
@@ -54,7 +52,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Tabs mount=Mount::WhenShown>
+        <Tabs mount=Mount::Once>
             <Tab name="tab-1" label=view! {cx, "State: " {move || test_reactive_label_bool.get()}}>
                 <Toggle state=test_reactive_label_bool on_toggle=move |s| set_test_reactive_label_bool.set(s) />
             </Tab>
@@ -71,7 +69,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Tabs mount=Mount::WhenShown>
+                <Tabs mount=Mount::Once>
                     <Tab name="outer-1" label="Outer 1">
                         <Tabs>
                             <Tab name="inner-1" label="Inner 1">
@@ -87,7 +85,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Tabs mount=Mount::WhenShown>
+        <Tabs mount=Mount::Once>
             <Tab name="outer-1" label="Outer 1">
                 <Tabs>
                     <Tab name="inner-1" label="Inner 1">
@@ -106,26 +104,31 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
         <P>
             "You might have spotted a particular behavior in the above example. "
             "When switching to the \"Inner 2\" tab, then switching to \"Outer 2\" and back to \"Outer 1\", "
-            "we no longer see \"Inner 2\", but instead see the default tab \"Inner 1\" again."
+            "we still see \"Inner 2\" and not the default tab \"Inner 1\" again."
         </P>
 
         <P>
-            "This is where the "<Code inline=true>"mount"</Code>" property comes into play. We had it set to "<Code inline=true>"Mount::WhenShown"</Code>" in all of our examples. "
-            "There are actually three variants to choose from:"
+            "This is where the "<Code inline=true>"mount"</Code>" property comes into play. We had it set to "<Code inline=true>"Mount::Once"</Code>" in all of our examples. "
+            "There are two variants to choose from:"
         </P>
 
         <ul>
             <li>
                 <Code inline=true>"Mount::Once"</Code>
                 <P style="margin-top: 0.5em;">
-                    "Shown"
+                    "Tab content is rendered once. Tabs are simply hidden when not shown."
                 </P>
             </li>
-            <li><Code inline=true>"Mount::OnceShown"</Code></li>
-            <li><Code inline=true>"Mount::WhenShown"</Code></li>
+            <li>
+                <Code inline=true>"Mount::WhenShown"</Code>
+                <P style="margin-top: 0.5em;">
+                    "Tab content is rendered every time a tab is shown. The dom of the tab is unmounted when hidden. "
+                    "This means that there is only ever one tab in the final dom, not requiring any hiding-mechanism as in the "<Code inline=true>"Mount::Once"</Code>" case."
+                </P>
+            </li>
         </ul>
 
-        <Tabs mount=Mount::Once>
+        <Tabs mount=Mount::WhenShown>
             <Tab name="outer-1" label="Outer 1">
                 <Tabs>
                     <Tab name="inner-1" label="Inner 1">
