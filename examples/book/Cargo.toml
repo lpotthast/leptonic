@@ -18,15 +18,14 @@ debug = 0
 console_error_panic_hook = "0.1"
 console_log = "1"
 indoc = "2.0.1"
-leptonic = { path = "../../leptonic", features = ["stable"] }
+leptonic = { path = "../../leptonic" }
 leptonic-theme = { path = "../../leptonic-theme", optional = true }
-leptos = { version = "0.3", default-features = false, features = [
+leptos = { version = "0.4", features = [
     "csr",
     "tracing",
-    "stable",
 ] }
-#leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
-leptos_icons = { version = "0.0.14", features = [
+leptos_icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "main", features = [
+#leptos_icons = { version = "0.0.15", features = [
     "BsGithub",
     "BsSearch",
     "BsList",
@@ -41,14 +40,12 @@ leptos_icons = { version = "0.0.14", features = [
     "BsArrowsMove",
 ] }
 leptos-tiptap-build = { version = "0.1", optional = true }
-leptos-use = { version = "^0.3.3", features = ["stable"] }
-leptos_meta = { version = "0.3", default-features = false, features = [
+leptos-use = { git = "https://github.com/lpotthast/leptos-use", branch = "leptos_0.4" }
+leptos_meta = { version = "0.4", features = [
     "csr",
-    "stable",
 ] }
-leptos_router = { version = "0.3", default-features = false, features = [
+leptos_router = { version = "0.4", features = [
     "csr",
-    "stable",
 ] }
 log = "0.4"
 serde = "1"
