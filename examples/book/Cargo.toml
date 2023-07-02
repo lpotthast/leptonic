@@ -39,7 +39,7 @@ leptos_icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "ma
     "BsCircleSquare",
     "BsArrowsMove",
 ] }
-leptos-tiptap-build = { version = "0.1", optional = true }
+leptos-tiptap-build = { version = "0.2", optional = true }
 leptos-use = { git = "https://github.com/lpotthast/leptos-use", branch = "leptos_0.4" }
 leptos_meta = { version = "0.4", features = [
     "csr",
