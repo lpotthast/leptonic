@@ -16,7 +16,7 @@ keywords = ["leptos", "components", "component-library"]
 [dependencies]
 indexmap = "1"
 js-sys = "0.3"
-leptos = "0.4"
+leptos = { version = "0.4", features = ["csr"] }
 leptos_icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "main", default-features = false, features = [
 #leptos_icons = { version = "0.0.15", features = [
     "BsSun",
