@@ -85,7 +85,6 @@ where
             DocumentIndeterminable,
             SetPropertyFailed,
         }
-        type Result = std::result::Result<(), Error>;
         let inner_height = window()
             .inner_height()
             .map_err(|_| Error::InnerHeightIndeterminable)?;
@@ -97,7 +96,7 @@ where
             .style()
             .set_property("--leptonic-vh", format!("{inner_height}px").as_str())
             .map_err(|_| Error::SetPropertyFailed)?;
-        Result::Ok(())
+        std::result::Result::<(), Error>::Ok(())
     };
 
     if let Err(err) = update_vh() {
