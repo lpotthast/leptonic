@@ -20,11 +20,8 @@ console_log = "1"
 indoc = "2.0.1"
 leptonic = { path = "../../leptonic" }
 leptonic-theme = { path = "../../leptonic-theme", optional = true }
-leptos = { version = "0.4", features = [
-    "csr",
-    "tracing",
-] }
-leptos_icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "main", features = [
+leptos = { version = "0.4", features = ["csr"] }
+leptos_icons = { git = "https://github.com/Carlosted/leptos-icons", branch = "main", default-features = false, features = [
 #leptos_icons = { version = "0.0.15", features = [
     "BsGithub",
     "BsSearch",

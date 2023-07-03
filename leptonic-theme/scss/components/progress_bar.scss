@@ -15,15 +15,7 @@ leptonic-progress-bar {
 
             leptonic-progress-bar-fill {
                 display: block;
-
-                -webkit-animation: animate-move 1.3s cubic-bezier(0.29, 0.63, 0.81, 0.07) infinite;
                 animation: animate-move 1.3s cubic-bezier(0.29, 0.63, 0.81, 0.07) infinite;
-
-                @-webkit-keyframes animate-move {
-                    100% {
-                        left: 100%;
-                    }
-                }
 
                 @keyframes animate-move {
                     100% {
@@ -58,12 +50,10 @@ leptonic-progress-bar {
             position: absolute;
             left: 0;
             top: 0;
-            //background-image: -webkit-linear-gradient(top, rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.25)),
-            //    -webkit-linear-gradient(left, #09c, #f44);
-            background-color: var(--progress-bar-fill-background-color);
-
             height: 100%;
             border-radius: var(--progress-bar-border-radius);
+            background-color: var(--progress-bar-fill-background-color);
+            transition: var(--progress-bar-fill-transition);
 
             leptonic-progress-bar-fill-overlay {
                 display: inline-flex;
@@ -76,16 +66,9 @@ leptonic-progress-bar {
                 height: 100%;
                 border-radius: var(--progress-bar-border-radius);
                 background-size: calc(var(--progress-bar-height) * 2), 1em, 100% 100%, 100% 100%;
-                -webkit-animation: animate-stripes 1s linear infinite;
-                animation: animate-stripes 1s linear infinite;
+                animation: animate-background-position 1s linear infinite;
 
-                @-webkit-keyframes animate-stripes {
-                    100% {
-                        background-position: -40px 0px;
-                    }
-                }
-
-                @keyframes animate-stripes {
+                @keyframes animate-background-position {
                     100% {
                         background-position: -40px 0px;
                     }
