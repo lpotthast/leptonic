@@ -15,4 +15,4 @@ no_autoreload = false
 [[hooks]]
 stage = "pre_build"
 command = "cargo"
-command_arguments = ["run", "--bin", "force-build", "--release", "--features", "build_deps"]
+command_arguments = ["check"]
