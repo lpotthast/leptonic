@@ -8,7 +8,8 @@ pub fn Link<H>(
     /// to the current route.
     href: H,
     #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
-    #[prop(into, optional)] title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
+    #[prop(into, optional)]
+    title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
@@ -40,6 +41,7 @@ where
             state,
             replace,
             class: None,
+            active_class: None,
             id: None,
             children,
         },
@@ -92,7 +94,11 @@ where
     // NOTE(lukas): rel="noopener" is added for security reasons. See: https://developer.chrome.com/docs/lighthouse/best-practices/external-anchors-use-rel-noopener/
     view! { cx,
         <leptonic-link id=id class=class style=style>
-            <a href={move || href.to_href()()} target=format!("{target}") rel={match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }>
+            <a
+                href={ move || href.to_href()() }
+                target=format!("{target}")
+                rel={ match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }
+            >
                 { children(cx) }
             </a>
         </leptonic-link>
