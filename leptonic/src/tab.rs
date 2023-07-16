@@ -2,7 +2,6 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use leptos::*;
-use tracing::info;
 use uuid::Uuid;
 
 use crate::prelude::{Callable, Callback};
