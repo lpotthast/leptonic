@@ -14,4 +14,4 @@ categories = ["gui"]
 keywords = ["leptos", "components", "component-library", "theming", "css"]
 
 [dependencies]
-include_dir = "0.7"
+include_dir = "0.7.3"
