@@ -39,7 +39,7 @@ pub fn Drawer(
 
     let (anim_state, set_anim_state) = create_signal(
         cx,
-        match memoized_shown.get() {
+        match memoized_shown.get_untracked() {
             true => DrawerAnimationState::Shown,
             false => DrawerAnimationState::Hidden,
         },
