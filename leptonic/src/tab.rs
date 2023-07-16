@@ -77,10 +77,6 @@ where
 
     let is_active = move || tabs.history.get().get_active() == Some(&name.get_value());
 
-    on_cleanup(cx, move || {
-        info!("cleanup tab");
-    });
-
     match mount {
         Mount::Once => view! { cx,
             {
