@@ -59,6 +59,8 @@ impl<T: 'static, I: Into<Signal<T>>> From<I> for OptionalSignal<T> {
 #[derive(Debug, Clone)]
 pub struct OptionalMaybeSignal<T: 'static>(Option<MaybeSignal<T>>);
 
+impl<T: Copy> Copy for OptionalMaybeSignal<T> {}
+
 impl<T> Default for OptionalMaybeSignal<T> {
     fn default() -> Self {
         Self(None)
@@ -68,6 +70,38 @@ impl<T> Default for OptionalMaybeSignal<T> {
 impl<T: 'static, I: Into<MaybeSignal<T>>> From<I> for OptionalMaybeSignal<T> {
     fn from(value: I) -> Self {
         Self(Some(value.into()))
+    }
+}
+
+impl<T: Clone + Default> SignalGet<T> for OptionalMaybeSignal<T> {
+    fn get(&self) -> T {
+        match &self.0 {
+            Some(signal) => signal.get(),
+            None => T::default(),
+        }
+    }
+
+    fn try_get(&self) -> Option<T> {
+        match &self.0 {
+            Some(signal) => signal.try_get(),
+            None => Some(T::default()),
+        }
+    }
+}
+
+impl<T: Clone + Default> SignalGetUntracked<T> for OptionalMaybeSignal<T> {
+    fn get_untracked(&self) -> T {
+        match &self.0 {
+            Some(signal) => signal.get_untracked(),
+            None => T::default(),
+        }
+    }
+
+    fn try_get_untracked(&self) -> Option<T> {
+        match &self.0 {
+            Some(signal) => signal.try_get_untracked(),
+            None => Some(T::default()),
+        }
     }
 }
 
