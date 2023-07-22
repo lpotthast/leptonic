@@ -12,12 +12,9 @@ use crate::pages::{documentation::doc_root::DocRoutes, err404::PageErr404, welco
 
 #[derive(Debug, Copy, Clone)]
 pub enum AppRoutes {
-    // Content
     Welcome,
     Doc,
-
-    // Technical
-    CatchAll,
+    NotFound,
 }
 
 impl AppRoutes {
@@ -25,7 +22,7 @@ impl AppRoutes {
         match self {
             AppRoutes::Welcome => "",
             AppRoutes::Doc => "doc",
-            AppRoutes::CatchAll => "*",
+            AppRoutes::NotFound => "*", // Leptos requires this to be be named "*"!
         }
     }
 }
@@ -57,7 +54,7 @@ pub fn App(cx: Scope) -> impl IntoView {
                     <Route path="" view=|cx| view! { cx, <Layout/> }>
                         <Route path=AppRoutes::Welcome view=|cx| view! { cx, <PageWelcome/> }/>
                         <DocRoutes path=AppRoutes::Doc/>
-                        <Route path=AppRoutes::CatchAll view=|cx| view! { cx, <PageErr404 /> }/>
+                        <Route path=AppRoutes::NotFound view=|cx| view! { cx, <PageErr404 /> }/>
                     </Route>
                 </Routes>
             </Router>

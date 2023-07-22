@@ -38,7 +38,6 @@ use crate::pages::documentation::transition::PageTransition;
 use crate::pages::documentation::typography::PageTypography;
 use crate::pages::documentation::usage::PageUsage;
 use crate::APP_BAR_HEIGHT;
-use crate::pages::err404::PageErr404;
 
 #[derive(Debug, Copy, Clone)]
 pub enum DocRoutes {
@@ -86,7 +85,7 @@ pub enum DocRoutes {
     Transition,
 
     // Technical
-    CatchAll,
+    NotFound,
 }
 
 impl DocRoutes {
@@ -128,7 +127,7 @@ impl DocRoutes {
             DocRoutes::Callback => "callback",
 
             DocRoutes::Transition => "transition",
-            DocRoutes::CatchAll => "*",
+            DocRoutes::NotFound => "*", // Leptos requires this to be be named "*"!
         }
     }
 }
@@ -194,7 +193,7 @@ where
 
             <Route path=DocRoutes::Transition view=|cx| view! { cx, <PageTransition/> }/>
 
-            <Route path=DocRoutes::CatchAll view=|cx| view! { cx, <PageErr404 /> }/>
+            <Route path=DocRoutes::NotFound view=|cx| view! { cx, <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
         </Route>
     }
 }
