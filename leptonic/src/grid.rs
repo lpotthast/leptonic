@@ -13,15 +13,14 @@ pub fn Grid(
     children: Children,
 ) -> impl IntoView {
     view! { cx,
-        <div
+        <leptonic-grid-container
             id=id
             class=class
-            class="leptonic-grid-container"
             style=style
             style=("--leptonic-grid-spacing", format!("{spacing}"))
         >
-            { children(cx) }
-        </div>
+            {children(cx)}
+        </leptonic-grid-container>
     }
 }
 
@@ -36,15 +35,14 @@ pub fn Row(
     children: Children,
 ) -> impl IntoView {
     view! { cx,
-        <div
+        <leptonic-grid-row
             id=id
             class=class
-            class="leptonic-grid-row"
             style=style
             style=("--leptonic-grid-spacing", spacing.map(|spacing| format!("{spacing}")))
         >
-            { children(cx) }
-        </div>
+            {children(cx)}
+        </leptonic-grid-row>
     }
 }
 
@@ -52,6 +50,7 @@ pub fn Row(
 pub enum ColAlign {
     #[default]
     Start,
+    Center,
     End,
 }
 
@@ -64,37 +63,26 @@ pub fn Col(
     #[prop(optional)] lg: Option<u32>,
     #[prop(optional)] xl: Option<u32>,
     #[prop(optional, default = Default::default())] h_align: ColAlign,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
-    let mut classes = "leptonic-grid-col".to_owned();
-    if let Some(xs) = xs {
-        classes.push_str(" leptonic-grid-col-");
-        classes.push_str(&xs.to_string());
-    }
-    if let Some(sm) = sm {
-        classes.push_str(" leptonic-grid-col-sm-");
-        classes.push_str(&sm.to_string());
-    }
-    if let Some(md) = md {
-        classes.push_str(" leptonic-grid-col-md-");
-        classes.push_str(&md.to_string());
-    }
-    if let Some(lg) = lg {
-        classes.push_str(" leptonic-grid-col-lg-");
-        classes.push_str(&lg.to_string());
-    }
-    if let Some(xl) = xl {
-        classes.push_str(" leptonic-grid-col-xl-");
-        classes.push_str(&xl.to_string());
-    }
-    match h_align {
-        ColAlign::Start => classes.push_str(" leptonic-grid-col-flex-start"),
-        ColAlign::End => classes.push_str(" leptonic-grid-col-flex-end"),
-    }
-
     view! { cx,
-        <div class=classes>
-            { children(cx) }
-        </div>
+        <leptonic-grid-col
+            id=id
+            class=class
+            class:leptonic-grid-col-flex-start=(h_align == ColAlign::Start)
+            class:leptonic-grid-col-flex-center=(h_align == ColAlign::Center)
+            class:leptonic-grid-col-flex-end=(h_align == ColAlign::End)
+            xs=xs.unwrap_or(12)
+            sm=sm
+            md=md
+            lg=lg
+            xl=xl
+            style=style
+        >
+            {children(cx)}
+        </leptonic-grid-col>
     }
 }

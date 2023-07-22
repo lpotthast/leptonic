@@ -1,24 +1,16 @@
 @use "sass:math";
 
-// Settings
 $-class-prefix: "leptonic-grid-";
 $-grid-columns: 12;
 $-tiers: (
-  // LOW to HIGH !
+  // Must be ordered from LOW to HIGH!
+  xs: 0em,
   sm: 48em,
   md: 64em,
   lg: 75em,
   xl: 83em
 );
-$-outer-margin: 2em;
-//$-gutter-width: 1em;
-$-gutter-width: 0;
 
-$-half-gutter-width: math.div($-gutter-width, 2);
-//$-gutter-compensation: $-half-gutter-width * -1;
-$-gutter-compensation: 0;
-
-// Functions
 @function tier-min($tier) {
   @if map-has-key($-tiers, $tier) {
     @return map-get($-tiers, $tier);
@@ -28,7 +20,6 @@ $-gutter-compensation: 0;
   @return null;
 }
 
-// Mixins
 @mixin respond-to-tier($tier) {
   @if map-has-key($-tiers, $tier) {
     @media only screen and (min-width: #{map-get($-tiers, $tier)}) {
@@ -52,7 +43,7 @@ $-gutter-compensation: 0;
 
 @mixin flex-center {
   justify-content: center;
-  text-align: center;
+  align-items: center;
 }
 
 @mixin flex-end {
@@ -92,56 +83,41 @@ $-gutter-compensation: 0;
   order: 1;
 }
 
-// We use a mixin, so we can use the code from inside a media query.
-@mixin col {
-  box-sizing: border-box;
-  flex: 0 0 auto;
-  flex-grow: 1;
-  flex-basis: 0;
-  max-width: 100%;
-  padding-right: $-half-gutter-width;
-  padding-left: $-half-gutter-width;
-}
-
 @mixin produce {
 
   // General styling
-  .#{$-class-prefix}container,
-  .#{$-class-prefix}container-fluid {
+  #{$-class-prefix}container,
+  #{$-class-prefix}container-fluid {
     display: flex;
     flex-direction: column;
     gap: var(--leptonic-grid-spacing);
     width: 100%;
-
-    //position: relative;
-    //margin-right: auto;
-    //margin-left: auto;
-    //padding-right: $-outer-margin;
-    //padding-left: $-outer-margin;
   }
 
-  .#{$-class-prefix}row {
+  #{$-class-prefix}row {
     box-sizing: border-box;
     display: flex;
-    flex: 1 1 auto;
     flex-direction: row;
+    flex: 1 1 auto;
     flex-wrap: wrap;
-    margin-right: $-gutter-compensation;
-    margin-left: $-gutter-compensation;
 
     gap: var(--leptonic-grid-spacing);
 
-    &.crud-row-flex-row-reverse {
+    &.#{$-class-prefix}row-flex-row-reverse {
       flex-direction: row-reverse;
     }
 
-    &.crud-row-flex-col-reverse {
+    &.#{$-class-prefix}row-flex-col-reverse {
       flex-direction: column-reverse;
     }
   }
 
-  .#{$-class-prefix}col {
-    @include col;
+  #{$-class-prefix}col {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    flex: 1 0 auto;
+    max-width: 100%;
 
     &.#{$-class-prefix}col-flex {
       display: flex;
@@ -208,52 +184,25 @@ $-gutter-compensation: 0;
   /*
    * Generates classes and media queries for each defined tier:
    */
-  @each $tier-name,
-  $tier-min in $-tiers {
-
-    /*
-     * All col- classes of tiers (sm and up) need to be of 100% width until their tier is reached.
-     */
-    @for $i from 1 through $-grid-columns {
-      .#{$-class-prefix}col-#{$tier-name}-#{$i} {
-        @extend .#{$-class-prefix}col;
-        flex-basis: 100%;
-        max-width: 100%;
-      }
-    }
+  @each $tier-name, $tier-min in $-tiers {
 
     @for $i from 0 to $-grid-columns {
-      .#{$-class-prefix}col-#{$tier-name}-offset-#{$i} {
+      [#{$tier-name}-offset="#{$i}"] {
         margin-left: 0;
       }
     }
 
     @media only screen and (min-width: $tier-min) {
 
-      // This ruleset would limit the grid to a certain width on each tier.
-      /*.#{$-class-prefix}container {
-        width: $tier-min + $-gutter-width;
-        max-width: 100%;
-      }*/
-      .#{$-class-prefix}col-#{$tier-name}.#{$-class-prefix}col-#{$tier-name} {
-        // Double specificity (DS)
-        @include col;
-      }
-
       @for $i from 1 through $-grid-columns {
-        .#{$-class-prefix}col-#{$tier-name}-#{$i}.#{$-class-prefix}col-#{$tier-name}-#{$i} {
-          // DS
-          @extend .#{$-class-prefix}col-#{$tier-name};
+        [#{$tier-name}="#{$i}"] {
           $percentage: percentage(math.div($i, $-grid-columns));
           flex-basis: calc($percentage - var(--leptonic-grid-spacing));
-          //max-width: $percentage;
         }
       }
 
       @for $i from 0 to $-grid-columns {
-        .#{$-class-prefix}col-#{$tier-name}-offset-#{$i}.#{$-class-prefix}col-#{$tier-name}-offset-#{$i} {
-          // DS
-          @extend .#{$-class-prefix}col-#{$tier-name};
+        [#{$tier-name}-offset="#{$i}"] {
           margin-left: percentage(math.div($i, $-grid-columns));
         }
       }
@@ -297,25 +246,6 @@ $-gutter-compensation: 0;
       .#{$-class-prefix}col-flex-last-#{$tier-name} {
         @include flex-last;
       }
-    }
-  }
-
-  /*
-   * Extra small (no-tag)
-   */
-  @for $i from 1 through $-grid-columns {
-    .#{$-class-prefix}col-#{$i} {
-      @extend .#{$-class-prefix}col;
-      $percentage: percentage(math.div($i, $-grid-columns));
-      flex-basis: calc($percentage - var(--leptonic-grid-spacing));
-      //max-width: $percentage;
-    }
-  }
-
-  @for $i from 0 to $-grid-columns {
-    .#{$-class-prefix}col-offset-#{$i} {
-      @extend .#{$-class-prefix}col;
-      margin-left: percentage(math.div($i, $-grid-columns));
     }
   }
 }
