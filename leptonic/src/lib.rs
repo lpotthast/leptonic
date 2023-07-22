@@ -311,7 +311,7 @@ pub enum Size {
 impl Display for Size {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Size::Zero => f.write_str("0"),
+            Size::Zero => f.write_str("0px"), // Having a unit is relevant here. Using it inside a calc() functions would otherwise not work!
             Size::Px(px) => f.write_fmt(format_args!("{px}px")),
             Size::Em(em) => f.write_fmt(format_args!("{em}em")),
             Size::Rem(rem) => f.write_fmt(format_args!("{rem}rem")),
