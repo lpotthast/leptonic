@@ -38,8 +38,8 @@ job "leptonic-book" {
       }
 
       resources {
-        cpu    = 500
-        memory = 256
+        cpu    = 256
+        memory = 128
       }
 
       service {
