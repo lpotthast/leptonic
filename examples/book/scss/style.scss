@@ -249,3 +249,31 @@ body {
         }
     }
 }
+
+.err-404 {
+    margin: auto;
+    max-width: 60em;
+    margin-top: 2em;
+
+    .info {
+        margin: 1em;
+        #error {
+            font-size: 6em;
+            font-weight: bold;
+            margin: 0;
+            margin-bottom: 0.1em;
+        }
+        #whoops {
+            font-size: 3em;
+            font-weight: 500;
+            margin: 0;
+            margin-bottom: 1.5em;
+        }
+    }
+
+    #ferris {
+        height: 14em;
+        width: auto;
+        margin-top: 2em;
+    }
+}
