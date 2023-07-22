@@ -254,9 +254,9 @@ body {
     margin: auto;
     max-width: 60em;
     margin-top: 2em;
+    width: 100%;
 
     .info {
-        margin: 1em;
         #error {
             font-size: 6em;
             font-weight: bold;
@@ -267,7 +267,13 @@ body {
             font-size: 3em;
             font-weight: 500;
             margin: 0;
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
             margin-bottom: 1.5em;
+            text-align: center;
+        }
+        #back-btn {
+            font-size: 1.5em;
         }
     }
 
