@@ -13,7 +13,7 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
         <P>
             "We assume that you already have an app depending on "<Code inline=true>"leptos"</Code>" in version "<Code inline=true>"0.4.3"</Code>" or higher."
         </P>
-        
+
         <P>
             "Start by adding "<Code inline=true>"leptonic"</Code>", "<Code inline=true>"leptonic-theme"</Code>" and "<Code inline=true>"leptos-tiptap-build"</Code>" as dependencies of your app. "
             "The later ones are "<Code inline=true>"[build-dependencies]"</Code>" as they will only be used in a "<Code inline=true>"build.rs"</Code>" script which we define later."
@@ -39,6 +39,9 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
                 use std::io::Write;
 
                 pub fn main() {
+                    println!("cargo:rerun-if-changed=build.rs");
+                    println!("cargo:rerun-if-changed=Cargo.lock");
+
                     let root_dir: std::path::PathBuf = std::env::var("CARGO_MANIFEST_DIR").unwrap().into();
                     let generated_dir = root_dir.join("generated");
                     let js_dir = generated_dir.join("js");
@@ -72,7 +75,6 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
 
         <P>
             "The "<Code inline=true>"[watch]"</Code>" section is used to ignore changes in the \"./generated\" directory (which our build script writes to). When omitted, Trunk would recompile our app in an endless loop."<br />
-            "We use the "<Code inline=true>"[[hooks]]"</Code>" section to tell Trunk that a \"cargo check\" must be executed BEFORE building the application, as a check run will execute our build.rs file and thereby ensure that all required files for building the application are present."
         </P>
 
         <Code>
@@ -89,12 +91,6 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
                 address = "127.0.0.1"
                 port = 4001
                 open = false
-                no_autoreload = false
-
-                [[hooks]]
-                stage = "pre_build"
-                command = "cargo"
-                command_arguments = ["check"]
             "#)}
         </Code>
 

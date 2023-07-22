@@ -10,9 +10,3 @@ ignore = [
 address = "127.0.0.1"
 port = 4001
 open = false
-no_autoreload = false
-
-[[hooks]]
-stage = "pre_build"
-command = "cargo"
-command_arguments = ["check"]

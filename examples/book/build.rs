@@ -1,6 +1,9 @@
 use std::io::Write;
 
 pub fn main() {
+    println!("cargo:rerun-if-changed=build.rs");
+    println!("cargo:rerun-if-changed=Cargo.lock");
+
     let root: std::path::PathBuf = std::env::var("CARGO_MANIFEST_DIR").unwrap().into();
     let generated_dir = root.join("generated");
     let js_dir = generated_dir.join("js");
