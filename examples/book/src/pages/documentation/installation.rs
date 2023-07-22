@@ -11,49 +11,28 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
         </H1>
 
         <P>
-            "Start by adding both "<Code inline=true>"leptonic"</Code>", "<Code inline=true>"leptonic-theme"</Code>" and "<Code inline=true>"leptos-tiptap-build"</Code>" as dependencies of your app. "
-            "We will see later why the theme and tiptap dependencies should be optional."
+            "We assume that you already have an app depending on "<Code inline=true>"leptos"</Code>" in version "<Code inline=true>"0.4.3"</Code>" or higher."
+        </P>
+        
+        <P>
+            "Start by adding "<Code inline=true>"leptonic"</Code>", "<Code inline=true>"leptonic-theme"</Code>" and "<Code inline=true>"leptos-tiptap-build"</Code>" as dependencies of your app. "
+            "The later ones are "<Code inline=true>"[build-dependencies]"</Code>" as they will only be used in a "<Code inline=true>"build.rs"</Code>" script which we define later."
         </P>
 
         <Code>
             {indoc!(r#"
                 cargo add leptonic
-                cargo add --optional leptonic-theme
-                cargo add --optional leptos-tiptap-build
+                cargo add --build leptonic-theme
+                cargo add --build leptos-tiptap-build
             "#)}
         </Code>
 
         <P>
             "Leptonic comes with default styling in form of the "<Code inline=true>"leptonic-theme"</Code>" crate. "
             "In order to build your app with these styles, a build script is required. "
-            "Currently, Leptonic focuses on integration with client-side-rendering and building with Trunk. "
-            "When building our application with Trunk, the build.rs script should executed before the Trunk build runs. "
-            "For us to be able to explicitly run the build script, we define it as a [[bin]] target."
         </P>
 
-        <P>
-            "Add this to your Cargo.toml:"
-        </P>
-
-        <Code>
-            {indoc!(r#"
-                [[bin]]
-                name = "force-build"
-                path = "build.rs"
-                required-features = ["build_deps"]  # only needed for build-dependencies
-            "#)}
-        </Code>
-
-        <P>"Our build.rs script needs access to our previously added, optional dependencies. Let's define that at the end of our Cargo.toml:"</P>
-
-        <Code>
-            {indoc!(r#"
-                [features]
-                build_deps = ["leptonic-theme", "leptos-tiptap-build"]
-            "#)}
-        </Code>
-
-        <P>"Let's create the actual build.rs file"</P>
+        <P>"Let's create our "<Code inline=true>"build.rs"</Code>" file, generating our theme and copying required JS files."</P>
 
         <Code>
             {indoc!(r#"
@@ -86,9 +65,14 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
         </Code>
 
         <P>
-            "With the force-build target and build script in place, we can set up a custom Trunk.toml."<br />
-            "The [watch] section is used to ignore changes in the \"./generated\" directory. When omitted, Trunk would recompile our app in an endless loop!"<br />
-            "We use the [[hooks]] section to tell Trunk that \"force-build\" must be executed BEFORE building the application."
+            "Currently, Leptonic focuses on integration with client-side-rendering and building with Trunk. "
+            "When building our application with Trunk, the build.rs script should be executed before the Trunk build runs. "
+            "Let's set up a custom "<Code inline=true>"Trunk.toml"</Code>" file:"
+        </P>
+
+        <P>
+            "The "<Code inline=true>"[watch]"</Code>" section is used to ignore changes in the \"./generated\" directory (which our build script writes to). When omitted, Trunk would recompile our app in an endless loop."<br />
+            "We use the "<Code inline=true>"[[hooks]]"</Code>" section to tell Trunk that a \"cargo check\" must be executed BEFORE building the application, as a check run will execute our build.rs file and thereby ensure that all required files for building the application are present."
         </P>
 
         <Code>
@@ -110,11 +94,29 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
                 [[hooks]]
                 stage = "pre_build"
                 command = "cargo"
-                command_arguments = ["run", "--bin", "force-build", "--release", "--features", "build_deps"]
+                command_arguments = ["check"]
             "#)}
         </Code>
 
-        <P>"Make sure that you are using a reasonable index.html file like the following"</P>
+        <P>"The styling of our app must include the leptonic themes. Let's ensure that by adding the following line to our "<Code inline=true>"scss/style.scss"</Code>" file. This is the default location for a Trunk-based project. Create the file if you do not have it already."</P>
+
+        <Code>
+            {indoc!(r##"
+                @import "../generated/leptonic/leptonic-themes";
+            "##)}
+        </Code>
+
+        <P>"You can overwrite or add styles for a particular theme using a "<Code inline=true>"[theme=\"...\"]"</Code>" selector like so:"</P>
+
+        <Code>
+            {indoc!(r##"
+                [theme="light"] {
+                    --brand-color: #e66956;
+                }
+            "##)}
+        </Code>
+
+        <P>"Make sure that you are using a reasonable index.html file like the following. This should work out of the box when you followed the previous instructions."</P>
 
         <Code>
             {indoc!(r##"
