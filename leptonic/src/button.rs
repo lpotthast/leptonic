@@ -96,6 +96,7 @@ pub fn Button<F>(
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] variations: OptionalMaybeSignal<View>,
+    #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: OptionalMaybeSignal<String>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
@@ -141,6 +142,7 @@ where
 
     view! { cx,
         <button
+            id=id
             class=move || class.0.as_ref().map(|it| Cow::Owned(format!("{} leptonic-btn", it.get()))).unwrap_or(Cow::Borrowed("leptonic-btn"))
             class:has-variations=has_variations
             class:active=move || active.get()
