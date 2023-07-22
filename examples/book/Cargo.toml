@@ -6,12 +6,11 @@ build = "build.rs"
 
 [profile.release]
 opt-level = "z"
-lto = "thin"
+lto = "fat"
 debug = 0
 
 [dependencies]
 console_error_panic_hook = "0.1.7"
-console_log = "1.0.0"
 indoc = "2.0.1"
 leptonic = { path = "../../leptonic" }
 leptos = { version = "0.4.3", features = ["csr"] }
