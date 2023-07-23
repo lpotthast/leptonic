@@ -214,6 +214,81 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
         }
     };
 
+    let drawer_content = view! {cx,
+        <DrawerSection header=move |cx| view! {cx,
+            <Icon icon=BsIcon::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                <Link href=DocRoutes::Overview class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
+                <Link href=DocRoutes::Installation class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
+                <Link href=DocRoutes::Usage class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Usage"</Link>
+                <Link href=DocRoutes::Themes class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
+                <Link href=DocRoutes::Changelog class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
+            </Stack>
+        </DrawerSection>
+
+        <DrawerSection header=move |cx| view! {cx,
+            <Icon icon=BsIcon::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                <Link href=DocRoutes::Stack class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
+                <Link href=DocRoutes::Grid class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
+                <Link href=DocRoutes::Separator class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
+                <Link href=DocRoutes::Skeleton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Skeleton"</Link>
+                <Link href=DocRoutes::AppBar class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
+                <Link href=DocRoutes::Drawer class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
+                <Link href=DocRoutes::Tab class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
+                <Link href=DocRoutes::Collapsible class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
+            </Stack>
+        </DrawerSection>
+
+        <DrawerSection header=move |cx| view! {cx,
+            <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                <Link href=DocRoutes::Button class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
+                <Link href=DocRoutes::Input class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Input"</Link>
+                <Link href=DocRoutes::TiptapEditor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tiptap editor"</Link>
+                <Link href=DocRoutes::DateTime class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Date & Time"</Link>
+                <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
+                <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
+                <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
+            </Stack>
+        </DrawerSection>
+
+        <DrawerSection header=move |cx| view! {cx,
+            <Icon icon=BsIcon::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                <Link href=DocRoutes::Alert class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
+                <Link href=DocRoutes::Toast class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
+                <Link href=DocRoutes::Modal class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
+                <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
+                <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
+            </Stack>
+        </DrawerSection>
+
+        <DrawerSection header=move |cx| view! {cx,
+            <Icon icon=BsIcon::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
+                <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
+                <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
+                <Link href=DocRoutes::Anchor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Anchor"</Link>
+                <Link href=DocRoutes::Callback class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Callback"</Link>
+            </Stack>
+        </DrawerSection>
+
+        <DrawerSection header=move |cx| view! {cx,
+            <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                <Link href=DocRoutes::Transition class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Transitions"</Link>
+            </Stack>
+        </DrawerSection>
+    };
+
     view! { cx,
         <Box id="doc-layout">
             <Drawer
@@ -223,85 +298,11 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                 style=format!("top: {APP_BAR_HEIGHT}")
             >
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
-
-                    <DrawerSection header=move |cx| view! {cx,
-                        <Icon icon=BsIcon::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
-                    }>
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                            <Link href=DocRoutes::Overview class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
-                            <Link href=DocRoutes::Installation class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
-                            <Link href=DocRoutes::Usage class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Usage"</Link>
-                            <Link href=DocRoutes::Themes class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
-                            <Link href=DocRoutes::Changelog class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
-                        </Stack>
-                    </DrawerSection>
-
-                    <DrawerSection header=move |cx| view! {cx,
-                        <Icon icon=BsIcon::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
-                    }>
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                            <Link href=DocRoutes::Stack class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
-                            <Link href=DocRoutes::Grid class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
-                            <Link href=DocRoutes::Separator class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
-                            <Link href=DocRoutes::Skeleton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Skeleton"</Link>
-                            <Link href=DocRoutes::AppBar class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
-                            <Link href=DocRoutes::Drawer class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
-                            <Link href=DocRoutes::Tab class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
-                            <Link href=DocRoutes::Collapsible class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
-                        </Stack>
-                    </DrawerSection>
-
-                    <DrawerSection header=move |cx| view! {cx,
-                        <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
-                    }>
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                            <Link href=DocRoutes::Button class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
-                            <Link href=DocRoutes::Input class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Input"</Link>
-                            <Link href=DocRoutes::TiptapEditor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tiptap editor"</Link>
-                            <Link href=DocRoutes::DateTime class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Date & Time"</Link>
-                            <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
-                            <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
-                            <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
-                        </Stack>
-                    </DrawerSection>
-
-                    <DrawerSection header=move |cx| view! {cx,
-                        <Icon icon=BsIcon::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
-                    }>
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                            <Link href=DocRoutes::Alert class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
-                            <Link href=DocRoutes::Toast class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
-                            <Link href=DocRoutes::Modal class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
-                            <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
-                            <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
-                        </Stack>
-                    </DrawerSection>
-
-                    <DrawerSection header=move |cx| view! {cx,
-                        <Icon icon=BsIcon::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
-                    }>
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                            <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
-                            <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
-                            <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
-                            <Link href=DocRoutes::Anchor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Anchor"</Link>
-                            <Link href=DocRoutes::Callback class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Callback"</Link>
-                        </Stack>
-                    </DrawerSection>
-
-                    <DrawerSection header=move |cx| view! {cx,
-                        <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
-                    }>
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                            <Link href=DocRoutes::Transition class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Transitions"</Link>
-                        </Stack>
-                    </DrawerSection>
+                    { drawer_content }
                 </Stack>
             </Drawer>
 
             <Box id="doc-content">
-
-
                 // <Outlet/> will show nested child routes.
                 <Outlet/>
             </Box>
