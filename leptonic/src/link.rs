@@ -33,26 +33,15 @@ pub fn Link<H>(
 where
     H: ToHref + 'static,
 {
-    let a = leptos_router::A::<H>(
-        cx,
-        AProps::<H> {
-            href,
-            exact,
-            state,
-            replace,
-            class: None,
-            active_class: None,
-            id: None,
-            children,
-        },
-    )
-    .into_view(cx);
     view! { cx,
         <leptonic-link id=id class=class style=style>
-            { a }
+            <A href=href exact=exact state=state.unwrap_or_default() replace=replace>
+                { children(cx) }
+            </A>
         </leptonic-link>
     }
 }
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LinkExtTarget {
     Blank,
@@ -95,7 +84,7 @@ where
     view! { cx,
         <leptonic-link id=id class=class style=style>
             <a
-                href={ move || href.to_href()() }
+                href=href.to_href()()
                 target=format!("{target}")
                 rel={ match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }
             >
