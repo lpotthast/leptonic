@@ -9,6 +9,7 @@ pub fn Icon(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] aria_label: Option<AttributeValue>,
     #[prop(optional)] margin: Option<Margin>,
 ) -> impl IntoView {
     let ico = leptos_icons::Icon(
@@ -24,7 +25,7 @@ pub fn Icon(
     .into_view(cx);
 
     view! { cx,
-        <leptonic-icon id=id class=class style=style style=("--margin", move || margin.map(|it| format!("{it}")))>
+        <leptonic-icon id=id class=class aria_label=aria_label style=style style=("--margin", move || margin.map(|it| format!("{it}")))>
             { ico }
         </leptonic-icon>
     }
