@@ -184,27 +184,24 @@ pub fn Layout(cx: Scope) -> impl IntoView {
         ),
     ];
 
+    let logo = move || view! {cx,
+        <Link href="">
+            <img src="/res/leptonic.svg" id="logo" alt="Leptonic logo"/>
+        </Link>
+    };
+
     view! { cx,
         <AppBar id="app-bar" height=APP_BAR_HEIGHT>
             <div id="app-bar-content">
                 <Stack id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
                     { move || match (is_doc.get(), is_small.get()) {
-                        (false, true) => view! {cx,
-                            <Link href="">
-                                <img src="/res/leptonic.svg" id="logo"/>
-                            </Link>
-                        }.into_view(cx),
+                        (false, true) => logo().into_view(cx),
                         (true, true) => view! {cx,
                             <Icon id="mobile-menu-trigger" icon=BsIcon::BsList on:click=move |_| ctx.toggle_doc_drawer()/>
-                            <Link href="">
-                                <img src="/res/leptonic.svg" id="logo"/>
-                            </Link>
+                            { logo }
                         }.into_view(cx),
                         (_, false) => view! {cx,
-                            <Link href="">
-                                <img src="/res/leptonic.svg" id="logo"/>
-                            </Link>
-
+                            { logo }
                             <Link href=AppRoutes::Doc>
                                 <H3 style="margin: 0 0 0 0.5em">
                                     "Docs"
@@ -247,7 +244,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                             <Link href=DocRoutes::Changelog>"v0.1"</Link>
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
-                                <Icon id="github-icon" icon=BsIcon::BsGithub/>
+                                <Icon id="github-icon" icon=BsIcon::BsGithub aria_label="GitHub icon"/>
                             </LinkExt>
 
                             <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>

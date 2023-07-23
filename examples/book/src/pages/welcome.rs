@@ -7,7 +7,7 @@ use crate::pages::documentation::doc_root::DocRoutes;
 pub fn PageWelcome(cx: Scope) -> impl IntoView {
     view! { cx,
         <Box id="welcome-page">
-            <img src="/res/leptonic.svg" id="big-logo"/>
+            <img src="/res/leptonic.svg" id="big-logo" alt="Big Leptonic logo"/>
 
             <H1 id="slogan">
                 "LEPTONIC"
