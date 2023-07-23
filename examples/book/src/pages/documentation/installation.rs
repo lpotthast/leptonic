@@ -2,6 +2,8 @@ use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
 
+use crate::pages::documentation::doc_root::DocRoutes;
+
 #[component]
 pub fn PageInstallation(cx: Scope) -> impl IntoView {
     view! { cx,
@@ -69,7 +71,6 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
 
         <P>
             "Currently, Leptonic focuses on integration with client-side-rendering and building with Trunk. "
-            "When building our application with Trunk, the build.rs script should be executed before the Trunk build runs. "
             "Let's set up a custom "<Code inline=true>"Trunk.toml"</Code>" file:"
         </P>
 
@@ -144,5 +145,7 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
                 </html>
             "##)}
         </Code>
+
+        <P>"You should now be ready to use leptonic components in your leptos app. Continue reading the "<Link href=DocRoutes::Usage>"Usage"</Link>" section, to see how to use your first component."</P>
     }
 }
