@@ -65,8 +65,8 @@ book-build:
       - examples/book/dist/
   script:
     - cd examples/book
-    # This is only required because the build.rs file is not run when only calling `trunk build`... This might change in the future.
-    - cargo build --release
+    # This is only required to run the build.rs file once before calling `trunk build`.
+    - cargo check
     - trunk build --release --public-url "/"
 
 book-test:
