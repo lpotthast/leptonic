@@ -3,12 +3,13 @@ use std::rc::Rc;
 use leptos::*;
 use leptos_use::use_event_listener;
 use wasm_bindgen::{prelude::Closure, JsCast};
-use web_sys::{KeyboardEvent, MouseEvent};
+use web_sys::{Event, KeyboardEvent, MouseEvent};
 
 use crate::{
     contexts::{
         global_click_event::GlobalClickEvent, global_keyboard_event::GlobalKeyboardEvent,
-        global_mouseup_event::GlobalMouseupEvent,
+        global_mouseup_event::GlobalMouseupEvent, global_resize_event::GlobalResizeEvent,
+        global_scroll_event::GlobalScrollEvent,
     },
     prelude::*,
 };
@@ -34,6 +35,7 @@ where
         tracing::warn!("The <Root> component must only be used once! Detected that <Root> was rendered when it was already rendered higher up the stack. Remove this usage.");
     }
 
+    let win = window();
     let doc = document();
 
     // KEY DOWN
@@ -74,6 +76,34 @@ where
             Rc::new(Box::new(onmouseup)),
             g_mouseup_event,
             set_g_mouseup_event,
+        ),
+    );
+
+    // RESIZE
+    let (g_resize_event, set_g_resize_event) = create_signal::<Option<Event>>(cx, None);
+    let onresize =
+        Closure::wrap(Box::new(move |e| set_g_resize_event.set(Some(e))) as Box<dyn FnMut(Event)>);
+    win.set_onresize(Some(onresize.as_ref().unchecked_ref()));
+    provide_context(
+        cx,
+        GlobalResizeEvent::new(
+            Rc::new(Box::new(onresize)),
+            g_resize_event,
+            set_g_resize_event,
+        ),
+    );
+
+    // SCROLL
+    let (g_scroll_event, set_g_scroll_event) = create_signal::<Option<Event>>(cx, None);
+    let onscroll =
+        Closure::wrap(Box::new(move |e| set_g_scroll_event.set(Some(e))) as Box<dyn FnMut(Event)>);
+    doc.set_onscroll(Some(onscroll.as_ref().unchecked_ref()));
+    provide_context(
+        cx,
+        GlobalScrollEvent::new(
+            Rc::new(Box::new(onscroll)),
+            g_scroll_event,
+            set_g_scroll_event,
         ),
     );
 

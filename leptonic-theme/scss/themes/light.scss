@@ -250,6 +250,23 @@
     --skeleton-padding: 0.2em;
     --skeleton-cursor: progress;
 
+    // Slider
+    --slider-margin: 1em 0 1em 0;
+    --slider-bar-height: 0.35em;
+    --slider-bar-background-color: #e0b9b9;
+    --slider-range-height: 0.5em;
+    --slider-knob-size: 1.5em;
+    --slider-knob-halo-size: 2.8em;
+    --slider-knob-halo-size-while-dragged: 3.6em;
+    --slider-knob-halo-opacity: .2;
+    --slider-knob-transition-speed: .1s;
+    --slider-knob-box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px;
+    --slider-mark-size: 2px;
+    --slider-mark-color: #c78585;
+    --slider-mark-color-in-range: #ececec;
+    --slider-mark-title-color: #a5a5a5;
+    --slider-mark-title-color-in-range: var(--std-text-dark);
+
     // Tab selector
     --tab-selector-background-color: #d3d3d3;
     --tab-selector-text-color: black;

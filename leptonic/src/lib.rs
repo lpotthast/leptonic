@@ -177,6 +177,9 @@ pub mod prelude {
     pub use super::slider::RangeSlider;
     pub use super::slider::Slider;
     pub use super::slider::SliderVariant;
+    pub use super::slider::SliderMarks;
+    pub use super::slider::SliderMark;
+    pub use super::slider::SliderMarkValue;
     pub use super::stack::Stack;
     pub use super::stack::StackOrientation;
     pub use super::tab::Tab;
