@@ -254,7 +254,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
             </div>
         </AppBar>
 
-        <Box id="content" style=format!("margin-top: {APP_BAR_HEIGHT}; height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT}); max-height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT});")>
+        <Box id="content" style=format!("height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT}); max-height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT});")>
             // <Outlet/> will show nested child routes.
             <Outlet/>
 

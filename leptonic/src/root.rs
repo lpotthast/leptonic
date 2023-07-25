@@ -165,7 +165,7 @@ where
         <ThemeProvider theme=create_signal_ls(cx, "theme", default_theme)>
             <ToastRoot>
                 <ModalRoot>
-                    <Box style="min-height: 100%; min-width: 100%; display: flex; flex-direction: row;">
+                    <Box style="min-height: 100%; min-width: 100%; display: flex; flex-direction: column;">
                         { children(cx) }
                     </Box>
                 </ModalRoot>
