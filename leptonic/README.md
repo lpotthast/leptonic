@@ -7,3 +7,7 @@ Visit [leptonic.dev](https://leptonic.dev) for installation instructions, compon
 Version `0.1` will be released soon. Until then, use leptonic with
 
     leptonic = { git = "https://github.com/lpotthast/leptonic" }
+
+## MSRV
+
+The minimum supported rust version is `1.70.0`
