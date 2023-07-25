@@ -63,8 +63,8 @@ pub fn Toggle<S>(
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(optional)] id: Option<Uuid>,
     /// Sets the `class` attribute on the underlying `<Toggle>` tag, making it easier to style.
-    #[prop(into, optional)]
-    class: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(optional)] size: ToggleSize,
     #[prop(optional)] variant: ToggleVariant,
     #[prop(into, optional)] icons: Option<ToggleIcons>,
@@ -80,7 +80,7 @@ where
     };
 
     view! { cx,
-        <div class=class>
+        <div class=class style=style>
             <label
                 id=id.to_string()
                 class=format!("leptonic-toggle {}", size)

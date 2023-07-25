@@ -10,7 +10,7 @@ pub fn TiptapEditor<C>(
     cx: Scope,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] disabled: bool,
+    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into)] value: Signal<String>,
     set_value: C,
 ) -> impl IntoView
@@ -25,7 +25,7 @@ where
 
     view! { cx,
         <leptonic-tiptap-editor id=id class=class>
-            { match disabled {
+            { move || match disabled.get() {
                 false => view! {cx,
                     <leptonic-tiptap-menu>
                         { move || selection_state.with(|state| view! {cx,
@@ -110,7 +110,10 @@ where
             <TiptapInstance
                 id=instance_id.to_string()
                 msg=msg
-                disabled=disabled
+                disabled=match disabled.0 {
+                    Some(sig) => sig,
+                    None => MaybeSignal::Static(false),
+                }
                 value=value
                 set_value=set_value
                 on_selection_change=move |state| set_selection_state.set(state)

@@ -92,6 +92,7 @@ where
             disabled: OptionalMaybeSignal(None),
             id: None,
             class: None,
+            style: None,
             size: ToggleSize::default(),
             variant,
             icons: Some(ToggleIcons {
