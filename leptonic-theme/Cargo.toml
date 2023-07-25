@@ -1,8 +1,8 @@
 [package]
 name = "leptonic-theme"
-version = "0.0.1"
+version = "0.1.0"
 edition = "2021"
-rust-version = "1.56"
+rust-version = "1.60"
 authors = ["Lukas Potthast <privat@lukas-potthast.de>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
