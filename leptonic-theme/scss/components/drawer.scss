@@ -3,13 +3,16 @@ leptonic-drawer {
     flex-direction: column;
     width: 17em;
     max-height: 100%;
-    margin: auto auto auto 0;
     background-color: var(--drawer-background-color);
     box-shadow: var(--drawer-box-shadow);
     z-index: 999;
 
     transform: translateX(0%);
     -webkit-transform: translateX(0%);
+
+    &[side="left"] {
+        margin: auto auto auto 0;
+    }
 
     &[side="right"] {
         margin: auto 0 auto auto;
@@ -21,8 +24,9 @@ leptonic-drawer {
     }
 
     &.showing {
-        --animation: slide-in-left;
-
+        &[side="left"] {
+            --animation: slide-in-left;
+        }
         &[side="right"] {
             --animation: slide-in-right;
         }
@@ -34,8 +38,9 @@ leptonic-drawer {
     }
 
     &.hiding {
-        --animation: slide-out-left;
-
+        &[side="left"] {
+            --animation: slide-out-left;
+        }
         &[side="right"] {
             --animation: slide-out-right;
         }

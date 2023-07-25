@@ -28,7 +28,7 @@ enum DrawerAnimationState {
 #[component]
 pub fn Drawer(
     cx: Scope,
-    #[prop(into, optional)] side: DrawerSide,
+    side: DrawerSide,
     #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,

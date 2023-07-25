@@ -29,6 +29,8 @@ leptos_icons = { version = "0.0.15", features = [
     "BsArrowsMove",
     "BsVolumeDownFill",
     "BsVolumeUpFill",
+    "BsBell",
+    "BsPower",
 ] }
 leptos-use = "0.6.0"
 leptos_meta = { version = "0.4.3", features = ["csr"] }

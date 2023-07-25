@@ -10,65 +10,43 @@ pub fn PageAppBar(cx: Scope) -> impl IntoView {
     view! { cx,
         <H1>"App Bar"</H1>
 
-        <P>"The "<Code inline=true>"<AppBar>"</Code>" component sticks to the top of the viewport and provides a convenient entrypoint for many layouts."</P>
+        <P>"The "<Code inline=true>"<AppBar>"</Code>" component sticks to the top of its parent and provides a convenient entrypoint for many app layouts."</P>
 
-        <div style="position: relative; border: 4px solid gray; width: 100%; height: 20em; overflow: auto;">
-            <AppBar height=app_bar_height style="z-index: 1;">
-                <Link href="" style="margin-left: 1em">
-                    <H3>"Leptonic  -  v0.1"</H3>
-                </Link>
+        <Box style="position: relative; border: 4px solid gray; width: 100%; height: 20em; overflow: auto;">
+            <AppBar height=app_bar_height style="z-index: 1; background: var(--brand-color); color: white;">
+                <H3 style="margin-left: 1em; color: white;">"Leptonic"</H3>
                 <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
-                    <Icon icon=BsIcon::BsGithub></Icon>
-                    <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
+                    <Icon icon=BsIcon::BsBell></Icon>
+                    <Icon icon=BsIcon::BsPower></Icon>
                 </Stack>
             </AppBar>
 
-            <div style="padding: 0.5em;">
+            <Box style="padding: 0.5em;">
                 <P>"Scroll ↓"</P>
                 <Stack spacing=Size::Em(0.5)>
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
-                    <Skeleton height=Size::Em(3.0) />
+                    {(0..10).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
                 </Stack>
-            </div>
-        </div>
+            </Box>
+        </Box>
 
         <Code>
             {indoc!(r#"
-                <div style="position: relative; border: 4px solid gray; width: 100%; height: 20em; overflow: auto;">
-                    <AppBar height=app_bar_height style="z-index: 1;">
-                        <Link href="" style="margin-left: 1em">
-                            <H3>"Leptonic  -  v0.1"</H3>
-                        </Link>
+                <Box style="position: relative; border: 4px solid gray; width: 100%; height: 20em; overflow: auto;">
+                    <AppBar height=app_bar_height style="z-index: 1; background: var(--brand-color); color: white;">
+                        <H3 style="margin-left: 1em; color: white;">"Leptonic"</H3>
                         <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
                             <Icon icon=BsIcon::BsGithub></Icon>
-                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
+                            <Icon icon=BsIcon::BsPower></Icon>
                         </Stack>
                     </AppBar>
 
-                    <div style="padding: 0.5em;">
+                    <Box style="padding: 0.5em;">
                         <P>"Scroll ↓"</P>
                         <Stack spacing=Size::Em(0.5)>
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
-                            <Skeleton height=Size::Em(3.0) />
+                            {(0..10).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
                         </Stack>
-                    </div>
-                </div>
+                    </Box>
+                </Box>
             "#)}
         </Code>
 

@@ -1,79 +1,105 @@
+use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::BsIcon;
-
-use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
 pub fn PageDrawer(cx: Scope) -> impl IntoView {
+    let (shown, set_shown) = create_signal(cx, true);
+    let (shown2, set_shown2) = create_signal(cx, true);
+
     view! { cx,
         <H1>"Drawer"</H1>
 
-        <Drawer>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
-                <Collapsible
-                    open=true
-                    header=view! {cx,
-                        <Icon icon=BsIcon::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
-                    }
-                    body=view! {cx,
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu nested dense">
-                            <Link href=DocRoutes::Overview class="item">"Overview"</Link>
-                            <Link href=DocRoutes::Installation class="item">"Installation"</Link>
-                            <Link href=DocRoutes::Usage class="item">"Usage"</Link>
-                        </Stack>
-                    }
-                />
+        <P>
+            "The "<Code inline=true>"<Drawer>"</Code>" component is intended to be used as a side menu. It is animated to conditionally move in and out of visibility."
+            "The required "<Code inline=true>"side"</Code>" prop controls to which side the drawer should move when hiding."
+        </P>
 
-                <Collapsible
-                    open=true
-                    header=view! {cx,
-                        <Icon icon=BsIcon::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
-                    }
-                    body=view! {cx,
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu nested dense">
-                            <Link href=DocRoutes::Stack class="item">"Stack"</Link>
-                            <Link href=DocRoutes::Grid class="item">"Grid"</Link>
-                        </Stack>
-                    }
-                />
+        <Toggle state=shown on_toggle=move |v| set_shown.set(v) />
 
-                <Collapsible
-                    open=true
-                    header=view! {cx,
-                        <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Components"
-                    }
-                    body=view! {cx,
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu nested dense">
-                            <Link href=DocRoutes::Button class="item">"Button"</Link>
-                            <Link href=DocRoutes::Tab class="item">"Tabs"</Link>
-                            <Link href=DocRoutes::Input class="item">"Inputs"</Link>
-                            <Link href=DocRoutes::DateTime class="item">"Date & Time"</Link>
-                            <Link href=DocRoutes::Collapsible class="item">"Collapsible"</Link>
-                            <Link href=DocRoutes::AppBar class="item">"App Bar"</Link>
-                            <Link href=DocRoutes::Drawer class="item">"Drawer"</Link>
-                            <Link href=DocRoutes::Toast class="item">"Toast"</Link>
-                            <Link href=DocRoutes::Modal class="item">"Modal"</Link>
-                            <Link href=DocRoutes::Alert class="item">"Alert"</Link>
-                            <Link href=DocRoutes::Typography class="item">"Typography"</Link>
-                            <Link href=DocRoutes::Icon class="item">"Icon"</Link>
-                            <Link href=DocRoutes::Progress class="item">"Progress"</Link>
-                        </Stack>
-                    }
-                />
+        <Box style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
+            <Drawer side=DrawerSide::Left shown=shown style="overflow-y: scroll; padding: 0.5em; background-color: var(--brand-color); border-right: 1px solid gray;">
+                <Stack spacing=Size::Em(0.5)>
+                    {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                </Stack>
+            </Drawer>
+            <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
+                <P>"Scroll ↓"</P>
+                <Stack spacing=Size::Em(0.5)>
+                    {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                </Stack>
+            </Box>
+        </Box>
 
-                <Collapsible
-                    open=true
-                    header=view! {cx,
-                        <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
-                    }
-                    body=view! {cx,
-                        <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu nested dense">
-                            <Link href=DocRoutes::Transition class="item">"Transitions"</Link>
+        <Code>
+            {indoc!(r#"
+                <Box style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
+                    <Drawer side=DrawerSide::Left shown=shown style="overflow-y: scroll; padding: 0.5em; background-color: var(--brand-color); border-right: 1px solid gray;">
+                        <Stack spacing=Size::Em(0.5)>
+                            {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
                         </Stack>
-                    }
-                />
-            </Stack>
-        </Drawer>
+                    </Drawer>
+                    <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
+                        <P>"Scroll ↓"</P>
+                        <Stack spacing=Size::Em(0.5)>
+                            {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                        </Stack>
+                    </Box>
+                </Box>
+            "#)}
+        </Code>
+
+        <H2>"Layout shifts"</H2>
+
+        <P>
+            "To avoid layout shifts, you may declare the drawer as absolutely positioned to let it overlay your content when shown. "
+            "This is especially useful when the menu is only animated on user action on small / mobile screens and fills the whole width of the viewport when shown. "
+            "When viewing this documentation on a small device, the open- and closeable main and documentation menus are created this way."
+        </P>
+
+        <Toggle state=shown2 on_toggle=move |v| set_shown2.set(v) />
+
+        <Box style="position: relative; display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
+            <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
+                <P>"Scroll ↓"</P>
+                <Stack spacing=Size::Em(0.5)>
+                    {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                </Stack>
+            </Box>
+            <Drawer side=DrawerSide::Right shown=shown2 style="padding: 0.5em; height: 19.5em; overflow: scroll; position: absolute; top: 0; right: 0; background-color: var(--brand-color); border-left: 1px solid gray;">
+                <Stack spacing=Size::Em(0.5)>
+                    {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                </Stack>
+            </Drawer>
+        </Box>
+
+        <Code>
+            {indoc!(r#"
+                <Box style="position: relative; display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
+                    <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
+                        <P>"Scroll ↓"</P>
+                        <Stack spacing=Size::Em(0.5)>
+                            {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                        </Stack>
+                    </Box>
+                    <Drawer side=DrawerSide::Right shown=shown2 style="padding: 0.5em; height: 19.5em; overflow: scroll; position: absolute; top: 0; right: 0; background-color: var(--brand-color); border-left: 1px solid gray;">
+                        <Stack spacing=Size::Em(0.5)>
+                            {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                        </Stack>
+                    </Drawer>
+                </Box>
+            "#)}
+        </Code>
+
+        <H2>"Styling"</H2>
+
+        <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+
+        <Code>
+            {indoc!(r#"
+                --drawer-background-color
+                --drawer-box-shadow
+            "#)}
+        </Code>
     }
 }

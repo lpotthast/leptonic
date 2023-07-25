@@ -292,6 +292,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
     view! { cx,
         <Box id="doc-layout">
             <Drawer
+                side=DrawerSide::Left
                 id="doc-drawer"
                 shown=Signal::derive(cx, move || !app_layout_context.doc_drawer_closed.get())
                 class=drawer_class
