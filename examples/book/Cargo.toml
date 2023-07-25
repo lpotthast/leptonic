@@ -30,7 +30,7 @@ leptos_icons = { version = "0.0.15", features = [
     "BsVolumeDownFill",
     "BsVolumeUpFill",
 ] }
-leptos-use = "0.5.0"
+leptos-use = "0.6.0"
 leptos_meta = { version = "0.4.3", features = ["csr"] }
 leptos_router = { version = "0.4.3", features = ["csr"] }
 serde = "1.0.171"
