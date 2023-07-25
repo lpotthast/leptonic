@@ -206,6 +206,9 @@
     --modal-border-radius: 0.4em;
     --modal-box-shadow: 10px 10px 22px -10px rgba(0, 0, 0, 0.55);
 
+    // Popover
+    --popover-content-background-color: rgba(187, 187, 187, 0.51);
+
     // Progress bar
     --progress-bar-height: 1.25em;
     --progress-bar-border-radius: 0.15em;
@@ -251,7 +254,7 @@
     --skeleton-cursor: progress;
 
     // Slider
-    --slider-margin: 1em 0 1em 0;
+    --slider-margin: 2em 0 2em 0;
     --slider-bar-height: 0.35em;
     --slider-bar-background-color: #e0b9b9;
     --slider-range-height: 0.5em;

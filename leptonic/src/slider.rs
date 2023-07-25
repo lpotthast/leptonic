@@ -3,7 +3,10 @@ use std::borrow::Cow;
 use leptos::*;
 use leptos_use::{use_mouse, UseMouseReturn};
 
-use crate::contexts::global_mouseup_event::GlobalMouseupEvent;
+use crate::{
+    contexts::global_mouseup_event::GlobalMouseupEvent,
+    prelude::{Callable, Callback, Popover},
+};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SliderVariant {
@@ -60,6 +63,7 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
     range: Memo<f64>,
     in_range: F,
     marks: SliderMarks,
+    value_display: Option<Callback<f64, String>>,
 ) -> Signal<Vec<Mark>> {
     match marks {
         SliderMarks::None => Signal::derive(cx, move || vec![]),
@@ -85,7 +89,10 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                     percentage: percentage_in_range(min, max, current),
                     in_range: in_range(current),
                     name: match create_names {
-                        true => Some(Cow::Owned(format!("{current:.0}"))),
+                        true => Some(Cow::Owned(match value_display {
+                            Some(callback) => callback.call(current),
+                            None => format!("{current}"),
+                        })),
                         false => None,
                     },
                 });
@@ -167,6 +174,7 @@ pub fn Slider<S>(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView
 where
     S: Fn(f64) + 'static,
@@ -214,6 +222,7 @@ where
             false => Signal::derive(cx, move || v >= value.get()),
         },
         marks,
+        value_display,
     );
 
     view! {cx,
@@ -246,12 +255,25 @@ where
                 <div node_ref=bar_el class="bar">
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
-                        <div class="knob" class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get()></div>
+                        <div class="knob" class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get()>
+                            <Popover>
+                                {
+                                    move || {
+                                        let value = value.get();
+                                        match value_display {
+                                            Some(callback) => callback.call(value) ,
+                                            None => format!("{value}"),
+                                        }
+                                    }
+                                }
+                            </Popover>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <Marks marks=marks/>
+
         </leptonic-slider>
     }
 }
@@ -273,6 +295,7 @@ pub fn RangeSlider<Sa, Sb>(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView
 where
     Sa: Fn(f64) + 'static,
@@ -347,6 +370,7 @@ where
             false => Signal::derive(cx, move || v <= value_a.get() && v >= value_b.get()),
         },
         marks,
+        value_display,
     );
 
     view! {cx,
@@ -405,11 +429,35 @@ where
             <div class="bar-wrapper">
                 <div node_ref=bar_el class="bar">
                     <div class="knob-wrapper">
-                        <div class="knob" class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get()></div>
+                        <div class="knob" class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get()>
+                            <Popover>
+                                {
+                                    move || {
+                                        let value = value_a.get();
+                                        match value_display {
+                                            Some(callback) => callback.call(value) ,
+                                            None => format!("{value}"),
+                                        }
+                                    }
+                                }
+                            </Popover>
+                        </div>
                     </div>
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
-                        <div class="knob" class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get()></div>
+                        <div class="knob" class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get()>
+                            <Popover>
+                                {
+                                    move || {
+                                        let value = value_b.get();
+                                        match value_display {
+                                            Some(callback) => callback.call(value) ,
+                                            None => format!("{value}"),
+                                        }
+                                    }
+                                }
+                            </Popover>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -22,6 +22,7 @@ pub mod icon;
 pub mod input;
 pub mod link;
 pub mod modal;
+pub mod popover;
 pub mod progress_bar;
 pub mod quicksearch;
 pub mod root;
@@ -161,6 +162,7 @@ pub mod prelude {
     pub use super::modal::ModalHeader;
     pub use super::modal::ModalRoot;
     pub use super::modal::ModalTitle;
+    pub use super::popover::Popover;
     pub use super::progress_bar::ProgressBar;
     pub use super::quicksearch::Quicksearch;
     pub use super::quicksearch::QuicksearchOption;
@@ -176,10 +178,10 @@ pub mod prelude {
     pub use super::skeleton::Skeleton;
     pub use super::slider::RangeSlider;
     pub use super::slider::Slider;
-    pub use super::slider::SliderVariant;
-    pub use super::slider::SliderMarks;
     pub use super::slider::SliderMark;
     pub use super::slider::SliderMarkValue;
+    pub use super::slider::SliderMarks;
+    pub use super::slider::SliderVariant;
     pub use super::stack::Stack;
     pub use super::stack::StackOrientation;
     pub use super::tab::Tab;

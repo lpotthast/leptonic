@@ -25,38 +25,33 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <P>"Value: "{move || value1.get()}</P>
-
-        <Slider min=1.0 max=10.0 step=1.0 marks=SliderMarks::Automatic { create_names: false } value=value1 set_value=move |v| set_value1.set(v) />
+        <Slider min=1.0 max=10.0 step=1.0 marks=SliderMarks::Automatic { create_names: false } value=value1 set_value=move |v| set_value1.set(v) value_display=create_callback(cx, move |v| format!("{v:.0}"))/>
 
         <H2>"With icons"</H2>
 
         <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
             <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
-            <Slider min=0.0 max=1.0 step=0.0001 value=value5 set_value=move |v| set_value5.set(v) style="width: 10em"/>
+            <Slider min=0.0 max=1.0 step=0.0001 value=value5 set_value=move |v| set_value5.set(v) style="width: 10em"
+                value_display=create_callback(cx, move |v| format!("{:.0}%", v * 100.0))/>
             <Icon icon=BsIcon::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
         </Stack>
 
-        <P>"Value: "{move || format!("{:.1}", value2.get())}</P>
-
-        <Slider value=value2 set_value=move |v| set_value2.set(v) min=2.0 max=8.0 step=0.4 />
+        <Slider value=value2 set_value=move |v| set_value2.set(v) min=2.0 max=8.0 step=0.4
+            marks=SliderMarks::Automatic { create_names: false }
+            value_display=create_callback(cx, move |v| format!("{v:.1}"))/>
 
         <P>"You can also use a positive value for the "<Code inline=true>"min"</Code>" prop, and a negative value for the "<Code inline=true>"max"</Code>" prop."</P>
 
-        <P>"Value: "{move || value3.get()}</P>
-
-        <Slider value=value3 set_value=move |v| set_value3.set(v) min=9.0 max=-9.0 step=1.0 />
+        <Slider value=value3 set_value=move |v| set_value3.set(v) min=9.0 max=-9.0 step=1.0
+            marks=SliderMarks::Automatic { create_names: false }
+            value_display=create_callback(cx, move |v| format!("{v:.0}")) />
 
         <P>"Use a small stepping value to achieve a smooth slider."</P>
 
-        <P>"Value: "{move || format!("{:.4}", value4.get())}</P>
-
-        <Slider value=value4 set_value=move |v| set_value4.set(v) min=0.0 max=1.0 step=0.0001 />
+        <Slider value=value4 set_value=move |v| set_value4.set(v) min=0.0 max=1.0 step=0.0001
+            value_display=create_callback(cx, move |v| format!("{v:.4}")) />
 
         <H2>"Range sliders"</H2>
-
-        <P>"Value A: "{move || format!("{:.4}", range_a.get())}</P>
-        <P>"Value B: "{move || format!("{:.4}", range_b.get())}</P>
 
         <RangeSlider
             value_a=range_a
@@ -66,6 +61,31 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
             min=0.0
             max=1.0
             step=0.0001
+            value_display=create_callback(cx, move |v| format!("{v:.4}"))
         />
+
+        <H2>"Styling"</H2>
+
+        <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+
+        <Code>
+            {indoc!(r#"
+                --slider-margin
+                --slider-bar-height
+                --slider-bar-background-color
+                --slider-range-height
+                --slider-knob-size
+                --slider-knob-halo-size
+                --slider-knob-halo-size-while-dragged
+                --slider-knob-halo-opacity
+                --slider-knob-transition-speed
+                --slider-knob-box-shadow
+                --slider-mark-size
+                --slider-mark-color
+                --slider-mark-color-in-range
+                --slider-mark-title-color
+                --slider-mark-title-color-in-range
+            "#)}
+        </Code>
     }
 }
