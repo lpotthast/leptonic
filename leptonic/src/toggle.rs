@@ -1,5 +1,4 @@
 use leptos::*;
-use uuid::Uuid;
 
 use crate::prelude::*;
 
@@ -11,7 +10,7 @@ pub enum ToggleSize {
 }
 
 impl ToggleSize {
-    pub fn class_name(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             ToggleSize::Small => "small",
             ToggleSize::Normal => "normal",
@@ -22,7 +21,7 @@ impl ToggleSize {
 
 impl std::fmt::Display for ToggleSize {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.class_name())
+        f.write_str(self.as_str())
     }
 }
 
@@ -61,8 +60,7 @@ pub fn Toggle<S>(
     on_toggle: S,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
-    #[prop(optional)] id: Option<Uuid>,
-    /// Sets the `class` attribute on the underlying `<Toggle>` tag, making it easier to style.
+    #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(optional)] size: ToggleSize,
@@ -72,20 +70,13 @@ pub fn Toggle<S>(
 where
     S: Fn(bool) + 'static,
 {
-    let id = id.unwrap_or_else(|| Uuid::new_v4());
-
-    let class = match class {
-        Some(attr) => attr.into_attribute_boxed(cx),
-        None => Attribute::String(std::borrow::Cow::Borrowed("leptonic-toggle-wrapper")),
-    };
-
     view! { cx,
-        <div class=class style=style>
-            <label
-                id=id.to_string()
-                class=format!("leptonic-toggle {}", size)
+        <leptonic-toggle-wrapper class=class style=style>
+            <leptonic-toggle
+                id=id
                 class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(true)
                 class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                size=size.as_str()
                 variant=variant.as_str()
                 on:click=move |_| (on_toggle)(!state.get())
             >
@@ -104,7 +95,7 @@ where
                         })
                     }
                 </span>
-            </label>
-        </div>
+            </leptonic-toggle>
+        </leptonic-toggle-wrapper>
     }
 }

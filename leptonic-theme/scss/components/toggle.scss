@@ -3,7 +3,7 @@
 $nob-width: 1.75em;
 $nob-transition: 0.3s;
 
-.leptonic-toggle-wrapper {
+leptonic-toggle-wrapper {
     display: inline-flex;
     flex-direction: row;
     user-select: none;
@@ -14,7 +14,7 @@ $nob-transition: 0.3s;
         color: var(--toggle-icon-color);
     }
 
-    .leptonic-toggle {
+    leptonic-toggle {
         display: inline-flex;
         height: $nob-width;
 
