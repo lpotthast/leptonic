@@ -136,6 +136,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
                         min=0.0
                         max=1.0
                         step=0.0001
+                        popover=SliderPopover::Always
                         value_display=create_callback(cx, move |v| format!("{v:.4}"))
                     />
                 }
@@ -150,6 +151,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
             min=0.0
             max=1.0
             step=0.0001
+            popover=SliderPopover::Always
             value_display=create_callback(cx, move |v| format!("{v:.4}"))
         />
 

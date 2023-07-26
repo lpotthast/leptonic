@@ -12,7 +12,7 @@ leptonic-tiptap-editor {
         gap: 0.3em;
         padding: 1em;
 
-        .leptonic-btn.leptonic-tiptap-btn {
+        .leptonic-btn[variant="filled"].leptonic-tiptap-btn {
             display: flex;
             justify-content: flex-start;
             align-items: center;

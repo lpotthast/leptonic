@@ -181,6 +181,7 @@ pub mod prelude {
     pub use super::slider::SliderMark;
     pub use super::slider::SliderMarkValue;
     pub use super::slider::SliderMarks;
+    pub use super::slider::SliderPopover;
     pub use super::slider::SliderVariant;
     pub use super::stack::Stack;
     pub use super::stack::StackOrientation;

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use leptos::*;
-use leptos_use::{use_mouse, UseMouseReturn};
+use leptos_use::{use_element_hover, use_mouse, UseMouseReturn};
 
 use crate::{
     contexts::global_mouseup_event::GlobalMouseupEvent,
@@ -159,6 +159,51 @@ fn Marks(cx: Scope, marks: Signal<Vec<Mark>>) -> impl IntoView {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum SliderPopover {
+    Never,
+    When { hovered: bool, dragged: bool },
+    Always,
+}
+
+impl Default for SliderPopover {
+    fn default() -> Self {
+        Self::When {
+            hovered: true,
+            dragged: true,
+        }
+    }
+}
+
+impl SliderPopover {
+    fn to_maybe_signal(
+        self,
+        cx: Scope,
+        knob_el: NodeRef<html::Div>,
+        knob: &KnobControl,
+    ) -> MaybeSignal<bool> {
+        match self {
+            SliderPopover::Never => MaybeSignal::Static(false),
+            SliderPopover::When { hovered, dragged } => match (hovered, dragged) {
+                (true, true) => {
+                    let knob_is_hovered = use_element_hover(cx, knob_el);
+                    let listening = knob.listening.clone();
+                    MaybeSignal::Dynamic(Signal::derive(cx, move || {
+                        knob_is_hovered.get() || listening.get()
+                    }))
+                }
+                (true, false) => {
+                    let knob_is_hovered = use_element_hover(cx, knob_el);
+                    MaybeSignal::Dynamic(knob_is_hovered)
+                }
+                (false, true) => MaybeSignal::Dynamic(knob.listening.clone().into()),
+                (false, false) => MaybeSignal::Static(false),
+            },
+            SliderPopover::Always => MaybeSignal::Static(true),
+        }
+    }
+}
+
 #[component]
 pub fn Slider<S>(
     cx: Scope,
@@ -168,6 +213,7 @@ pub fn Slider<S>(
     max: f64,
     step: f64,
     #[prop(optional)] variant: SliderVariant,
+    #[prop(optional)] popover: SliderPopover,
     #[prop(optional)] active: bool,
     #[prop(optional)] disabled: bool,
     #[prop(optional)] marks: SliderMarks,
@@ -184,7 +230,9 @@ where
     let bar_el: NodeRef<html::Div> = create_node_ref(cx);
     let bar = BarControl::new(cx, bar_el);
     let cursor = CursorControl::new(cx, min, range, step, bar);
+    let knob_el: NodeRef<html::Div> = create_node_ref(cx);
     let knob = KnobControl::new(cx, min, max, step, value);
+    let show_popover = popover.to_maybe_signal(cx, knob_el, &knob);
 
     let range_style = Signal::derive(cx, move || {
         format!(
@@ -255,8 +303,8 @@ where
                 <div node_ref=bar_el class="bar">
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
-                        <div class="knob" class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get()>
-                            <Popover>
+                        <div class="knob" node_ref=knob_el class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get()>
+                            <Popover show=move || show_popover.get()>
                                 {
                                     move || {
                                         let value = value.get();
@@ -289,6 +337,7 @@ pub fn RangeSlider<Sa, Sb>(
     max: f64,
     step: f64,
     #[prop(optional)] variant: SliderVariant,
+    #[prop(optional)] popover: SliderPopover,
     #[prop(optional)] active: bool,
     #[prop(optional)] disabled: bool,
     #[prop(optional)] marks: SliderMarks,
@@ -306,8 +355,12 @@ where
     let bar_el: NodeRef<html::Div> = create_node_ref(cx);
     let bar = BarControl::new(cx, bar_el);
     let cursor = CursorControl::new(cx, min, range, step, bar);
+    let knob_a_el: NodeRef<html::Div> = create_node_ref(cx);
+    let knob_b_el: NodeRef<html::Div> = create_node_ref(cx);
     let knob_a = KnobControl::new(cx, min, max, step, value_a);
     let knob_b = KnobControl::new(cx, min, max, step, value_b);
+    let show_a_popover = popover.to_maybe_signal(cx, knob_a_el, &knob_a);
+    let show_b_popover = popover.to_maybe_signal(cx, knob_b_el, &knob_b);
 
     let range_style = Signal::derive(cx, move || {
         format!(
@@ -429,8 +482,8 @@ where
             <div class="bar-wrapper">
                 <div node_ref=bar_el class="bar">
                     <div class="knob-wrapper">
-                        <div class="knob" class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get()>
-                            <Popover>
+                        <div class="knob" node_ref=knob_a_el class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get()>
+                            <Popover show=move || show_a_popover.get()>
                                 {
                                     move || {
                                         let value = value_a.get();
@@ -445,8 +498,8 @@ where
                     </div>
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
-                        <div class="knob" class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get()>
-                            <Popover>
+                        <div class="knob" node_ref=knob_b_el class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get()>
+                            <Popover show=move || show_b_popover.get()>
                                 {
                                     move || {
                                         let value = value_b.get();

@@ -1,9 +1,15 @@
 leptonic-popover {
-    display: flex;
+    display: none;
     justify-content: center;
     align-items: flex-start;
-    position: relative;
+    align-self: flex-start;
+    position: absolute;
     z-index: 10;
+    width: 100%;
+
+    &.show {
+        display: flex;
+    }
 
     leptonic-popover-content {
         display: flex;
@@ -13,6 +19,6 @@ leptonic-popover {
         background-color: var(--popover-content-background-color);
         padding: 0.3em 0.5em;
         border-radius: 0.25em;
-        top: -2em;
+        top: -2.5em;
     }
 }

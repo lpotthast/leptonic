@@ -23,6 +23,7 @@ use crate::pages::documentation::installation::PageInstallation;
 use crate::pages::documentation::link::PageLink;
 use crate::pages::documentation::modal::PageModal;
 use crate::pages::documentation::overview::PageOverview;
+use crate::pages::documentation::popover::PagePopover;
 use crate::pages::documentation::progress::PageProgress;
 use crate::pages::documentation::select::PageSelect;
 use crate::pages::documentation::separator::PageSeparator;
@@ -72,6 +73,7 @@ pub enum DocRoutes {
     Toast,
     Modal,
     Progress,
+    Popover,
     Chip,
 
     // General
@@ -118,6 +120,7 @@ impl DocRoutes {
             DocRoutes::Toast => "toast",
             DocRoutes::Modal => "modal",
             DocRoutes::Progress => "progress",
+            DocRoutes::Popover => "popover",
             DocRoutes::Chip => "chip",
 
             DocRoutes::Typography => "typography",
@@ -183,6 +186,7 @@ where
             <Route path=DocRoutes::Toast view=|cx| view! { cx, <PageToast/> }/>
             <Route path=DocRoutes::Modal view=|cx| view! { cx, <PageModal/> }/>
             <Route path=DocRoutes::Progress view=|cx| view! { cx, <PageProgress/> }/>
+            <Route path=DocRoutes::Popover view=|cx| view! { cx, <PagePopover/> }/>
             <Route path=DocRoutes::Chip view=|cx| view! { cx, <PageChip/> }/>
 
             <Route path=DocRoutes::Typography view=|cx| view! { cx, <PageTypography/> }/>
@@ -264,6 +268,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                 <Link href=DocRoutes::Toast class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
                 <Link href=DocRoutes::Modal class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
                 <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
+                <Link href=DocRoutes::Popover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
                 <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
             </Stack>
         </DrawerSection>

@@ -118,6 +118,10 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
                 --button-primary-border-color-hover
                 --button-primary-box-shadow-color
 
+                --button-flat-primary-text-color
+                --button-flat-primary-text-color-hover
+                --button-flat-primary-background-color-hover
+
                 --button-secondary-text-color
                 --button-secondary-text-color-hover
                 --button-secondary-background-color
@@ -125,6 +129,10 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
                 --button-secondary-border-color
                 --button-secondary-border-color-hover
                 --button-secondary-box-shadow-color
+
+                --button-flat-secondary-text-color
+                --button-flat-secondary-text-color-hover
+                --button-flat-secondary-background-color-hover
 
                 --button-success-text-color
                 --button-success-text-color-hover
@@ -134,6 +142,10 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
                 --button-success-border-color-hover
                 --button-success-box-shadow-color
 
+                --button-flat-success-text-color
+                --button-flat-success-text-color-hover
+                --button-flat-success-background-color-hover
+
                 --button-info-text-color
                 --button-info-text-color-hover
                 --button-info-background-color
@@ -141,6 +153,10 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
                 --button-info-border-color
                 --button-info-border-color-hover
                 --button-info-box-shadow-color
+
+                --button-flat-info-text-color
+                --button-flat-info-text-color-hover
+                --button-flat-info-background-color-hover
 
                 --button-warning-text-color
                 --button-warning-text-color-hover
@@ -150,6 +166,10 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
                 --button-warning-border-color-hover
                 --button-warning-box-shadow-color
 
+                --button-flat-warning-text-color
+                --button-flat-warning-text-color-hover
+                --button-flat-warning-background-color-hover
+
                 --button-danger-text-color
                 --button-danger-text-color-hover
                 --button-danger-background-color
@@ -157,6 +177,10 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
                 --button-danger-border-color
                 --button-danger-border-color-hover
                 --button-danger-box-shadow-color
+
+                --button-flat-danger-text-color
+                --button-flat-danger-text-color-hover
+                --button-flat-danger-background-color-hover
             "#)}
         </Code>
     }

@@ -16,6 +16,7 @@ pub mod installation;
 pub mod link;
 pub mod modal;
 pub mod overview;
+pub mod popover;
 pub mod progress;
 pub mod select;
 pub mod separator;
