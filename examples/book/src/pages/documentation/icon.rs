@@ -15,10 +15,9 @@ pub fn PageIcon(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                leptos-icons = { git = "https://github.com/lpotthast/leptos-icons", branch = "enum", features = [
-                    "csr",
-                    "BsFolder",
+                leptos_icons = { version = "0.0.15", features = [
                     "BsFolderFill",
+                    "BsFolder",
                 ] }
             "#)}
         </Code>

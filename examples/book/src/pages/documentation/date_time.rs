@@ -8,7 +8,7 @@ pub fn PageDateTime(cx: Scope) -> impl IntoView {
     view! { cx,
         <H1>"Date & Time"</H1>
 
-        <P>"Leptonic includes a calendar-like date selector component."</P>
+        <P>"Select dates using the calendar-like "<Code inline=true>"<DateSelector>"</Code>" component."</P>
 
         <Code>
             {indoc!(r#"
