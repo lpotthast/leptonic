@@ -18,7 +18,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
         <Toggle state=shown on_toggle=move |v| set_shown.set(v) />
 
         <Box style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
-            <Drawer side=DrawerSide::Left shown=shown style="overflow-y: scroll; padding: 0.5em; background-color: var(--brand-color); border-right: 1px solid gray;">
+            <Drawer side=DrawerSide::Left shown=shown style="overflow-y: scroll; padding: 0.5em; background-color: var(--brand-color); border-right: 1px solid gray; z-index: 1;">
                 <Stack spacing=Size::Em(0.5)>
                     {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
                 </Stack>
@@ -66,7 +66,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
                     {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
                 </Stack>
             </Box>
-            <Drawer side=DrawerSide::Right shown=shown2 style="padding: 0.5em; height: 19.5em; overflow: scroll; position: absolute; top: 0; right: 0; background-color: var(--brand-color); border-left: 1px solid gray;">
+            <Drawer side=DrawerSide::Right shown=shown2 style="padding: 0.5em; height: 19.5em; overflow: scroll; position: absolute; top: 0; right: 0; background-color: var(--brand-color); border-left: 1px solid gray; z-index: 1;">
                 <Stack spacing=Size::Em(0.5)>
                     {(0..8).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
                 </Stack>
