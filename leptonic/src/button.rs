@@ -5,6 +5,7 @@ use std::{
 
 use leptos::{ev::MouseEvent, *};
 use leptos_icons::BsIcon;
+use leptos_use::on_click_outside;
 
 use crate::{icon::Icon, OptionalMaybeSignal};
 
@@ -104,16 +105,19 @@ pub fn Button<F>(
 where
     F: Fn(MouseEvent) + 'static,
 {
-    let (dropdown_open, set_dropdown_open): (ReadSignal<bool>, WriteSignal<bool>) =
-        create_signal(cx, false);
-
     let has_variations = variations.0.as_ref().is_some();
 
     let variations = move || {
         if has_variations {
+            let (dropdown_open, set_dropdown_open): (ReadSignal<bool>, WriteSignal<bool>) =
+                create_signal(cx, false);
+            let dropdown_trigger = create_node_ref::<html::Div>(cx);
+            let _ = on_click_outside(cx, dropdown_trigger, move |_| {
+                set_dropdown_open.set(false);
+            });
             Some(
                 view! {cx,
-                    <div class="dropdown-trigger" on:click=move |_| {
+                    <div class="dropdown-trigger" node_ref=dropdown_trigger on:click=move |_| {
                         if !disabled.get_untracked() {
                             set_dropdown_open.update(|it| *it = !*it);
                         }

@@ -68,6 +68,10 @@
     --button-primary-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--primary-color));
     --button-primary-box-shadow-color: var(--primary-color);
 
+    --button-flat-primary-text-color: var(--std-text-dark);
+    --button-flat-primary-text-color-hover: var(--std-text-dark);
+    --button-flat-primary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--primary-color));
+
     --button-secondary-text-color: var(--std-text-dark);
     --button-secondary-text-color-hover: var(--std-text-dark);
     --button-secondary-background-color: var(--default-color);
@@ -75,6 +79,10 @@
     --button-secondary-border-color: var(--default-color);
     --button-secondary-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--default-color));
     --button-secondary-box-shadow-color: var(--default-color);
+
+    --button-flat-secondary-text-color: var(--std-text-dark);
+    --button-flat-secondary-text-color-hover: var(--std-text-dark);
+    --button-flat-secondary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--default-color));
 
     --button-success-text-color: var(--std-text-bright);
     --button-success-text-color-hover: var(--std-text-bright);
@@ -84,6 +92,10 @@
     --button-success-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--success-color));
     --button-success-box-shadow-color: var(--success-color);
 
+    --button-flat-success-text-color: var(--std-text-dark);
+    --button-flat-success-text-color-hover: var(--std-text-dark);
+    --button-flat-success-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--success-color));
+
     --button-info-text-color: var(--std-text-bright);
     --button-info-text-color-hover: var(--std-text-bright);
     --button-info-background-color: var(--info-color);
@@ -91,6 +103,10 @@
     --button-info-border-color: var(--info-color);
     --button-info-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--info-color));
     --button-info-box-shadow-color: var(--info-color);
+
+    --button-info-success-text-color: var(--std-text-dark);
+    --button-info-success-text-color-hover: var(--std-text-dark);
+    --button-info-success-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--info-color));
 
     --button-warning-text-color: var(--std-text-bright);
     --button-warning-text-color-hover: var(--std-text-bright);
@@ -100,6 +116,10 @@
     --button-warning-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--warn-color));
     --button-warning-box-shadow-color: var(--warn-color);
 
+    --button-flat-warning-text-color: var(--std-text-dark);
+    --button-flat-warning-text-color-hover: var(--std-text-dark);
+    --button-flat-warning-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--warn-color));
+
     --button-danger-text-color: var(--std-text-bright);
     --button-danger-text-color-hover: var(--std-text-bright);
     --button-danger-background-color: var(--danger-color);
@@ -107,6 +127,10 @@
     --button-danger-border-color: var(--danger-color);
     --button-danger-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--danger-color));
     --button-danger-box-shadow-color: var(--danger-color);
+
+    --button-flat-danger-text-color: var(--std-text-dark);
+    --button-flat-danger-text-color-hover: var(--std-text-dark);
+    --button-flat-danger-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--danger-color));
 
     // Card
     --card-background-color: white;
