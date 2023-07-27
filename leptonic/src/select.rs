@@ -27,8 +27,10 @@ impl<T: Debug + Display + Clone + PartialEq + Eq> SelectOption for T {
 // TODO: multiselect deselect performance
 // TODO: remove code duplication between select variants
 
+// TODO: Replace select_previous and select_next with a function that stores the current index and does not need to traverse on each call!
+
 fn select_previous<O: SelectOption + 'static>(
-    available: &Vec<O>,
+    available: &[O],
     preselected: ReadSignal<Option<O>>,
     set_preselected: WriteSignal<Option<O>>,
 ) {
@@ -46,7 +48,7 @@ fn select_previous<O: SelectOption + 'static>(
 }
 
 fn select_next<O: SelectOption + 'static>(
-    available: &Vec<O>,
+    available: &[O],
     preselected: ReadSignal<Option<O>>,
     set_preselected: WriteSignal<Option<O>>,
 ) {
@@ -190,7 +192,7 @@ where
 
     // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
     create_effect(cx, move |_| {
-        if show_options.get() == false && search_is_focused.get_untracked() {
+        if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
                 wrapper.focus().unwrap();
@@ -423,7 +425,7 @@ where
 
     // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
     create_effect(cx, move |_| {
-        if show_options.get() == false && search_is_focused.get_untracked() {
+        if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
                 wrapper.focus().unwrap();
@@ -614,15 +616,15 @@ where
         // set_show_options.set(false); // TODO: Make this optional.
     });
 
-    let is_selected = move |option: &O| selected.with(|selected| selected.contains(&option));
+    let is_selected = move |option: &O| selected.with(|selected| selected.contains(option));
 
     let is_disabled = move |option: &O| {
-        selected.with(|selected| selected.contains(&option) || selected.len() == max as usize)
+        selected.with(|selected| selected.contains(option) || selected.len() == max as usize)
     };
 
     let is_disabled_untracked = move |option: &O| {
         selected
-            .with_untracked(|selected| selected.contains(&option) || selected.len() == max as usize)
+            .with_untracked(|selected| selected.contains(option) || selected.len() == max as usize)
     };
 
     // We need to check for global mouse events.
@@ -692,7 +694,7 @@ where
 
     // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
     create_effect(cx, move |_| {
-        if show_options.get() == false && search_is_focused.get_untracked() {
+        if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
                 wrapper.focus().unwrap();

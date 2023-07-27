@@ -13,7 +13,7 @@ where
     S: Fn() -> bool + 'static,
 {
     view! {cx,
-        <leptonic-popover id=id class=class style=style class:show=move || show()>
+        <leptonic-popover id=id class=class style=style class:show=show>
             <leptonic-popover-content>
                 {children(cx)}
             </leptonic-popover-content>

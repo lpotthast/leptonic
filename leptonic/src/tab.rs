@@ -33,7 +33,7 @@ pub fn Tab<L>(
 where
     L: IntoView + 'static,
 {
-    let id = id.unwrap_or_else(|| Uuid::new_v4());
+    let id = id.unwrap_or_else(Uuid::new_v4);
     let tabs = use_context::<TabsContext>(cx).unwrap();
 
     let mount = mount.or(tabs.mount).unwrap_or(Mount::Once);
@@ -48,7 +48,7 @@ where
         })
     });
 
-    if tabs.history.get_untracked().get_active() == None {
+    if tabs.history.get_untracked().get_active().is_none() {
         tabs.set_history.update(|history| {
             history.push(name.get_value());
         });

@@ -101,8 +101,8 @@ where
                 prop:value=move || get.get()
                 on:change=move |e| set(event_target::<HtmlInputElement>(&e).value())
                 on:keyup=move |e| set_clone(event_target::<HtmlInputElement>(&e).value())
-                on:blur=move |_e| { on_focus_change.map(|cb| cb.call(false)); }
-                on:focus=move |_e| { on_focus_change.map(|cb| cb.call(true)); }
+                on:blur=move |_e| { if let Some(cb) = on_focus_change { cb.call(false) }; }
+                on:focus=move |_e| { if let Some(cb) = on_focus_change { cb.call(true) }; }
             />
 
             {match prepend.0 {

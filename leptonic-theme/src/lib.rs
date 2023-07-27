@@ -1,6 +1,6 @@
-use std::{io::Write, path::PathBuf};
-
 use include_dir::{include_dir, Dir};
+use indoc::indoc;
+use std::{io::Write, path::PathBuf};
 
 static SCSS_DIR: Dir = include_dir!("$CARGO_MANIFEST_DIR/scss");
 
@@ -18,15 +18,17 @@ pub fn generate(path: PathBuf) {
         .write(true)
         .append(false)
         .truncate(true)
-        .open(&path.join("leptonic-themes.scss"))
+        .open(path.join("leptonic-themes.scss"))
         .unwrap();
 
     file.write_all(
-        r#"
-        @import "./themes/builder";
-        @import "./themes/light";
-        @import "./themes/dark";
-        "#
+        indoc!(
+            r#"
+            @import "./themes/builder";
+            @import "./themes/light";
+            @import "./themes/dark";
+            "#
+        )
         .as_bytes(),
     )
     .unwrap();

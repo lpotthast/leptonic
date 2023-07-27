@@ -37,7 +37,7 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
         { children(cx) }
 
         <leptonic-modal-host>
-            <Show fallback=|_cx| view! { cx, } when=move || modals.get().len() != 0>
+            <Show fallback=|_cx| view! { cx, } when=move || !modals.get().is_empty()>
                 <leptonic-modal-backdrop></leptonic-modal-backdrop>
 
                 <leptonic-modals>

@@ -38,7 +38,7 @@ impl CollapsiblesContext {
         match on_open.unwrap_or(self.default_on_open) {
             OnOpen::DoNothing => (),
             OnOpen::CloseOthers => {
-                if new_state == true {
+                if new_state {
                     let vec = self.collapsibles.read().unwrap();
                     for ctx in vec.iter() {
                         if ctx.id != id {

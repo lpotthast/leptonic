@@ -15,3 +15,4 @@ keywords = ["leptos", "components", "component-library", "theming", "css"]
 
 [dependencies]
 include_dir = "0.7.3"
+indoc = "2.0.3"

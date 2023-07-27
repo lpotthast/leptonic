@@ -16,7 +16,7 @@ pub enum SliderVariant {
 }
 
 impl SliderVariant {
-    fn to_str(&self) -> &'static str {
+    fn to_str(self) -> &'static str {
         match self {
             SliderVariant::Block => "block",
             SliderVariant::Round => "round",
@@ -55,6 +55,7 @@ struct Mark {
     name: Option<Cow<'static, str>>,
 }
 
+#[allow(clippy::too_many_arguments)]
 fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
     cx: Scope,
     min: f64,
@@ -66,7 +67,7 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
     value_display: Option<Callback<f64, String>>,
 ) -> Signal<Vec<Mark>> {
     match marks {
-        SliderMarks::None => Signal::derive(cx, move || vec![]),
+        SliderMarks::None => Signal::derive(cx, Vec::new),
         SliderMarks::Automatic { create_names } => Signal::derive(cx, move || {
             let mut marks_at = Vec::new();
             let cap = 20.0;
@@ -80,10 +81,8 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                     if current > max + rounding_error_offset {
                         break;
                     }
-                } else {
-                    if current < max - rounding_error_offset {
-                        break;
-                    }
+                } else if current < max - rounding_error_offset {
+                    break;
                 }
                 marks_at.push(Mark {
                     percentage: percentage_in_range(min, max, current),
@@ -100,10 +99,8 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                     if current <= max + rounding_error_offset {
                         current += step * step_multiplier;
                     }
-                } else {
-                    if current >= max - rounding_error_offset {
-                        current -= step * step_multiplier;
-                    }
+                } else if current >= max - rounding_error_offset {
+                    current -= step * step_multiplier;
                 };
             }
             marks_at
@@ -145,7 +142,7 @@ fn Marks(cx: Scope, marks: Signal<Vec<Mark>>) -> impl IntoView {
                                 { match &mark.name {
                                     Some(name) => view! {cx,
                                         <div class="title">
-                                            {name.to_owned()}
+                                            {name.clone()}
                                         </div>
                                     }.into_view(cx),
                                     None => ().into_view(cx)
@@ -187,7 +184,7 @@ impl SliderPopover {
             SliderPopover::When { hovered, dragged } => match (hovered, dragged) {
                 (true, true) => {
                     let knob_is_hovered = use_element_hover(cx, knob_el);
-                    let listening = knob.listening.clone();
+                    let listening = knob.listening;
                     MaybeSignal::Dynamic(Signal::derive(cx, move || {
                         knob_is_hovered.get() || listening.get()
                     }))
@@ -196,7 +193,7 @@ impl SliderPopover {
                     let knob_is_hovered = use_element_hover(cx, knob_el);
                     MaybeSignal::Dynamic(knob_is_hovered)
                 }
-                (false, true) => MaybeSignal::Dynamic(knob.listening.clone().into()),
+                (false, true) => MaybeSignal::Dynamic(knob.listening.into()),
                 (false, false) => MaybeSignal::Static(false),
             },
             SliderPopover::Always => MaybeSignal::Static(true),
@@ -457,10 +454,7 @@ where
             // touched more towards the left or right knob.
             // Limitation: The initial touch event no longer results in a direct value change. But the value is set after touchmove or touchend.
             on:touchmove=move |e| {
-                if knob_a.listening.get_untracked() {
-                    e.prevent_default();
-                    e.stop_propagation();
-                } else if knob_b.listening.get_untracked() {
+                if knob_a.listening.get_untracked() || knob_b.listening.get_untracked() {
                     e.prevent_default();
                     e.stop_propagation();
                 } else {

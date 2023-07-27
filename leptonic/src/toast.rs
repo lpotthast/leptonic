@@ -72,7 +72,6 @@ pub struct Toasts {
 impl Toasts {
     /// Adds a toast and schedules its removal.
     pub fn push(&self, toast: Toast) {
-        let t_id = toast.id.clone();
         let setter = self.set_toasts;
 
         // Prepare cleanup. We do it before adding the toast so that we can save a clone.
@@ -81,7 +80,7 @@ impl Toasts {
             set_timeout(
                 move || {
                     setter.update(|toasts| {
-                        if let Some(idx) = toasts.iter().position(|it| it.id == t_id) {
+                        if let Some(idx) = toasts.iter().position(|it| it.id == toast.id) {
                             toasts.remove(idx);
                         }
                     });
@@ -101,11 +100,7 @@ impl Toasts {
 
     pub fn try_remove(&self, id: Uuid) -> Option<Toast> {
         self.set_toasts.update_ret(|toasts| {
-            if let Some(idx) = toasts.iter().position(|it| it.id == id) {
-                Some(toasts.remove(idx))
-            } else {
-                None
-            }
+            toasts.iter().position(|it| it.id == id).map(|idx| toasts.remove(idx))
         })
     }
 

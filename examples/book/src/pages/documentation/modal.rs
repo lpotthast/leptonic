@@ -6,36 +6,13 @@ use leptos::*;
 pub fn PageModal(cx: Scope) -> impl IntoView {
     let (show_modal, set_show_modal) = create_signal(cx, false);
     let (show_modal2, set_show_modal2) = create_signal(cx, false);
-    let (show_input_modal, set_show_input_modal) = create_signal(cx, false);
-    let (last_input, set_last_input) = create_signal(cx, Option::<String>::None);
-
-    let (a_text, set_a_text) = create_signal(cx, String::new());
-    let a = Signal::derive(cx, move || {
-        let t = a_text.get();
-        match t.len() {
-            0 => None,
-            _ => Some(t),
-        }
-    });
-    let show_a = Signal::derive(cx, move || a.get().is_some());
+    let (show_confirm_modal, set_show_input_modal) = create_signal(cx, false);
 
     view! { cx,
         <H1>"Modals"</H1>
 
-        <Button on_click=move |_| set_show_modal.set(true)>"Show Modal"</Button>
-        <Button on_click=move |_| set_show_input_modal.set(true)>"Show Input Modal"</Button>
-
-        <Input get=a_text set=move |v| set_a_text.set(v)/>
-        <Modal show_when=show_a>
-            <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
-            <ModalBody>"This ia a test modal. Input: " { move || format!("{}", a.get().unwrap_or_default()) }</ModalBody>
-            <ModalFooter>
-                <ButtonWrapper>
-                    <Button on_click=move |_| set_a_text.set(String::new()) color=ButtonColor::Danger>"Accept"</Button>
-                    <Button on_click=move |_| set_a_text.set(String::new()) color=ButtonColor::Secondary>"Cancel"</Button>
-                </ButtonWrapper>
-            </ModalFooter>
-        </Modal>
+        <P><Button on_click=move |_| set_show_modal.set(true)>"Show staged modal"</Button></P>
+        <P><Button on_click=move |_| set_show_input_modal.set(true)>"Show confirmation modal"</Button></P>
 
         <Modal show_when=show_modal>
             <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
@@ -43,10 +20,7 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
             <ModalFooter>
                 <ButtonWrapper>
                     <Button on_click=move |_| set_show_modal.set(false) color=ButtonColor::Danger>"Accept"</Button>
-                    <Button on_click=move |_| {
-                        //set_show_modal.set(false);
-                        set_show_modal2.set(true);
-                    } color=ButtonColor::Info>"Next"</Button>
+                    <Button on_click=move |_| set_show_modal2.set(true) color=ButtonColor::Info>"Next"</Button>
                     <Button on_click=move |_| set_show_modal.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
@@ -62,19 +36,12 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
             </ModalFooter>
         </Modal>
 
-        <InputModal
-            show_when=show_input_modal
-            on_accept=move |input| {
-                set_last_input.set(Some(input));
-                set_show_input_modal.set(false);
-            }
+        <ConfirmModal
+            show_when=show_confirm_modal
+            requires_confirmation_of="ok".to_owned()
+            on_accept=move || set_show_input_modal.set(false)
             on_cancel=move || set_show_input_modal.set(false)
         />
-
-        <div>
-            "Last input: "
-            { move || last_input.get() }
-        </div>
 
         <H2>"Styling"</H2>
 
@@ -97,28 +64,32 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn InputModal<A, C>(
+pub fn ConfirmModal<A, C>(
     cx: Scope,
     #[prop(into)] show_when: Signal<bool>,
+    requires_confirmation_of: String,
     on_accept: A,
     on_cancel: C,
 ) -> impl IntoView
 where
-    A: Fn(String) + Copy + 'static,
+    A: Fn() + Copy + 'static,
     C: Fn() + Copy + 'static,
 {
     let (input, set_input) = create_signal(cx, "".to_owned());
+    let required = requires_confirmation_of.clone();
+    let confirmed = Signal::derive(cx, move || input.get() == required);
+    let disabled: OptionalMaybeSignal<bool> = Signal::derive(cx, move || !confirmed.get()).into();
 
     view! { cx,
         <Modal show_when=show_when>
-            <ModalHeader><ModalTitle>"Delete repository"</ModalTitle></ModalHeader>
+            <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
             <ModalBody>
-                "Please enter \"ok\" to delete the repository."
+                "Please enter \""{requires_confirmation_of}"\" to confirm."
                 <Input get=input set=move |v| set_input.set(v)/>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| (on_accept)("dummy".to_owned()) color=ButtonColor::Danger>"Accept"</Button>
+                    <Button on_click=move |_| (on_accept)() disabled=disabled color=ButtonColor::Danger>"Accept"</Button>
                     <Button on_click=move |_| (on_cancel)() color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>

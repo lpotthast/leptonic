@@ -359,8 +359,7 @@ pub fn create_weeks(
     let current_day = now.day();
     let staging_day = staging.day();
 
-    let first_weekday_index = staging
-        .clone()
+    let first_weekday_index = (*staging)
         .replace_day(1)
         .unwrap()
         .weekday()
@@ -368,9 +367,9 @@ pub fn create_weeks(
     let number_of_days_in_month = whole_days_in(staging.year(), staging.month());
     let index_of_last_day_in_month = first_weekday_index + number_of_days_in_month;
 
-    let prev_month = start_of_previous_month(staging.clone());
+    let prev_month = start_of_previous_month(*staging);
     let this_month = staging;
-    let next_month = start_of_next_month(staging.clone());
+    let next_month = start_of_next_month(*staging);
 
     let days_in_previous_month = whole_days_in(prev_month.year(), prev_month.month());
 

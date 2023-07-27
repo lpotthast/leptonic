@@ -79,9 +79,9 @@ pub fn Checkbox<T>(
     #[prop(optional)] size: CheckboxSize,
 ) -> impl IntoView
 where
-    T: Fn() -> () + 'static,
+    T: Fn() + 'static,
 {
-    let id = id.unwrap_or_else(|| Uuid::new_v4());
+    let id = id.unwrap_or_else(Uuid::new_v4);
     view! { cx,
         <leptonic-checkbox>
             <input

@@ -34,6 +34,12 @@ impl TabHistory {
     }
 }
 
+impl Default for TabHistory {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Copy, Clone)]
 pub struct TabsContext {
     pub history: ReadSignal<TabHistory>,
@@ -110,7 +116,7 @@ fn TabSelector<A, S>(
 ) -> impl IntoView
 where
     A: Fn() -> bool + 'static,
-    S: Fn() -> () + 'static,
+    S: Fn() + 'static,
 {
     view! { cx,
         <leptonic-tab-selector

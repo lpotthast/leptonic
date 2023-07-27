@@ -137,7 +137,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
         set_doc_drawer_closed,
     };
 
-    provide_context(cx, ctx.clone());
+    provide_context(cx, ctx);
 
     let search_options = vec![
         (

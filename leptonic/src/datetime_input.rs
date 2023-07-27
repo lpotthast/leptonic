@@ -33,7 +33,7 @@ pub fn DateTimeInput<S>(
 where
     S: Fn(Option<time::OffsetDateTime>) + 'static,
 {
-    let id = id.map(|it| it.to_owned().to_string());
+    let id = id.map(|it| it.into_owned());
 
     let class = class
         .map(|it| Cow::Owned(format!("leptonic-input datetime-selected {it}")))
@@ -82,7 +82,7 @@ where
             cx,
             DateSelectorProps {
                 value: get.get().unwrap(),
-                on_change: move |new_value| on_change(new_value),
+                on_change,
                 min,
                 max,
                 guide_mode: guide_mode.into(),
@@ -123,7 +123,7 @@ where
                 on:click=move |_| set_open.update(|open| *open = !*open)
                 on:focusin=move |_| set_in_focus.set(true)
                 on:focusout=move |_| set_in_focus.set(false)
-                on:keydown=move |e| on_key_down(e)
+                on:keydown=on_key_down
             />
             <div class="datetime-dropdown-menu-ref">
                 { match open.get() {
