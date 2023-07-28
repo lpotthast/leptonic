@@ -58,7 +58,7 @@ variables:
 book-build:
   stage: build
   extends: .book-with-cache
-  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:latest
+  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:1.71.0
   needs: []
   artifacts:
     paths:
@@ -72,7 +72,7 @@ book-build:
 book-test:
   stage: test
   extends: .book-with-cache
-  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:latest
+  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:1.71.0
   needs: []
   script:
     - cd examples/book
