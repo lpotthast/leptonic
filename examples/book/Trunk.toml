@@ -10,3 +10,8 @@ ignore = [
 address = "127.0.0.1"
 port = 4001
 open = false
+
+#[[hooks]]
+#stage = "pre_build"
+#command = "cargo"
+#command_arguments = ["check", "--target", "wasm32-unknown-unknown"]
