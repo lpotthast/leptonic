@@ -115,14 +115,8 @@ $-tiers: (
   #{$-class-prefix}col {
     box-sizing: border-box;
     display: flex;
-    flex-direction: column;
     flex: 1 0 auto;
     max-width: 100%;
-
-    &.#{$-class-prefix}col-flex {
-      display: flex;
-      flex-direction: column;
-    }
 
     &.#{$-class-prefix}col-flex-col {
       flex-direction: column;
