@@ -16,7 +16,7 @@ keywords = ["leptos", "components", "component-library"]
 [dependencies]
 indexmap = "2.0.0"
 js-sys = "0.3.64"
-leptos = { version = "0.4.3", features = ["csr"] }
+leptos = { version = "0.4.8", features = ["csr"] }
 leptos_icons = { version = "0.0.15", features = [
     "BsSun",
     "BsMoon",
@@ -42,7 +42,7 @@ leptos_icons = { version = "0.0.15", features = [
 ] }
 leptos-tiptap = "0.2.1"
 leptos-use = { version = "0.6.0", features = ["math"] }
-leptos_router = "0.4.3"
+leptos_router = "0.4.8"
 serde = "1.0.171"
 serde-wasm-bindgen = "0.5.0"
 serde_json = "1.0.103"
