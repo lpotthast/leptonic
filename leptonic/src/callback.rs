@@ -197,3 +197,9 @@ pub fn create_simple_callback<T: 'static, R: 'static, F: Fn(T) -> R + 'static>(
 ) -> SimpleCallback<T, R> {
     SimpleCallback::new(fun)
 }
+
+impl<T: 'static, R: 'static, F: Fn(T) -> R + 'static> From<F> for SimpleCallback<T, R> {
+    fn from(value: F) -> Self {
+        SimpleCallback::new(value)
+    }
+}
