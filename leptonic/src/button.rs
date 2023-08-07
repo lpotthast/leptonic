@@ -117,9 +117,10 @@ where
             });
             Some(
                 view! {cx,
-                    <div class="dropdown-trigger" node_ref=dropdown_trigger on:click=move |_| {
+                    <div class="dropdown-trigger" node_ref=dropdown_trigger on:click=move |e| {
                         if !disabled.get_untracked() {
                             set_dropdown_open.update(|it| *it = !*it);
+                            e.stop_propagation();
                         }
                     }>
                         { move || {
@@ -157,6 +158,7 @@ where
             aria-disabled=move || disabled.get()
             on:click=move |e| {
                 if !disabled.get_untracked() {
+                    e.stop_propagation();
                     on_click(e);
                 }
             }

@@ -5,6 +5,8 @@ use leptos::*;
 #[component]
 pub fn PageButton(cx: Scope) -> impl IntoView {
     let (disabled, set_disabled) = create_signal(cx, false);
+    let (num_main_action_activated, set_num_main_action_activated) = create_signal(cx, 0);
+    let (num_secondary_action_activated, set_num_secondary_action_activated) = create_signal(cx, 0);
     view! { cx,
         <H1>"Buttons"</H1>
 
@@ -96,9 +98,24 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
 
         <H2>"Variations"</H2>
 
-        <Button on_click=move |_| {} variations=view!{cx, <Button on_click=move |_| {}>"Secondary action"</Button>}.into_view(cx)>
+        <Code>
+            {indoc!(r#"
+                <Button on_click=move |_| {} variations=view!{cx,
+                    <Button on_click=move |_| {}>"Secondary action"</Button>
+                }.into_view(cx)>
+                    "MainAction"
+                </Button>
+            "#)}
+        </Code>
+
+        <Button on_click=move |_| {set_num_main_action_activated.update(|it| *it += 1)} variations=view!{cx,
+                <Button on_click=move |_| {set_num_secondary_action_activated.update(|it| *it += 1)}>"Secondary action"</Button>
+        }.into_view(cx)>
             "MainAction"
         </Button>
+
+        <div>"Main action activated: " { move || num_main_action_activated.get() }</div>
+        <div>"Secondary action activated: " { move || num_secondary_action_activated.get() }</div>
 
         <H2>"Styling"</H2>
 
