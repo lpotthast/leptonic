@@ -6,6 +6,19 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
     view! { cx,
         <H1>"Changelog"</H1>
 
+        <H2>"0.2.0"</H2>
+
+        <H3>"Changed:"</H3>
+        <ul>
+            <li>"The DateSelector components on_change prop now takes a Callback instead of a generic function."</li>
+        </ul>
+
+        <H3>"Fixed:"</H3>
+        <ul>
+            <li>"A button with variants now properly respects its disabled state."</li>
+            <li>"A button with variants now correctly only triggers one of its actions per interaction."</li>
+        </ul>
+
         <H2>"0.1.0"</H2>
 
         <P>"Initial release."</P>
@@ -45,19 +58,6 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
             <li>"Anchor component and styles"</li>
             <li>"Typography components and styles"</li>
             <li>"Transition components and styles"</li>
-        </ul>
-
-        <H2>"0.2.0"</H2>
-
-        <H3>"Changed:"</H3>
-        <ul>
-            <li>"The DateSelector components on_change prop now takes a Callback instead of a generic function."</li>
-        </ul>
-
-        <H3>"Fixed:"</H3>
-        <ul>
-            <li>"A button with variants now properly respects its disabled state."</li>
-            <li>"A button with variants now correctly only triggers one of its actions per interaction."</li>
         </ul>
     }
 }
