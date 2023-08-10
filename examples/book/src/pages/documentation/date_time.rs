@@ -16,7 +16,7 @@ pub fn PageDateTime(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
+        <DateSelector value=OffsetDateTime::now_utc() on_change=create_callback(cx, move |_v| {})/>
 
         <P>"The date selector can also start with the year selection."</P>
 
@@ -26,7 +26,7 @@ pub fn PageDateTime(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>
+        <DateSelector value=OffsetDateTime::now_utc() on_change=create_callback(cx, move |_v| {}) guide_mode=GuideMode::YearFirst/>
 
         <H2>"Input fields"</H2>
 

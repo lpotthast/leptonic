@@ -2,9 +2,12 @@ use leptos::*;
 use time::macros::format_description;
 use uuid::Uuid;
 
-use crate::datetime::{
-    is_in_range, start_of_next_month, start_of_previous_month, whole_days_in, Day, GuideMode,
-    InMonth, Month, SaveReplaceYear, Week, Year,
+use crate::{
+    datetime::{
+        is_in_range, start_of_next_month, start_of_previous_month, whole_days_in, Day, GuideMode,
+        InMonth, Month, SaveReplaceYear, Week, Year,
+    },
+    prelude::{Callable, Callback},
 };
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
@@ -15,26 +18,23 @@ enum Show {
 }
 
 #[component]
-pub fn DateSelector<C>(
+pub fn DateSelector(
     cx: Scope,
     value: time::OffsetDateTime,
-    on_change: C,
+    on_change: Callback<time::OffsetDateTime>,
     #[prop(optional)] min: Option<time::OffsetDateTime>,
     #[prop(optional)] max: Option<time::OffsetDateTime>,
     #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: MaybeSignal<
         GuideMode,
     >,
-) -> impl IntoView
-where
-    C: Fn(time::OffsetDateTime) + 'static,
-{
+) -> impl IntoView {
     let (staging, set_staging) = create_signal(cx, value);
 
     let staging_year = Signal::derive(cx, move || staging.get().year());
     let staging_month = Signal::derive(cx, move || staging.get().month().to_string());
 
     let selected: Memo<time::OffsetDateTime> = create_memo(cx, move |_| staging.get());
-    create_effect(cx, move |_| on_change(selected.get()));
+    create_effect(cx, move |_| on_change.call(selected.get()));
 
     let (show, set_show) = create_signal(
         cx,

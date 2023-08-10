@@ -7,7 +7,7 @@ use web_sys::KeyboardEvent;
 use crate::{
     date_selector::DateSelectorProps,
     datetime::{GuideMode, Type},
-    prelude::DateSelector,
+    prelude::{create_callback, DateSelector},
     Margin, OptionalMaybeSignal,
 };
 
@@ -66,7 +66,7 @@ where
         }
     };
 
-    let on_change = move |new_value| {
+    let on_change = create_callback(cx, move |new_value| {
         tracing::info!("Received new value {:?}", new_value);
         // Skip propagating a change event when the received value does not deviate from the current value.
         if let Some(current) = get.get() {
@@ -75,7 +75,7 @@ where
             }
         }
         set(Some(new_value));
-    };
+    });
 
     let date_selector = move || {
         DateSelector(
@@ -126,25 +126,20 @@ where
                 on:keydown=on_key_down
             />
             <div class="datetime-dropdown-menu-ref">
-                { match open.get() {
-                    true => view! {cx,
-                        <div class="datetime-dropdown-menu">
-                            {
-                                match input_type {
-                                    Type::Date => date_selector().into_view(cx),
-                                    Type::Time => time_selector().into_view(cx),
-                                    Type::DateTime => view! {cx,
-                                        <>
-                                            {date_selector()}
-                                            {time_selector()}
-                                        </>
-                                    }.into_view(cx),
-                                }
+                <Show when=move || open.get() fallback=|_| ()>
+                    <div class="datetime-dropdown-menu">
+                        {
+                            match input_type {
+                                Type::Date => date_selector().into_view(cx),
+                                Type::Time => time_selector().into_view(cx),
+                                Type::DateTime => view! {cx,
+                                    {date_selector()}
+                                    {time_selector()}
+                                }.into_view(cx),
                             }
-                        </div>
-                    }.into_view(cx),
-                    false => ().into_view(cx)
-                } }
+                        }
+                    </div>
+                </Show>
             </div>
         </leptonic-input-field>
     }
