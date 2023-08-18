@@ -127,77 +127,113 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
                 --button-border-radius
                 --button-box-shadow-opacity
 
-                --button-primary-text-color
-                --button-primary-text-color-hover
-                --button-primary-background-color
-                --button-primary-background-color-hover
-                --button-primary-border-color
-                --button-primary-border-color-hover
-                --button-primary-box-shadow-color
-
                 --button-flat-primary-text-color
                 --button-flat-primary-text-color-hover
                 --button-flat-primary-background-color-hover
 
-                --button-secondary-text-color
-                --button-secondary-text-color-hover
-                --button-secondary-background-color
-                --button-secondary-background-color-hover
-                --button-secondary-border-color
-                --button-secondary-border-color-hover
-                --button-secondary-box-shadow-color
+                --button-outlined-primary-text-color
+                --button-outlined-primary-text-color-hover
+                --button-outlined-primary-border-color
+                --button-outlined-primary-border-color-hover
+                --button-outlined-primary-box-shadow-color
+
+                --button-filled-primary-text-color
+                --button-filled-primary-text-color-hover
+                --button-filled-primary-background-color
+                --button-filled-primary-background-color-hover
+                --button-filled-primary-border-color
+                --button-filled-primary-border-color-hover
+                --button-filled-primary-box-shadow-color
 
                 --button-flat-secondary-text-color
                 --button-flat-secondary-text-color-hover
                 --button-flat-secondary-background-color-hover
 
-                --button-success-text-color
-                --button-success-text-color-hover
-                --button-success-background-color
-                --button-success-background-color-hover
-                --button-success-border-color
-                --button-success-border-color-hover
-                --button-success-box-shadow-color
+                --button-outlined-secondary-text-color
+                --button-outlined-secondary-text-color-hover
+                --button-outlined-secondary-border-color
+                --button-outlined-secondary-border-color-hover
+                --button-outlined-secondary-box-shadow-color
+
+                --button-filled-secondary-text-color
+                --button-filled-secondary-text-color-hover
+                --button-filled-secondary-background-color
+                --button-filled-secondary-background-color-hover
+                --button-filled-secondary-border-color
+                --button-filled-secondary-border-color-hover
+                --button-filled-secondary-box-shadow-color
 
                 --button-flat-success-text-color
                 --button-flat-success-text-color-hover
                 --button-flat-success-background-color-hover
 
-                --button-info-text-color
-                --button-info-text-color-hover
-                --button-info-background-color
-                --button-info-background-color-hover
-                --button-info-border-color
-                --button-info-border-color-hover
-                --button-info-box-shadow-color
+                --button-outlined-success-text-color
+                --button-outlined-success-text-color-hover
+                --button-outlined-success-border-color
+                --button-outlined-success-border-color-hover
+                --button-outlined-success-box-shadow-color
+
+                --button-filled-success-text-color
+                --button-filled-success-text-color-hover
+                --button-filled-success-background-color
+                --button-filled-success-background-color-hover
+                --button-filled-success-border-color
+                --button-filled-success-border-color-hover
+                --button-filled-success-box-shadow-color
 
                 --button-flat-info-text-color
                 --button-flat-info-text-color-hover
                 --button-flat-info-background-color-hover
 
-                --button-warning-text-color
-                --button-warning-text-color-hover
-                --button-warning-background-color
-                --button-warning-background-color-hover
-                --button-warning-border-color
-                --button-warning-border-color-hover
-                --button-warning-box-shadow-color
+                --button-outlined-info-text-color
+                --button-outlined-info-text-color-hover
+                --button-outlined-info-border-color
+                --button-outlined-info-border-color-hover
+                --button-outlined-info-box-shadow-color
+
+                --button-filled-info-text-color
+                --button-filled-info-text-color-hover
+                --button-filled-info-background-color
+                --button-filled-info-background-color-hover
+                --button-filled-info-border-color
+                --button-filled-info-border-color-hover
+                --button-filled-info-box-shadow-color
 
                 --button-flat-warning-text-color
                 --button-flat-warning-text-color-hover
                 --button-flat-warning-background-color-hover
 
-                --button-danger-text-color
-                --button-danger-text-color-hover
-                --button-danger-background-color
-                --button-danger-background-color-hover
-                --button-danger-border-color
-                --button-danger-border-color-hover
-                --button-danger-box-shadow-color
+                --button-outlined-warning-text-color
+                --button-outlined-warning-text-color-hover
+                --button-outlined-warning-border-color
+                --button-outlined-warning-border-color-hover
+                --button-outlined-warning-box-shadow-color
+
+                --button-filled-warning-text-color
+                --button-filled-warning-text-color-hover
+                --button-filled-warning-background-color
+                --button-filled-warning-background-color-hover
+                --button-filled-warning-border-color
+                --button-filled-warning-border-color-hover
+                --button-filled-warning-box-shadow-color
 
                 --button-flat-danger-text-color
                 --button-flat-danger-text-color-hover
                 --button-flat-danger-background-color-hover
+
+                --button-outlined-danger-text-color
+                --button-outlined-danger-text-color-hover
+                --button-outlined-danger-border-color
+                --button-outlined-danger-border-color-hover
+                --button-outlined-danger-box-shadow-color
+
+                --button-filled-danger-text-color
+                --button-filled-danger-text-color-hover
+                --button-filled-danger-background-color
+                --button-filled-danger-background-color-hover
+                --button-filled-danger-border-color
+                --button-filled-danger-border-color-hover
+                --button-filled-danger-box-shadow-color
             "#)}
         </Code>
     }

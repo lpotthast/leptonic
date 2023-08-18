@@ -11,12 +11,16 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
         <H3>"Changed:"</H3>
         <ul>
             <li>"The DateSelector components on_change prop now takes a Callback instead of a generic function."</li>
+            <li>"Buttons of type 'outlined' now use --button-outlined-[color]-... variables for their styling."</li>
+            <li>"Buttons of type 'filled' now use --button-filled-[color]-... variables for their styling."</li>
+            <li>"Buttons of type 'outlined' and color 'primary' now use a dark text color, contrasting the default bright background."</li>
         </ul>
 
         <H3>"Fixed:"</H3>
         <ul>
             <li>"A button with variants now properly respects its disabled state."</li>
-            <li>"A button with variants now correctly only triggers one of its actions per interaction."</li>
+            <li>"A button with variants now only triggers one of its actions (either main or variant) per interaction."</li>
+            <li>"Buttons of type 'flat' and color 'info' now receive correct styling."</li>
         </ul>
 
         <H2>"0.1.0"</H2>
