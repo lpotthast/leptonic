@@ -35,6 +35,7 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
             <li>"A button with variants now properly respects its disabled state."</li>
             <li>"A button with variants now only triggers one of its actions (either main or variant) per interaction."</li>
             <li>"Buttons of type 'flat' and color 'info' now receive correct styling."</li>
+            <li>"The installation instructions now include a section describing how to enable the required web_sys_unstable_apis opt-in."</li>
         </ul>
 
         <H2>"0.1.0"</H2>

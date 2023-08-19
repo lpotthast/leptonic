@@ -146,6 +146,20 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
             "##)}
         </Code>
 
+        <P>
+            "Leptonic depends on the "<Code inline=true>"leptos-use"</Code>" crate. Some of the features used require an opt-in."
+            " In order for your app to compile properly, add a folder named "<Code inline=true>".cargo"</Code>" besides your "<Code inline=true>"Cargo.toml"</Code>" file."
+            " Place a "<Code inline=true>"config.toml"</Code>" file inside it containing the following content:"
+        </P>
+
+        <Code>
+            {indoc!(r##"
+                [build]
+                # `leptonic` depends on some `leptos-use` functions requiring this opt-in. This may change in the future.
+                rustflags = ["--cfg=web_sys_unstable_apis"]
+            "##)}
+        </Code>
+
         <P>"You should now be ready to use leptonic components in your leptos app. Continue reading the "<Link href=DocRoutes::Usage>"Usage"</Link>" section, to see how to use your first component."</P>
     }
 }
