@@ -17,7 +17,7 @@ leptonic-skeleton {
     align-items: center;
     cursor: var(--skeleton-cursor);
 
-    &[animated] {
+    &[data-animated] {
         animation: loading 1.5s infinite;
     }
 

@@ -96,7 +96,7 @@ leptonic-slider {
         // The knob position is determined by setting the "left" attribute programmatically with a percentage value.
     }
 
-    &[variant="round"] {
+    &[data-variant="round"] {
         .bar {
             border-radius: calc(var(--slider-bar-height) * 0.5);
         }

@@ -89,6 +89,7 @@ where
                 id=id.to_string()
                 class=format!("{} {}", variant, size)
                 class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(true)
+                // TODO: Use aria-disabled instead?
                 class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 on:click=move |_| on_toggle()
                 prop:checked=move || checked.get()

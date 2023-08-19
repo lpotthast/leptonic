@@ -110,7 +110,7 @@ pub fn Drawer(
             class:hiding=move || anim_state.get() == DrawerAnimationState::Hiding
             class:hidden=move || anim_state.get() == DrawerAnimationState::Hidden
             style=style
-            side=side.to_str()
+            data-side=side.to_str()
         >
             { children(cx) }
         </leptonic-drawer>

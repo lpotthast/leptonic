@@ -83,7 +83,7 @@ leptonic-select {
         }
     }
 
-    &[variant="multiselect"] {
+    &[data-variant="multiselect"] {
         leptonic-select-selected {
             leptonic-select-option {
                 leptonic-chip {

@@ -180,7 +180,7 @@ $-tiers: (
   @each $tier-name, $tier-min in $-tiers {
 
     @for $i from 0 to $-grid-columns {
-      [#{$tier-name}-offset="#{$i}"] {
+      [data-#{$tier-name}-offset="#{$i}"] {
         margin-left: 0;
       }
     }
@@ -188,14 +188,14 @@ $-tiers: (
     @media only screen and (min-width: $tier-min) {
 
       @for $i from 1 through $-grid-columns {
-        [#{$tier-name}="#{$i}"] {
+        [data-#{$tier-name}="#{$i}"] {
           $percentage: percentage(math.div($i, $-grid-columns));
           flex-basis: calc($percentage - var(--leptonic-grid-spacing));
         }
       }
 
       @for $i from 0 to $-grid-columns {
-        [#{$tier-name}-offset="#{$i}"] {
+        [data-#{$tier-name}-offset="#{$i}"] {
           margin-left: percentage(math.div($i, $-grid-columns));
         }
       }

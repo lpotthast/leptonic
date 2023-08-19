@@ -273,7 +273,7 @@ where
     view! {cx,
         <leptonic-slider
             id=id
-            variant=variant.to_str()
+            data-variant=variant.to_str()
             class=class
             class:active=active
             class:disabled=disabled
@@ -426,7 +426,7 @@ where
     view! {cx,
         <leptonic-slider
             id=id
-            variant=variant.to_str()
+            data-variant=variant.to_str()
             class=class
             class:active=active
             class:disabled=disabled

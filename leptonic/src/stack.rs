@@ -32,7 +32,7 @@ pub fn Stack(
         <leptonic-stack
             id=id
             class=class
-            orientation=orientation.as_str()
+            data-orientation=orientation.as_str()
             style=style
             style=("--gap", format!("{spacing}"))
         >

@@ -37,7 +37,7 @@ where
     V: IntoView + 'static,
 {
     view! { cx,
-        <leptonic-alert variant=move || variant.get().to_str()>
+        <leptonic-alert data-variant=move || variant.get().to_str()>
             <div class="prepend">
                 {move || match variant.get() {
                     AlertVariant::Success => view!{cx, <Icon icon=BsIcon::BsCheckCircleFill /> },

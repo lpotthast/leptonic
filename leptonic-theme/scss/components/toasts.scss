@@ -51,7 +51,7 @@ leptonic-toast {
         border-bottom-right-radius: var(--toast-border-radius);
     }
 
-    &[variant="info"] {
+    &[data-variant="info"] {
         leptonic-toast-header {
             background-color: var(--toast-info-header-background-color);
             color: var(--toast-info-header-color);
@@ -63,7 +63,7 @@ leptonic-toast {
         }
     }
 
-    &[variant="success"] {
+    &[data-variant="success"] {
         leptonic-toast-header {
             background-color: var(--toast-success-header-background-color);
             color: var(--toast-success-header-color);
@@ -75,7 +75,7 @@ leptonic-toast {
         }
     }
 
-    &[variant="warn"] {
+    &[data-variant="warn"] {
         leptonic-toast-header {
             background-color: var(--toast-warn-header-background-color);
             color: var(--toast-warn-header-color);
@@ -87,7 +87,7 @@ leptonic-toast {
         }
     }
 
-    &[variant="error"] {
+    &[data-variant="error"] {
         leptonic-toast-header {
             background-color: var(--toast-error-header-background-color);
             color: var(--toast-error-header-color);

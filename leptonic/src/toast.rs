@@ -174,7 +174,7 @@ pub fn Toast(cx: Scope, toast: Toast) -> impl IntoView {
     };
 
     view! { cx,
-        <leptonic-toast id=toast.id.to_string() variant=toast.variant.as_str()>
+        <leptonic-toast id=toast.id.to_string() data-variant=toast.variant.as_str()>
             <leptonic-toast-header>
                 { toast.header }
 

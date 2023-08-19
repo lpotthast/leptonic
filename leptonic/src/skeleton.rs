@@ -29,7 +29,7 @@ pub fn Skeleton(
             node_ref=element
             id=id
             class=class
-            animated=animated
+            data-animated=animated
             style=style
             style=("--height", format!("{height}"))
             style=("--width", format!("{width}"))

@@ -17,7 +17,7 @@ body {
 
 @import "../generated/leptonic/leptonic-themes";
 
-[theme="light"] {
+[data-theme="light"] {
     --brand-color: #e66956;
 
     --drawer-background-color: none;
@@ -30,7 +30,7 @@ body {
     --book-menu-item-hover-color: var(--std-text-bright);
 }
 
-[theme="dark"] {
+[data-theme="dark"] {
     --brand-color: #e66956;
 
     --drawer-background-color: none;

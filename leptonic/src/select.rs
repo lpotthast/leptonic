@@ -213,7 +213,7 @@ where
         >
             <leptonic-select
                 id=id_string
-                variant="select"
+                data-variant="select"
                 aria-haspopup="listbox"
                 class:active=move || show_options.get()
                 style=style
@@ -447,7 +447,7 @@ where
         >
             <leptonic-select
                 id=id_string
-                variant="optional-select"
+                data-variant="optional-select"
                 aria-haspopup="listbox"
                 style=style
             >
@@ -715,7 +715,7 @@ where
         >
             <leptonic-select
                 id=id_string
-                variant="multiselect"
+                data-variant="multiselect"
                 aria-haspopup="listbox"
                 style=style
             >

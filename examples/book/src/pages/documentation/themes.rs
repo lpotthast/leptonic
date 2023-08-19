@@ -61,14 +61,14 @@ pub fn PageThemes(cx: Scope) -> impl IntoView {
             {indoc!(r#"
                 @import "../generated/leptonic/leptonic-themes";
 
-                [theme="light"] {
+                [data-theme="light"] {
                     --brand-color: #e66956;
 
                     --drawer-background-color: none;
                     --drawer-box-shadow: none;
                 }
 
-                [theme="dark"] {
+                [data-theme="dark"] {
                     --brand-color: #e66956;
 
                     --drawer-background-color: none;

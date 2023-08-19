@@ -10,11 +10,11 @@ leptonic-drawer {
     transform: translateX(0%);
     -webkit-transform: translateX(0%);
 
-    &[side="left"] {
+    &[data-side="left"] {
         margin: auto auto auto 0;
     }
 
-    &[side="right"] {
+    &[data-side="right"] {
         margin: auto 0 auto auto;
     }
 
@@ -24,10 +24,10 @@ leptonic-drawer {
     }
 
     &.showing {
-        &[side="left"] {
+        &[data-side="left"] {
             --animation: slide-in-left;
         }
-        &[side="right"] {
+        &[data-side="right"] {
             --animation: slide-in-right;
         }
 
@@ -38,10 +38,10 @@ leptonic-drawer {
     }
 
     &.hiding {
-        &[side="left"] {
+        &[data-side="left"] {
             --animation: slide-out-left;
         }
-        &[side="right"] {
+        &[data-side="right"] {
             --animation: slide-out-right;
         }
 

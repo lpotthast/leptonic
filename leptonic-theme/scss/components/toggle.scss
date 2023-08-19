@@ -18,10 +18,10 @@ leptonic-toggle-wrapper {
         display: inline-flex;
         height: $nob-width;
 
-        &[variant="sliding"] {
+        &[data-variant="sliding"] {
             width: 3.5em;
         }
-        &[variant="stationary"] {
+        &[data-variant="stationary"] {
             width: $nob-width;
         }
 
@@ -62,7 +62,7 @@ leptonic-toggle-wrapper {
             box-shadow: 0 0 0.1em var(--brand-color);
         }
 
-        &[variant="sliding"] {
+        &[data-variant="sliding"] {
             .slider.on {
                 &:before,
                 .icon-positioner {

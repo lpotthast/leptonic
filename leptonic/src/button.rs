@@ -151,9 +151,9 @@ where
             class=move || class.0.as_ref().map(|it| Cow::Owned(format!("{} leptonic-btn", it.get()))).unwrap_or(Cow::Borrowed("leptonic-btn"))
             class:has-variations=has_variations
             class:active=move || active.get()
-            variant=move || variant.get().as_str()
-            color=move || color.get().as_str()
-            size=move || size.get().as_str()
+            data-variant=move || variant.get().as_str()
+            data-color=move || color.get().as_str()
+            data-size=move || size.get().as_str()
             style=style
             aria-disabled=move || disabled.get()
             on:click=move |e| {

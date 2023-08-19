@@ -31,7 +31,7 @@
     padding-right: 1.5em;
   }
 
-  &[size="small"] {
+  &[data-size="small"] {
     .name {
       padding: 0.347em 0.625em;
     }
@@ -44,7 +44,7 @@
     outline: none;
   }
 
-  &[variant="flat"] {
+  &[data-variant="flat"] {
     border: none;
     background-color: transparent;
 
@@ -52,7 +52,7 @@
       text-transform: uppercase;
     }
 
-    &[color="primary"] {
+    &[data-color="primary"] {
       color: var(--button-flat-primary-text-color);
 
       &:hover,
@@ -63,7 +63,7 @@
       }
     }
 
-    &[color="secondary"] {
+    &[data-color="secondary"] {
       color: var(--button-flat-secondary-text-color);
 
       &:hover,
@@ -74,7 +74,7 @@
       }
     }
 
-    &[color="success"] {
+    &[data-color="success"] {
       color: var(--button-flat-success-text-color);
 
       &:hover,
@@ -85,7 +85,7 @@
       }
     }
 
-    &[color="info"] {
+    &[data-color="info"] {
       color: var(--button-flat-info-text-color);
 
       &:hover,
@@ -96,7 +96,7 @@
       }
     }
 
-    &[color="warn"] {
+    &[data-color="warn"] {
       color: var(--button-flat-warning-text-color);
 
       &:hover,
@@ -107,7 +107,7 @@
       }
     }
 
-    &[color="danger"] {
+    &[data-color="danger"] {
       color: var(--button-flat-danger-text-color);
 
       &:hover,
@@ -129,13 +129,13 @@
     }
   }
 
-  &[variant="outlined"] {
+  &[data-variant="outlined"] {
     border-width: var(--button-outlined-border-size);
     border-style: solid;
     border-color: var(--brand-color);
     background-color: transparent;
 
-    &[color="primary"] {
+    &[data-color="primary"] {
       color: var(--button-outlined-primary-text-color);
       border-color: var(--button-outlined-primary-border-color);
 
@@ -154,7 +154,7 @@
       }
     }
 
-    &[color="secondary"] {
+    &[data-color="secondary"] {
       color: var(--button-outlined-secondary-text-color);
       border-color: var(--button-outlined-secondary-border-color);
 
@@ -173,7 +173,7 @@
       }
     }
 
-    &[color="success"] {
+    &[data-color="success"] {
       color: var(--button-outlined-success-text-color);
       border-color: var(--button-outlined-success-border-color);
 
@@ -192,7 +192,7 @@
       }
     }
 
-    &[color="info"] {
+    &[data-color="info"] {
       color: var(--button-outlined-info-text-color);
       border-color: var(--button-outlined-info-border-color);
 
@@ -211,7 +211,7 @@
       }
     }
 
-    &[color="warn"] {
+    &[data-color="warn"] {
       color: var(--button-outlined-warning-text-color);
       border-color: var(--button-outlined-warning-border-color);
 
@@ -230,7 +230,7 @@
       }
     }
 
-    &[color="danger"] {
+    &[data-color="danger"] {
       color: var(--button-outlined-danger-text-color);
       border-color: var(--button-outlined-danger-border-color);
 
@@ -262,12 +262,12 @@
     }
   }
 
-  &[variant="filled"] {
+  &[data-variant="filled"] {
     border-width: var(--button-border-size);
     border-style: solid;
     border-color: transparent;
 
-    &[color="primary"] {
+    &[data-color="primary"] {
       color: var(--button-filled-primary-text-color);
       background-color: var(--button-filled-primary-background-color);
       border-color: var(--button-filled-primary-border-color);
@@ -288,7 +288,7 @@
       }
     }
 
-    &[color="secondary"] {
+    &[data-color="secondary"] {
       color: var(--button-filled-secondary-text-color);
       background-color: var(--button-filled-secondary-background-color);
       border-color: var(--button-filled-secondary-border-color);
@@ -309,7 +309,7 @@
       }
     }
 
-    &[color="success"] {
+    &[data-color="success"] {
       color: var(--button-filled-success-text-color);
       background-color: var(--button-filled-success-background-color);
       border-color: var(--button-filled-success-border-color);
@@ -330,7 +330,7 @@
       }
     }
 
-    &[color="info"] {
+    &[data-color="info"] {
       color: var(--button-filled-info-text-color);
       background-color: var(--button-filled-nfo-background-color);
       border-color: var(--button-filled-info-border-color);
@@ -351,7 +351,7 @@
       }
     }
 
-    &[color="warn"] {
+    &[data-color="warn"] {
       color: var(--button-filled-warning-text-color);
       background-color: var(--button-filled-warning-background-color);
       border-color: var(--button-filled-warning-border-color);
@@ -372,7 +372,7 @@
       }
     }
 
-    &[color="danger"] {
+    &[data-color="danger"] {
       color: var(--button-filled-danger-text-color);
       background-color: var(--button-filled-danger-background-color);
       border-color: var(--button-filled-danger-border-color);

@@ -8,11 +8,11 @@ leptonic-stack {
 
     gap: var(--gap);
 
-    &[orientation="vertical"] {
+    &[data-orientation="vertical"] {
         flex-direction: column;
     }
 
-    &[orientation="horizontal"] {
+    &[data-orientation="horizontal"] {
         flex-direction: row;
     }
 }

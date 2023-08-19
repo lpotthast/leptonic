@@ -8,7 +8,7 @@ leptonic-chip {
     border: var(--chip-border);
     border-radius: var(--chip-border-radius);
 
-    &[color="primary"] {
+    &[data-color="primary"] {
         color: var(--chip-primary-text-color);
         background-color: var(--chip-primary-background-color);
 
@@ -18,7 +18,7 @@ leptonic-chip {
         }
     }
 
-    &[color="secondary"] {
+    &[data-color="secondary"] {
         color: var(--chip-secondary-text-color);
         background-color: var(--chip-secondary-background-color);
 
@@ -28,7 +28,7 @@ leptonic-chip {
         }
     }
 
-    &[color="success"] {
+    &[data-color="success"] {
         color: var(--chip-success-text-color);
         background-color: var(--chip-success-background-color);
 
@@ -38,7 +38,7 @@ leptonic-chip {
         }
     }
 
-    &[color="info"] {
+    &[data-color="info"] {
         color: var(--chip-info-text-color);
         background-color: var(--chip-info-background-color);
 
@@ -48,7 +48,7 @@ leptonic-chip {
         }
     }
 
-    &[color="warn"] {
+    &[data-color="warn"] {
         color: var(--chip-warn-text-color);
         background-color: var(--chip-warn-background-color);
 
@@ -58,7 +58,7 @@ leptonic-chip {
         }
     }
 
-    &[color="danger"] {
+    &[data-color="danger"] {
         color: var(--chip-danger-text-color);
         background-color: var(--chip-danger-background-color);
 

@@ -35,7 +35,7 @@ pub fn ProgressBar(
     });
 
     view! { cx,
-        <leptonic-progress-bar node_ref=el indeterminate=move || progress.get().is_none()>
+        <leptonic-progress-bar node_ref=el data-indeterminate=move || progress.get().is_none()>
             <leptonic-progress-bar-background>
                 <leptonic-progress-bar-fill style=move || fill_style.get()>
                     <leptonic-progress-bar-fill-overlay />

@@ -55,7 +55,7 @@ where
 
     view! {cx,
         <leptonic-theme-provider
-            theme=move || theme.get().name()
+            data-theme=move || theme.get().name()
             style="height: 100%; width: auto; display: contents;"
         >
             { children(cx) }

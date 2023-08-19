@@ -103,11 +103,11 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
             "##)}
         </Code>
 
-        <P>"You can overwrite or add styles for a particular theme using a "<Code inline=true>"[theme=\"...\"]"</Code>" selector like so:"</P>
+        <P>"You can overwrite or add styles for a particular theme using a "<Code inline=true>"[data-theme=\"...\"]"</Code>" selector like so:"</P>
 
         <Code>
             {indoc!(r##"
-                [theme="light"] {
+                [data-theme="light"] {
                     --brand-color: #e66956;
                 }
             "##)}

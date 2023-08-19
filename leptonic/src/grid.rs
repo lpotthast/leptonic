@@ -75,11 +75,11 @@ pub fn Col(
             class:leptonic-grid-col-flex-start=(h_align == ColAlign::Start)
             class:leptonic-grid-col-flex-center=(h_align == ColAlign::Center)
             class:leptonic-grid-col-flex-end=(h_align == ColAlign::End)
-            xs=xs.unwrap_or(12)
-            sm=sm
-            md=md
-            lg=lg
-            xl=xl
+            data-xs=xs.unwrap_or(12)
+            data-sm=sm
+            data-md=md
+            data-lg=lg
+            data-xl=xl
             style=style
         >
             {children(cx)}
