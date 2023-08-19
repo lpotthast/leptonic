@@ -28,7 +28,10 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
             <li>"When using an input of type 'Number', you now have to supply optional 'min', 'max' and 'step' values which are propagated to the underlying input element."</li>
             <li>"The inputs 'set' prop is now optional."</li>
             <li>"The inputs 'set' prop is no longer generic. It now expects an 'Out<String>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
-            <li>"All components using custom attributes now render them with a \"data-\" prefix, allowing them to be standard-compliant and distinguishable from well-known / standard attributes."</li>
+            <li>
+                "All components using custom attributes now render them with a \"data-\" prefix, allowing them to be standard-compliant and distinguishable from well-known / standard attributes."
+                " 'leptonic-theme' styling changed appropriately."
+            </li>
         </ul>
 
         <H3>"Fixed:"</H3>
