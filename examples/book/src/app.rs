@@ -241,7 +241,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                             <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
                         }.into_view(cx),
                         false => view! {cx,
-                            <Link href=DocRoutes::Changelog>"v0.1"</Link>
+                            <Link href=DocRoutes::Changelog>"v0.2.0"</Link>
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
                                 <Icon id="github-icon" icon=BsIcon::BsGithub aria_label="GitHub icon"/>
@@ -267,7 +267,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
 
                     <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
 
-                    "Currently - v0.1"
+                    "Currently - v0.2.0"
                 </Stack>
             </Drawer>
         </Box>

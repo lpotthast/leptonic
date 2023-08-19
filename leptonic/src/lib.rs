@@ -1,6 +1,7 @@
 use std::fmt::Display;
 
 use leptos::*;
+use prelude::{Callable, Callback};
 
 pub mod alert;
 pub mod anchor;
@@ -226,9 +227,49 @@ pub mod prelude {
     pub use super::OptionDeref;
     pub use super::OptionalMaybeSignal;
     pub use super::OptionalSignal;
+    pub use super::Out;
     pub use super::Size;
     pub use super::Width;
 }
+
+pub enum Out<O: 'static> {
+    Callback(Callback<O, ()>),
+    WriteSignal(WriteSignal<O>),
+}
+
+impl<O: 'static> Out<O> {
+    pub fn set(&self, new_value: O) {
+        match self {
+            Out::Callback(callback) => callback.call(new_value),
+            Out::WriteSignal(write_signal) => write_signal.set(new_value),
+        }
+    }
+}
+
+// TODO: Add `impl<O: 'static> From<Fn<O>> for Out<O>` when leptos 0.5 is used, as no scope is needed to transform the closure into a callback! (see https://github.com/lpotthast/leptonic/issues/5)
+
+impl<O: 'static> From<Callback<O>> for Out<O> {
+    fn from(callback: Callback<O>) -> Self {
+        Out::Callback(callback)
+    }
+}
+
+impl<O: 'static> From<WriteSignal<O>> for Out<O> {
+    fn from(write_signal: WriteSignal<O>) -> Self {
+        Out::WriteSignal(write_signal)
+    }
+}
+
+impl<O: 'static> Clone for Out<O> {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Callback(arg0) => Self::Callback(arg0.clone()),
+            Self::WriteSignal(arg0) => Self::WriteSignal(arg0.clone()),
+        }
+    }
+}
+
+impl<O: 'static> Copy for Out<O> {}
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Mount {

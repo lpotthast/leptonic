@@ -32,7 +32,11 @@ pub fn PageProgress(cx: Scope) -> impl IntoView {
 
         <ProgressBar progress=progress/>
 
-        <Input ty=InputType::Number get=progress_str set=move |v| set_progress.set(str::parse::<f64>(v.as_str()).ok()) style="margin-top: 1em;"/>
+        <Input ty=InputType::Number { min: None, max: None, step: None }
+            get=progress_str
+            set=create_callback(cx, move |v: String| set_progress.set(str::parse::<f64>(v.as_str()).ok()))
+            style="margin-top: 1em;"
+        />
 
         <Slider
             value=Signal::derive(cx, move || progress.get().unwrap_or(0.0))

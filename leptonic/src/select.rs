@@ -232,7 +232,7 @@ where
                 <leptonic-select-options class:shown=move || show_options.get()>
                     <Input
                         get=search
-                        set=move |s| set_search.set(s)
+                        set=set_search
                         should_be_focused=search_should_be_focused
                         on_focus_change=create_callback(cx, move |focused| {
                             // We only update our state as long as show_options is true.
@@ -485,7 +485,7 @@ where
                 <leptonic-select-options class:shown=move || show_options.get()>
                     <Input
                         get=search
-                        set=move |s| set_search.set(s)
+                        set=set_search
                         should_be_focused=search_should_be_focused
                         on_focus_change=create_callback(cx, move |focused| {
                             // We only update our state as long as show_options is true.
@@ -751,7 +751,7 @@ where
                 <leptonic-select-options class:shown=move || show_options.get()>
                     <Input
                         get=search
-                        set=move |s| set_search.set(s)
+                        set=set_search
                         should_be_focused=search_should_be_focused
                         on_focus_change=create_callback(cx, move |focused| {
                             // We only update our state as long as show_options is true.

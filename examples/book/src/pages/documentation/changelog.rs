@@ -8,12 +8,26 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
 
         <H2>"0.2.0"</H2>
 
+        <H3>"Added:"</H3>
+        <ul>
+            <li>
+                "Added the 'Out' type. An enum abstracting over 'Callback's and 'WriteSignal's."
+                " Components can use this type when it is equally likely that a user will provide either of the previously mentioned types."
+                " In case of the WriteSignal, the user just wants a new value to be stored."
+                " In case of a callback, the user wants fine control over how a new value is handled."
+                " The input component is the first one using it, as mentioned in the 'Changed' section."
+            </li>
+        </ul>
+
         <H3>"Changed:"</H3>
         <ul>
             <li>"The DateSelector components on_change prop now takes a Callback instead of a generic function."</li>
             <li>"Buttons of type 'outlined' now use --button-outlined-[color]-... variables for their styling."</li>
             <li>"Buttons of type 'filled' now use --button-filled-[color]-... variables for their styling."</li>
             <li>"Buttons of type 'outlined' and color 'primary' now use a dark text color, contrasting the default bright background."</li>
+            <li>"When using an input of type 'Number', you now have to supply optional 'min', 'max' and 'step' values which are propagated to the underlying input element."</li>
+            <li>"The inputs 'set' prop is now optional."</li>
+            <li>"The inputs 'set' prop is no longer generic. It now expects an 'Out<String>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
         </ul>
 
         <H3>"Fixed:"</H3>

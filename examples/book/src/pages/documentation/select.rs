@@ -19,12 +19,37 @@ impl std::fmt::Display for Foo {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+struct User {
+    name: String,
+    value: ordered_float::OrderedFloat<f32>,
+}
+
+impl std::fmt::Display for User {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{} - {}", &self.name, &self.value))
+    }
+}
+
 #[component]
 pub fn PageSelect(cx: Scope) -> impl IntoView {
     let (selected, set_selected) = create_signal(cx, Foo::A);
     let (selected_opt, set_selected_opt) = create_signal(cx, Option::<Foo>::None);
     let (selected_multi, set_selected_multi) = create_signal(cx, vec![Foo::A, Foo::B]);
     let (selected_multi2, set_selected_multi2) = create_signal(cx, vec![Foo::A]);
+
+    let selectable_users = vec![
+        User {
+            name: "Tom".to_owned(),
+            value: ordered_float::OrderedFloat(1.0),
+        },
+        User {
+            name: "Bob".to_owned(),
+            value: ordered_float::OrderedFloat(42.0),
+        },
+    ];
+
+    let (selected_user, set_selected_user) = create_signal(cx, selectable_users[0].clone());
 
     view! { cx,
         <H1>"Selects"</H1>
@@ -154,6 +179,58 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
             "Select options can be searched. When opening the dropdown of available options, focus will automatically jump to the search input, allowing you to type instantly. "
             "When closing the dropdown, focus is automatically restored to the select, allowing you to "<Code inline=true>"Tab"</Code>" to the next element."
         </P>
+
+        <H2>"Customization"</H2>
+
+        <P>"Let's define a select component which allows selection from a list of struct values."</P>
+
+        <Code>
+            {indoc!(r#"
+                #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+                struct User {
+                    name: String,
+                    value: ordered_float::OrderedFloat<f32>,
+                }
+
+                impl std::fmt::Display for User {
+                    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                        f.write_fmt(format_args!("{} - {}", &self.name, &self.value))
+                    }
+                }
+
+                let selectable_users = vec![
+                    User {
+                        name: "Tom".to_owned(),
+                        value: ordered_float::OrderedFloat(1.0),
+                    },
+                    User {
+                        name: "Bob".to_owned(),
+                        value: ordered_float::OrderedFloat(42.0),
+                    },
+                ];
+
+                let (selected_user, set_selected_user) = create_signal(cx, selectable_users[0].clone());
+
+                view! {cx,
+                    <P>"Selected user is: " { move || selected_user.get().to_string() }</P>
+                    <Select
+                        options=selectable_users.clone()
+                        render_option=create_callback(cx, move |(_cx, o): (Scope, User)| format!("{}", o.name))
+                        selected=selected_user
+                        set_selected=create_callback(cx, move |v| set_selected_user.set(v))
+                    />
+                }
+            "#)}
+        </Code>
+
+        <P>"Selected user is: " { move || selected_user.get().to_string() }</P>
+
+        <Select
+            options=selectable_users.clone()
+            render_option=create_callback(cx, move |(_cx, o): (Scope, User)| format!("{}", o.name))
+            selected=selected_user
+            set_selected=create_callback(cx, move |v| set_selected_user.set(v))
+        />
 
         <H2>"Styling"</H2>
 

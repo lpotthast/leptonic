@@ -77,7 +77,7 @@ where
             <ModalHeader>
                 <Input
                     get=input
-                    set=move |v| set_input.set(v)
+                    set=set_input
                     label="Search"
                     class="search-input"
                     should_be_focused=show_when
