@@ -4,8 +4,8 @@ use leptos_use::{use_element_size, UseElementSizeReturn};
 #[component]
 pub fn ProgressBar(
     cx: Scope,
-    #[prop(default = 100.0)] max: f64,
-    #[prop(into)] progress: Signal<Option<f64>>, // TODO: MaybeSignal
+    #[prop(into, default = MaybeSignal::Static(100.0))] max: MaybeSignal<f64>,
+    #[prop(into)] progress: MaybeSignal<Option<f64>>,
 ) -> impl IntoView {
     let el = create_node_ref(cx);
 
@@ -13,13 +13,16 @@ pub fn ProgressBar(
 
     // Calculates the percentage done in range [0, 1].
     let percentage_done = Signal::derive(cx, move || {
-        progress.get().map(|it| f64::max(it, 0.0)).map(|pos_progress| {
-            let percentage = match max == 0.0 {
-                true => 0.0,
-                false => pos_progress / max,
-            };
-            f64::max(f64::min(percentage, 1.0), 0.0)
-        })
+        let max = max.get();
+        progress.get()
+            .map(|it| f64::max(it, 0.0))
+            .map(|pos_progress| {
+                let percentage = match max == 0.0 {
+                    true => 0.0,
+                    false => pos_progress / max,
+                };
+                f64::max(f64::min(percentage, 1.0), 0.0)
+            })
     });
 
     let fill_width_px = Signal::derive(cx, move || {

@@ -47,7 +47,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
 
         <H2>"Volume slider"</H2>
 
-        <P>"Continuous sliders are perfect when the exact value selected is of no interest to your user. For example, when operating a volume slider."</P>
+        <P>"Continuous sliders are perfect when the exact value selected is of no particular interest to your user. For example, when operating a volume slider."</P>
 
         <Code>
             {indoc!(r#"

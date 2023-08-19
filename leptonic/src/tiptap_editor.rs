@@ -6,17 +6,14 @@ use uuid::Uuid;
 use crate::prelude::*;
 
 #[component]
-pub fn TiptapEditor<C>(
+pub fn TiptapEditor(
     cx: Scope,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into)] value: Signal<String>,
-    set_value: C,
-) -> impl IntoView
-where
-    C: Fn(TiptapContent) + 'static,
-{
+    #[prop(into)] set_value: Out<TiptapContent>,
+) -> impl IntoView {
     let (msg, set_msg) = create_signal(cx, TiptapInstanceMsg::Noop);
 
     let (selection_state, set_selection_state) = create_signal(cx, TiptapSelectionState::default());
@@ -115,7 +112,7 @@ where
                     None => MaybeSignal::Static(false),
                 }
                 value=value
-                set_value=set_value
+                set_value=move |v| set_value.set(v)
                 on_selection_change=move |state| set_selection_state.set(state)
             />
         </leptonic-tiptap-editor>

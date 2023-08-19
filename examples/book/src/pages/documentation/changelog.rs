@@ -26,12 +26,16 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
             <li>"Buttons of type 'filled' now use --button-filled-[color]-... variables for their styling."</li>
             <li>"Buttons of type 'outlined' and color 'primary' now use a dark text color, contrasting the default bright background."</li>
             <li>"When using an input of type 'Number', you now have to supply optional 'min', 'max' and 'step' values which are propagated to the underlying input element."</li>
-            <li>"The inputs 'set' prop is now optional."</li>
-            <li>"The inputs 'set' prop is no longer generic. It now expects an 'Out<String>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
+            <li>"The Input 'set' prop is now optional."</li>
+            <li>"The Input 'set' prop is no longer generic. It now expects an 'Out<String>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
+            <li>"The Slider and RangerSlider 'set_value' props are no longer generic. They now expect an 'Out<f64>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
+            <li>"The TiptapEditor 'set_value' prop is no longer generic. It now expect an 'Out<TiptapContent>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
             <li>
                 "All components using custom attributes now render them with a \"data-\" prefix, allowing them to be standard-compliant and distinguishable from well-known / standard attributes."
                 " 'leptonic-theme' styling changed appropriately."
             </li>
+            <li>"Prop 'max' of the ProgressBar is now a MaybeSignal."</li>
+            <li>"Prop 'progress' of the ProgressBar is now a MaybeSignal."</li>
         </ul>
 
         <H3>"Fixed:"</H3>
