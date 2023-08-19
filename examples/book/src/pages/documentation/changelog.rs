@@ -36,6 +36,10 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
             </li>
             <li>"Prop 'max' of the ProgressBar is now a MaybeSignal."</li>
             <li>"Prop 'progress' of the ProgressBar is now a MaybeSignal."</li>
+            <li>
+                "Prop 'title' of the Alert is now a Callback instead of a generic Fn closure."
+                " Expect the now necessary `create_callback(cx, move || {})` when instantiating a component with a callback prop to become a simple `move || {}` after a migration to leptos 0.5!"
+            </li>
         </ul>
 
         <H3>"Fixed:"</H3>

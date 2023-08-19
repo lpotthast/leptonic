@@ -25,15 +25,14 @@ impl AlertVariant {
 // TODO: Use Slots for title and body when available.
 // TODO: Icon (or entire prepend) must be overridable.
 #[component]
-pub fn Alert<T, V>(
+pub fn Alert<V>(
     cx: Scope,
     #[prop(into)] variant: MaybeSignal<AlertVariant>,
-    title: T,
+    #[prop(into)] title: Callback<Scope, V>,
     #[prop(into, optional)] centered: OptionalMaybeSignal<bool>,
     children: Children,
 ) -> impl IntoView
 where
-    T: Fn(Scope) -> V + 'static,
     V: IntoView + 'static,
 {
     view! { cx,
@@ -48,7 +47,7 @@ where
             </div>
             <div class="content" class:centered=move || centered.0.as_ref().map(|it| it.get()).unwrap_or(false)>
                 <div class="title">
-                    { move || title(cx) }
+                    { move || title.call(cx) }
                 </div>
                 { children(cx) }
             </div>

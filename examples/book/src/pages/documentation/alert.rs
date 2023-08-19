@@ -14,10 +14,10 @@ pub fn PageAlert(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Alert variant=AlertVariant::Success title=|_| "Success" centered=centered>"Action completed."</Alert>
-        <Alert variant=AlertVariant::Info title=|_| "Info" centered=centered>"This concept is based on [...]"</Alert>
-        <Alert variant=AlertVariant::Warn title=|_| "Warn" centered=centered>"This seems not plausible."</Alert>
-        <Alert variant=AlertVariant::Danger title=|_| "Danger" centered=centered>"There was an error!"</Alert>
+        <Alert variant=AlertVariant::Success title=create_callback(cx, |_| "Success") centered=centered>"Action completed."</Alert>
+        <Alert variant=AlertVariant::Info title=create_callback(cx, |_| "Info") centered=centered>"This concept is based on [...]"</Alert>
+        <Alert variant=AlertVariant::Warn title=create_callback(cx, |_| "Warn") centered=centered>"This seems not plausible."</Alert>
+        <Alert variant=AlertVariant::Danger title=create_callback(cx, |_| "Danger") centered=centered>"There was an error!"</Alert>
 
         <P>"Alerts can be dynamically centered using a signal."</P>
 
