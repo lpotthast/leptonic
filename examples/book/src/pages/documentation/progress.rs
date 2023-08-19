@@ -40,7 +40,7 @@ pub fn PageProgress(cx: Scope) -> impl IntoView {
 
         <Slider
             value=Signal::derive(cx, move || progress.get().unwrap_or(0.0))
-            set_value=move |v| set_progress.set(Some((v * 100.0).round() / 100.0))
+            set_value=create_callback(cx, move |v: f64| set_progress.set(Some((v * 100.0).round() / 100.0)))
             min=0.0
             max=100.0
             step=0.01

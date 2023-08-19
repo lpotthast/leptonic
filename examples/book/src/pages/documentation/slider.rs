@@ -30,7 +30,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
                 let (value, set_value) = create_signal(cx, 6.0);
                 view! {cx,
                     <Slider min=0.0 max=1.0 step=0.0001
-                        value=value set_value=move |v| set_value.set(v)
+                        value=value set_value=set_value
                         value_display=create_callback(cx, move |v| format!("{v:.4}")) />
                 }
             "#)}
@@ -42,7 +42,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
         </P>
 
         <Slider min=0.0 max=1.0 step=0.0001
-            value=value4 set_value=move |v| set_value4.set(v)
+            value=value4 set_value=set_value4
             value_display=create_callback(cx, move |v| format!("{v:.4}")) />
 
         <H2>"Volume slider"</H2>
@@ -56,7 +56,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
                     <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
                         <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
                         <Slider min=0.0 max=1.0 step=0.0001
-                            value=value set_value=move |v| set_value.set(v)
+                            value=value set_value=set_value
                             value_display=create_callback(cx, move |v| format!("{:.0}%", v * 100.0))
                             style="width: 10em"/>
                         <Icon icon=BsIcon::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
@@ -67,7 +67,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
 
         <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
             <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
-            <Slider min=0.0 max=1.0 step=0.0001 value=value5 set_value=move |v| set_value5.set(v) style="width: 10em"
+            <Slider min=0.0 max=1.0 step=0.0001 value=value5 set_value=set_value5 style="width: 10em"
                 value_display=create_callback(cx, move |v| format!("{:.0}%", v * 100.0))/>
             <Icon icon=BsIcon::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
         </Stack>
@@ -84,7 +84,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
                 let (value, set_value) = create_signal(cx, 6.0);
                 view! {cx,
                     <Slider min=1.0 max=10.0 step=1.0
-                        value=value set_value=move |v| set_value.set(v)
+                        value=value set_value=set_value
                         marks=SliderMarks::Automatic { create_names: false }
                         value_display=create_callback(cx, move |v| format!("{v:.0}"))/>
                 }
@@ -92,7 +92,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
         </Code>
 
         <Slider min=1.0 max=10.0 step=1.0
-            value=value1 set_value=move |v| set_value1.set(v)
+            value=value1 set_value=set_value1
             marks=SliderMarks::Automatic { create_names: false }
             value_display=create_callback(cx, move |v| format!("{v:.0}"))/>
 
@@ -105,13 +105,13 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
 
         <P>"Sliders can use any combination of min, max and step values."</P>
 
-        <Slider value=value2 set_value=move |v| set_value2.set(v) min=2.0 max=8.0 step=0.4
+        <Slider value=value2 set_value=set_value2 min=2.0 max=8.0 step=0.4
             marks=SliderMarks::Automatic { create_names: false }
             value_display=create_callback(cx, move |v| format!("{v:.1}"))/>
 
         <P>"You can also use a positive value for the "<Code inline=true>"min"</Code>" prop, and a negative value for the "<Code inline=true>"max"</Code>" prop, resulting in an reversed axis."</P>
 
-        <Slider value=value3 set_value=move |v| set_value3.set(v) min=9.0 max=-9.0 step=1.0
+        <Slider value=value3 set_value=set_value3 min=9.0 max=-9.0 step=1.0
             marks=SliderMarks::Automatic { create_names: false }
             value_display=create_callback(cx, move |v| format!("{v:.0}")) />
 
@@ -131,8 +131,8 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
                     <RangeSlider
                         value_a=range_a
                         value_b=range_b
-                        set_value_a=move |v| set_range_a.set(v)
-                        set_value_b=move |v| set_range_b.set(v)
+                        set_value_a=set_range_a
+                        set_value_b=set_range_b
                         min=0.0
                         max=1.0
                         step=0.0001
@@ -146,8 +146,8 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
         <RangeSlider
             value_a=range_a
             value_b=range_b
-            set_value_a=move |v| set_range_a.set(v)
-            set_value_b=move |v| set_range_b.set(v)
+            set_value_a=set_range_a
+            set_value_b=set_range_b
             min=0.0
             max=1.0
             step=0.0001
@@ -160,8 +160,8 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
         <RangeSlider
             value_a=range_a_step
             value_b=range_b_step
-            set_value_a=move |v| set_range_a_step.set(v)
-            set_value_b=move |v| set_range_b_step.set(v)
+            set_value_a=set_range_a_step
+            set_value_b=set_range_b_step
             min=1.0
             max=5.0
             step=1.0

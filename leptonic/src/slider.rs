@@ -5,7 +5,7 @@ use leptos_use::{use_element_hover, use_mouse, UseMouseReturn};
 
 use crate::{
     contexts::global_mouseup_event::GlobalMouseupEvent,
-    prelude::{Callable, Callback, Popover},
+    prelude::{Callable, Callback, Popover}, Out,
 };
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -202,10 +202,10 @@ impl SliderPopover {
 }
 
 #[component]
-pub fn Slider<S>(
+pub fn Slider(
     cx: Scope,
     #[prop(into)] value: MaybeSignal<f64>,
-    set_value: S,
+    #[prop(into)] set_value: Out<f64>,
     min: f64,
     max: f64,
     step: f64,
@@ -218,10 +218,7 @@ pub fn Slider<S>(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
-) -> impl IntoView
-where
-    S: Fn(f64) + 'static,
-{
+) -> impl IntoView {
     let range = create_memo(cx, move |_| max - min);
 
     let bar_el: NodeRef<html::Div> = create_node_ref(cx);
@@ -252,7 +249,7 @@ where
     // While this slider is "listening", propagate the value.
     create_effect(cx, move |_| {
         if knob.listening.get() {
-            set_value(cursor.clipped_value.get())
+            set_value.set(cursor.clipped_value.get())
         }
     });
 
@@ -324,12 +321,12 @@ where
 }
 
 #[component]
-pub fn RangeSlider<Sa, Sb>(
+pub fn RangeSlider(
     cx: Scope,
     #[prop(into)] value_a: MaybeSignal<f64>,
     #[prop(into)] value_b: MaybeSignal<f64>,
-    set_value_a: Sa,
-    set_value_b: Sb,
+    #[prop(into)] set_value_a: Out<f64>,
+    #[prop(into)] set_value_b: Out<f64>,
     min: f64,
     max: f64,
     step: f64,
@@ -342,11 +339,7 @@ pub fn RangeSlider<Sa, Sb>(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
-) -> impl IntoView
-where
-    Sa: Fn(f64) + 'static,
-    Sb: Fn(f64) + 'static,
-{
+) -> impl IntoView {
     let range = create_memo(cx, move |_| max - min);
 
     let bar_el: NodeRef<html::Div> = create_node_ref(cx);
@@ -386,25 +379,25 @@ where
         if knob_a.listening.get() {
             let b = value_b.get_untracked();
             if clipped_value_from_cursor > b {
-                set_value_a(b);
-                set_value_b(clipped_value_from_cursor);
+                set_value_a.set(b);
+                set_value_b.set(clipped_value_from_cursor);
 
                 knob_a.set_listening.set(false);
                 knob_b.set_listening.set(true);
             } else {
-                set_value_a(clipped_value_from_cursor);
+                set_value_a.set(clipped_value_from_cursor);
             }
         }
         if knob_b.listening.get() {
             let a = value_a.get_untracked();
             if clipped_value_from_cursor < a {
-                set_value_b(a);
-                set_value_a(clipped_value_from_cursor);
+                set_value_b.set(a);
+                set_value_a.set(clipped_value_from_cursor);
 
                 knob_b.set_listening.set(false);
                 knob_a.set_listening.set(true);
             } else {
-                set_value_b(clipped_value_from_cursor);
+                set_value_b.set(clipped_value_from_cursor);
             }
         }
     });
