@@ -10,16 +10,55 @@ pub fn PageTable(cx: Scope) -> impl IntoView {
         <P>"Tables..."</P>
 
         <Code>
-            {indoc!(r#"
-                <Table>
-                    <TableBody />
-                </Table>
-            "#)}
+            {indoc!(r###"
+                <TableContainer>
+                    <Table bordered=true hoverable=true>
+                        <Thead>
+                            <Tr>
+                                <Th min_width=true>"#"</Th>
+                                <Th>"Name"</Th>
+                            </Tr>
+                        </Thead>
+                        <Tbody>
+                            <Tr>
+                                <Th>"1"</Th>
+                                <Th>"Kevin"</Th>
+                            </Tr>
+                            // ...
+                        </Tbody>
+                    </Table>
+                </TableContainer>
+            "###)}
         </Code>
 
-        <Table>
-            <TableBody />
-        </Table>
+        <TableContainer>
+            <Table bordered=true hoverable=true>
+                <Thead>
+                    <Tr>
+                        <Th min_width=true>"#"</Th>
+                        <Th>"Name"</Th>
+                    </Tr>
+                </Thead>
+                <Tbody>
+                    <Tr>
+                        <Th>"1"</Th>
+                        <Th>"Kevin"</Th>
+                    </Tr>
+                    <Tr>
+                        <Th>"2"</Th>
+                        <Th>"Bob"</Th>
+                    </Tr>
+                    <Tr>
+                        <Th>"3"</Th>
+                        <Th>"Stuart"</Th>
+                    </Tr>
+                    <Tr>
+                        <Th>"4"</Th>
+                        <Th>"Otto"</Th>
+                    </Tr>
+                </Tbody>
+            </Table>
+        </TableContainer>
 
         <H2>"Styling"</H2>
 

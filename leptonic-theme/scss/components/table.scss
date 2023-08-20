@@ -1,4 +1,4 @@
-.leptonic-table-wrapper {
+leptonic-table-container {
   display: block;
   width: 100%;
   overflow-x: auto;
@@ -7,7 +7,8 @@
   box-shadow: -2px 3px 15px -6px var(--table-wrapper-box-shadow-color);
 }
 
-.leptonic-table {
+leptonic-table {
+  display: table;
   margin: 0;
   width: 100%;
   font-size: 1em;

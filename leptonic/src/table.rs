@@ -13,7 +13,7 @@ pub fn TableContainer(
     children: Children,
 ) -> impl IntoView {
     view! {cx,
-        <leptonic-table-container>
+        <leptonic-table-container id=id class=class style=style>
             {children(cx)}
         </leptonic-table-container>
     }
@@ -22,6 +22,8 @@ pub fn TableContainer(
 #[component]
 pub fn Table(
     cx: Scope,
+    #[prop(optional)] bordered: Option<bool>,
+    #[prop(optional)] hoverable: Option<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -29,48 +31,55 @@ pub fn Table(
 ) -> impl IntoView {
     view! {cx,
         //<table class="crud-table crud-table-bordered crud-table-hoverable">
-        <leptonic-table id=id class=class style=style>
+        <leptonic-table
+            id=id
+            class=class
+            class:leptonic-table-bordered=bordered.unwrap_or(false)
+            class:leptonic-table-hoverable=hoverable.unwrap_or(false)
+            style=style
+        >
             {children(cx)}
         </leptonic-table>
     }
 }
 
 #[component]
-pub fn THeader(cx: Scope) -> impl IntoView {
+pub fn Thead(cx: Scope, children: Children) -> impl IntoView {
     view! {cx,
-        <leptonic-table-header>
-        </leptonic-table-header>
+        <thead>{children(cx)}</thead>
     }
 }
 
 #[component]
-pub fn TBody(cx: Scope) -> impl IntoView {
+pub fn Tbody(cx: Scope, children: Children) -> impl IntoView {
     view! {cx,
-        <leptonic-table-header>
-        </leptonic-table-header>
+        <tbody>{children(cx)}</tbody>
     }
 }
 
 #[component]
-pub fn TFooter(cx: Scope) -> impl IntoView {
+pub fn Tfoot(cx: Scope, children: Children) -> impl IntoView {
     view! {cx,
-        <leptonic-table-header>
-        </leptonic-table-header>
+        <tfoot>{children(cx)}</tfoot>
     }
 }
 
 #[component]
-pub fn TRow(cx: Scope) -> impl IntoView {
+pub fn Tr(cx: Scope, children: Children) -> impl IntoView {
     view! {cx,
-        <leptonic-table-header>
-        </leptonic-table-header>
+        <tr>{children(cx)}</tr>
     }
 }
 
 #[component]
-pub fn TCell(cx: Scope) -> impl IntoView {
+pub fn Th(cx: Scope, #[prop(optional)] min_width: Option<bool>, children: Children) -> impl IntoView {
     view! {cx,
-        <leptonic-table-header>
-        </leptonic-table-header>
+        <th class:min-width=min_width.unwrap_or(false)>{children(cx)}</th>
+    }
+}
+#[component]
+pub fn Td(cx: Scope, children: Children) -> impl IntoView {
+    view! {cx,
+        <td>{children(cx)}</td>
     }
 }
