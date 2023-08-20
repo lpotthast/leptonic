@@ -17,6 +17,7 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
                 " In case of a callback, the user wants fine control over how a new value is handled."
                 " The input component is the first one using it, as mentioned in the 'Changed' section."
             </li>
+            <li>"The Select, OptionalSelect and Multiselect components now accept a 'class' prop with which custom classes can be attached to a rendered <leptonic-select> element."</li>
         </ul>
 
         <H3>"Changed:"</H3>
