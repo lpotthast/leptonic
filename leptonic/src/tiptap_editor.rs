@@ -12,7 +12,7 @@ pub fn TiptapEditor(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into)] value: Signal<String>,
-    #[prop(into)] set_value: Out<TiptapContent>,
+    #[prop(into, optional)] set_value: Option<Out<TiptapContent>>,
 ) -> impl IntoView {
     let (msg, set_msg) = create_signal(cx, TiptapInstanceMsg::Noop);
 
@@ -112,7 +112,11 @@ pub fn TiptapEditor(
                     None => MaybeSignal::Static(false),
                 }
                 value=value
-                set_value=move |v| set_value.set(v)
+                set_value=move |v| {
+                    if let Some(set_value) = set_value {
+                        set_value.set(v)
+                    }
+                }
                 on_selection_change=move |state| set_selection_state.set(state)
             />
         </leptonic-tiptap-editor>

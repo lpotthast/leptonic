@@ -252,6 +252,19 @@
     --input-min-height: 2.75em;
     --input-focused-border-color: var(--brand-color);
 
+    // Kbd
+    --leptonic-kbd-key-color: var(--std-text-light);
+    --leptonic-kbd-key-background-color: #5a5a5a;
+    --leptonic-kbd-key-margin: 0em;
+    --leptonic-kbd-key-padding: 0.3em 0.5em;
+    --leptonic-kbd-key-border-radius: 0.4em;
+    --leptonic-kbd-key-border-color: #333333;
+    --leptonic-kbd-concatenate-color: var(--std-text-light);
+    --leptonic-kbd-concatenate-background-color: transparent;
+    --leptonic-kbd-concatenate-margin: 0 0.1em;
+    --leptonic-kbd-concatenate-padding: 0.3em;
+    --leptonic-kbd-concatenate-border-radius: 0;
+
     // Links
     --link-color: var(--brand-color);
 

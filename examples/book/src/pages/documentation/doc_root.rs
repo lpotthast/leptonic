@@ -20,6 +20,7 @@ use crate::pages::documentation::grid::PageGrid;
 use crate::pages::documentation::icon::PageIcon;
 use crate::pages::documentation::input::PageInput;
 use crate::pages::documentation::installation::PageInstallation;
+use crate::pages::documentation::kbd::PageKbd;
 use crate::pages::documentation::link::PageLink;
 use crate::pages::documentation::modal::PageModal;
 use crate::pages::documentation::overview::PageOverview;
@@ -31,6 +32,7 @@ use crate::pages::documentation::skeleton::PageSkeleton;
 use crate::pages::documentation::slider::PageSlider;
 use crate::pages::documentation::stack::PageStack;
 use crate::pages::documentation::tab::PageTab;
+use crate::pages::documentation::table::PageTable;
 use crate::pages::documentation::themes::PageThemes;
 use crate::pages::documentation::tiptap_editor::PageTiptapEditor;
 use crate::pages::documentation::toast::PageToast;
@@ -57,6 +59,7 @@ pub enum DocRoutes {
     AppBar,
     Drawer,
     Tab,
+    Table,
     Collapsible,
 
     // Input
@@ -75,6 +78,7 @@ pub enum DocRoutes {
     Progress,
     Popover,
     Chip,
+    Kbd,
 
     // General
     Typography,
@@ -105,7 +109,8 @@ impl DocRoutes {
             DocRoutes::Skeleton => "skeleton",
             DocRoutes::AppBar => "app-bar",
             DocRoutes::Drawer => "drawer",
-            DocRoutes::Tab => "tab",
+            DocRoutes::Tab => "tabs",
+            DocRoutes::Table => "table",
             DocRoutes::Collapsible => "collapsible",
 
             DocRoutes::Button => "button",
@@ -122,6 +127,7 @@ impl DocRoutes {
             DocRoutes::Progress => "progress",
             DocRoutes::Popover => "popover",
             DocRoutes::Chip => "chip",
+            DocRoutes::Kbd => "kbd",
 
             DocRoutes::Typography => "typography",
             DocRoutes::Icon => "icon",
@@ -172,6 +178,7 @@ where
             <Route path=DocRoutes::AppBar view=|cx| view! { cx, <PageAppBar/> }/>
             <Route path=DocRoutes::Drawer view=|cx| view! { cx, <PageDrawer/> }/>
             <Route path=DocRoutes::Tab view=|cx| view! { cx, <PageTab/> }/>
+            <Route path=DocRoutes::Table view=|cx| view! { cx, <PageTable/> }/>
             <Route path=DocRoutes::Collapsible view=|cx| view! { cx, <PageCollapsible/> }/>
 
             <Route path=DocRoutes::Button view=|cx| view! { cx, <PageButton/> }/>
@@ -188,6 +195,7 @@ where
             <Route path=DocRoutes::Progress view=|cx| view! { cx, <PageProgress/> }/>
             <Route path=DocRoutes::Popover view=|cx| view! { cx, <PagePopover/> }/>
             <Route path=DocRoutes::Chip view=|cx| view! { cx, <PageChip/> }/>
+            <Route path=DocRoutes::Kbd view=|cx| view! { cx, <PageKbd/> }/>
 
             <Route path=DocRoutes::Typography view=|cx| view! { cx, <PageTypography/> }/>
             <Route path=DocRoutes::Icon view=|cx| view! { cx, <PageIcon/> }/>
@@ -242,6 +250,10 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                 <Link href=DocRoutes::AppBar class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
                 <Link href=DocRoutes::Drawer class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
                 <Link href=DocRoutes::Tab class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
+                <div class="item">
+                    <Link href=DocRoutes::Table on:click=move |_| close_doc_drawer_on_mobile()>"Table"</Link>
+                    <New/>
+                </div>
                 <Link href=DocRoutes::Collapsible class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
             </Stack>
         </DrawerSection>
@@ -270,6 +282,10 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                 <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
                 <Link href=DocRoutes::Popover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
                 <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
+                <div class="item">
+                    <Link href=DocRoutes::Kbd on:click=move |_| close_doc_drawer_on_mobile()>"Kbd"</Link>
+                    <New/>
+                </div>
             </Stack>
         </DrawerSection>
 
@@ -329,5 +345,14 @@ where
             </div>
             { children(cx) }
         </div>
+    }
+}
+
+#[component]
+pub fn New(cx: Scope) -> impl IntoView {
+    view! {cx,
+        <Chip style="color: var(--primary-color); background-color: transparent; margin: 0;">
+            "NEW"
+        </Chip>
     }
 }

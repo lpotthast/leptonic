@@ -18,6 +18,8 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
                 " The input component is the first one using it, as mentioned in the 'Changed' section."
             </li>
             <li>"The Select, OptionalSelect and Multiselect components now accept a 'class' prop with which custom classes can be attached to a rendered <leptonic-select> element."</li>
+            <li>"The 'Kbd' component together with 'KbdShortcut', displaying keyboard keys and shortcuts."</li>
+            <li>"The 'Chip' component now accepts custom 'id', 'class' and 'style' props."</li>
         </ul>
 
         <H3>"Changed:"</H3>
@@ -30,7 +32,7 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
             <li>"The Input 'set' prop is now optional."</li>
             <li>"The Input 'set' prop is no longer generic. It now expects an 'Out<String>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
             <li>"The Slider and RangerSlider 'set_value' props are no longer generic. They now expect an 'Out<f64>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
-            <li>"The TiptapEditor 'set_value' prop is no longer generic. It now expect an 'Out<TiptapContent>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
+            <li>"The TiptapEditor 'set_value' prop is no longer generic. It now expect an 'Option<Out<TiptapContent>>', which can either be a 'WriteSignal' or a custom 'Callback'."</li>
             <li>
                 "All components using custom attributes now render them with a \"data-\" prefix, allowing them to be standard-compliant and distinguishable from well-known / standard attributes."
                 " 'leptonic-theme' styling changed appropriately."

@@ -4,7 +4,11 @@ use leptos::*;
 use leptos_icons::BsIcon;
 use web_sys::MouseEvent;
 
-use crate::{OptionalMaybeSignal, icon::Icon, prelude::{Callback, Callable}};
+use crate::{
+    icon::Icon,
+    prelude::{Callable, Callback},
+    OptionalMaybeSignal,
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ChipColor {
@@ -41,10 +45,13 @@ pub fn Chip(
     cx: Scope,
     #[prop(into, optional)] color: OptionalMaybeSignal<ChipColor>,
     #[prop(into, optional)] dismissible: Option<Callback<MouseEvent>>,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! { cx,
-        <leptonic-chip data-color=move || color.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()>
+        <leptonic-chip id=id class=class style=style data-color=move || color.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()>
             { children(cx) }
             { match dismissible {
                 Some(callback) => view! {cx,

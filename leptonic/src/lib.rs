@@ -21,6 +21,7 @@ pub mod drawer;
 pub mod grid;
 pub mod icon;
 pub mod input;
+pub mod kbd;
 pub mod link;
 pub mod modal;
 pub mod popover;
@@ -34,6 +35,7 @@ pub mod skeleton;
 pub mod slider;
 pub mod stack;
 pub mod tab;
+pub mod table;
 pub mod tabs;
 pub mod theme;
 pub mod tile;
@@ -152,6 +154,11 @@ pub mod prelude {
     pub use super::icon::Icon;
     pub use super::input::Input;
     pub use super::input::InputType;
+    pub use super::kbd::Kbd;
+    pub use super::kbd::KbdConcatenate;
+    pub use super::kbd::KbdShortcut;
+    pub use super::kbd::KbdShortcutRoot;
+    pub use super::kbd::Key;
     pub use super::link::Link;
     pub use super::link::LinkExt;
     pub use super::link::LinkExtTarget;
@@ -187,6 +194,10 @@ pub mod prelude {
     pub use super::stack::Stack;
     pub use super::stack::StackOrientation;
     pub use super::tab::Tab;
+    pub use super::table::Table;
+    pub use super::table::TBody;
+    pub use super::table::TFooter;
+    pub use super::table::THeader;
     pub use super::tabs::Tabs;
     pub use super::theme::LeptonicTheme;
     pub use super::theme::Theme;
@@ -230,6 +241,10 @@ pub mod prelude {
     pub use super::Out;
     pub use super::Size;
     pub use super::Width;
+}
+
+pub enum Language {
+    En,
 }
 
 pub enum Out<O: 'static> {
