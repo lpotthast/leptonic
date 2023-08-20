@@ -73,6 +73,7 @@ pub fn Select<O, V>(
     #[prop(into)] set_selected: Callback<O>,
     #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
@@ -215,6 +216,7 @@ where
                 id=id_string
                 data-variant="select"
                 aria-haspopup="listbox"
+                class=class
                 class:active=move || show_options.get()
                 style=style
             >
@@ -302,6 +304,7 @@ pub fn OptionalSelect<O, V>(
     #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
@@ -436,7 +439,6 @@ where
     });
 
     view! { cx,
-
         // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
         <div
             node_ref=wrapper
@@ -449,6 +451,7 @@ where
                 id=id_string
                 data-variant="optional-select"
                 aria-haspopup="listbox"
+                class=class
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
@@ -555,6 +558,7 @@ pub fn Multiselect<O, V>(
     #[prop(into)] set_selected: Callback<Vec<O>>,
     #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
@@ -717,6 +721,7 @@ where
                 id=id_string
                 data-variant="multiselect"
                 aria-haspopup="listbox"
+                class=class
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
