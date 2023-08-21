@@ -15,6 +15,7 @@ keywords = ["leptos", "components", "component-library"]
 
 [dependencies]
 indexmap = "2.0.0"
+indoc = "2.0.1"
 js-sys = "0.3.64"
 leptos = { version = "0.4.8", features = ["csr"] }
 leptos_icons = { version = "0.0.15", features = [

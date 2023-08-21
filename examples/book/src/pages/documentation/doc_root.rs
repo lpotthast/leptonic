@@ -14,6 +14,7 @@ use crate::pages::documentation::callback::PageCallback;
 use crate::pages::documentation::changelog::PageChangelog;
 use crate::pages::documentation::chip::PageChip;
 use crate::pages::documentation::collapsible::PageCollapsible;
+use crate::pages::documentation::color_picker::PageColorPicker;
 use crate::pages::documentation::date_time::PageDateTime;
 use crate::pages::documentation::drawer::PageDrawer;
 use crate::pages::documentation::grid::PageGrid;
@@ -70,6 +71,7 @@ pub enum DocRoutes {
     Slider,
     Select,
     Toggle,
+    ColorPicker,
 
     // Feedback
     Alert,
@@ -120,6 +122,7 @@ impl DocRoutes {
             DocRoutes::Slider => "slider",
             DocRoutes::Select => "select",
             DocRoutes::Toggle => "toggle",
+            DocRoutes::ColorPicker => "color-picker",
 
             DocRoutes::Alert => "alert",
             DocRoutes::Toast => "toast",
@@ -188,6 +191,7 @@ where
             <Route path=DocRoutes::Slider view=|cx| view! { cx, <PageSlider/> }/>
             <Route path=DocRoutes::Select view=|cx| view! { cx, <PageSelect/> }/>
             <Route path=DocRoutes::Toggle view=|cx| view! { cx, <PageToggle/> }/>
+            <Route path=DocRoutes::ColorPicker view=|cx| view! { cx, <PageColorPicker/> }/>
 
             <Route path=DocRoutes::Alert view=|cx| view! { cx, <PageAlert/> }/>
             <Route path=DocRoutes::Toast view=|cx| view! { cx, <PageToast/> }/>
@@ -269,6 +273,10 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
                 <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
                 <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
                 <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
+                <div class="item">
+                    <Link href=DocRoutes::ColorPicker on:click=move |_| close_doc_drawer_on_mobile()>"Color Picker"</Link>
+                    <New/>
+                </div>
             </Stack>
         </DrawerSection>
 

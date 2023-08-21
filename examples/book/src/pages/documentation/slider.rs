@@ -22,7 +22,8 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
 
         <P>
             "All sliders require the "<Code inline=true>"min"</Code>", "<Code inline=true>"max"</Code>" and "<Code inline=true>"step"</Code>" properties, specifying the range of values the slider provides. "
-            "Using a small step value results in a smooth or \"continuous\" slider."
+            "Using smaller step values results in ever so slightly smoother sliders until they can be considered \"continuous\". "
+            "You may exclude the "<Code inline=true>"step"</Code>" prop altogether to let the sliders use its full "<Code inline=true>"f64"</Code>" precision."
         </P>
 
         <Code>
@@ -185,11 +186,19 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
                 --slider-margin
                 --slider-bar-height
                 --slider-bar-background-color
+                --slider-bar-background-image
                 --slider-range-height
+                --slider-range-background-color
+                --slider-range-background-image
                 --slider-knob-size
+                --slider-knob-border-width
+                --slider-knob-border-color
+                --slider-knob-border-style
+                --slider-knob-background-color
                 --slider-knob-halo-size
                 --slider-knob-halo-size-while-dragged
                 --slider-knob-halo-opacity
+                --slider-knob-halo-background-color
                 --slider-knob-transition-speed
                 --slider-knob-box-shadow
                 --slider-mark-size

@@ -20,6 +20,10 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
             <li>"The Select, OptionalSelect and Multiselect components now accept a 'class' prop with which custom classes can be attached to a rendered <leptonic-select> element."</li>
             <li>"The 'Kbd' component together with 'KbdShortcut', displaying keyboard keys and shortcuts."</li>
             <li>"The 'Chip' component now accepts custom 'id', 'class' and 'style' props."</li>
+            <li>"You can now use the new '--slider-bar-background-image' CSS variable to style the bar of a 'Slider' with more control. Defaults to 'none'. '--slider-bar-background-color' is still the preferred way to style the bar if no image is needed. The image property will overwrite the color."</li>
+            <li>"Also added '--slider-range-background-color', '--slider-range-background-image', '--slider-knob-border-width', '--slider-knob-border-color', '--slider-knob-border-style', '--slider-knob-background-color' and '--slider-knob-halo-background-color'."</li>
+            <li>"The background color/image of the selection of a 'Slider' can now be styled using '--slider-range-background-color', defaulting to 'var(--brand-color)', and '--slider-range-background-image', defaulting to 'none'."</li>
+            <li>"Initial version of a 'ColorPicker' component."</li>
         </ul>
 
         <H3>"Changed:"</H3>
@@ -43,6 +47,7 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
                 "Prop 'title' of the Alert is now a Callback instead of a generic Fn closure."
                 " Expect the now necessary `create_callback(cx, move || {})` when instantiating a component with a callback prop to become a simple `move || {}` after a migration to leptos 0.5!"
             </li>
+            <li>"The Slider 'step' prop is now optional, making continuous sliders with maximum precision easier to set up."</li>
         </ul>
 
         <H3>"Fixed:"</H3>

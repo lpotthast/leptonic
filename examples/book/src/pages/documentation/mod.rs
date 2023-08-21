@@ -19,6 +19,7 @@ pub mod modal;
 pub mod overview;
 pub mod popover;
 pub mod progress;
+pub mod color_picker;
 pub mod select;
 pub mod separator;
 pub mod skeleton;

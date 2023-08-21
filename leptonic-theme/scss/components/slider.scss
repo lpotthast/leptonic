@@ -25,6 +25,7 @@ leptonic-slider {
         width: calc(100% - var(--slider-knob-size));
         height: var(--slider-bar-height);
         background-color: var(--slider-bar-background-color);
+        background-image: var(--slider-bar-background-image);
         transition: 0s;
 
         &:focus {
@@ -36,7 +37,8 @@ leptonic-slider {
         position: absolute;
         height: var(--slider-range-height);
         border-radius: var(--slider-range-height);
-        background-color: var(--brand-color);
+        background-color: var(--slider-range-background-color);
+        background-image: var(--slider-range-background-image);
         top: calc(((var(--slider-range-height) - var(--slider-bar-height)) * -0.5));
     }
 
@@ -51,7 +53,7 @@ leptonic-slider {
 
     .knob {
         &:before {
-            --slider-knob-halo-displacement: calc((var(--slider-knob-halo-size) / 2.0 - var(--slider-knob-size) / 2.0) * -1.0);
+            --slider-knob-halo-displacement: calc((var(--slider-knob-halo-size) / 2.0 - (var(--slider-knob-size) - 2.0 * var(--slider-knob-border-width)) / 2.0) * -1.0);
             content: "";
             display: block;
             position: absolute;
@@ -60,7 +62,7 @@ leptonic-slider {
             border-radius: var(--slider-knob-halo-size);
             top: var(--slider-knob-halo-displacement);
             left: var(--slider-knob-halo-displacement);
-            background-color: var(--brand-color);
+            background-color: var(--slider-knob-halo-background-color);
             opacity: 0;
             transition: all var(--slider-knob-transition-speed);
         }
@@ -76,7 +78,7 @@ leptonic-slider {
 
         &.is-dragged {
             &:before {
-                --slider-knob-halo-displacement: calc((var(--slider-knob-halo-size-while-dragged) / 2.0 - var(--slider-knob-size) / 2.0) * -1.0);
+                --slider-knob-halo-displacement: calc((var(--slider-knob-halo-size-while-dragged) / 2.0 - (var(--slider-knob-size) - 2.0 * var(--slider-knob-border-width)) / 2.0) * -1.0);
                 width: var(--slider-knob-halo-size-while-dragged);
                 height: var(--slider-knob-halo-size-while-dragged);
                 border-radius: var(--slider-knob-halo-size-while-dragged);
@@ -90,7 +92,10 @@ leptonic-slider {
         z-index: 1;
         height: var(--slider-knob-size);
         width: var(--slider-knob-size);
-        background-color: var(--brand-color);
+        border-width: var(--slider-knob-border-width);
+        border-style: var(--slider-knob-border-style);
+        border-color: var(--slider-knob-border-color);
+        background-color: var(--slider-knob-background-color);
         box-shadow: var(--slider-knob-box-shadow);
         transition: 0s;
         // The knob position is determined by setting the "left" attribute programmatically with a percentage value.

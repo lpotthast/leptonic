@@ -211,6 +211,19 @@
     --collapsible-body-background-color: #353535;
     --collapsible-body-padding: 0.75em;
 
+    // Color
+    --color-palette-knob-size: 1.5em;
+    --color-palette-knob-border-width: 0.25em;
+    --color-palette-knob-border-color: white;
+    --color-palette-knob-border-style: solid;
+    --color-palette-knob-background-color: var(--brand-color);
+    --color-palette-knob-halo-size: 2.8em;
+    --color-palette-knob-halo-size-while-dragged: 3.6em;
+    --color-palette-knob-halo-opacity: .2;
+    --color-palette-knob-halo-background-color: var(--brand-color);
+    --color-palette-knob-transition-speed: .1s;
+    --color-palette-knob-box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px;
+
     // Datetime
     --datetime-font-size: 1em;
     --datetime-weekday-name-color: var(--primary-color);
@@ -327,14 +340,22 @@
     --skeleton-cursor: progress;
 
     // Slider
-    --slider-margin: 2em 0 2em 0;
+    --slider-margin: 2em 0em 2em 0em;
     --slider-bar-height: 0.35em;
     --slider-bar-background-color: #e0b9b9;
+    --slider-bar-background-image: none;
     --slider-range-height: 0.5em;
+    --slider-range-background-color: var(--brand-color);
+    --slider-range-background-image: none;
     --slider-knob-size: 1.5em;
+    --slider-knob-border-width: 0em;
+    --slider-knob-border-color: transparent;
+    --slider-knob-border-style: solid;
+    --slider-knob-background-color: var(--brand-color);
     --slider-knob-halo-size: 2.8em;
     --slider-knob-halo-size-while-dragged: 3.6em;
     --slider-knob-halo-opacity: .2;
+    --slider-knob-halo-background-color: var(--brand-color);
     --slider-knob-transition-speed: .1s;
     --slider-knob-box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px;
     --slider-mark-size: 2px;

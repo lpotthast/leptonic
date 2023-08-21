@@ -5,7 +5,8 @@ use leptos_use::{use_element_hover, use_mouse, UseMouseReturn};
 
 use crate::{
     contexts::global_mouseup_event::GlobalMouseupEvent,
-    prelude::{Callable, Callback, Popover}, Out,
+    prelude::{Callable, Callback, Popover},
+    Out,
 };
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,6 +29,7 @@ impl SliderVariant {
 pub enum SliderMarks {
     #[default]
     None,
+    /// Note that marks can only be automatically generated if a step value is provided!
     Automatic {
         create_names: bool,
     },
@@ -60,7 +62,7 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
     cx: Scope,
     min: f64,
     max: f64,
-    step: f64,
+    step: Option<f64>,
     range: Memo<f64>,
     in_range: F,
     marks: SliderMarks,
@@ -68,42 +70,45 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
 ) -> Signal<Vec<Mark>> {
     match marks {
         SliderMarks::None => Signal::derive(cx, Vec::new),
-        SliderMarks::Automatic { create_names } => Signal::derive(cx, move || {
-            let mut marks_at = Vec::new();
-            let cap = 20.0;
-            let estimate = range.get() / step;
-            let step_multiplier = f64::max(1.0, f64::round(estimate / cap));
-            let mut current = min;
+        SliderMarks::Automatic { create_names } => Signal::derive(cx, move || match step {
+            Some(step) => {
+                let mut marks_at = Vec::new();
+                let cap = 20.0;
+                let estimate = range.get() / step;
+                let step_multiplier = f64::max(1.0, f64::round(estimate / cap));
+                let mut current = min;
 
-            let rounding_error_offset = 0.000001;
-            loop {
-                if max > min {
-                    if current > max + rounding_error_offset {
+                let rounding_error_offset = 0.000001;
+                loop {
+                    if max > min {
+                        if current > max + rounding_error_offset {
+                            break;
+                        }
+                    } else if current < max - rounding_error_offset {
                         break;
                     }
-                } else if current < max - rounding_error_offset {
-                    break;
+                    marks_at.push(Mark {
+                        percentage: crate::math::percentage_in_range(min, max, current),
+                        in_range: in_range(current),
+                        name: match create_names {
+                            true => Some(Cow::Owned(match value_display {
+                                Some(callback) => callback.call(current),
+                                None => format!("{current}"),
+                            })),
+                            false => None,
+                        },
+                    });
+                    if max > min {
+                        if current <= max + rounding_error_offset {
+                            current += step * step_multiplier;
+                        }
+                    } else if current >= max - rounding_error_offset {
+                        current -= step * step_multiplier;
+                    };
                 }
-                marks_at.push(Mark {
-                    percentage: percentage_in_range(min, max, current),
-                    in_range: in_range(current),
-                    name: match create_names {
-                        true => Some(Cow::Owned(match value_display {
-                            Some(callback) => callback.call(current),
-                            None => format!("{current}"),
-                        })),
-                        false => None,
-                    },
-                });
-                if max > min {
-                    if current <= max + rounding_error_offset {
-                        current += step * step_multiplier;
-                    }
-                } else if current >= max - rounding_error_offset {
-                    current -= step * step_multiplier;
-                };
+                marks_at
             }
-            marks_at
+            None => Vec::new(),
         }),
         SliderMarks::Custom(marks) => Signal::derive(cx, move || {
             marks
@@ -112,12 +117,12 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                     let value = match mark.value {
                         SliderMarkValue::Value(value) => value,
                         SliderMarkValue::Percentage(percentage) => {
-                            value_in_range(min, max, percentage)
+                            crate::math::value_in_range(min, max, percentage)
                         }
                     };
                     Mark {
                         percentage: match mark.value {
-                            SliderMarkValue::Value(value) => percentage_in_range(min, max, value),
+                            SliderMarkValue::Value(value) => crate::math::percentage_in_range(min, max, value),
                             SliderMarkValue::Percentage(percentage) => percentage,
                         },
                         in_range: in_range(value),
@@ -208,7 +213,7 @@ pub fn Slider(
     #[prop(into)] set_value: Out<f64>,
     min: f64,
     max: f64,
-    step: f64,
+    #[prop(optional)] step: Option<f64>,
     #[prop(optional)] variant: SliderVariant,
     #[prop(optional)] popover: SliderPopover,
     #[prop(optional)] active: bool,
@@ -329,7 +334,7 @@ pub fn RangeSlider(
     #[prop(into)] set_value_b: Out<f64>,
     min: f64,
     max: f64,
-    step: f64,
+    #[prop(optional)] step: Option<f64>,
     #[prop(optional)] variant: SliderVariant,
     #[prop(optional)] popover: SliderPopover,
     #[prop(optional)] active: bool,
@@ -555,7 +560,13 @@ struct CursorControl {
 }
 
 impl CursorControl {
-    pub fn new(cx: Scope, min: f64, range: Memo<f64>, step: f64, bar_control: BarControl) -> Self {
+    pub fn new(
+        cx: Scope,
+        min: f64,
+        range: Memo<f64>,
+        step: Option<f64>,
+        bar_control: BarControl,
+    ) -> Self {
         let UseMouseReturn {
             x: cursor_x,
             y: cursor_y,
@@ -574,7 +585,11 @@ impl CursorControl {
         });
         let clipped_value = create_memo(cx, move |_| {
             let value_in_range: f64 = cursor_rel_pos_percent.get().0 * range.get() + min;
-            (value_in_range / step).round() * step
+            // Round to the nearest step value if a step is provided.
+            match step {
+                Some(step) => (value_in_range / step).round() * step,
+                None => value_in_range,
+            }
         });
         Self { clipped_value }
     }
@@ -590,7 +605,7 @@ struct KnobControl {
 }
 
 impl KnobControl {
-    pub fn new(cx: Scope, min: f64, max: f64, step: f64, value: MaybeSignal<f64>) -> Self {
+    pub fn new(cx: Scope, min: f64, max: f64, step: Option<f64>, value: MaybeSignal<f64>) -> Self {
         let range = create_memo(cx, move |_| max - min);
         let clipped_value = Signal::derive(cx, move || {
             let value = value.get();
@@ -604,7 +619,11 @@ impl KnobControl {
             } else {
                 f64::min(f64::max(value, max), min)
             };
-            (clipped / step).round() * step
+            // Round to the nearest step if a step-value was provided.
+            match step {
+                Some(step) => (clipped / step).round() * step,
+                None => clipped,
+            }
         });
         let clipped_value_percent = Signal::derive(cx, move || {
             ((min.abs() - clipped_value.get()) / range.get()).abs()
@@ -620,43 +639,5 @@ impl KnobControl {
             listening,
             set_listening,
         }
-    }
-}
-
-fn percentage_in_range(min: f64, max: f64, value: f64) -> f64 {
-    (value - min) / (max - min)
-}
-
-fn value_in_range(min: f64, max: f64, percentage: f64) -> f64 {
-    min + (max - min) * percentage
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::slider::percentage_in_range;
-    use crate::slider::value_in_range;
-
-    #[test]
-    fn test_simple_range() {
-        assert_eq!(0.75, percentage_in_range(0.0, 100.0, 75.0));
-        assert_eq!(75.0, value_in_range(0.0, 100.0, 0.75));
-    }
-
-    #[test]
-    fn test_min() {
-        assert_eq!(0.0, percentage_in_range(50.0, 100.0, 50.0));
-        assert_eq!(50.0, value_in_range(50.0, 100.0, 0.0));
-    }
-
-    #[test]
-    fn test_max() {
-        assert_eq!(1.0, percentage_in_range(50.0, 100.0, 100.0));
-        assert_eq!(100.0, value_in_range(50.0, 100.0, 1.0));
-    }
-
-    #[test]
-    fn test_range_negative_to_positive_skewed() {
-        assert_eq!(0.625, percentage_in_range(-20.0, 12.0, 0.0));
-        assert_eq!(0.0, value_in_range(-20.0, 12.0, 0.625));
     }
 }
