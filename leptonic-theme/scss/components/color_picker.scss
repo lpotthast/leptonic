@@ -20,6 +20,8 @@ leptonic-color-preview {
         left: var(--color-palette-click-container-displacement);
         opacity: 0;
         transition: all var(--color-palette-knob-transition-speed);
+        touch-action: none;
+        user-select: none;
     }
 
     display: flex;
