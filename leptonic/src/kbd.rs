@@ -6,7 +6,7 @@ use strum::EnumIter;
 use crate::Language;
 
 #[component]
-pub fn Kbd(cx: Scope, key: Key) -> impl IntoView {
+pub fn KbdKey(cx: Scope, key: Key) -> impl IntoView {
     view! {cx,
         <leptonic-kbd-key>
             { key.display(Language::En) }
@@ -45,7 +45,7 @@ pub fn KbdShortcut<const N: usize>(
     view! {cx,
         <KbdShortcutRoot>
             { keys.into_iter().enumerate().map(|(i, key)| view! {cx,
-                <Kbd key=key/>
+                <KbdKey key=key/>
                 { match i == N - 1 {
                     true => ().into_view(cx),
                     false => view! {cx, <KbdConcatenate with=concatenate_with.clone()/>}.into_view(cx),

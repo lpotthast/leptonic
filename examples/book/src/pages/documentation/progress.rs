@@ -6,13 +6,6 @@ use leptos::*;
 pub fn PageProgress(cx: Scope) -> impl IntoView {
     let (progress, set_progress) = create_signal(cx, Some(34.0));
 
-    let progress_str = Signal::derive(cx, move || {
-        progress
-            .get()
-            .map(|it| it.to_string())
-            .unwrap_or_else(|| "0.0".to_owned())
-    });
-
     view! { cx,
         <H1>"Progress"</H1>
 
@@ -32,9 +25,9 @@ pub fn PageProgress(cx: Scope) -> impl IntoView {
 
         <ProgressBar progress=progress/>
 
-        <Input ty=InputType::Number { min: None, max: None, step: None }
-            get=progress_str
-            set=create_callback(cx, move |v: String| set_progress.set(str::parse::<f64>(v.as_str()).ok()))
+        <NumberInput
+            get=Signal::derive(cx, move || progress.get().unwrap_or_default())
+            set=create_callback(cx, move |v| set_progress.set(Some(v)))
             style="margin-top: 1em;"
         />
 

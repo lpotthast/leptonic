@@ -11,7 +11,7 @@ pub fn PageKbd(cx: Scope) -> impl IntoView {
         <H1>"Keyboard"</H1>
 
         <P>
-            "Display labeled keyboard key-caps using the "<Code inline=true>"<Kbd>"</Code>" component."
+            "Display labeled keyboard key-caps using the "<Code inline=true>"<KbdKey>"</Code>" component."
             " Leptonic provides the "<Code inline=true>"Key"</Code>" enum which provides well-known keys and their display properties."
         </P>
 
@@ -21,7 +21,7 @@ pub fn PageKbd(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Kbd key=Key::Option/>
+        <KbdKey key=Key::Option/>
 
         <H2>"Shortcuts"</H2>
 
@@ -46,17 +46,17 @@ pub fn PageKbd(cx: Scope) -> impl IntoView {
         <Code>
             {indoc!(r#"
                 <KbdShortcutRoot>
-                    <Kbd key=Key::Command/>
+                    <KbdKey key=Key::Command/>
                     <KbdConcatenate with="+"/>
-                    <Kbd key=Key::Enter/>
+                    <KbdKey key=Key::Enter/>
                 </KbdShortcutRoot>
             "#)}
         </Code>
 
         <KbdShortcutRoot>
-            <Kbd key=Key::Command/>
+            <KbdKey key=Key::Command/>
             <KbdConcatenate with="+"/>
-            <Kbd key=Key::Enter/>
+            <KbdKey key=Key::Enter/>
         </KbdShortcutRoot>
 
         <H2>Keys</H2>
@@ -68,7 +68,7 @@ pub fn PageKbd(cx: Scope) -> impl IntoView {
                 .into_iter()
                 .filter(|key| std::mem::discriminant(key) != std::mem::discriminant(&Key::Custom("")))
                 .map(|key: Key| view! {cx,
-                    <Kbd key=key/>
+                    <KbdKey key=key/>
                 })
                 .collect_view(cx)
         }
@@ -77,11 +77,11 @@ pub fn PageKbd(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Kbd key=Key::Custom("Foo")/>
+                <KbdKey key=Key::Custom("Foo")/>
             "#)}
         </Code>
 
-        <Kbd key=Key::Custom("Foo")/>
+        <KbdKey key=Key::Custom("Foo")/>
 
         <H2>"Styling"</H2>
 

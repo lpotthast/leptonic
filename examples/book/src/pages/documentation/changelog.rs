@@ -48,6 +48,7 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
                 " Expect the now necessary `create_callback(cx, move || {})` when instantiating a component with a callback prop to become a simple `move || {}` after a migration to leptos 0.5!"
             </li>
             <li>"The Slider 'step' prop is now optional, making continuous sliders with maximum precision easier to set up."</li>
+            <li>"The Input component was split into 'TextInput', 'PasswordInput' and 'NumberInput'. Their 'label' prop was renamed to 'placeholder'. The 'InputType' enum was removed."</li>
         </ul>
 
         <H3>"Fixed:"</H3>

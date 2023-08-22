@@ -75,10 +75,10 @@ where
     view! { cx,
         <Modal show_when=show_when class="quicksearch-modal">
             <ModalHeader>
-                <Input
+                <TextInput
                     get=input
                     set=set_input
-                    label="Search"
+                    placeholder="Search"
                     class="search-input"
                     should_be_focused=show_when
                     prepend=view! {cx, ""}.into_view(cx)

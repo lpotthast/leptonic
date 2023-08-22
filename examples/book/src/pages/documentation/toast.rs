@@ -14,8 +14,8 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
     view! { cx,
         <H1>"Toasts"</H1>
 
-        <Input label="Header text" get=header set=set_header style="margin-bottom: 1em;"></Input>
-        <Input label="Body text" get=body set=set_body style="margin-bottom: 1em;"></Input>
+        <TextInput get=header set=set_header placeholder="Header text" style="margin-bottom: 1em;"/>
+        <TextInput get=body set=set_body placeholder="Body text" style="margin-bottom: 1em;"/>
 
         <Select
             options={ToastVariant::iter().collect::<Vec<_>>()}

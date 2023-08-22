@@ -85,7 +85,7 @@ where
             <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
             <ModalBody>
                 "Please enter \""{requires_confirmation_of}"\" to confirm."
-                <Input get=input set=set_input/>
+                <TextInput get=input set=set_input/>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>

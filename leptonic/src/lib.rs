@@ -160,11 +160,11 @@ pub mod prelude {
     pub use super::grid::Grid;
     pub use super::grid::Row;
     pub use super::icon::Icon;
-    pub use super::input::Input;
-    pub use super::input::InputType;
     pub use super::input::NumberInput;
-    pub use super::kbd::Kbd;
+    pub use super::input::PasswordInput;
+    pub use super::input::TextInput;
     pub use super::kbd::KbdConcatenate;
+    pub use super::kbd::KbdKey;
     pub use super::kbd::KbdShortcut;
     pub use super::kbd::KbdShortcutRoot;
     pub use super::kbd::Key;

@@ -232,7 +232,7 @@ where
                 </leptonic-select-selected>
 
                 <leptonic-select-options class:shown=move || show_options.get()>
-                    <Input
+                    <TextInput
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
@@ -486,7 +486,7 @@ where
                 </leptonic-select-selected>
 
                 <leptonic-select-options class:shown=move || show_options.get()>
-                    <Input
+                    <TextInput
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
@@ -754,7 +754,7 @@ where
                 </leptonic-select-selected>
 
                 <leptonic-select-options class:shown=move || show_options.get()>
-                    <Input
+                    <TextInput
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
