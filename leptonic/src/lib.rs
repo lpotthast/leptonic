@@ -467,3 +467,110 @@ impl Display for Margin {
         }
     }
 }
+
+/// Keep track of an elements position and size.
+/// Call track_client_rect to update the signal state.
+#[derive(Debug, Clone)]
+struct TrackedElementClientBoundingRect<T: Into<web_sys::Element> + Clone + 'static> {
+    el: StoredValue<leptos_use::core::ElementMaybeSignal<T, web_sys::Element>>,
+    /// Distance of the tracked element to the left of the viewport.
+    pub left: ReadSignal<f64>,
+    /// Distance of the tracked element to the top of the viewport.
+    pub top: ReadSignal<f64>,
+    /// Width of the tracked element.
+    pub width: ReadSignal<f64>,
+    /// Height of the tracked element.
+    pub height: ReadSignal<f64>,
+    set_left: WriteSignal<f64>,
+    set_top: WriteSignal<f64>,
+    set_width: WriteSignal<f64>,
+    set_height: WriteSignal<f64>,
+}
+
+impl<T: Into<web_sys::Element> + Clone + 'static> Copy for TrackedElementClientBoundingRect<T> {}
+
+impl<T> TrackedElementClientBoundingRect<T>
+where
+    T: Into<web_sys::Element> + Clone + 'static,
+{
+    pub fn new<El>(cx: Scope, el: El) -> Self
+    where
+        El: Clone,
+        (Scope, El): Into<leptos_use::core::ElementMaybeSignal<T, web_sys::Element>>,
+    {
+        let (left, set_left) = create_signal(cx, 0.0);
+        let (top, set_top) = create_signal(cx, 0.0);
+        let (width, set_width) = create_signal(cx, 0.0);
+        let (height, set_height) = create_signal(cx, 0.0);
+
+        Self {
+            el: store_value(cx, (cx, el).into()),
+            left,
+            set_left,
+            top,
+            set_top,
+            width,
+            set_width,
+            height,
+            set_height,
+        }
+    }
+
+    pub fn track_client_rect(&self) {
+        self.el.with_value(|maybe_signal| {
+            if let Some(el) = maybe_signal.get_untracked() {
+                let el: web_sys::Element = el.into();
+                let rect = el.get_bounding_client_rect();
+                self.set_left.set(rect.left());
+                self.set_top.set(rect.top());
+                self.set_width.set(rect.width());
+                self.set_height.set(rect.height());
+            }
+        });
+    }
+}
+
+struct RelativeMousePosition {
+    rel_mouse_pos: Memo<(f64, f64)>,
+}
+
+impl RelativeMousePosition {
+    pub fn new<T>(cx: Scope, client_bounding_rect: TrackedElementClientBoundingRect<T>) -> Self
+    where
+        T: Into<web_sys::Element> + Clone + 'static,
+    {
+        let leptos_use::UseMouseReturn {
+            x: cursor_x,
+            y: cursor_y,
+            ..
+        } = leptos_use::use_mouse(cx);
+
+        let (x, set_x) = create_signal(cx, 0.0);
+        let (y, set_y) = create_signal(cx, 0.0);
+
+        let _ = leptos_use::watch_throttled_with_options(
+            cx,
+            move || (cursor_x.get(), cursor_y.get()),
+            move |(cursor_x, cursor_y), _, _| {
+                set_x.set(*cursor_x);
+                set_y.set(*cursor_y);
+            },
+            5.0, // Limit to 200 updates / sec.
+            leptos_use::WatchThrottledOptions::default()
+                .leading(true)
+                .trailing(true),
+        );
+
+        Self {
+            rel_mouse_pos: create_memo(cx, move |_| {
+                let x = x.get() - client_bounding_rect.left.get();
+                let y = y.get() - client_bounding_rect.top.get();
+                let mut px = x / client_bounding_rect.width.get();
+                let mut py = y / client_bounding_rect.height.get();
+                px = f64::max(0.0, f64::min(1.0, px));
+                py = f64::max(0.0, f64::min(1.0, py));
+                (px, py)
+            }),
+        }
+    }
+}

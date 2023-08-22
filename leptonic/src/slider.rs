@@ -1,12 +1,12 @@
 use std::borrow::Cow;
 
 use leptos::*;
-use leptos_use::{use_element_hover, use_mouse, UseMouseReturn};
+use leptos_use::use_element_hover;
 
 use crate::{
     contexts::global_mouseup_event::GlobalMouseupEvent,
     prelude::{Callable, Callback, Popover},
-    Out,
+    Out, RelativeMousePosition, TrackedElementClientBoundingRect, math::project_into_range,
 };
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,7 +122,9 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                     };
                     Mark {
                         percentage: match mark.value {
-                            SliderMarkValue::Value(value) => crate::math::percentage_in_range(min, max, value),
+                            SliderMarkValue::Value(value) => {
+                                crate::math::percentage_in_range(min, max, value)
+                            }
                             SliderMarkValue::Percentage(percentage) => percentage,
                         },
                         in_range: in_range(value),
@@ -227,8 +229,8 @@ pub fn Slider(
     let range = create_memo(cx, move |_| max - min);
 
     let bar_el: NodeRef<html::Div> = create_node_ref(cx);
-    let bar = BarControl::new(cx, bar_el);
-    let cursor = CursorControl::new(cx, min, range, step, bar);
+    let bar = TrackedElementClientBoundingRect::new(cx, bar_el);
+    let cursor = RelativeMousePosition::new(cx, bar);
     let knob_el: NodeRef<html::Div> = create_node_ref(cx);
     let knob = KnobControl::new(cx, min, max, step, value);
     let show_popover = popover.to_maybe_signal(cx, knob_el, &knob);
@@ -251,10 +253,15 @@ pub fn Slider(
         }
     });
 
-    // While this slider is "listening", propagate the value.
+    // While this slider is "listening", project the relative cursor position into the sliders value range and propagate.
     create_effect(cx, move |_| {
         if knob.listening.get() {
-            set_value.set(cursor.clipped_value.get())
+            set_value.set(project_into_range(
+                cursor.rel_mouse_pos.get().0,
+                range.get(),
+                min,
+                step,
+            ))
         }
     });
 
@@ -348,8 +355,8 @@ pub fn RangeSlider(
     let range = create_memo(cx, move |_| max - min);
 
     let bar_el: NodeRef<html::Div> = create_node_ref(cx);
-    let bar = BarControl::new(cx, bar_el);
-    let cursor = CursorControl::new(cx, min, range, step, bar);
+    let bar = TrackedElementClientBoundingRect::new(cx, bar_el);
+    let cursor = RelativeMousePosition::new(cx, bar);
     let knob_a_el: NodeRef<html::Div> = create_node_ref(cx);
     let knob_b_el: NodeRef<html::Div> = create_node_ref(cx);
     let knob_a = KnobControl::new(cx, min, max, step, value_a);
@@ -377,32 +384,37 @@ pub fn RangeSlider(
         }
     });
 
-    // While this slider is "listening", propagate the value.
-    create_effect(cx, move |_| {
-        let clipped_value_from_cursor = cursor.clipped_value.get();
+    // Project the relative cursor position into the sliders value range.
+    let projected_value_from_cursor = create_memo(cx, move |_| {
+        project_into_range(cursor.rel_mouse_pos.get().0, range.get(), min, step)
+    });
 
+    // While this slider is "listening", propagate the projected value.
+    create_effect(cx, move |_| {
         if knob_a.listening.get() {
+            let projected_value_from_cursor = projected_value_from_cursor.get();
             let b = value_b.get_untracked();
-            if clipped_value_from_cursor > b {
+            if projected_value_from_cursor > b {
                 set_value_a.set(b);
-                set_value_b.set(clipped_value_from_cursor);
+                set_value_b.set(projected_value_from_cursor);
 
                 knob_a.set_listening.set(false);
                 knob_b.set_listening.set(true);
             } else {
-                set_value_a.set(clipped_value_from_cursor);
+                set_value_a.set(projected_value_from_cursor);
             }
         }
         if knob_b.listening.get() {
+            let projected_value_from_cursor = projected_value_from_cursor.get();
             let a = value_a.get_untracked();
-            if clipped_value_from_cursor < a {
+            if projected_value_from_cursor < a {
                 set_value_b.set(a);
-                set_value_a.set(clipped_value_from_cursor);
+                set_value_a.set(projected_value_from_cursor);
 
                 knob_b.set_listening.set(false);
                 knob_a.set_listening.set(true);
             } else {
-                set_value_b.set(clipped_value_from_cursor);
+                set_value_b.set(projected_value_from_cursor);
             }
         }
     });
@@ -433,7 +445,7 @@ pub fn RangeSlider(
             // as the user may click, drag and move the cursor outside of this element.
             on:mousedown=move |_e| {
                 bar.track_client_rect();
-                let could_be = cursor.clipped_value.get();
+                let could_be = projected_value_from_cursor.get();
                 let distance_to_a = (value_a.get() - could_be).abs();
                 let distance_to_b = (value_b.get() - could_be).abs();
                 if distance_to_a < distance_to_b {
@@ -456,7 +468,7 @@ pub fn RangeSlider(
                     e.prevent_default();
                     e.stop_propagation();
                 } else {
-                    let could_be = cursor.clipped_value.get();
+                    let could_be = projected_value_from_cursor.get();
                     let distance_to_a = (value_a.get() - could_be).abs();
                     let distance_to_b = (value_b.get() - could_be).abs();
                     if distance_to_a < distance_to_b {
@@ -509,89 +521,6 @@ pub fn RangeSlider(
 
             <Marks marks=marks/>
         </leptonic-slider>
-    }
-}
-
-#[derive(Clone, Copy)]
-struct BarControl {
-    bar: NodeRef<html::Div>,
-    bar_left: ReadSignal<f64>,
-    set_bar_left: WriteSignal<f64>,
-    bar_top: ReadSignal<f64>,
-    set_bar_top: WriteSignal<f64>,
-    bar_width: ReadSignal<f64>,
-    set_bar_width: WriteSignal<f64>,
-    bar_height: ReadSignal<f64>,
-    set_bar_height: WriteSignal<f64>,
-}
-
-impl BarControl {
-    pub fn new(cx: Scope, bar: NodeRef<html::Div>) -> Self {
-        let (bar_left, set_bar_left) = create_signal(cx, 0.0);
-        let (bar_top, set_bar_top) = create_signal(cx, 0.0);
-        let (bar_width, set_bar_width) = create_signal(cx, 0.0);
-        let (bar_height, set_bar_height) = create_signal(cx, 0.0);
-
-        Self {
-            bar,
-            bar_left,
-            set_bar_left,
-            bar_top,
-            set_bar_top,
-            bar_width,
-            set_bar_width,
-            bar_height,
-            set_bar_height,
-        }
-    }
-
-    fn track_client_rect(&self) {
-        if let Some(rect) = self.bar.get().map(|el| el.get_bounding_client_rect()) {
-            self.set_bar_left.set(rect.left());
-            self.set_bar_top.set(rect.top());
-            self.set_bar_width.set(rect.width());
-            self.set_bar_height.set(rect.height());
-        }
-    }
-}
-
-struct CursorControl {
-    clipped_value: Memo<f64>,
-}
-
-impl CursorControl {
-    pub fn new(
-        cx: Scope,
-        min: f64,
-        range: Memo<f64>,
-        step: Option<f64>,
-        bar_control: BarControl,
-    ) -> Self {
-        let UseMouseReturn {
-            x: cursor_x,
-            y: cursor_y,
-            ..
-        } = use_mouse(cx);
-        let cursor_rel_pos_percent = Signal::derive(cx, move || {
-            let x = cursor_x.get() - bar_control.bar_left.get();
-            let y = cursor_y.get() - bar_control.bar_top.get();
-            // Using custom x,y instead of event.offset_x/y,
-            // because event.offset was computed for the direct target, which must not be the target we got now.
-            let mut px = x / bar_control.bar_width.get();
-            let mut py = y / bar_control.bar_height.get();
-            px = f64::max(0.0, f64::min(1.0, px));
-            py = f64::max(0.0, f64::min(1.0, py));
-            (px, py)
-        });
-        let clipped_value = create_memo(cx, move |_| {
-            let value_in_range: f64 = cursor_rel_pos_percent.get().0 * range.get() + min;
-            // Round to the nearest step value if a step is provided.
-            match step {
-                Some(step) => (value_in_range / step).round() * step,
-                None => value_in_range,
-            }
-        });
-        Self { clipped_value }
     }
 }
 

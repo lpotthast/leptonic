@@ -1,7 +1,9 @@
-use crate::{contexts::global_mouseup_event::GlobalMouseupEvent, prelude::*};
+use crate::{
+    contexts::global_mouseup_event::GlobalMouseupEvent, math::project_into_range, prelude::*,
+    RelativeMousePosition, TrackedElementClientBoundingRect,
+};
 use indoc::formatdoc;
 use leptos::*;
-use leptos_use::{use_mouse, UseMouseReturn};
 
 #[component]
 pub fn ColorPreview(
@@ -64,9 +66,9 @@ pub fn ColorPalette(
     };
 
     let palette_el: NodeRef<html::Div> = create_node_ref(cx);
-    let palette = PaletteControl::new(cx, palette_el);
-    let cursor = Cursor2DControl::new(cx, 0.0, 1.0, None, 1.0, -1.0, None, palette);
-    let knob = Knob2DControl::new(cx);
+    let palette = TrackedElementClientBoundingRect::new(cx, palette_el);
+    let cursor = RelativeMousePosition::new(cx, palette);
+    let (knob_listening, set_knob_listening) = create_signal(cx, false);
 
     let knob_left = move || format!("{}%", hsv.get().saturation * 100.0);
     let knob_bottom = move || format!("{}%", hsv.get().value * 100.0);
@@ -78,15 +80,23 @@ pub fn ColorPalette(
     } = expect_context(cx);
     create_effect(cx, move |_| {
         if mouse_up.get().is_some() {
-            knob.set_listening.set(false);
+            set_knob_listening.set(false);
         }
     });
 
-    // While this knob is "listening", propagate the value.
+    // Project the relative cursor position into the sliders value range.
+    let projected_value_from_cursor_x = create_memo(cx, move |_| {
+        project_into_range(cursor.rel_mouse_pos.get().0, 1.0, 0.0, None)
+    });
+    let projected_value_from_cursor_y = create_memo(cx, move |_| {
+        1.0 - project_into_range(cursor.rel_mouse_pos.get().1, 1.0, 0.0, None)
+    });
+
+    // While this knob is "listening", propagate the projected values.
     create_effect(cx, move |_| {
-        if knob.listening.get() {
-            set_saturation.set(cursor.clipped_value_x.get());
-            set_value.set(cursor.clipped_value_y.get());
+        if knob_listening.get() {
+            set_saturation.set(projected_value_from_cursor_x.get());
+            set_value.set(projected_value_from_cursor_y.get());
         }
     });
 
@@ -100,21 +110,21 @@ pub fn ColorPalette(
             // as the user may click, drag and move the cursor outside of this element.
             on:mousedown=move |_e| {
                 palette.track_client_rect();
-                knob.set_listening.set(true);
+                set_knob_listening.set(true);
             }
             on:touchstart=move |e| {
                 palette.track_client_rect();
-                knob.set_listening.set(true);
+                set_knob_listening.set(true);
                 e.prevent_default();
                 e.stop_propagation();
             }
             on:touchmove=move |e| {
-                if knob.listening.get_untracked() {
+                if knob_listening.get_untracked() {
                     e.prevent_default();
                     e.stop_propagation();
                 }
             }
-            on:touchend=move |_e| knob.set_listening.set(false)
+            on:touchend=move |_e| set_knob_listening.set(false)
         >
             <leptonic-color-palette-knob-wrapper style="">
                 <leptonic-color-palette-knob data-variant="round" style:left=knob_left style:bottom=knob_bottom style=("--color-palette-knob-background-color", knob_background_color)>
@@ -244,118 +254,5 @@ pub fn ColorPicker(
 
             <P>"Hex: #"{move || format!("{:X}", rgb.get())}</P>
         </leptonic-color-picker>
-    }
-}
-
-#[derive(Clone, Copy)]
-struct PaletteControl {
-    bar: NodeRef<html::Div>,
-    bar_left: ReadSignal<f64>,
-    set_bar_left: WriteSignal<f64>,
-    bar_top: ReadSignal<f64>,
-    set_bar_top: WriteSignal<f64>,
-    bar_width: ReadSignal<f64>,
-    set_bar_width: WriteSignal<f64>,
-    bar_height: ReadSignal<f64>,
-    set_bar_height: WriteSignal<f64>,
-}
-
-impl PaletteControl {
-    pub fn new(cx: Scope, bar: NodeRef<html::Div>) -> Self {
-        let (bar_left, set_bar_left) = create_signal(cx, 0.0);
-        let (bar_top, set_bar_top) = create_signal(cx, 0.0);
-        let (bar_width, set_bar_width) = create_signal(cx, 0.0);
-        let (bar_height, set_bar_height) = create_signal(cx, 0.0);
-
-        Self {
-            bar,
-            bar_left,
-            set_bar_left,
-            bar_top,
-            set_bar_top,
-            bar_width,
-            set_bar_width,
-            bar_height,
-            set_bar_height,
-        }
-    }
-
-    fn track_client_rect(&self) {
-        if let Some(rect) = self.bar.get().map(|el| el.get_bounding_client_rect()) {
-            self.set_bar_left.set(rect.left());
-            self.set_bar_top.set(rect.top());
-            self.set_bar_width.set(rect.width());
-            self.set_bar_height.set(rect.height());
-        }
-    }
-}
-
-struct Cursor2DControl {
-    clipped_value_x: Memo<f64>,
-    clipped_value_y: Memo<f64>,
-}
-
-impl Cursor2DControl {
-    pub fn new(
-        cx: Scope,
-        min_x: f64,
-        range_x: f64,
-        step_x: Option<f64>,
-        min_y: f64,
-        range_y: f64,
-        step_y: Option<f64>,
-        palette_control: PaletteControl,
-    ) -> Self {
-        let UseMouseReturn {
-            x: cursor_x,
-            y: cursor_y,
-            ..
-        } = use_mouse(cx);
-        let cursor_rel_pos_percent = Signal::derive(cx, move || {
-            let x = cursor_x.get() - palette_control.bar_left.get();
-            let y = cursor_y.get() - palette_control.bar_top.get();
-            // Using custom x,y instead of event.offset_x/y,
-            // because event.offset was computed for the direct target, which must not be the target we got now.
-            let mut px = x / palette_control.bar_width.get();
-            let mut py = y / palette_control.bar_height.get();
-            px = f64::max(0.0, f64::min(1.0, px));
-            py = f64::max(0.0, f64::min(1.0, py));
-            (px, py)
-        });
-        let clipped_value_x = create_memo(cx, move |_| {
-            let value_in_range: f64 = cursor_rel_pos_percent.get().0 * range_x + min_x;
-            // Round to the nearest step value if a step is provided.
-            match step_x {
-                Some(step_x) => (value_in_range / step_x).round() * step_x,
-                None => value_in_range,
-            }
-        });
-        let clipped_value_y = create_memo(cx, move |_| {
-            let value_in_range: f64 = cursor_rel_pos_percent.get().1 * range_y + min_y;
-            // Round to the nearest step value if a step is provided.
-            match step_y {
-                Some(step_y) => (value_in_range / step_y).round() * step_y,
-                None => value_in_range,
-            }
-        });
-        Self {
-            clipped_value_x,
-            clipped_value_y,
-        }
-    }
-}
-
-struct Knob2DControl {
-    listening: ReadSignal<bool>,
-    set_listening: WriteSignal<bool>,
-}
-
-impl Knob2DControl {
-    pub fn new(cx: Scope) -> Self {
-        let (listening, set_listening) = create_signal(cx, false);
-        Self {
-            listening,
-            set_listening,
-        }
     }
 }

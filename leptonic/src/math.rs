@@ -6,6 +6,15 @@ pub(crate) fn value_in_range(min: f64, max: f64, percentage: f64) -> f64 {
     min + (max - min) * percentage
 }
 
+/// Rounds to the nearest possible step value if a step is provided.
+pub(crate) fn project_into_range(value: f64, range: f64, min: f64, step: Option<f64>) -> f64 {
+    let projected = value * range + min;
+    match step {
+        Some(step) => (projected / step).round() * step,
+        None => projected,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::math::percentage_in_range;
