@@ -102,9 +102,11 @@ pub fn ColorPalette(
                 palette.track_client_rect();
                 knob.set_listening.set(true);
             }
-            on:touchstart=move |_e| {
+            on:touchstart=move |e| {
                 palette.track_client_rect();
                 knob.set_listening.set(true);
+                e.prevent_default();
+                e.stop_propagation();
             }
             on:touchmove=move |e| {
                 if knob.listening.get_untracked() {
@@ -159,18 +161,23 @@ pub fn HueSlider(
 }
 
 #[component]
-pub fn ColorPicker(cx: Scope) -> impl IntoView {
-    let (hsv, set_hsv) = create_signal(
-        cx,
-        HSV {
-            hue: 0.0,
-            saturation: 1.0,
-            value: 1.0,
-        },
-    );
-
+pub fn ColorPicker(
+    cx: Scope,
+    #[prop(into)] hsv: Signal<HSV>,
+    #[prop(into)] set_hsv: Out<HSV>,
+) -> impl IntoView {
     let hue = Signal::derive(cx, move || hsv.get().hue);
-    let set_hue = create_callback(cx, move |new_hue| set_hsv.update(|hsv| hsv.hue = new_hue));
+    let saturation = Signal::derive(cx, move || hsv.get().saturation);
+    let value = Signal::derive(cx, move || hsv.get().value);
+    let set_hue = create_callback(cx, move |new_hue| {
+        set_hsv.set(hsv.get_untracked().with_hue(new_hue))
+    });
+    let set_saturation = create_callback(cx, move |new_saturation| {
+        set_hsv.set(hsv.get_untracked().with_saturation(new_saturation))
+    });
+    let set_value = create_callback(cx, move |new_value| {
+        set_hsv.set(hsv.get_untracked().with_value(new_value))
+    });
 
     let rgb = Signal::derive(cx, move || RGB8::from(hsv.get()));
 
@@ -179,21 +186,48 @@ pub fn ColorPicker(cx: Scope) -> impl IntoView {
             <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; height: 20em;">
                 <ColorPreview rgb=rgb style="width: 20%; height: 100%;"/>
                 <ColorPalette hsv=hsv
-                    set_saturation=create_callback(cx, move |new_saturation| set_hsv.update(|hsv| hsv.saturation = new_saturation))
-                    set_value=create_callback(cx, move |new_value| set_hsv.update(|hsv| hsv.value = new_value))
+                    set_saturation=set_saturation
+                    set_value=set_value
                     style="width: 80%; height: 100%;"
                 />
             </div>
 
             <HueSlider hue=hue set_hue=set_hue/>
 
-            <P>"H: "{move || hsv.get().hue}</P>
-            <P>"S: "{move || hsv.get().saturation}</P>
-            <P>"V: "{move || hsv.get().value}</P>
+            <div style="display: flex; flex-direction: row;">
+                <NumberInput min=0.0 max=360.0 step=1.0 style="width: 32%; margin-right: 2%;"
+                    get=hue
+                    set=set_hue
+                />
+                <NumberInput min=0.0 max=1.0 step=0.01 style="width: 32%; margin-right: 2%;"
+                    get=saturation
+                    set=set_saturation
+                />
+                <NumberInput min=0.0 max=1.0 step=0.01 style="width: 32%; margin-right: 0%;"
+                    get=value
+                    set=set_value
+                />
+            </div>
 
-            <P>"R: "{move || rgb.get().r}</P>
-            <P>"G: "{move || rgb.get().g}</P>
-            <P>"B: "{move || rgb.get().b}</P>
+            <div style="display: flex; flex-direction: row;">
+                "Hue"
+                <NumberInput min=0.0 max=255.0 step=1.0 style="width: 32%; margin-right: 2%;"
+                    get=Signal::derive(cx, move || rgb.get().r as f64)
+                    set=create_callback(cx, move |r| {})
+                />
+                "Saturation"
+                <NumberInput min=0.0 max=255.0 step=1.0 style="width: 32%; margin-right: 2%;"
+                    get=Signal::derive(cx, move || rgb.get().g as f64)
+                    set=create_callback(cx, move |g| {})
+                />
+                "Value"
+                <NumberInput min=0.0 max=255.0 step=1.0 style="width: 32%; margin-right: 0%;"
+                    get=Signal::derive(cx, move || rgb.get().b as f64)
+                    set=create_callback(cx, move |b| {})
+                />
+            </div>
+
+            <P>"#"{move || format!("{:X}", rgb.get())}</P>
         </leptonic-color-picker>
     }
 }

@@ -31,6 +31,8 @@ leptonic-color-preview {
     height: 10em;
     forced-color-adjust: none;
     cursor: pointer;
+    touch-action: none;
+    user-select: none;
 
     leptonic-color-palette-knob-wrapper {
         display: flex;

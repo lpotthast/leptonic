@@ -4,6 +4,8 @@ use leptos::*;
 
 #[component]
 pub fn PageColorPicker(cx: Scope) -> impl IntoView {
+    let (hsv, set_hsv) = create_signal(cx, HSV::new());
+
     view! { cx,
         <H1>"Color Picker"</H1>
 
@@ -11,11 +13,14 @@ pub fn PageColorPicker(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <ColorPicker />
+                let (hsv, set_hsv) = create_signal(cx, HSV::new());
+                view! {cx,
+                    <ColorPicker hsv=hsv set_hsv=set_hsv/>
+                }
             "#)}
         </Code>
 
-        <ColorPicker />
+        <ColorPicker hsv=hsv set_hsv=set_hsv/>
 
         <H2>"Styling"</H2>
 

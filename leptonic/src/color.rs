@@ -14,6 +14,56 @@ pub struct HSV {
 }
 
 impl HSV {
+    /// Hue starting at red (0.0 degrees) with full saturation (1.0) and full value (1.0).
+    /// This is a sensitive way to construct a new HSV value.
+    pub fn new() -> Self {
+        Self {
+            hue: 0.0,
+            saturation: 1.0,
+            value: 1.0,
+        }
+    }
+
+    pub fn from_hue_fully_saturated(hue: f64) -> Self {
+        Self {
+            hue,
+            saturation: 1.0,
+            value: 1.0,
+        }
+    }
+
+    pub fn with_hue(self, hue: f64) -> Self {
+        Self {
+            hue,
+            saturation: self.saturation,
+            value: self.value,
+        }
+    }
+
+    pub fn with_saturation(self, saturation: f64) -> Self {
+        Self {
+            hue: self.hue,
+            saturation,
+            value: self.value,
+        }
+    }
+
+    pub fn with_value(self, value: f64) -> Self {
+        Self {
+            hue: self.hue,
+            saturation: self.saturation,
+            value,
+        }
+    }
+}
+
+impl Default for HSV {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl HSV {
     pub fn into_rgb8(self) -> RGB8 {
         RGB8::from(self)
     }
@@ -29,6 +79,34 @@ pub struct RGB8 {
 impl RGB8 {
     pub fn into_hsv(self) -> HSV {
         HSV::from(self)
+    }
+}
+
+impl std::fmt::LowerHex for RGB8 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:02x}", self.r))?;
+        f.write_fmt(format_args!("{:02x}", self.g))?;
+        f.write_fmt(format_args!("{:02x}", self.b))
+    }
+}
+
+impl std::fmt::UpperHex for RGB8 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("{:02X}", self.r))?;
+        f.write_fmt(format_args!("{:02X}", self.g))?;
+        f.write_fmt(format_args!("{:02X}", self.b))
+    }
+}
+
+impl std::fmt::Display for RGB8 {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!("#{:X}", self))
+    }
+}
+
+impl From<(u8, u8, u8)> for RGB8 {
+    fn from((r, g, b): (u8, u8, u8)) -> Self {
+        Self { r, g, b }
     }
 }
 
@@ -109,5 +187,40 @@ impl From<RGB8> for HSV {
             saturation,
             value,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::RGB8;
+
+    #[test]
+    fn rgb8_to_lower_hex() {
+        let rgb = RGB8 {
+            r: 186,
+            g: 23,
+            b: 241,
+        };
+        assert_eq!(format!("{:x}", rgb).as_str(), "ba17f1");
+    }
+
+    #[test]
+    fn rgb8_to_upper_hex() {
+        let rgb = RGB8 {
+            r: 186,
+            g: 23,
+            b: 241,
+        };
+        assert_eq!(format!("{:X}", rgb).as_str(), "BA17F1");
+    }
+
+    #[test]
+    fn rgb8_display() {
+        let rgb = RGB8 {
+            r: 186,
+            g: 23,
+            b: 241,
+        };
+        assert_eq!(&rgb.to_string(), "#BA17F1");
     }
 }
