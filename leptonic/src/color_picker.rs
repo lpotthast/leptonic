@@ -195,39 +195,54 @@ pub fn ColorPicker(
             <HueSlider hue=hue set_hue=set_hue/>
 
             <div style="display: flex; flex-direction: row;">
-                <NumberInput min=0.0 max=360.0 step=1.0 style="width: 32%; margin-right: 2%;"
-                    get=hue
-                    set=set_hue
-                />
-                <NumberInput min=0.0 max=1.0 step=0.01 style="width: 32%; margin-right: 2%;"
-                    get=saturation
-                    set=set_saturation
-                />
-                <NumberInput min=0.0 max=1.0 step=0.01 style="width: 32%; margin-right: 0%;"
-                    get=value
-                    set=set_value
-                />
+                <Field style="width: 32%; margin-right: 2%;">
+                    <FieldLabel>"Hue"</FieldLabel>
+                    <NumberInput min=0.0 max=360.0 step=1.0
+                        get=hue
+                        set=set_hue
+                    />
+                </Field>
+                <Field style="width: 32%; margin-right: 2%;">
+                    <FieldLabel>"Saturation"</FieldLabel>
+                    <NumberInput min=0.0 max=1.0 step=0.01
+                        get=saturation
+                        set=set_saturation
+                    />
+                </Field>
+                <Field style="width: 32%; margin-right: 0%;">
+                    <FieldLabel>"Value"</FieldLabel>
+                    <NumberInput min=0.0 max=1.0 step=0.01
+                        get=value
+                        set=set_value
+                    />
+                </Field>
             </div>
 
             <div style="display: flex; flex-direction: row;">
-                "Hue"
-                <NumberInput min=0.0 max=255.0 step=1.0 style="width: 32%; margin-right: 2%;"
-                    get=Signal::derive(cx, move || rgb.get().r as f64)
-                    set=create_callback(cx, move |r| {})
-                />
-                "Saturation"
-                <NumberInput min=0.0 max=255.0 step=1.0 style="width: 32%; margin-right: 2%;"
-                    get=Signal::derive(cx, move || rgb.get().g as f64)
-                    set=create_callback(cx, move |g| {})
-                />
-                "Value"
-                <NumberInput min=0.0 max=255.0 step=1.0 style="width: 32%; margin-right: 0%;"
-                    get=Signal::derive(cx, move || rgb.get().b as f64)
-                    set=create_callback(cx, move |b| {})
-                />
+                <Field style="width: 32%; margin-right: 2%;">
+                    <FieldLabel>"R"</FieldLabel>
+                    <NumberInput min=0.0 max=255.0 step=1.0
+                        get=Signal::derive(cx, move || rgb.get().r as f64)
+                        set=create_callback(cx, move |_r| {})
+                    />
+                </Field>
+                <Field style="width: 32%; margin-right: 2%;">
+                    <FieldLabel>"G"</FieldLabel>
+                    <NumberInput min=0.0 max=255.0 step=1.0
+                        get=Signal::derive(cx, move || rgb.get().g as f64)
+                        set=create_callback(cx, move |_g| {})
+                    />
+                </Field>
+                <Field style="width: 32%; margin-right: 0%;">
+                    <FieldLabel>"B"</FieldLabel>
+                    <NumberInput min=0.0 max=255.0 step=1.0
+                        get=Signal::derive(cx, move || rgb.get().b as f64)
+                        set=create_callback(cx, move |_b| {})
+                    />
+                </Field>
             </div>
 
-            <P>"#"{move || format!("{:X}", rgb.get())}</P>
+            <P>"Hex: #"{move || format!("{:X}", rgb.get())}</P>
         </leptonic-color-picker>
     }
 }

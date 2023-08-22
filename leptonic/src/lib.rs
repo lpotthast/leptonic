@@ -20,6 +20,7 @@ pub mod date_selector;
 pub mod datetime;
 pub mod datetime_input;
 pub mod drawer;
+pub mod field;
 pub mod grid;
 pub mod icon;
 pub mod input;
@@ -155,6 +156,8 @@ pub mod prelude {
     pub use super::datetime_input::DateTimeInput;
     pub use super::drawer::Drawer;
     pub use super::drawer::DrawerSide;
+    pub use super::field::Field;
+    pub use super::field::FieldLabel;
     pub use super::grid::Col;
     pub use super::grid::ColAlign;
     pub use super::grid::Grid;
