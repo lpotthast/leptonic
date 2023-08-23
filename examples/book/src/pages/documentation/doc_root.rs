@@ -359,7 +359,7 @@ where
 #[component]
 pub fn New(cx: Scope) -> impl IntoView {
     view! {cx,
-        <Chip style="color: var(--primary-color); background-color: transparent; margin: 0;">
+        <Chip style="color: var(--primary-color); background-color: transparent; margin: 0; padding: 0;">
             "NEW"
         </Chip>
     }
