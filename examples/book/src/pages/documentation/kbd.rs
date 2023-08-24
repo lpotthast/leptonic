@@ -17,7 +17,7 @@ pub fn PageKbd(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Kbd key=Key::Option/>
+                <KbdKey key=Key::Option/>
             "#)}
         </Code>
 

@@ -36,7 +36,7 @@ pub fn PageIcon(cx: Scope) -> impl IntoView {
 
         <H2>"Styling"</H2>
 
-        <P>"There are currently no CSS variables expose, targeting the "<Code inline=true>"<Icon>"</Code> " component."</P>
+        <P>"There are currently no CSS variables exposed, targeting the "<Code inline=true>"<Icon>"</Code> " component."</P>
 
         <P>"Notes:"</P>
         <ul>
