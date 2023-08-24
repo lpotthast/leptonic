@@ -148,7 +148,10 @@ pub mod prelude {
     pub use super::color::HSV;
     pub use super::color::RGB8;
     pub use super::color::RGBA8;
+    pub use super::color_picker::ColorPalette;
     pub use super::color_picker::ColorPicker;
+    pub use super::color_picker::ColorPreview;
+    pub use super::color_picker::HueSlider;
     pub use super::contexts::global_click_event::GlobalClickEvent;
     pub use super::contexts::global_keyboard_event::GlobalKeyboardEvent;
     pub use super::create_signal_ls;

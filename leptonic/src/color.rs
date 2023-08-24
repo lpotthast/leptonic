@@ -77,6 +77,10 @@ pub struct RGB8 {
 }
 
 impl RGB8 {
+    pub fn new() -> RGB8 {
+        Self { r: 0, g: 0, b: 0 }
+    }
+
     pub fn into_hsv(self) -> HSV {
         HSV::from(self)
     }
