@@ -56,7 +56,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
                 view! {cx,
                     <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
                         <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
-                        <Slider min=0.0 max=1.0 step=0.0001
+                        <Slider min=0.0 max=1.0
                             value=value set_value=set_value
                             value_display=create_callback(cx, move |v| format!("{:.0}%", v * 100.0))
                             style="width: 10em"/>
@@ -68,7 +68,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
 
         <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
             <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
-            <Slider min=0.0 max=1.0 step=0.0001 value=value5 set_value=set_value5 style="width: 10em"
+            <Slider min=0.0 max=1.0 value=value5 set_value=set_value5 style="width: 10em"
                 value_display=create_callback(cx, move |v| format!("{:.0}%", v * 100.0))/>
             <Icon icon=BsIcon::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
         </Stack>
@@ -110,7 +110,7 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
             marks=SliderMarks::Automatic { create_names: false }
             value_display=create_callback(cx, move |v| format!("{v:.1}"))/>
 
-        <P>"You can also use a positive value for the "<Code inline=true>"min"</Code>" prop, and a negative value for the "<Code inline=true>"max"</Code>" prop, resulting in an reversed axis."</P>
+        <P>"You can also use a positive value for the "<Code inline=true>"min"</Code>" prop, and a negative value for the "<Code inline=true>"max"</Code>" prop, resulting in a reversed axis."</P>
 
         <Slider value=value3 set_value=set_value3 min=9.0 max=-9.0 step=1.0
             marks=SliderMarks::Automatic { create_names: false }
@@ -132,11 +132,10 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
                     <RangeSlider
                         value_a=range_a
                         value_b=range_b
-                        set_value_a=set_range_a
-                        set_value_b=set_range_b
+                        set_value_a=set_value_a
+                        set_value_b=set_value_b
                         min=0.0
                         max=1.0
-                        step=0.0001
                         popover=SliderPopover::Always
                         value_display=create_callback(cx, move |v| format!("{v:.4}"))
                     />
@@ -151,7 +150,6 @@ pub fn PageSlider(cx: Scope) -> impl IntoView {
             set_value_b=set_range_b
             min=0.0
             max=1.0
-            step=0.0001
             popover=SliderPopover::Always
             value_display=create_callback(cx, move |v| format!("{v:.4}"))
         />
