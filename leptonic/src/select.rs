@@ -1,21 +1,26 @@
-use std::fmt::{Debug, Display};
+use std::fmt::Debug;
 
 use leptos::*;
-
 use leptos_icons::BsIcon;
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
 use crate::prelude::*;
 
-pub trait SelectOption: Debug + Clone + PartialEq + Eq {
-    fn matches_lowercase(&self, search: &str) -> bool;
+pub trait SearchTextProvider {
+    fn get_searchable_content() -> String;
 }
 
-impl<T: Debug + Display + Clone + PartialEq + Eq> SelectOption for T {
-    fn matches_lowercase(&self, search: &str) -> bool {
-        self.to_string().to_lowercase().contains(search)
+pub trait SelectSearchable {
+    fn get_searchable_content() -> String;
+
+    fn matches(&self, lowercase_searchable_content: &str, lowercase_search: &str) -> bool {
+        lowercase_searchable_content.contains(lowercase_search)
     }
 }
+
+pub trait SelectOption: Debug + Clone + PartialEq + Eq {}
+
+impl<T: Debug + Clone + PartialEq + Eq> SelectOption for T {}
 
 // TODO: select_previous and select_next could be made more efficient.
 // If we would know that the initial vec from which the current preselect'ed option was taken didn't change
@@ -71,6 +76,7 @@ pub fn Select<O, V>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Callback<O>,
+    #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -101,12 +107,17 @@ where
     let (search, set_search) = create_signal(cx, "".to_owned());
 
     let filtered_options = create_memo(cx, move |_| {
-        let search = search.get().to_lowercase();
+        let lowercased_search = search.get().to_lowercase();
         stored_options
             .get_value()
             .get()
             .into_iter()
-            .filter(|it| it.matches_lowercase(search.as_str()))
+            .filter(|it| {
+                search_text_provider
+                    .call(it.clone())
+                    .to_lowercase()
+                    .contains(lowercased_search.as_str())
+            })
             .collect::<Vec<O>>()
     });
 
@@ -300,7 +311,8 @@ pub fn OptionalSelect<O, V>(
     cx: Scope,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
-    #[prop(into)] set_selected: Callback<Option<O>>,
+    #[prop(into)] set_selected: Out<Option<O>>,
+    #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
@@ -332,12 +344,17 @@ where
     let (search, set_search) = create_signal(cx, "".to_owned());
 
     let filtered_options = create_memo(cx, move |_| {
-        let search = search.get().to_lowercase();
+        let lowercased_search = search.get().to_lowercase();
         stored_options
             .get_value()
             .get()
             .into_iter()
-            .filter(|it| it.matches_lowercase(search.as_str()))
+            .filter(|it| {
+                search_text_provider
+                    .call(it.clone())
+                    .to_lowercase()
+                    .contains(lowercased_search.as_str())
+            })
             .collect::<Vec<_>>()
     });
 
@@ -346,12 +363,12 @@ where
     });
 
     let select = create_callback(cx, move |option: O| {
-        set_selected.call(Some(option));
+        set_selected.set(Some(option));
         set_show_options.set(false);
     });
 
     let deselect = move || {
-        set_selected.call(None);
+        set_selected.set(None);
     };
 
     let is_selected = move |option: &O| selected.with(|selected| selected.as_ref() == Some(option));
@@ -556,6 +573,7 @@ pub fn Multiselect<O, V>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Callback<Vec<O>>,
+    #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: Callback<(Scope, O), V>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -586,12 +604,17 @@ where
     let (search, set_search) = create_signal(cx, "".to_owned());
 
     let filtered_options = create_memo(cx, move |_| {
-        let search = search.get().to_lowercase();
+        let lowercased_search = search.get().to_lowercase();
         stored_options
             .get_value()
             .get()
             .into_iter()
-            .filter(|it| it.matches_lowercase(search.as_str()))
+            .filter(|it| {
+                search_text_provider
+                    .call(it.clone())
+                    .to_lowercase()
+                    .contains(lowercased_search.as_str())
+            })
             .collect::<Vec<_>>()
     });
 

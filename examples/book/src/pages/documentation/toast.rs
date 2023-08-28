@@ -21,6 +21,7 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
             options={ToastVariant::iter().collect::<Vec<_>>()}
             selected=variant
             set_selected=create_callback(cx, move |v| set_variant.set(v))
+            search_text_provider=create_callback(cx, move |o| format!("{o}"))
             render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             style="margin-bottom: 1em;"
         />
@@ -29,6 +30,7 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
             options=vec![ToastTimeout::None, ToastTimeout::DefaultDelay]
             selected=timeout
             set_selected=create_callback(cx, move |v| set_timeout.set(v))
+            search_text_provider=create_callback(cx, move |o| format!("{o}"))
             render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             style="margin-bottom: 1em;"
         />

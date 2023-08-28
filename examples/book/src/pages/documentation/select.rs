@@ -84,6 +84,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                 view! {cx,
                     <Select
                         options=vec![Foo::A, Foo::B, Foo::C]
+                        search_text_provider=create_callback(cx, move |o| format!("{o}"))
                         render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
                         selected=selected
                         set_selected=create_callback(cx, move |v| set_selected.set(v))
@@ -94,6 +95,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <Select
             options=vec![Foo::A, Foo::B, Foo::C]
+            search_text_provider=create_callback(cx, move |o| format!("{o}"))
             render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             selected=selected
             set_selected=create_callback(cx, move |v| set_selected.set(v))
@@ -110,6 +112,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                 view! {cx,
                     <OptionalSelect
                         options=vec![Foo::A, Foo::B, Foo::C]
+                        search_text_provider=create_callback(cx, move |o| format!("{o}"))
                         render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
                         selected=selected_opt
                         set_selected=create_callback(cx, move |v| set_selected_opt.set(v))
@@ -121,6 +124,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <OptionalSelect
             options=vec![Foo::A, Foo::B, Foo::C]
+            search_text_provider=create_callback(cx, move |o| format!("{o:?}"))
             render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             selected=selected_opt
             set_selected=create_callback(cx, move |v| set_selected_opt.set(v))
@@ -138,6 +142,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                 view! {cx,
                     <Multiselect
                         options=vec![Foo::A, Foo::B, Foo::C]
+                        search_text_provider=create_callback(cx, move |o| format!("{o}"))
                         render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
                         selected=selected_multi
                         set_selected=create_callback(cx, move |v| set_selected_multi.set(v))
@@ -148,6 +153,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <Multiselect
             options=vec![Foo::A, Foo::B, Foo::C]
+            search_text_provider=create_callback(cx, move |o| format!("{o}"))
             render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             selected=selected_multi
             set_selected=create_callback(cx, move |v| set_selected_multi.set(v))
@@ -158,6 +164,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
         <Multiselect
             options=vec![Foo::A, Foo::B, Foo::C]
             max=2
+            search_text_provider=create_callback(cx, move |o| format!("{o}"))
             render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
             selected=selected_multi2
             set_selected=create_callback(cx, move |v| set_selected_multi2.set(v))
@@ -215,6 +222,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
                     <P>"Selected user is: " { move || selected_user.get().to_string() }</P>
                     <Select
                         options=selectable_users.clone()
+                        search_text_provider=create_callback(cx, move |o| format!("{o}"))
                         render_option=create_callback(cx, move |(_cx, o): (Scope, User)| format!("{}", o.name))
                         selected=selected_user
                         set_selected=create_callback(cx, move |v| set_selected_user.set(v))
@@ -227,6 +235,7 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <Select
             options=selectable_users.clone()
+            search_text_provider=create_callback(cx, move |o| format!("{o}"))
             render_option=create_callback(cx, move |(_cx, o): (Scope, User)| format!("{}", o.name))
             selected=selected_user
             set_selected=create_callback(cx, move |v| set_selected_user.set(v))
