@@ -103,9 +103,7 @@ impl AppLayoutContext {
 pub fn Layout() -> impl IntoView {
     let is_small = use_media_query("(max-width: 800px)");
     let router_context = use_router();
-    let is_doc = create_memo(move |_| {
-        router_context.pathname().get().starts_with("/doc")
-    });
+    let is_doc = create_memo(move |_| router_context.pathname().get().starts_with("/doc"));
 
     // The main drawer is only used on mobile / small screens!.
     let (main_drawer_closed, set_main_drawer_closed) = create_signal(true);
@@ -183,10 +181,12 @@ pub fn Layout() -> impl IntoView {
         ),
     ];
 
-    let logo = move || view! {
-        <Link href="">
-            <img src="/res/leptonic.svg" id="logo" alt="Leptonic logo"/>
-        </Link>
+    let logo = move || {
+        view! {
+            <Link href="">
+                <img src="/res/leptonic.svg" id="logo" alt="Leptonic logo"/>
+            </Link>
+        }
     };
 
     view! {

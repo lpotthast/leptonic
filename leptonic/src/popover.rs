@@ -2,7 +2,6 @@ use leptos::*;
 
 #[component]
 pub fn Popover<S>(
-    
     show: S,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,

@@ -5,7 +5,6 @@ use crate::Size;
 // TODO: Only allow rows as children.
 #[component]
 pub fn Grid(
-    
     spacing: Size,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -27,7 +26,6 @@ pub fn Grid(
 // TODO: Only allow columns as children.
 #[component]
 pub fn Row(
-    
     #[prop(into, optional)] spacing: Option<Size>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -56,7 +54,6 @@ pub enum ColAlign {
 
 #[component]
 pub fn Col(
-    
     #[prop(optional)] xs: Option<u32>,
     #[prop(optional)] sm: Option<u32>,
     #[prop(optional)] md: Option<u32>,

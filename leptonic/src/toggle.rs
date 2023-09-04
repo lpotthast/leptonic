@@ -55,7 +55,6 @@ impl ToggleVariant {
 
 #[component]
 pub fn Toggle(
-    
     #[prop(into)] state: MaybeSignal<bool>,
     #[prop(into, optional)] set_state: Option<Out<bool>>,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,

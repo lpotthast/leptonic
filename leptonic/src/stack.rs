@@ -20,7 +20,6 @@ impl StackOrientation {
 
 #[component]
 pub fn Stack(
-    
     spacing: Size,
     #[prop(optional)] orientation: StackOrientation,
     #[prop(into, optional)] id: Option<AttributeValue>,

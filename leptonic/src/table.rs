@@ -6,7 +6,6 @@ use leptos::*;
 
 #[component]
 pub fn TableContainer(
-    
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -21,7 +20,6 @@ pub fn TableContainer(
 
 #[component]
 pub fn Table(
-    
     #[prop(optional)] bordered: Option<bool>,
     #[prop(optional)] hoverable: Option<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
@@ -44,41 +42,41 @@ pub fn Table(
 }
 
 #[component]
-pub fn Thead( children: Children) -> impl IntoView {
+pub fn Thead(children: Children) -> impl IntoView {
     view! {
         <thead>{children()}</thead>
     }
 }
 
 #[component]
-pub fn Tbody( children: Children) -> impl IntoView {
+pub fn Tbody(children: Children) -> impl IntoView {
     view! {
         <tbody>{children()}</tbody>
     }
 }
 
 #[component]
-pub fn Tfoot( children: Children) -> impl IntoView {
+pub fn Tfoot(children: Children) -> impl IntoView {
     view! {
         <tfoot>{children()}</tfoot>
     }
 }
 
 #[component]
-pub fn Tr( children: Children) -> impl IntoView {
+pub fn Tr(children: Children) -> impl IntoView {
     view! {
         <tr>{children()}</tr>
     }
 }
 
 #[component]
-pub fn Th( #[prop(optional)] min_width: Option<bool>, children: Children) -> impl IntoView {
+pub fn Th(#[prop(optional)] min_width: Option<bool>, children: Children) -> impl IntoView {
     view! {
         <th class:min-width=min_width.unwrap_or(false)>{children()}</th>
     }
 }
 #[component]
-pub fn Td( children: Children) -> impl IntoView {
+pub fn Td(children: Children) -> impl IntoView {
     view! {
         <td>{children()}</td>
     }

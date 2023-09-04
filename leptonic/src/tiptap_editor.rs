@@ -7,7 +7,6 @@ use crate::prelude::*;
 
 #[component]
 pub fn TiptapEditor(
-    
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,

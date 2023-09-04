@@ -2,7 +2,6 @@ use leptos::*;
 
 #[component]
 pub fn Field(
-    
     children: Children,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -17,7 +16,6 @@ pub fn Field(
 
 #[component]
 pub fn FieldLabel(
-    
     children: Children,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,

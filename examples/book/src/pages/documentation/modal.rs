@@ -65,7 +65,6 @@ pub fn PageModal() -> impl IntoView {
 
 #[component]
 pub fn ConfirmModal<A, C>(
-    
     #[prop(into)] show_when: Signal<bool>,
     requires_confirmation_of: String,
     on_accept: A,

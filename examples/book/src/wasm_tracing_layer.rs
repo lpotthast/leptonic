@@ -406,7 +406,8 @@ impl<S: Subscriber + for<'a> LookupSpan<'a>> Layer<S> for WASMLayer {
     // fn on_id_change(&self, _old: &tracing::Id, _new: &tracing::Id, ctx: Context<'_, S>) {}
 }
 
-const NOT_ALREADY_SET: &str = "No global default to have already been set. Global default can only be set once!";
+const NOT_ALREADY_SET: &str =
+    "No global default to have already been set. Global default can only be set once!";
 
 /// Set the global default with [tracing::subscriber::set_global_default] and expect the operation to succeed.
 /// This might panic if a global default was already set.
@@ -432,7 +433,9 @@ pub fn set_as_global_default_with_config(config: WASMLayerConfig) {
 
 /// Set the global default with [tracing::subscriber::set_global_default].
 #[allow(unused)]
-pub fn try_set_as_global_default_with_config(config: WASMLayerConfig) -> Result<(), SetGlobalDefaultError> {
+pub fn try_set_as_global_default_with_config(
+    config: WASMLayerConfig,
+) -> Result<(), SetGlobalDefaultError> {
     tracing::subscriber::set_global_default(Registry::default().with(WASMLayer::new(config)))
 }
 

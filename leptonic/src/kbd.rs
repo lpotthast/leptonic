@@ -6,7 +6,7 @@ use strum::EnumIter;
 use crate::Language;
 
 #[component]
-pub fn KbdKey( key: Key) -> impl IntoView {
+pub fn KbdKey(key: Key) -> impl IntoView {
     view! {
         <leptonic-kbd-key>
             { key.display(Language::En) }
@@ -15,10 +15,7 @@ pub fn KbdKey( key: Key) -> impl IntoView {
 }
 
 #[component]
-pub fn KbdConcatenate(
-    
-    #[prop(into, optional)] with: Option<Cow<'static, str>>,
-) -> impl IntoView {
+pub fn KbdConcatenate(#[prop(into, optional)] with: Option<Cow<'static, str>>) -> impl IntoView {
     view! {
         <leptonic-kbd-concatenate>
             { with.unwrap_or(Cow::Borrowed("+")) }
@@ -27,7 +24,7 @@ pub fn KbdConcatenate(
 }
 
 #[component]
-pub fn KbdShortcutRoot( children: Children) -> impl IntoView {
+pub fn KbdShortcutRoot(children: Children) -> impl IntoView {
     view! {
         <leptonic-kbd-shortcut>
             {children()}
@@ -37,7 +34,6 @@ pub fn KbdShortcutRoot( children: Children) -> impl IntoView {
 
 #[component]
 pub fn KbdShortcut<const N: usize>(
-    
     keys: [Key; N],
     #[prop(into, optional)] concatenate_with: Option<Cow<'static, str>>,
 ) -> impl IntoView {
