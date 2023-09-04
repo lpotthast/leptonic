@@ -7,11 +7,11 @@ members = [
 exclude = ["examples"]
 
 [workspace.package]
-version = "0.0.1"
+version = "0.2.0"
 
 [workspace.dependencies]
 leptonic = { path = "./leptonic", default-features = false }
-leptonic_theme = { path = "./leptonic-theme", default-features = false, version = "0.0.1" }
+leptonic_theme = { path = "./leptonic-theme", default-features = false }
 
 [profile.release]
 opt-level = 'z'
