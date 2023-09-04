@@ -82,12 +82,15 @@ where
         cx,
         ToggleProps {
             state: MaybeSignal::derive(cx, move || theme_context.theme.get() == on),
-            on_toggle: move |val| {
-                theme_context.set_theme.update(|current| match val {
-                    true => *current = on,
-                    false => *current = off,
+            set_state: Some(
+                create_callback(cx, move |val: bool| {
+                    theme_context.set_theme.update(|current| match val {
+                        true => *current = on,
+                        false => *current = off,
+                    })
                 })
-            },
+                .into(),
+            ),
             active: OptionalMaybeSignal(None),
             disabled: OptionalMaybeSignal(None),
             id: None,

@@ -15,7 +15,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
             "The required "<Code inline=true>"side"</Code>" prop controls to which side the drawer should move when hiding."
         </P>
 
-        <Toggle state=shown on_toggle=move |v| set_shown.set(v) />
+        <Toggle state=shown set_state=set_shown/>
 
         <Box style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
             <Drawer side=DrawerSide::Left shown=shown style="overflow-y: scroll; padding: 0.5em; background-color: var(--brand-color); border-right: 1px solid gray; z-index: 1;">
@@ -57,7 +57,7 @@ pub fn PageDrawer(cx: Scope) -> impl IntoView {
             "When viewing this documentation on a small device, the open- and closeable main and documentation menus are created this way."
         </P>
 
-        <Toggle state=shown2 on_toggle=move |v| set_shown2.set(v) />
+        <Toggle state=shown2 set_state=set_shown2/>
 
         <Box style="position: relative; display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
             <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">

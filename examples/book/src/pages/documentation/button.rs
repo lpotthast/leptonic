@@ -87,7 +87,7 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
         </Code>
 
         <div>
-            "Disable: " <Toggle state=disabled on_toggle=move |s| set_disabled.set(s)/>
+            "Disable: " <Toggle state=disabled set_state=set_disabled/>
         </div>
 
         <ButtonWrapper>

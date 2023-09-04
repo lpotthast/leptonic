@@ -17,12 +17,12 @@ pub fn PageToggle(cx: Scope) -> impl IntoView {
                 let (state, set_state) = create_signal(cx, false);
 
                 view! {cx,
-                    <Toggle state=state on_toggle=move |s| set_state.set(s)/>
+                    <Toggle state=state set_state=set_state/>
                 }
             "#)}
         </Code>
 
-        <Toggle state=state on_toggle=move |s| set_state.set(s)/>
+        <Toggle state=state set_state=set_state/>
 
         <H2>"Icons"</H2>
 
@@ -33,7 +33,7 @@ pub fn PageToggle(cx: Scope) -> impl IntoView {
                 let (state, set_state) = create_signal(cx, false);
 
                 view! {cx,
-                    <Toggle state=state on_toggle=move |s| set_state.set(s) icons=ToggleIcons {
+                    <Toggle state=state set_state=set_state icons=ToggleIcons {
                         on: BsIcon::BsFolderFill.into(),
                         off: BsIcon::BsFolder.into(),
                     }/>
@@ -41,7 +41,7 @@ pub fn PageToggle(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Toggle state=state on_toggle=move |s| set_state.set(s) icons=ToggleIcons {
+        <Toggle state=state set_state=set_state icons=ToggleIcons {
             on: BsIcon::BsFolderFill.into(),
             off: BsIcon::BsFolder.into(),
         }/>
@@ -51,7 +51,7 @@ pub fn PageToggle(cx: Scope) -> impl IntoView {
         <P>"The toggle comes in two variants: Sliding and Stationary. Sliding toggles are the default and the ones we have used so far."</P>
         <P>"Stationary toggles are not animated and only consist of a single circle."</P>
 
-        <Toggle state=state on_toggle=move |s| set_state.set(s) variant=ToggleVariant::Stationary icons=ToggleIcons {
+        <Toggle state=state set_state=set_state variant=ToggleVariant::Stationary icons=ToggleIcons {
             on: BsIcon::BsFolderFill.into(),
             off: BsIcon::BsFolder.into(),
         }/>

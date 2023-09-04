@@ -54,7 +54,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
 
         <Tabs mount=Mount::Once>
             <Tab name="tab-1" label=view! {cx, "State: " {move || test_reactive_label_bool.get()}}>
-                <Toggle state=test_reactive_label_bool on_toggle=move |s| set_test_reactive_label_bool.set(s) />
+                <Toggle state=test_reactive_label_bool set_state=set_test_reactive_label_bool/>
             </Tab>
             <Tab name="tab-2" label="Tab 2">
                 "Content of tab 2"

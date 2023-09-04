@@ -18,7 +18,7 @@ pub fn PageTiptapEditor(cx: Scope) -> impl IntoView {
         </P>
 
         <P style="display: flex;">
-            <Toggle state=disabled on_toggle=move |v| set_disabled.set(v) style="margin-right: 0.5em;"/>
+            <Toggle state=disabled set_state=set_disabled style="margin-right: 0.5em;"/>
             <span style="font-style: italic; color: gray;">
                 {
                     move || match disabled.get() {

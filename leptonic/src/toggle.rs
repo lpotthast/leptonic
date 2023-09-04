@@ -54,10 +54,10 @@ impl ToggleVariant {
 }
 
 #[component]
-pub fn Toggle<S>(
+pub fn Toggle(
     cx: Scope,
     #[prop(into)] state: MaybeSignal<bool>,
-    on_toggle: S,
+    #[prop(into, optional)] set_state: Option<Out<bool>>,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
@@ -66,10 +66,7 @@ pub fn Toggle<S>(
     #[prop(optional)] size: ToggleSize,
     #[prop(optional)] variant: ToggleVariant,
     #[prop(into, optional)] icons: Option<ToggleIcons>,
-) -> impl IntoView
-where
-    S: Fn(bool) + 'static,
-{
+) -> impl IntoView {
     view! { cx,
         <leptonic-toggle-wrapper class=class style=style>
             <leptonic-toggle
@@ -78,7 +75,7 @@ where
                 class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 data-size=size.as_str()
                 data-variant=variant.as_str()
-                on:click=move |_| (on_toggle)(!state.get())
+                on:click=move |_| { if let Some(set) = set_state { set.set(!state.get_untracked()) } }
             >
                 <span class="slider round" class:on=move || state.get()>
                     {

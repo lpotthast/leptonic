@@ -14,7 +14,7 @@ pub fn PageTransition(cx: Scope) -> impl IntoView {
         <H1>"Transitions"</H1>
 
         <H2>"Transition - Collapse - horizontally"</H2>
-        <Toggle state=transition_collapse_h on_toggle=move |s| set_transition_collapse_h.set(s) />
+        <Toggle state=transition_collapse_h set_state=set_transition_collapse_h/>
         <Collapse show=transition_collapse_h axis=CollapseAxis::X>
             <Skeleton height=Size::Em(5.0) width=Size::Percent(100.0)>"Collapse"</Skeleton>
         </Collapse>
@@ -22,7 +22,7 @@ pub fn PageTransition(cx: Scope) -> impl IntoView {
         <Separator />
 
         <H2>"Transition - Collapse - vertically"</H2>
-        <Toggle state=transition_collapse_v on_toggle=move |s| set_transition_collapse_v.set(s) />
+        <Toggle state=transition_collapse_v set_state=set_transition_collapse_v/>
         <Collapse show=transition_collapse_v axis=CollapseAxis::Y>
             <Skeleton height=Size::Em(5.0)>"Collapse"</Skeleton>
         </Collapse>
@@ -30,7 +30,7 @@ pub fn PageTransition(cx: Scope) -> impl IntoView {
         <Separator />
 
         <H2>"Transition - Fade"</H2>
-        <Toggle state=transition_fade on_toggle=move |s| set_transition_fade.set(s) />
+        <Toggle state=transition_fade set_state=set_transition_fade/>
         <Fade inn=Signal::derive(cx, move || transition_fade.get())>
             <Skeleton>"Fade"</Skeleton>
         </Fade>
@@ -38,7 +38,7 @@ pub fn PageTransition(cx: Scope) -> impl IntoView {
         <Separator />
 
         //<H2>"Transition - Grow"</H2>
-        //<Toggle state=transition_grow on_toggle=move |s| set_transition_grow.set(s) />
+        //<Toggle state=transition_grow set_state=set_transition_grow/>
         //<Grow inn=Signal::derive(cx, move || transition_grow.get())>
         //    <Skeleton>"Grow"</Skeleton>
         //</Grow>
@@ -46,7 +46,7 @@ pub fn PageTransition(cx: Scope) -> impl IntoView {
         //<Separator />
 
         //<H2>"Transition - Slide"</H2>
-        //<Toggle state=transition_slide on_toggle=move |s| set_transition_slide.set(s) />
+        //<Toggle state=transition_slide set_state=set_transition_slide/>
         //<Slide inn=Signal::derive(cx, move || transition_slide.get())>
         //    <Skeleton>"Slide"</Skeleton>
         //</Slide>
@@ -54,7 +54,7 @@ pub fn PageTransition(cx: Scope) -> impl IntoView {
         //<Separator />
 
         //<H2>"Transition - Zoom"</H2>
-        //<Toggle state=transition_zoom on_toggle=move |s| set_transition_zoom.set(s) />
+        //<Toggle state=transition_zoom set_state=set_transition_zoom/>
         //<Zoom inn=Signal::derive(cx, move || transition_zoom.get())>
         //    <Skeleton>"Zoom"</Skeleton>
         //</Zoom>
