@@ -1,10 +1,10 @@
 use leptos::*;
 
 #[component]
-pub fn Card(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn Card(children: Children) -> impl IntoView {
+    view! {
         <leptonic-card>
-            { children(cx) }
+            { children() }
         </leptonic-card>
     }
 }

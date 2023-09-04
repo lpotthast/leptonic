@@ -17,7 +17,7 @@ fn main() {
             .build(),
     );
 
-    mount_to_body(|cx| {
-        view! { cx, <App/> }
+    mount_to_body(|| {
+        view! { <App/> }
     })
 }

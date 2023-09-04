@@ -71,24 +71,20 @@ impl CollapsibleContext {
 }
 
 #[component]
-pub fn Collapsibles(cx: Scope, default_on_open: OnOpen, children: Children) -> impl IntoView {
-    provide_context(
-        cx,
-        CollapsiblesContext {
-            default_on_open,
-            collapsibles: Arc::new(RwLock::new(vec![])),
-        },
-    );
-    view! { cx,
+pub fn Collapsibles(default_on_open: OnOpen, children: Children) -> impl IntoView {
+    provide_context(CollapsiblesContext {
+        default_on_open,
+        collapsibles: Arc::new(RwLock::new(vec![])),
+    });
+    view! {
         <leptonic-collapsibles>
-            { children(cx) }
+            { children() }
         </leptonic-collapsibles>
     }
 }
 
 #[component]
 pub fn Collapsible<H, B>(
-    cx: Scope,
     /// Whether this collapsible should initially be opened.
     #[prop(optional, default = false)]
     open: bool,
@@ -103,9 +99,9 @@ where
     let id = Uuid::new_v4();
     let id_str = id.to_string();
 
-    let (show, set_show) = create_signal(cx, open);
+    let (show, set_show) = create_signal(open);
 
-    let parent = use_context::<CollapsiblesContext>(cx);
+    let parent = use_context::<CollapsiblesContext>();
 
     if parent.is_none() && on_open.is_some() {
         warn!("Collapsible {id}: Setting on_open on a Collapsible when that collapsible is not a Child of a Collapsibles parent element is pointless. Remove the argument or wrap this Collapsible in a Collapsibles.");
@@ -122,17 +118,17 @@ where
     if let Some(mut parent) = parent {
         parent.register(ctx.clone());
     };
-    provide_context(cx, ctx);
+    provide_context(ctx);
 
-    view! { cx,
+    view! {
         <leptonic-collapsible id=id_str>
             <CollapsibleHeaderWrapper>
                 <CollapsibleHeader>
                     { header }
                 </CollapsibleHeader>
                 {move || match show.get() {
-                    true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
-                    false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                    true => view! { <Icon icon=BsIcon::BsCaretUpFill/>},
+                    false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}
                 }}
             </CollapsibleHeaderWrapper>
             <CollapsibleBody>
@@ -143,34 +139,34 @@ where
 }
 
 #[component]
-pub fn CollapsibleHeaderWrapper(cx: Scope, children: Children) -> impl IntoView {
-    let collapsible_ctx = use_context::<CollapsibleContext>(cx)
+pub fn CollapsibleHeaderWrapper(children: Children) -> impl IntoView {
+    let collapsible_ctx = use_context::<CollapsibleContext>()
         .expect("A CollapsibleHeader musst be placed inside a Collapsible component.");
 
-    view! { cx,
+    view! {
         <leptonic-collapsible-header-wrapper on:click=move |_| collapsible_ctx.toggle()>
-            { children(cx) }
+            { children() }
         </leptonic-collapsible-header-wrapper>
     }
 }
 
 #[component]
-pub fn CollapsibleHeader(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn CollapsibleHeader(children: Children) -> impl IntoView {
+    view! {
         <leptonic-collapsible-header>
-            { children(cx) }
+            { children() }
         </leptonic-collapsible-header>
     }
 }
 
 #[component]
-pub fn CollapsibleBody(cx: Scope, children: Children) -> impl IntoView {
-    let collapsible_ctx = use_context::<CollapsibleContext>(cx)
+pub fn CollapsibleBody(children: Children) -> impl IntoView {
+    let collapsible_ctx = use_context::<CollapsibleContext>()
         .expect("A CollapsibleHeader musst be placed inside a Collapsible component.");
 
-    view! { cx,
+    view! {
         <leptonic-collapsible-body class:show=move || collapsible_ctx.show.get()>
-            { children(cx) }
+            { children() }
         </leptonic-collapsible-body>
     }
 }

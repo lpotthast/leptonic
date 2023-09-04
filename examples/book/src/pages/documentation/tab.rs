@@ -3,9 +3,9 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageTab(cx: Scope) -> impl IntoView {
-    let (test_reactive_label_bool, set_test_reactive_label_bool) = create_signal(cx, false);
-    view! { cx,
+pub fn PageTab() -> impl IntoView {
+    let (test_reactive_label_bool, set_test_reactive_label_bool) = create_signal(false);
+    view! {
         <H1>"Tabs"</H1>
 
         <P>
@@ -37,11 +37,11 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let (bool, set_bool) = create_signal(cx, false);
+                let (bool, set_bool) = create_signal(false);
 
-                view! {cx,
+                view! {
                     <Tabs mount=Mount::Once>
-                        <Tab name="tab-1" label=view! {cx, "State: " {move || bool.get()}}>
+                        <Tab name="tab-1" label=view! { "State: " {move || bool.get()}}>
                             <Toggle state=bool on_toggle=move |s| set_bool.set(s) />
                         </Tab>
                         <Tab name="tab-2" label="Tab 2">
@@ -53,7 +53,7 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
         </Code>
 
         <Tabs mount=Mount::Once>
-            <Tab name="tab-1" label=view! {cx, "State: " {move || test_reactive_label_bool.get()}}>
+            <Tab name="tab-1" label=view! { "State: " {move || test_reactive_label_bool.get()}}>
                 <Toggle state=test_reactive_label_bool set_state=set_test_reactive_label_bool/>
             </Tab>
             <Tab name="tab-2" label="Tab 2">

@@ -3,22 +3,22 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageInput(cx: Scope) -> impl IntoView {
-    let (text, set_text) = create_signal(cx, "text".to_owned());
-    let (password, set_password) = create_signal(cx, "secret".to_owned());
-    let (number, set_number) = create_signal(cx, 4.2);
-    let number_string = Signal::derive(cx, move || format!("{:.1}", number.get()));
+pub fn PageInput() -> impl IntoView {
+    let (text, set_text) = create_signal("text".to_owned());
+    let (password, set_password) = create_signal("secret".to_owned());
+    let (number, set_number) = create_signal(4.2);
+    let number_string = Signal::derive(move || format!("{:.1}", number.get()));
 
-    let (placeholder_input, set_placeholder_input) = create_signal(cx, "".to_owned());
+    let (placeholder_input, set_placeholder_input) = create_signal("".to_owned());
 
-    view! { cx,
+    view! {
         <H1>"Inputs"</H1>
 
         <P>"Creating an input is as simple as doing the following"</P>
         <Code>
             {indoc!(r#"
-                let (text, set_text) = create_signal(cx, "text".to_owned());
-                view! { cx,
+                let (text, set_text) = create_signal("text".to_owned());
+                view! {
                     <TextInput get=text set=set_text/>
                 }
             "#)}
@@ -39,8 +39,8 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let (password, set_password) = create_signal(cx, "secret".to_owned());
-                view! { cx,
+                let (password, set_password) = create_signal("secret".to_owned());
+                view! {
                     <PasswordInput get=password set=set_password/>
                 }
             "#)}
@@ -58,9 +58,9 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let (number, set_number) = create_signal(cx, Some(42.0));
-                let number_string = Signal::derive(cx, move || format!("{:.1}", number.get()));
-                view! { cx,
+                let (number, set_number) = create_signal(Some(42.0));
+                let number_string = Signal::derive(move || format!("{:.1}", number.get()));
+                view! {
                     <NumberInput min=0.0 max=10.0 step=0.1
                         get=number
                         set=set_number
@@ -97,9 +97,9 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                view! { cx,
+                view! {
                     <Input get=text set=set_text/>
-                    <Input get=text set=create_callback(cx, move |v: String| set_text.set(v))/>
+                    <Input get=text set=create_callback(move |v: String| set_text.set(v))/>
                 }
             "#)}
         </Code>
@@ -110,8 +110,8 @@ pub fn PageInput(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let (text, set_text) = create_signal(cx, "".to_owned());
-                view! { cx,
+                let (text, set_text) = create_signal("".to_owned());
+                view! {
                     <TextInput get=text set=set_text placeholder="This is a placeholder"/>
                     <Button
                         variant=ButtonVariant::Flat

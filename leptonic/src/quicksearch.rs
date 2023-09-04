@@ -3,7 +3,6 @@ use leptos::*;
 
 #[component]
 pub fn Quicksearch<T, IV>(
-    cx: Scope,
     trigger: T,
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
     #[prop(into, optional)] id: Option<AttributeValue>,
@@ -11,13 +10,13 @@ pub fn Quicksearch<T, IV>(
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
-    T: Fn(Scope, WriteSignal<bool>) -> IV + 'static,
+    T: Fn(WriteSignal<bool>) -> IV + 'static,
     IV: IntoView + 'static,
 {
-    let (show_modal, set_show_modal) = create_signal(cx, false);
-    view! { cx,
+    let (show_modal, set_show_modal) = create_signal(false);
+    view! {
         <leptonic-quicksearch id=id class=class style=style>
-            { trigger(cx, set_show_modal) }
+            { trigger(set_show_modal) }
             <QuicksearchModal
                 show_when=show_modal
                 query=query
@@ -29,29 +28,27 @@ where
 
 #[component]
 pub fn QuicksearchTrigger(
-    cx: Scope,
     #[prop(into)] set_quicksearch: WriteSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
-    view! { cx,
+    view! {
         <leptonic-quicksearch-trigger id=id class=class style=style on:click=move |_| set_quicksearch.set(true)>
-            { children(cx) }
+            { children() }
         </leptonic-quicksearch-trigger>
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct QuicksearchOption {
-    pub view: Callback<Scope, View>,
+    pub view: Callback<(), View>,
     pub on_select: Callback<()>,
 }
 
 #[component]
 fn QuicksearchModal<C>(
-    cx: Scope,
     #[prop(into)] show_when: Signal<bool>,
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
     on_cancel: C,
@@ -59,12 +56,12 @@ fn QuicksearchModal<C>(
 where
     C: Fn() + Copy + 'static,
 {
-    let (input, set_input) = create_signal(cx, "".to_owned());
+    let (input, set_input) = create_signal("".to_owned());
 
     let options = move || query.call(input.get());
 
-    let g_keyboard_event: GlobalKeyboardEvent = expect_context::<GlobalKeyboardEvent>(cx);
-    create_effect(cx, move |_old| {
+    let g_keyboard_event: GlobalKeyboardEvent = expect_context::<GlobalKeyboardEvent>();
+    create_effect(move |_old| {
         if let Some(e) = g_keyboard_event.read_signal.get() {
             if show_when.get_untracked() && e.key().as_str() == "Escape" {
                 on_cancel();
@@ -72,7 +69,7 @@ where
         }
     });
 
-    view! { cx,
+    view! {
         <Modal show_when=show_when class="quicksearch-modal">
             <ModalHeader>
                 <TextInput
@@ -81,19 +78,19 @@ where
                     placeholder="Search"
                     class="search-input"
                     should_be_focused=show_when
-                    prepend=view! {cx, ""}.into_view(cx)
+                    prepend=view! { ""}.into_view()
                 />
             </ModalHeader>
             <ModalBody>
                 <leptonic-quicksearch-results>
-                    { move || options().into_iter().map(|option| view! {cx,
+                    { move || options().into_iter().map(|option| view! {
                         <leptonic-quicksearch-result on:click=move |_| {
                                 option.on_select.call(());
                                 on_cancel();
                             }>
-                            { option.view.call(cx) }
+                            { option.view.call(()) }
                         </leptonic-quicksearch-result>
-                    }).collect_view(cx) }
+                    }).collect_view() }
                 </leptonic-quicksearch-results>
             </ModalBody>
             <ModalFooter>

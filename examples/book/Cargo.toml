@@ -13,8 +13,8 @@ debug = 0
 console_error_panic_hook = "0.1.7"
 indoc = "2.0.1"
 leptonic = { path = "../../leptonic" }
-leptos = { version = "0.4.8", features = ["csr"] }
-leptos_icons = { version = "0.0.15", features = [
+leptos = { version = "0.5.0-beta2", features = ["csr"] }
+leptos_icons = { version = "0.0.16-beta", features = [
     "BsGithub",
     "BsSearch",
     "BsList",
@@ -32,9 +32,9 @@ leptos_icons = { version = "0.0.15", features = [
     "BsBell",
     "BsPower",
 ] }
-leptos-use = "0.6.0"
-leptos_meta = { version = "0.4.8", features = ["csr"] }
-leptos_router = { version = "0.4.8", features = ["csr"] }
+leptos-use = { git = "https://github.com/Synphonyte/leptos-use" }
+leptos_meta = { version = "0.5.0-beta2", features = ["csr"] }
+leptos_router = { version = "0.5.0-beta2", features = ["csr"] }
 serde = "1.0.171"
 serde-wasm-bindgen = "0.5.0"
 serde_json = "1.0.103"
@@ -48,4 +48,4 @@ ordered-float = "3.9.0"
 
 [build-dependencies]
 leptonic-theme = { path = "../../leptonic-theme" }
-leptos-tiptap-build = "0.2.0"
+leptos-tiptap-build = "0.2.2"

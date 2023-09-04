@@ -19,7 +19,6 @@ enum Selection {
 
 #[component]
 pub fn DateSelector(
-    cx: Scope,
     value: time::OffsetDateTime,
     on_change: Callback<time::OffsetDateTime>,
     #[prop(optional)] min: Option<time::OffsetDateTime>,
@@ -28,24 +27,21 @@ pub fn DateSelector(
         GuideMode,
     >,
 ) -> impl IntoView {
-    let (staging, set_staging) = create_signal(cx, value);
+    let (staging, set_staging) = create_signal(value);
 
-    let staging_year = Signal::derive(cx, move || staging.get().year());
-    let staging_month = Signal::derive(cx, move || staging.get().month().to_string());
+    let staging_year = Signal::derive(move || staging.get().year());
+    let staging_month = Signal::derive(move || staging.get().month().to_string());
 
-    let selected: Memo<time::OffsetDateTime> = create_memo(cx, move |_| staging.get());
-    create_effect(cx, move |_| on_change.call(selected.get()));
+    let selected: Memo<time::OffsetDateTime> = create_memo(move |_| staging.get());
+    create_effect(move |_| on_change.call(selected.get()));
 
-    let (show, set_show) = create_signal(
-        cx,
-        match guide_mode.get() {
-            GuideMode::CalendarFirst => Selection::Day,
-            GuideMode::YearFirst => Selection::Year,
-        },
-    );
+    let (show, set_show) = create_signal(match guide_mode.get() {
+        GuideMode::CalendarFirst => Selection::Day,
+        GuideMode::YearFirst => Selection::Year,
+    });
 
-    let (years_starting_at, set_years_starting_at) = create_signal(cx, None);
-    let years = Signal::derive(cx, move || {
+    let (years_starting_at, set_years_starting_at) = create_signal(None);
+    let years = Signal::derive(move || {
         staging.with(|staging| {
             create_years(
                 *staging,
@@ -55,7 +51,7 @@ pub fn DateSelector(
             )
         })
     });
-    let years_range = Signal::derive(cx, move || {
+    let years_range = Signal::derive(move || {
         years.with(|years| {
             if years.is_empty() {
                 "ERR: no years".to_owned()
@@ -64,14 +60,12 @@ pub fn DateSelector(
             }
         })
     });
-    let months = Signal::derive(cx, move || {
+    let months = Signal::derive(move || {
         staging.with(|staging| create_months(*staging, min.as_ref(), max.as_ref()))
     });
     // TODO: Make static. Make i18n.
-    let (short_weekday_names, _) = create_signal(cx, create_week_day_names());
-    let weeks = Signal::derive(cx, move || {
-        create_weeks(&staging.get(), min.as_ref(), max.as_ref())
-    });
+    let (short_weekday_names, _) = create_signal(create_week_day_names());
+    let weeks = Signal::derive(move || create_weeks(&staging.get(), min.as_ref(), max.as_ref()));
 
     let select_previous_month =
         move |_| set_staging.update(|staging| *staging = start_of_previous_month(*staging));
@@ -130,13 +124,13 @@ pub fn DateSelector(
         }
     };
 
-    view! { cx,
+    view! {
         <leptonic-datetime>
         <leptonic-date-selector>
             <leptonic-calender-month>
                 <div class={"actions"}>
                     {move || match show.get() {
-                        Selection::Year => view! { cx,
+                        Selection::Year => view! {
                             <div on:click=select_previous_years
                                 class="previous arrow-left">
                             </div>
@@ -148,7 +142,7 @@ pub fn DateSelector(
                                 class="next arrow-right">
                             </div>
                         },
-                        Selection::Month => view! { cx,
+                        Selection::Month => view! {
                             <div on:click=select_previous_year
                                 class="previous arrow-left">
                             </div>
@@ -160,7 +154,7 @@ pub fn DateSelector(
                                 class="next arrow-right">
                             </div>
                         },
-                        Selection::Day => view! { cx,
+                        Selection::Day => view! {
                             <div on:click=select_previous_month
                                 class="previous arrow-left">
                             </div>
@@ -175,13 +169,13 @@ pub fn DateSelector(
                     }}
                 </div>
 
-                <Show when=move || show.get() == Selection::Year fallback=|_cx| view! { cx,  }>
+                <Show when=move || show.get() == Selection::Year fallback=|| ()>
                     <div class="years">
                         <For
                             each=move || years.get()
                             key=|year| year.number
-                            view=move |cx, year| {
-                                view! { cx,
+                            view=move |year| {
+                                view! {
                                     <div on:click=move |_e| select_year(year)
                                         class="year"
                                         class:is-staging=year.is_staging
@@ -196,14 +190,14 @@ pub fn DateSelector(
                     </div>
                 </Show>
 
-                <Show when=move || show.get() == Selection::Month fallback=|_cx| view! { cx,  }>
+                <Show when=move || show.get() == Selection::Month fallback=|| ()>
                     <div class="months">
                         <For
                             each=move || months.get()
                             key=|month| month.index
-                            view=move |cx, month| {
+                            view=move |month| {
                                 let mon = month.clone();
-                                view! { cx,
+                                view! {
                                     <div on:click=move |_e| select_month(mon.clone())
                                         class="month"
                                         class:is-staging=month.is_staging
@@ -217,14 +211,14 @@ pub fn DateSelector(
                     </div>
                 </Show>
 
-                <Show when=move || show.get() == Selection::Day fallback=|_cx| view! { cx,  }>
+                <Show when=move || show.get() == Selection::Day fallback=|| ()>
                     <div class={"weekday-names"}>
                         // Not use For for this...?
                         <For
                             each=move || short_weekday_names.get()
                             key=|short_weekday_name| short_weekday_name.clone()
-                            view=move |cx, short_weekday_name| {
-                                view! { cx,
+                            view=move |short_weekday_name| {
+                                view! {
                                     <div class={"weekday-name"}>
                                         {short_weekday_name}
                                     </div>
@@ -237,21 +231,21 @@ pub fn DateSelector(
                         <For
                             each=move || weeks.get()
                             key=|week| week.id
-                            view=move |cx, week| {
-                                view! { cx,
+                            view=move |week| {
+                                view! {
                                     <div class="week">
                                         <For
                                             each=move || week.days.clone()
                                             key=|day| day.id
-                                            view=move |cx, day| {
+                                            view=move |day| {
                                                 let d = day.clone();
-                                                view! { cx,
+                                                view! {
                                                     <div
                                                         on:click=move |_e| select_day(d.clone())
                                                         class="day"
                                                         class:is-staging=day.is_staging
                                                         class:is-now=day.is_now
-                                                        class:not-in-month=(day.in_month != InMonth::Current)
+                                                        class:not-in-month=day.in_month != InMonth::Current
                                                         class:disabled=day.disabled
                                                     >
                                                         <span class="text">

@@ -5,8 +5,8 @@ use leptos::*;
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
-pub fn PageUsage(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageUsage() -> impl IntoView {
+    view! {
         <H1>"Usage"</H1>
 
         <P>"Similar to Leptos, this crate comes with a prelude module."</P>
@@ -31,8 +31,8 @@ pub fn PageUsage(cx: Scope) -> impl IntoView {
         <Code>
             {indoc!(r#"
                 #[component]
-                pub fn App(cx: Scope) -> impl IntoView {
-                    view! {cx,
+                pub fn App() -> impl IntoView {
+                    view! {
                         <Root default_theme=LeptonicTheme::default()>
                             "Content goes here :)"
                         </Root>

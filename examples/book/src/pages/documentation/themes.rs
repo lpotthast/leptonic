@@ -5,8 +5,8 @@ use leptos::*;
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
-pub fn PageThemes(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageThemes() -> impl IntoView {
+    view! {
         <H1>"Theming"</H1>
 
         <P>"From the first day on, Leptonic was built with theming in mind."</P>

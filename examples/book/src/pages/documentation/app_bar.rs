@@ -4,10 +4,10 @@ use leptos::*;
 use leptos_icons::BsIcon;
 
 #[component]
-pub fn PageAppBar(cx: Scope) -> impl IntoView {
+pub fn PageAppBar() -> impl IntoView {
     let app_bar_height = Height::Em(3.0);
 
-    view! { cx,
+    view! {
         <H1>"App Bar"</H1>
 
         <P>"The "<Code inline=true>"<AppBar>"</Code>" component sticks to the top of its parent and provides a convenient entrypoint for many app layouts."</P>
@@ -24,7 +24,7 @@ pub fn PageAppBar(cx: Scope) -> impl IntoView {
             <Box style="padding: 0.5em;">
                 <P>"Scroll ↓"</P>
                 <Stack spacing=Size::Em(0.5)>
-                    {(0..10).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                    {(0..10).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
                 </Stack>
             </Box>
         </Box>
@@ -43,7 +43,7 @@ pub fn PageAppBar(cx: Scope) -> impl IntoView {
                     <Box style="padding: 0.5em;">
                         <P>"Scroll ↓"</P>
                         <Stack spacing=Size::Em(0.5)>
-                            {(0..10).map(|_| view! { cx, <Skeleton height=Size::Em(3.0)/> }).collect_view(cx)}
+                            {(0..10).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
                         </Stack>
                     </Box>
                 </Box>

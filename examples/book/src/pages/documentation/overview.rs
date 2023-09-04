@@ -4,8 +4,8 @@ use leptos::*;
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
-pub fn PageOverview(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageOverview() -> impl IntoView {
+    view! {
         <H1>"Overview"</H1>
 
         <P>

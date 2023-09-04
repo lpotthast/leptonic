@@ -3,10 +3,10 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageChip(cx: Scope) -> impl IntoView {
-    let (dismissed, set_dismissed) = create_signal(cx, false);
+pub fn PageChip() -> impl IntoView {
+    let (dismissed, set_dismissed) = create_signal(false);
 
-    view! { cx,
+    view! {
         <H1>"Chips"</H1>
 
         <Code>
@@ -34,7 +34,7 @@ pub fn PageChip(cx: Scope) -> impl IntoView {
             {indoc!(r#"
                 <Chip
                     color=ChipColor::Secondary
-                    dismissible=create_callback(cx, move |_| set_dismissed.set(true))
+                    dismissible=create_callback(move |()| set_dismissed.set(true))
                 >
                     "Dismissible"
                 </Chip>
@@ -43,9 +43,9 @@ pub fn PageChip(cx: Scope) -> impl IntoView {
 
         <Show
             when=move || !dismissed.get()
-            fallback=move |cx| view! {cx, <Button on_click=move |_| set_dismissed.set(false)>"Reveal chip"</Button>}
+            fallback=move || view! { <Button on_click=move |_| set_dismissed.set(false)>"Reveal chip"</Button>}
         >
-            <Chip color=ChipColor::Secondary dismissible=create_callback(cx, move |_| set_dismissed.set(true))>
+            <Chip color=ChipColor::Secondary dismissible=create_callback(move |_| set_dismissed.set(true))>
                 "Dismissible"
             </Chip>
         </Show>

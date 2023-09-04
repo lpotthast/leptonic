@@ -6,22 +6,22 @@ use leptos::*;
 
 #[component]
 pub fn TableContainer(
-    cx: Scope,
+    
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
-    view! {cx,
+    view! {
         <leptonic-table-container id=id class=class style=style>
-            {children(cx)}
+            {children()}
         </leptonic-table-container>
     }
 }
 
 #[component]
 pub fn Table(
-    cx: Scope,
+    
     #[prop(optional)] bordered: Option<bool>,
     #[prop(optional)] hoverable: Option<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
@@ -29,7 +29,7 @@ pub fn Table(
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
-    view! {cx,
+    view! {
         //<table class="crud-table crud-table-bordered crud-table-hoverable">
         <leptonic-table
             id=id
@@ -38,48 +38,48 @@ pub fn Table(
             class:leptonic-table-hoverable=hoverable.unwrap_or(false)
             style=style
         >
-            {children(cx)}
+            {children()}
         </leptonic-table>
     }
 }
 
 #[component]
-pub fn Thead(cx: Scope, children: Children) -> impl IntoView {
-    view! {cx,
-        <thead>{children(cx)}</thead>
+pub fn Thead( children: Children) -> impl IntoView {
+    view! {
+        <thead>{children()}</thead>
     }
 }
 
 #[component]
-pub fn Tbody(cx: Scope, children: Children) -> impl IntoView {
-    view! {cx,
-        <tbody>{children(cx)}</tbody>
+pub fn Tbody( children: Children) -> impl IntoView {
+    view! {
+        <tbody>{children()}</tbody>
     }
 }
 
 #[component]
-pub fn Tfoot(cx: Scope, children: Children) -> impl IntoView {
-    view! {cx,
-        <tfoot>{children(cx)}</tfoot>
+pub fn Tfoot( children: Children) -> impl IntoView {
+    view! {
+        <tfoot>{children()}</tfoot>
     }
 }
 
 #[component]
-pub fn Tr(cx: Scope, children: Children) -> impl IntoView {
-    view! {cx,
-        <tr>{children(cx)}</tr>
+pub fn Tr( children: Children) -> impl IntoView {
+    view! {
+        <tr>{children()}</tr>
     }
 }
 
 #[component]
-pub fn Th(cx: Scope, #[prop(optional)] min_width: Option<bool>, children: Children) -> impl IntoView {
-    view! {cx,
-        <th class:min-width=min_width.unwrap_or(false)>{children(cx)}</th>
+pub fn Th( #[prop(optional)] min_width: Option<bool>, children: Children) -> impl IntoView {
+    view! {
+        <th class:min-width=min_width.unwrap_or(false)>{children()}</th>
     }
 }
 #[component]
-pub fn Td(cx: Scope, children: Children) -> impl IntoView {
-    view! {cx,
-        <td>{children(cx)}</td>
+pub fn Td( children: Children) -> impl IntoView {
+    view! {
+        <td>{children()}</td>
     }
 }

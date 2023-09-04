@@ -3,8 +3,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageTable(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageTable() -> impl IntoView {
+    view! {
         <H1>"Table"</H1>
 
         <P>"Tables..."</P>

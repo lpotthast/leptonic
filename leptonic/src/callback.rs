@@ -16,8 +16,8 @@ pub trait Callable<A, R = ()> {
 pub struct Callback<T: 'static, R: 'static = ()>(leptos::StoredValue<Box<dyn Fn(T) -> R>>);
 
 impl<T: 'static, R: 'static> Callback<T, R> {
-    pub fn new<F: Fn(T) -> R + 'static>(cx: leptos::Scope, fun: F) -> Self {
-        Self(leptos::store_value(cx, Box::new(fun)))
+    pub fn new<F: Fn(T) -> R + 'static>(fun: F) -> Self {
+        Self(leptos::store_value(Box::new(fun)))
     }
 }
 
@@ -49,11 +49,8 @@ impl<T: 'static, R: 'static> Debug for Callback<T, R> {
     }
 }
 
-pub fn create_callback<T: 'static, R: 'static, F: Fn(T) -> R + 'static>(
-    cx: leptos::Scope,
-    fun: F,
-) -> Callback<T, R> {
-    Callback::new(cx, fun)
+pub fn create_callback<T: 'static, R: 'static, F: Fn(T) -> R + 'static>(fun: F) -> Callback<T, R> {
+    Callback::new(fun)
 }
 
 /// A callback backed by a `leptos::StoredValue` where the stored function...
@@ -64,8 +61,8 @@ pub fn create_callback<T: 'static, R: 'static, F: Fn(T) -> R + 'static>(
 pub struct CallbackRc<T: 'static, R: 'static = ()>(leptos::StoredValue<Rc<dyn Fn(T) -> R>>);
 
 impl<T: 'static, R: 'static> CallbackRc<T, R> {
-    pub fn new<F: Fn(T) -> R + 'static>(cx: leptos::Scope, fun: F) -> Self {
-        Self(leptos::store_value(cx, Rc::new(fun)))
+    pub fn new<F: Fn(T) -> R + 'static>(fun: F) -> Self {
+        Self(leptos::store_value(Rc::new(fun)))
     }
 }
 
@@ -98,10 +95,9 @@ impl<T: 'static, R: 'static> Debug for CallbackRc<T, R> {
 }
 
 pub fn create_callback_rc<T: 'static, R: 'static, F: Fn(T) -> R + 'static>(
-    cx: leptos::Scope,
     fun: F,
 ) -> CallbackRc<T, R> {
-    CallbackRc::new(cx, fun)
+    CallbackRc::new(fun)
 }
 
 /// A callback backed by a `leptos::StoredValue` where the stored function...
@@ -113,8 +109,8 @@ pub fn create_callback_rc<T: 'static, R: 'static, F: Fn(T) -> R + 'static>(
 pub struct CallbackArc<T: 'static, R: 'static = ()>(leptos::StoredValue<Arc<dyn Fn(T) -> R>>);
 
 impl<T: 'static, R: 'static> CallbackArc<T, R> {
-    pub fn new<F: Fn(T) -> R + 'static>(cx: leptos::Scope, fun: F) -> Self {
-        Self(leptos::store_value(cx, Arc::new(fun)))
+    pub fn new<F: Fn(T) -> R + 'static>(fun: F) -> Self {
+        Self(leptos::store_value(Arc::new(fun)))
     }
 }
 
@@ -147,10 +143,9 @@ impl<T: 'static, R: 'static> Debug for CallbackArc<T, R> {
 }
 
 pub fn create_callback_arc<T: 'static, R: 'static, F: Fn(T) -> R + 'static>(
-    cx: leptos::Scope,
     fun: F,
 ) -> CallbackArc<T, R> {
-    CallbackArc::new(cx, fun)
+    CallbackArc::new(fun)
 }
 
 /// A callback not backed by leptos which...

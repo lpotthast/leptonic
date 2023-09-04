@@ -4,8 +4,8 @@ use leptos::*;
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
-pub fn PageWelcome(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageWelcome() -> impl IntoView {
+    view! {
         <Box id="welcome-page">
             <img src="/res/leptonic.svg" id="big-logo" alt="Big Leptonic logo"/>
 

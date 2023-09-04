@@ -7,8 +7,8 @@ use leptos_router::ToHref;
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
-pub fn PageLink(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageLink() -> impl IntoView {
+    view! {
         <H1>"Links"</H1>
 
         <P>"Links bring your users to a different place of your application."</P>

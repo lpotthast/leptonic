@@ -69,7 +69,6 @@ impl Default for CheckboxSize {
 
 #[component]
 pub fn Checkbox<T>(
-    cx: Scope,
     #[prop(into)] checked: Signal<bool>,
     on_toggle: T,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
@@ -82,7 +81,7 @@ where
     T: Fn() + 'static,
 {
     let id = id.unwrap_or_else(Uuid::new_v4);
-    view! { cx,
+    view! {
         <leptonic-checkbox>
             <input
                 type="checkbox"

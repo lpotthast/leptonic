@@ -3,8 +3,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageSeparator(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageSeparator() -> impl IntoView {
+    view! {
         <H1>"Separators"</H1>
 
         <Code>

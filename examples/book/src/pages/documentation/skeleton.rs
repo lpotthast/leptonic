@@ -3,8 +3,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageSkeleton(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageSkeleton() -> impl IntoView {
+    view! {
         <H1>"Skeletons"</H1>
 
         <P>

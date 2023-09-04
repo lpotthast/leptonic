@@ -3,9 +3,9 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageAlert(cx: Scope) -> impl IntoView {
-    let (centered, set_centered) = create_signal(cx, false);
-    view! { cx,
+pub fn PageAlert() -> impl IntoView {
+    let (centered, set_centered) = create_signal(false);
+    view! {
         <H1>"Alerts"</H1>
 
         <Code>
@@ -14,10 +14,10 @@ pub fn PageAlert(cx: Scope) -> impl IntoView {
             "#)}
         </Code>
 
-        <Alert variant=AlertVariant::Success title=create_callback(cx, |_| "Success") centered=centered>"Action completed."</Alert>
-        <Alert variant=AlertVariant::Info title=create_callback(cx, |_| "Info") centered=centered>"This concept is based on [...]"</Alert>
-        <Alert variant=AlertVariant::Warn title=create_callback(cx, |_| "Warn") centered=centered>"This seems not plausible."</Alert>
-        <Alert variant=AlertVariant::Danger title=create_callback(cx, |_| "Danger") centered=centered>"There was an error!"</Alert>
+        <Alert variant=AlertVariant::Success title=create_callback(|_| "Success") centered=centered>"Action completed."</Alert>
+        <Alert variant=AlertVariant::Info title=create_callback(|_| "Info") centered=centered>"This concept is based on [...]"</Alert>
+        <Alert variant=AlertVariant::Warn title=create_callback(|_| "Warn") centered=centered>"This seems not plausible."</Alert>
+        <Alert variant=AlertVariant::Danger title=create_callback(|_| "Danger") centered=centered>"There was an error!"</Alert>
 
         <P>"Alerts can be dynamically centered using a signal."</P>
 

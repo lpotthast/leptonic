@@ -100,7 +100,10 @@ impl Toasts {
 
     pub fn try_remove(&self, id: Uuid) -> Option<Toast> {
         self.set_toasts.update_ret(|toasts| {
-            toasts.iter().position(|it| it.id == id).map(|idx| toasts.remove(idx))
+            toasts
+                .iter()
+                .position(|it| it.id == id)
+                .map(|idx| toasts.remove(idx))
         })
     }
 
@@ -127,20 +130,20 @@ impl<T> SignalUpdateExt<T> for WriteSignal<T> {
 }
 
 #[component]
-pub fn ToastRoot(cx: Scope, children: Children) -> impl IntoView {
-    let (toasts, set_toasts) = create_signal(cx, Vec::new());
+pub fn ToastRoot(children: Children) -> impl IntoView {
+    let (toasts, set_toasts) = create_signal(Vec::new());
 
-    provide_context::<Toasts>(cx, Toasts { toasts, set_toasts });
+    provide_context::<Toasts>(Toasts { toasts, set_toasts });
 
-    view! { cx,
-        { children(cx) }
+    view! {
+        { children() }
 
         <leptonic-toasts>
             <For
                 each=move || toasts.get()
                 key=|toast| toast.id
-                view=move |_cx, toast| {
-                    view! { cx,
+                view=move |toast| {
+                    view! {
                         <Toast toast/>
                     }
                 }
@@ -166,29 +169,29 @@ pub enum ToastVerticalPosition {
 }
 
 #[component]
-pub fn Toast(cx: Scope, toast: Toast) -> impl IntoView {
+pub fn Toast(toast: Toast) -> impl IntoView {
     let manually_closable = match toast.timeout {
         ToastTimeout::None => true,
         ToastTimeout::DefaultDelay => false,
         ToastTimeout::CustomDelay(duration) => duration.whole_seconds() > 10,
     };
 
-    view! { cx,
+    view! {
         <leptonic-toast id=toast.id.to_string() data-variant=toast.variant.as_str()>
             <leptonic-toast-header>
                 { toast.header }
 
                 { match manually_closable {
-                    true => view! {cx,
+                    true => view! {
                         <div>
                             <Icon
                                 class="dismiss"
                                 icon=BsIcon::BsXCircleFill
-                                on:click=move |_e| { expect_context::<Toasts>(cx).try_remove(toast.id); }
+                                on:click=move |_e| { expect_context::<Toasts>().try_remove(toast.id); }
                             />
                         </div>
-                    }.into_view(cx),
-                    false => ().into_view(cx),
+                    }.into_view(),
+                    false => ().into_view(),
                 } }
             </leptonic-toast-header>
             <leptonic-toast-message>

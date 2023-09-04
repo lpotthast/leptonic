@@ -6,8 +6,8 @@ use strum::EnumIter;
 use crate::Language;
 
 #[component]
-pub fn KbdKey(cx: Scope, key: Key) -> impl IntoView {
-    view! {cx,
+pub fn KbdKey( key: Key) -> impl IntoView {
+    view! {
         <leptonic-kbd-key>
             { key.display(Language::En) }
         </leptonic-kbd-key>
@@ -16,10 +16,10 @@ pub fn KbdKey(cx: Scope, key: Key) -> impl IntoView {
 
 #[component]
 pub fn KbdConcatenate(
-    cx: Scope,
+    
     #[prop(into, optional)] with: Option<Cow<'static, str>>,
 ) -> impl IntoView {
-    view! {cx,
+    view! {
         <leptonic-kbd-concatenate>
             { with.unwrap_or(Cow::Borrowed("+")) }
         </leptonic-kbd-concatenate>
@@ -27,30 +27,30 @@ pub fn KbdConcatenate(
 }
 
 #[component]
-pub fn KbdShortcutRoot(cx: Scope, children: Children) -> impl IntoView {
-    view! {cx,
+pub fn KbdShortcutRoot( children: Children) -> impl IntoView {
+    view! {
         <leptonic-kbd-shortcut>
-            {children(cx)}
+            {children()}
         </leptonic-kbd-shortcut>
     }
 }
 
 #[component]
 pub fn KbdShortcut<const N: usize>(
-    cx: Scope,
+    
     keys: [Key; N],
     #[prop(into, optional)] concatenate_with: Option<Cow<'static, str>>,
 ) -> impl IntoView {
     let concatenate_with = concatenate_with.unwrap_or(Cow::Borrowed("+"));
-    view! {cx,
+    view! {
         <KbdShortcutRoot>
-            { keys.into_iter().enumerate().map(|(i, key)| view! {cx,
+            { keys.into_iter().enumerate().map(|(i, key)| view! {
                 <KbdKey key=key/>
                 { match i == N - 1 {
-                    true => ().into_view(cx),
-                    false => view! {cx, <KbdConcatenate with=concatenate_with.clone()/>}.into_view(cx),
+                    true => ().into_view(),
+                    false => view! { <KbdConcatenate with=concatenate_with.clone()/>}.into_view(),
                 }}
-            }).collect_view(cx) }
+            }).collect_view() }
         </KbdShortcutRoot>
     }
 }

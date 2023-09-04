@@ -4,10 +4,10 @@ use leptos::*;
 use strum::IntoEnumIterator;
 
 #[component]
-pub fn PageKbd(cx: Scope) -> impl IntoView {
+pub fn PageKbd() -> impl IntoView {
     let all_keys = Key::iter();
 
-    view! { cx,
+    view! {
         <H1>"Keyboard"</H1>
 
         <P>
@@ -67,10 +67,10 @@ pub fn PageKbd(cx: Scope) -> impl IntoView {
             all_keys
                 .into_iter()
                 .filter(|key| std::mem::discriminant(key) != std::mem::discriminant(&Key::Custom("")))
-                .map(|key: Key| view! {cx,
+                .map(|key: Key| view! {
                     <KbdKey key=key/>
                 })
-                .collect_view(cx)
+                .collect_view()
         }
 
         <P>"If you need custom content in a "<Code inline=true>"<Kbd>"</Code>" element, use the "<Code inline=true>"Key::Custom(String)"</Code>" variant."</P>

@@ -81,7 +81,9 @@ impl<T: 'static, I: Into<MaybeSignal<T>>> From<I> for OptionalMaybeSignal<T> {
     }
 }
 
-impl<T: Clone + Default> SignalGet<T> for OptionalMaybeSignal<T> {
+impl<T: Clone + Default> SignalGet for OptionalMaybeSignal<T> {
+    type Value = T;
+
     fn get(&self) -> T {
         match &self.0 {
             Some(signal) => signal.get(),
@@ -97,7 +99,9 @@ impl<T: Clone + Default> SignalGet<T> for OptionalMaybeSignal<T> {
     }
 }
 
-impl<T: Clone + Default> SignalGetUntracked<T> for OptionalMaybeSignal<T> {
+impl<T: Clone + Default> SignalGetUntracked for OptionalMaybeSignal<T> {
+    type Value = T;
+
     fn get_untracked(&self) -> T {
         match &self.0 {
             Some(signal) => signal.get_untracked(),
@@ -314,14 +318,12 @@ pub enum Mount {
 }
 
 pub fn create_signal_ls<T: Clone + serde::Serialize + serde::de::DeserializeOwned>(
-    cx: Scope,
     key: &'static str,
     initial: T,
 ) -> (ReadSignal<T>, WriteSignal<T>) {
-    let (signal, set_signal) =
-        create_signal(cx, read_from_local_storage::<T>(key).unwrap_or(initial));
+    let (signal, set_signal) = create_signal(read_from_local_storage::<T>(key).unwrap_or(initial));
 
-    track_in_local_storage(cx, key, signal);
+    track_in_local_storage(key, signal);
 
     (signal, set_signal)
 }
@@ -342,16 +344,15 @@ pub fn read_from_local_storage<T: serde::de::DeserializeOwned>(key: &'static str
 }
 
 pub fn track_in_local_storage<T: serde::Serialize + Clone>(
-    cx: Scope,
     key: &'static str,
     signal: ReadSignal<T>,
 ) {
-    create_effect(cx, move |_old| {
+    create_effect(move |_old| {
         let storage = window().local_storage().ok()??;
         storage
             .set(key, serde_json::to_string(&signal.get()).ok()?.as_ref())
             .ok()
-    })
+    });
 }
 
 pub trait OptionDeref<T: std::ops::Deref> {
@@ -493,18 +494,17 @@ impl<T> TrackedElementClientBoundingRect<T>
 where
     T: Into<web_sys::Element> + Clone + 'static,
 {
-    pub fn new<El>(cx: Scope, el: El) -> Self
+    pub fn new<El>(el: El) -> Self
     where
-        El: Clone,
-        (Scope, El): Into<leptos_use::core::ElementMaybeSignal<T, web_sys::Element>>,
+        El: Clone + Into<leptos_use::core::ElementMaybeSignal<T, web_sys::Element>>,
     {
-        let (left, set_left) = create_signal(cx, 0.0);
-        let (top, set_top) = create_signal(cx, 0.0);
-        let (width, set_width) = create_signal(cx, 0.0);
-        let (height, set_height) = create_signal(cx, 0.0);
+        let (left, set_left) = create_signal(0.0);
+        let (top, set_top) = create_signal(0.0);
+        let (width, set_width) = create_signal(0.0);
+        let (height, set_height) = create_signal(0.0);
 
         Self {
-            el: store_value(cx, (cx, el).into()),
+            el: store_value(el.into()),
             left,
             set_left,
             top,
@@ -535,7 +535,7 @@ struct RelativeMousePosition {
 }
 
 impl RelativeMousePosition {
-    pub fn new<T>(cx: Scope, client_bounding_rect: TrackedElementClientBoundingRect<T>) -> Self
+    pub fn new<T>(client_bounding_rect: TrackedElementClientBoundingRect<T>) -> Self
     where
         T: Into<web_sys::Element> + Clone + 'static,
     {
@@ -543,13 +543,12 @@ impl RelativeMousePosition {
             x: cursor_x,
             y: cursor_y,
             ..
-        } = leptos_use::use_mouse(cx);
+        } = leptos_use::use_mouse();
 
-        let (x, set_x) = create_signal(cx, 0.0);
-        let (y, set_y) = create_signal(cx, 0.0);
+        let (x, set_x) = create_signal(0.0);
+        let (y, set_y) = create_signal(0.0);
 
         let _ = leptos_use::watch_throttled_with_options(
-            cx,
             move || (cursor_x.get(), cursor_y.get()),
             move |(cursor_x, cursor_y), _, _| {
                 set_x.set(*cursor_x);
@@ -562,7 +561,7 @@ impl RelativeMousePosition {
         );
 
         Self {
-            rel_mouse_pos: create_memo(cx, move |_| {
+            rel_mouse_pos: create_memo(move |_| {
                 let x = x.get() - client_bounding_rect.left.get();
                 let y = y.get() - client_bounding_rect.top.get();
                 let mut px = x / client_bounding_rect.width.get();
