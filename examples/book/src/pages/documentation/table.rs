@@ -17,12 +17,16 @@ pub fn PageTable(cx: Scope) -> impl IntoView {
                             <Tr>
                                 <Th min_width=true>"#"</Th>
                                 <Th>"Name"</Th>
+                                <Th>"Appearance"</Th>
+                                <Th>"Num. eyes"</Th>
                             </Tr>
                         </Thead>
                         <Tbody>
                             <Tr>
-                                <Th>"1"</Th>
-                                <Th>"Kevin"</Th>
+                                <Td>"1"</Td>
+                                <Td>"Kevin"</Td>
+                                <Td>"Tall"</Td>
+                                <Td>"2"</Td>
                             </Tr>
                             // ...
                         </Tbody>
@@ -37,24 +41,34 @@ pub fn PageTable(cx: Scope) -> impl IntoView {
                     <Tr>
                         <Th min_width=true>"#"</Th>
                         <Th>"Name"</Th>
+                        <Th>"Appearance"</Th>
+                        <Th>"Num. eyes"</Th>
                     </Tr>
                 </Thead>
                 <Tbody>
                     <Tr>
-                        <Th>"1"</Th>
-                        <Th>"Kevin"</Th>
+                        <Td>"1"</Td>
+                        <Td>"Kevin"</Td>
+                        <Td>"Tall"</Td>
+                        <Td>"2"</Td>
                     </Tr>
                     <Tr>
-                        <Th>"2"</Th>
-                        <Th>"Bob"</Th>
+                        <Td>"2"</Td>
+                        <Td>"Bob"</Td>
+                        <Td>"Short"</Td>
+                        <Td>"2"</Td>
                     </Tr>
                     <Tr>
-                        <Th>"3"</Th>
-                        <Th>"Stuart"</Th>
+                        <Td>"3"</Td>
+                        <Td>"Stuart"</Td>
+                        <Td>"Medium"</Td>
+                        <Td>"1"</Td>
                     </Tr>
                     <Tr>
-                        <Th>"4"</Th>
-                        <Th>"Otto"</Th>
+                        <Td>"4"</Td>
+                        <Td>"Otto"</Td>
+                        <Td>"Round"</Td>
+                        <Td>"2"</Td>
                     </Tr>
                 </Tbody>
             </Table>
@@ -66,7 +80,20 @@ pub fn PageTable(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                --table-...
+                // Table wrapper
+                --table-wrapper-box-shadow-color
+
+                // Table
+                --table-color
+                --table-background-color
+                --table-background-color-on-hover
+                --table-background-color-of-striped-rows
+                --table-header-background-color
+                --table-border-color
+                --table-cell-box-shadow-on-hover
+                --table-column-background-if-ordered
+                --table-header-cell-padding
+                --table-body-cell-padding
             "#)}
         </Code>
     }
