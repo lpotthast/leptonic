@@ -1,6 +1,6 @@
 [package]
 name = "leptonic-theme"
-version = "0.2.0"
+version = { workspace = true }
 edition = "2021"
 rust-version = "1.60"
 authors = ["Lukas Potthast <privat@lukas-potthast.de>"]
