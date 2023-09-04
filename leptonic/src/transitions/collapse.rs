@@ -1,5 +1,4 @@
 use leptos::{html::Div, *};
-use tracing::info;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CollapseAxis {
@@ -15,7 +14,6 @@ impl Default for CollapseAxis {
 
 #[component]
 pub fn Collapse(
-    
     #[prop(into)] show: Signal<bool>,
     #[prop(optional)] axis: CollapseAxis,
     children: Children,
@@ -31,7 +29,6 @@ pub fn Collapse(
                 CollapseAxis::Y => el.scroll_height(),
             })
             .unwrap_or(0);
-        info!("dim: {el_axis_dimension}");
         match axis {
             CollapseAxis::X => format!(
                 "min-width: 0px; width: {}px",

@@ -224,9 +224,8 @@ pub fn DocLayout() -> impl IntoView {
     };
 
     let close_doc_drawer_on_mobile = move || {
-        let ctx = expect_context::<AppLayoutContext>();
-        if ctx.is_small.get_untracked() {
-            ctx.close_doc_drawer();
+        if app_layout_context.is_small.get_untracked() {
+            app_layout_context.close_doc_drawer();
         }
     };
 
