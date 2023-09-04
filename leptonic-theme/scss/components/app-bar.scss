@@ -5,6 +5,7 @@ leptonic-app-bar {
   flex-direction: row;
   align-items: center;
   justify-content: space-between;
+  color: var(--app-bar-color);
   background-color: var(--app-bar-background-color);
   border-bottom: var(--app-bar-border-bottom);
   width: 100%;
