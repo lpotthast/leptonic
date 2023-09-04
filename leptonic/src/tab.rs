@@ -1,5 +1,5 @@
 use std::borrow::Cow;
-use std::sync::Arc;
+use std::rc::Rc;
 
 use leptos::*;
 use uuid::Uuid;
@@ -12,7 +12,7 @@ use crate::Mount;
 pub struct TabLabel {
     pub id: Uuid,
     pub name: Cow<'static, str>,
-    pub label: Arc<View>,
+    pub label: Rc<View>,
 }
 
 // TODO: We might want to take only `Children` and hide them when the tab is not active...
@@ -44,7 +44,7 @@ where
         labels.push(TabLabel {
             id,
             name: name.get_value(),
-            label: Arc::new(label.into_view(cx)),
+            label: Rc::new(label.into_view(cx)),
         })
     });
 

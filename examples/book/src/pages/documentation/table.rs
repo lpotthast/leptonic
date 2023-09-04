@@ -10,7 +10,7 @@ pub fn PageTable(cx: Scope) -> impl IntoView {
         <P>"Tables..."</P>
 
         <Code>
-            {indoc!(r###"
+            {indoc!(r##"
                 <TableContainer>
                     <Table bordered=true hoverable=true>
                         <Thead>
@@ -28,7 +28,7 @@ pub fn PageTable(cx: Scope) -> impl IntoView {
                         </Tbody>
                     </Table>
                 </TableContainer>
-            "###)}
+            "##)}
         </Code>
 
         <TableContainer>

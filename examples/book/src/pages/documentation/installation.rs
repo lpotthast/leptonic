@@ -98,19 +98,19 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
         <P>"The styling of our app must include the leptonic themes. Let's ensure that by adding the following line to our "<Code inline=true>"scss/style.scss"</Code>" file. This is the default location for a Trunk-based project. Create the file if you do not have it already."</P>
 
         <Code>
-            {indoc!(r##"
+            {indoc!(r#"
                 @import "../generated/leptonic/leptonic-themes";
-            "##)}
+            "#)}
         </Code>
 
         <P>"You can overwrite or add styles for a particular theme using a "<Code inline=true>"[data-theme=\"...\"]"</Code>" selector like so:"</P>
 
         <Code>
-            {indoc!(r##"
+            {indoc!(r#"
                 [data-theme="light"] {
                     --brand-color: #e66956;
                 }
-            "##)}
+            "#)}
         </Code>
 
         <P>"Make sure that you are using a reasonable index.html file like the following. This should work out of the box when you followed the previous instructions."</P>
@@ -153,11 +153,11 @@ pub fn PageInstallation(cx: Scope) -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r##"
+            {indoc!(r#"
                 [build]
                 # `leptonic` depends on some `leptos-use` functions requiring this opt-in. This may change in the future.
                 rustflags = ["--cfg=web_sys_unstable_apis"]
-            "##)}
+            "#)}
         </Code>
 
         <P>"You should now be ready to use leptonic components in your leptos app. Continue reading the "<Link href=DocRoutes::Usage>"Usage"</Link>" section, to see how to use your first component."</P>

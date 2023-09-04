@@ -235,8 +235,8 @@ pub fn PageSelect(cx: Scope) -> impl IntoView {
 
         <Select
             options=selectable_users.clone()
-            search_text_provider=create_callback(cx, move |o| format!("{o}"))
-            render_option=create_callback(cx, move |(_cx, o): (Scope, User)| format!("{}", o.name))
+            search_text_provider=create_callback(cx, move |o: User| o.to_string())
+            render_option=create_callback(cx, move |(_cx, o): (Scope, User)| o.name.to_string())
             selected=selected_user
             set_selected=create_callback(cx, move |v| set_selected_user.set(v))
         />

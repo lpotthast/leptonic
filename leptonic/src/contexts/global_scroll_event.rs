@@ -1,19 +1,18 @@
-use std::rc::Rc;
-
 use leptos::*;
-use wasm_bindgen::prelude::Closure;
 use web_sys::Event;
+
+use super::WasmClosure;
 
 #[derive(Debug, Clone)]
 pub struct GlobalScrollEvent {
-    _closure: Rc<Box<Closure<dyn FnMut(Event)>>>,
+    _closure: WasmClosure<Event>,
     pub read_signal: ReadSignal<Option<Event>>,
     pub write_signal: WriteSignal<Option<Event>>,
 }
 
 impl GlobalScrollEvent {
     pub fn new(
-        _closure: Rc<Box<Closure<dyn FnMut(Event)>>>,
+        _closure: WasmClosure<Event>,
         read_signal: ReadSignal<Option<Event>>,
         write_signal: WriteSignal<Option<Event>>,
     ) -> Self {

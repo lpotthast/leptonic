@@ -11,10 +11,10 @@ use crate::{
 };
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
-enum Show {
-    YearSelection,
-    MonthSelection,
-    DaySelection,
+enum Selection {
+    Year,
+    Month,
+    Day,
 }
 
 #[component]
@@ -39,8 +39,8 @@ pub fn DateSelector(
     let (show, set_show) = create_signal(
         cx,
         match guide_mode.get() {
-            GuideMode::CalendarFirst => Show::DaySelection,
-            GuideMode::YearFirst => Show::YearSelection,
+            GuideMode::CalendarFirst => Selection::Day,
+            GuideMode::YearFirst => Selection::Year,
         },
     );
 
@@ -111,7 +111,7 @@ pub fn DateSelector(
         if !year.disabled {
             set_staging
                 .update(|staging| *staging = staging.save_replace_year(year.number).unwrap());
-            set_show.update(|show| *show = Show::MonthSelection);
+            set_show.update(|show| *show = Selection::Month);
         }
     };
     let select_month = move |month: Month| {
@@ -121,7 +121,7 @@ pub fn DateSelector(
                     .save_replace_month(time::Month::try_from(month.index).unwrap())
                     .unwrap()
             });
-            set_show.update(|show| *show = Show::DaySelection);
+            set_show.update(|show| *show = Selection::Day);
         }
     };
     let select_day = move |day: Day| {
@@ -136,11 +136,11 @@ pub fn DateSelector(
             <leptonic-calender-month>
                 <div class={"actions"}>
                     {move || match show.get() {
-                        Show::YearSelection => view! { cx,
+                        Selection::Year => view! { cx,
                             <div on:click=select_previous_years
                                 class="previous arrow-left">
                             </div>
-                            <div on:click=move |_| set_show.update(|show| *show = Show::MonthSelection)
+                            <div on:click=move |_| set_show.update(|show| *show = Selection::Month)
                                 class="current-date">
                                 {years_range}
                             </div>
@@ -148,11 +148,11 @@ pub fn DateSelector(
                                 class="next arrow-right">
                             </div>
                         },
-                        Show::MonthSelection => view! { cx,
+                        Selection::Month => view! { cx,
                             <div on:click=select_previous_year
                                 class="previous arrow-left">
                             </div>
-                            <div on:click=move |_| set_show.update(|show| *show = Show::YearSelection)
+                            <div on:click=move |_| set_show.update(|show| *show = Selection::Year)
                                 class="current-date">
                                 {staging_year}
                             </div>
@@ -160,11 +160,11 @@ pub fn DateSelector(
                                 class="next arrow-right">
                             </div>
                         },
-                        Show::DaySelection => view! { cx,
+                        Selection::Day => view! { cx,
                             <div on:click=select_previous_month
                                 class="previous arrow-left">
                             </div>
-                            <div on:click=move |_| set_show.update(|show| *show = Show::YearSelection)
+                            <div on:click=move |_| set_show.update(|show| *show = Selection::Year)
                                 class="current-date">
                                 {staging_month} " " {staging_year}
                             </div>
@@ -175,7 +175,7 @@ pub fn DateSelector(
                     }}
                 </div>
 
-                <Show when=move || show.get() == Show::YearSelection fallback=|_cx| view! { cx,  }>
+                <Show when=move || show.get() == Selection::Year fallback=|_cx| view! { cx,  }>
                     <div class="years">
                         <For
                             each=move || years.get()
@@ -196,7 +196,7 @@ pub fn DateSelector(
                     </div>
                 </Show>
 
-                <Show when=move || show.get() == Show::MonthSelection fallback=|_cx| view! { cx,  }>
+                <Show when=move || show.get() == Selection::Month fallback=|_cx| view! { cx,  }>
                     <div class="months">
                         <For
                             each=move || months.get()
@@ -217,7 +217,7 @@ pub fn DateSelector(
                     </div>
                 </Show>
 
-                <Show when=move || show.get() == Show::DaySelection fallback=|_cx| view! { cx,  }>
+                <Show when=move || show.get() == Selection::Day fallback=|_cx| view! { cx,  }>
                     <div class={"weekday-names"}>
                         // Not use For for this...?
                         <For

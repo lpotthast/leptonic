@@ -31,7 +31,7 @@ impl<T: 'static, R: 'static> std::ops::Deref for Callback<T, R> {
 
 impl<T: 'static, R: 'static> Clone for Callback<T, R> {
     fn clone(&self) -> Self {
-        Self(self.0)
+        *self
     }
 }
 
@@ -79,7 +79,7 @@ impl<T: 'static, R: 'static> std::ops::Deref for CallbackRc<T, R> {
 
 impl<T: 'static, R: 'static> Clone for CallbackRc<T, R> {
     fn clone(&self) -> Self {
-        Self(self.0)
+        *self
     }
 }
 
@@ -128,7 +128,7 @@ impl<T: 'static, R: 'static> std::ops::Deref for CallbackArc<T, R> {
 
 impl<T: 'static, R: 'static> Clone for CallbackArc<T, R> {
     fn clone(&self) -> Self {
-        Self(self.0)
+        *self
     }
 }
 

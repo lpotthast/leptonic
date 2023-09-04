@@ -296,10 +296,7 @@ impl<O: 'static> From<WriteSignal<O>> for Out<O> {
 
 impl<O: 'static> Clone for Out<O> {
     fn clone(&self) -> Self {
-        match self {
-            Self::Callback(arg0) => Self::Callback(arg0.clone()),
-            Self::WriteSignal(arg0) => Self::WriteSignal(arg0.clone()),
-        }
+        *self
     }
 }
 

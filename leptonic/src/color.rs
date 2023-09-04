@@ -86,6 +86,12 @@ impl RGB8 {
     }
 }
 
+impl Default for RGB8 {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl std::fmt::LowerHex for RGB8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_fmt(format_args!("{:02x}", self.r))?;
