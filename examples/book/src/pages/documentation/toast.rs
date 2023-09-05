@@ -11,6 +11,8 @@ pub fn PageToast() -> impl IntoView {
     let (header, set_header) = create_signal("Header".to_owned());
     let (body, set_body) = create_signal("Body".to_owned());
 
+    let toasts = expect_context::<Toasts>();
+
     view! {
         <H1>"Toasts"</H1>
 
@@ -35,7 +37,7 @@ pub fn PageToast() -> impl IntoView {
             style="margin-bottom: 1em;"
         />
 
-        <Button on_click=move |_| { expect_context::<Toasts>().push(
+        <Button on_click=move |_| { toasts.push(
             Toast {
                 id: Uuid::new_v4(),
                 created_at: time::OffsetDateTime::now_utc(),
@@ -49,17 +51,21 @@ pub fn PageToast() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Button on_click=move |_| { expect_context::<Toasts>().push(
-                    Toast {
-                        id: Uuid::new_v4(),
-                        created_at: time::OffsetDateTime::now_utc(),
-                        variant: variant.get_untracked(),
-                        header: header.get_untracked().into_view(),
-                        body: body.get_untracked().into_view(),
-                        timeout: timeout.get_untracked(),
-                    }) }>
-                    "Create Toast"
-                </Button>
+                let toasts = expect_context::<Toasts>();
+
+                view! {
+                    <Button on_click=move |_| { toasts.push(
+                        Toast {
+                            id: Uuid::new_v4(),
+                            created_at: time::OffsetDateTime::now_utc(),
+                            variant: variant.get_untracked(),
+                            header: header.get_untracked().into_view(),
+                            body: body.get_untracked().into_view(),
+                            timeout: timeout.get_untracked(),
+                        }) }>
+                        "Create Toast"
+                    </Button>
+                }
             "#)}
         </Code>
 
