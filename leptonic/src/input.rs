@@ -4,7 +4,7 @@ use leptos::{html::ElementDescriptor, *};
 use web_sys::HtmlInputElement;
 
 use crate::{
-    prelude::{create_callback, Callable, Callback},
+    prelude::{callback, Callable, Callback},
     OptionalMaybeSignal, Out,
 };
 
@@ -176,7 +176,7 @@ pub fn NumberInput(
     }
 
     let set_value = set.map(|set| {
-        create_callback(move |v: String| {
+        callback(move |v: String| {
             let parsed = str::parse::<f64>(&v).ok();
             if let Some(parsed) = parsed {
                 set.set(parsed);

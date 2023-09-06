@@ -22,18 +22,18 @@ pub fn PageToast() -> impl IntoView {
         <Select
             options={ToastVariant::iter().collect::<Vec<_>>()}
             selected=variant
-            set_selected=create_callback(move |v| set_variant.set(v))
-            search_text_provider=create_callback(move |o| format!("{o}"))
-            render_option=create_callback(move |o| format!("{o:?}"))
+            set_selected=set_variant
+            search_text_provider=move |o| format!("{o}")
+            render_option=move |o| format!("{o:?}")
             style="margin-bottom: 1em;"
         />
 
         <Select
             options=vec![ToastTimeout::None, ToastTimeout::DefaultDelay]
             selected=timeout
-            set_selected=create_callback(move |v| set_timeout.set(v))
-            search_text_provider=create_callback(move |o| format!("{o}"))
-            render_option=create_callback(move |o| format!("{o:?}"))
+            set_selected=set_timeout
+            search_text_provider=move |o| format!("{o}")
+            render_option=move |o| format!("{o:?}")
             style="margin-bottom: 1em;"
         />
 

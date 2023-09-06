@@ -84,10 +84,10 @@ pub fn PageSelect() -> impl IntoView {
                 view! {
                     <Select
                         options=vec![Foo::A, Foo::B, Foo::C]
-                        search_text_provider=create_callback(move |o| format!("{o}"))
-                        render_option=create_callback(move |o| format!("{o:?}"))
+                        search_text_provider=callback(move |o| format!("{o}"))
+                        render_option=callback(move |o| format!("{o:?}"))
                         selected=selected
-                        set_selected=create_callback(move |v| set_selected.set(v))
+                        set_selected=callback(move |v| set_selected.set(v))
                     />
                 }
             "#)}
@@ -95,10 +95,10 @@ pub fn PageSelect() -> impl IntoView {
 
         <Select
             options=vec![Foo::A, Foo::B, Foo::C]
-            search_text_provider=create_callback(move |o| format!("{o}"))
-            render_option=create_callback(move |o| format!("{o:?}"))
+            search_text_provider=callback(move |o| format!("{o}"))
+            render_option=callback(move |o| format!("{o:?}"))
             selected=selected
-            set_selected=create_callback(move |v| set_selected.set(v))
+            set_selected=callback(move |v| set_selected.set(v))
         />
 
         <H3>"OptionalSelect"</H3>
@@ -112,10 +112,10 @@ pub fn PageSelect() -> impl IntoView {
                 view! {
                     <OptionalSelect
                         options=vec![Foo::A, Foo::B, Foo::C]
-                        search_text_provider=create_callback(move |o| format!("{o}"))
-                        render_option=create_callback(move |o| format!("{o:?}"))
+                        search_text_provider=move |o| format!("{o}")
+                        render_option=move |o| format!("{o:?}")
                         selected=selected_opt
-                        set_selected=create_callback(move |v| set_selected_opt.set(v))
+                        set_selected=set_selected_opt
                         allow_deselect=true
                     />
                 }
@@ -124,10 +124,10 @@ pub fn PageSelect() -> impl IntoView {
 
         <OptionalSelect
             options=vec![Foo::A, Foo::B, Foo::C]
-            search_text_provider=create_callback(move |o| format!("{o:?}"))
-            render_option=create_callback(move |o| format!("{o:?}"))
+            search_text_provider=move |o| format!("{o:?}")
+            render_option=move |o| format!("{o:?}")
             selected=selected_opt
-            set_selected=create_callback(move |v| set_selected_opt.set(v))
+            set_selected=set_selected_opt
             allow_deselect=true
         />
 
@@ -142,10 +142,10 @@ pub fn PageSelect() -> impl IntoView {
                 view! {
                     <Multiselect
                         options=vec![Foo::A, Foo::B, Foo::C]
-                        search_text_provider=create_callback(move |o| format!("{o}"))
-                        render_option=create_callback(move |o| format!("{o:?}"))
+                        search_text_provider=callback(move |o| format!("{o}"))
+                        render_option=callback(move |o| format!("{o:?}"))
                         selected=selected_multi
-                        set_selected=create_callback(move |v| set_selected_multi.set(v))
+                        set_selected=callback(move |v| set_selected_multi.set(v))
                     />
                 }
             "#)}
@@ -153,10 +153,10 @@ pub fn PageSelect() -> impl IntoView {
 
         <Multiselect
             options=vec![Foo::A, Foo::B, Foo::C]
-            search_text_provider=create_callback(move |o| format!("{o}"))
-            render_option=create_callback(move |o| format!("{o:?}"))
+            search_text_provider=callback(move |o| format!("{o}"))
+            render_option=callback(move |o| format!("{o:?}"))
             selected=selected_multi
-            set_selected=create_callback(move |v| set_selected_multi.set(v))
+            set_selected=callback(move |v| set_selected_multi.set(v))
         />
 
         <P>"Using the "<Code inline=true>"max"</Code>" prop, a maximum number of selectable elements can be specified. Here: 2"</P>
@@ -164,10 +164,10 @@ pub fn PageSelect() -> impl IntoView {
         <Multiselect
             options=vec![Foo::A, Foo::B, Foo::C]
             max=2
-            search_text_provider=create_callback(move |o| format!("{o}"))
-            render_option=create_callback(move |o| format!("{o:?}"))
+            search_text_provider=move |o| format!("{o}")
+            render_option=move |o| format!("{o:?}")
             selected=selected_multi2
-            set_selected=create_callback(move |v| set_selected_multi2.set(v))
+            set_selected=set_selected_multi2
         />
 
         <H2>"Keyboard navigation"</H2>
@@ -222,10 +222,10 @@ pub fn PageSelect() -> impl IntoView {
                     <P>"Selected user is: " { move || selected_user.get().to_string() }</P>
                     <Select
                         options=selectable_users.clone()
-                        search_text_provider=create_callback(move |o| format!("{o}"))
-                        render_option=create_callback(move |o: User| format!("{}", o.name))
+                        search_text_provider=callback(move |o| format!("{o}"))
+                        render_option=callback(move |o: User| format!("{}", o.name))
                         selected=selected_user
-                        set_selected=create_callback(move |v| set_selected_user.set(v))
+                        set_selected=callback(move |v| set_selected_user.set(v))
                     />
                 }
             "#)}
@@ -235,10 +235,10 @@ pub fn PageSelect() -> impl IntoView {
 
         <Select
             options=selectable_users.clone()
-            search_text_provider=create_callback(move |o: User| o.to_string())
-            render_option=create_callback(move |o: User| o.name.to_string())
+            search_text_provider=callback(move |o: User| o.to_string())
+            render_option=callback(move |o: User| o.name.to_string())
             selected=selected_user
-            set_selected=create_callback(move |v| set_selected_user.set(v))
+            set_selected=callback(move |v| set_selected_user.set(v))
         />
 
         <H2>"Styling"</H2>

@@ -32,7 +32,7 @@ pub fn PageSlider() -> impl IntoView {
                 view! {
                     <Slider min=0.0 max=1.0 step=0.0001
                         value=value set_value=set_value
-                        value_display=create_callback(move |v| format!("{v:.4}")) />
+                        value_display=move |v| format!("{v:.4}") />
                 }
             "#)}
         </Code>
@@ -44,7 +44,7 @@ pub fn PageSlider() -> impl IntoView {
 
         <Slider min=0.0 max=1.0 step=0.0001
             value=value4 set_value=set_value4
-            value_display=create_callback(move |v| format!("{v:.4}")) />
+            value_display=move |v| format!("{v:.4}") />
 
         <H2>"Volume slider"</H2>
 
@@ -58,7 +58,7 @@ pub fn PageSlider() -> impl IntoView {
                         <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
                         <Slider min=0.0 max=1.0
                             value=value set_value=set_value
-                            value_display=create_callback(move |v| format!("{:.0}%", v * 100.0))
+                            value_display=move |v| format!("{:.0}%", v * 100.0)
                             style="width: 10em"/>
                         <Icon icon=BsIcon::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
                     </Stack>
@@ -69,7 +69,7 @@ pub fn PageSlider() -> impl IntoView {
         <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
             <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
             <Slider min=0.0 max=1.0 value=value5 set_value=set_value5 style="width: 10em"
-                value_display=create_callback(move |v| format!("{:.0}%", v * 100.0))/>
+                value_display=move |v| format!("{:.0}%", v * 100.0)/>
             <Icon icon=BsIcon::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
         </Stack>
 
@@ -87,7 +87,7 @@ pub fn PageSlider() -> impl IntoView {
                     <Slider min=1.0 max=10.0 step=1.0
                         value=value set_value=set_value
                         marks=SliderMarks::Automatic { create_names: false }
-                        value_display=create_callback(move |v| format!("{v:.0}"))/>
+                        value_display=move |v| format!("{v:.0}")/>
                 }
             "#)}
         </Code>
@@ -95,7 +95,7 @@ pub fn PageSlider() -> impl IntoView {
         <Slider min=1.0 max=10.0 step=1.0
             value=value1 set_value=set_value1
             marks=SliderMarks::Automatic { create_names: false }
-            value_display=create_callback(move |v| format!("{v:.0}"))/>
+            value_display=move |v| format!("{v:.0}")/>
 
         <P>
             "Note that marks are only helpful when dealing with sliders having a limited number of selectable values, meaning ones with small ranges and a big stepping values. "
@@ -108,13 +108,13 @@ pub fn PageSlider() -> impl IntoView {
 
         <Slider value=value2 set_value=set_value2 min=2.0 max=8.0 step=0.4
             marks=SliderMarks::Automatic { create_names: false }
-            value_display=create_callback(move |v| format!("{v:.1}"))/>
+            value_display=move |v| format!("{v:.1}")/>
 
         <P>"You can also use a positive value for the "<Code inline=true>"min"</Code>" prop, and a negative value for the "<Code inline=true>"max"</Code>" prop, resulting in a reversed axis."</P>
 
         <Slider value=value3 set_value=set_value3 min=9.0 max=-9.0 step=1.0
             marks=SliderMarks::Automatic { create_names: false }
-            value_display=create_callback(move |v| format!("{v:.0}")) />
+            value_display=move |v| format!("{v:.0}")/>
 
         <H2>"Range sliders"</H2>
 
@@ -137,7 +137,7 @@ pub fn PageSlider() -> impl IntoView {
                         min=0.0
                         max=1.0
                         popover=SliderPopover::Always
-                        value_display=create_callback(move |v| format!("{v:.4}"))
+                        value_display=move |v| format!("{v:.4}")
                     />
                 }
             "#)}
@@ -151,7 +151,7 @@ pub fn PageSlider() -> impl IntoView {
             min=0.0
             max=1.0
             popover=SliderPopover::Always
-            value_display=create_callback(move |v| format!("{v:.4}"))
+            value_display=move |v| format!("{v:.4}")
         />
 
         <P>"Range sliders can also use marks, just like the normal slider."</P>
@@ -165,7 +165,7 @@ pub fn PageSlider() -> impl IntoView {
             max=5.0
             step=1.0
             marks=SliderMarks::Automatic { create_names: true }
-            value_display=create_callback(move |v| format!("{v:.0}"))
+            value_display=move |v| format!("{v:.0}")
         />
 
         <H2>"Keyboard input"</H2>

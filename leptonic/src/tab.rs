@@ -25,8 +25,8 @@ pub fn Tab<L>(
     label: L,
     #[prop(optional)] mount: Option<Mount>,
     #[prop(optional)] children: Option<ChildrenFn>,
-    #[prop(optional)] on_show: Option<Callback<()>>,
-    #[prop(optional)] on_hide: Option<Callback<()>>,
+    #[prop(into, optional)] on_show: Option<Callback<()>>,
+    #[prop(into, optional)] on_hide: Option<Callback<()>>,
 ) -> impl IntoView
 where
     L: IntoView + 'static,

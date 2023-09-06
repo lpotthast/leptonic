@@ -140,7 +140,7 @@ pub fn Layout() -> impl IntoView {
         (
             "overview",
             QuicksearchOption {
-                view: create_callback(move |()| {
+                view: callback(move |()| {
                     view! {
                         <Link href=DocRoutes::Overview class="search-link">
                             "Overview"
@@ -148,13 +148,13 @@ pub fn Layout() -> impl IntoView {
                     }
                     .into_view()
                 }),
-                on_select: create_callback(move |()| {}),
+                on_select: callback(move |()| {}),
             },
         ),
         (
             "installation",
             QuicksearchOption {
-                view: create_callback(move |()| {
+                view: callback(move |()| {
                     view! {
                         <Link href=DocRoutes::Installation class="search-link">
                             "Installation"
@@ -162,13 +162,13 @@ pub fn Layout() -> impl IntoView {
                     }
                     .into_view()
                 }),
-                on_select: create_callback(move |()| {}),
+                on_select: callback(move |()| {}),
             },
         ),
         (
             "usage",
             QuicksearchOption {
-                view: create_callback(move |()| {
+                view: callback(move |()| {
                     view! {
                         <Link href=DocRoutes::Usage class="search-link">
                             "Usage"
@@ -176,7 +176,7 @@ pub fn Layout() -> impl IntoView {
                     }
                     .into_view()
                 }),
-                on_select: create_callback(move |()| {}),
+                on_select: callback(move |()| {}),
             },
         ),
     ];
@@ -221,7 +221,7 @@ pub fn Layout() -> impl IntoView {
                                 } }
                             </QuicksearchTrigger>
                         }
-                        query=create_callback(move |search: String| {
+                        query=move |search: String| {
                             if search.is_empty() {
                                 return vec![];
                             }
@@ -230,7 +230,7 @@ pub fn Layout() -> impl IntoView {
                                 .filter(|it| it.0.to_lowercase().contains(&lower_search))
                                 .map(|it| it.1.clone())
                                 .collect::<Vec<_>>()
-                        })
+                        }
                     />
                 </Stack>
 

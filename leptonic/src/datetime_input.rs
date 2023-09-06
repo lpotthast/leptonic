@@ -5,7 +5,7 @@ use web_sys::KeyboardEvent;
 use crate::{
     date_selector::DateSelectorProps,
     datetime::{GuideMode, Type},
-    prelude::{create_callback, DateSelector},
+    prelude::{callback, DateSelector},
     Margin, OptionalMaybeSignal,
 };
 
@@ -63,7 +63,7 @@ where
         }
     };
 
-    let on_change = create_callback(move |new_value| {
+    let on_change = callback(move |new_value| {
         tracing::info!("Received new value {:?}", new_value);
         // Skip propagating a change event when the received value does not deviate from the current value.
         if let Some(current) = get.get() {

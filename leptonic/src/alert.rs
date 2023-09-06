@@ -27,7 +27,7 @@ impl AlertVariant {
 #[component]
 pub fn Alert<V>(
     #[prop(into)] variant: MaybeSignal<AlertVariant>,
-    #[prop(into)] title: Callback<(), V>,
+    #[prop(into)] title: Producer<V>,
     #[prop(into, optional)] centered: OptionalMaybeSignal<bool>,
     children: Children,
 ) -> impl IntoView
@@ -46,7 +46,7 @@ where
             </div>
             <div class="content" class:centered=move || centered.0.as_ref().map(|it| it.get()).unwrap_or(false)>
                 <div class="title">
-                    { move || title.call(()) }
+                    { move || title.produce() }
                 </div>
                 { children() }
             </div>

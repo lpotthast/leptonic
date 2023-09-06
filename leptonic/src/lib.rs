@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use leptos::*;
-use prelude::{Callable, Callback};
+use prelude::{Callable, Callback, Consumer};
 
 pub mod alert;
 pub mod anchor;
@@ -130,14 +130,18 @@ pub mod prelude {
     pub use super::button::ButtonSize;
     pub use super::button::ButtonVariant;
     pub use super::button::ButtonWrapper;
-    pub use super::callback::create_callback;
-    pub use super::callback::create_callback_arc;
-    pub use super::callback::create_callback_rc;
-    pub use super::callback::create_simple_callback;
+    pub use super::callback::callback;
+    pub use super::callback::callback_arc;
+    pub use super::callback::callback_rc;
+    pub use super::callback::consumer;
+    pub use super::callback::producer;
+    pub use super::callback::simple_callback;
     pub use super::callback::Callable;
     pub use super::callback::Callback;
     pub use super::callback::CallbackArc;
     pub use super::callback::CallbackRc;
+    pub use super::callback::Consumer;
+    pub use super::callback::Producer;
     pub use super::callback::SimpleCallback;
     pub use super::card::Card;
     pub use super::checkbox::Checkbox;
@@ -271,6 +275,7 @@ pub enum Language {
 }
 
 pub enum Out<O: 'static> {
+    Consumer(Consumer<O>),
     Callback(Callback<O, ()>),
     WriteSignal(WriteSignal<O>),
 }
@@ -278,13 +283,24 @@ pub enum Out<O: 'static> {
 impl<O: 'static> Out<O> {
     pub fn set(&self, new_value: O) {
         match self {
+            Out::Consumer(consumer) => consumer.consume(new_value),
             Out::Callback(callback) => callback.call(new_value),
             Out::WriteSignal(write_signal) => write_signal.set(new_value),
         }
     }
 }
 
-// TODO: Add `impl<O: 'static> From<Fn<O>> for Out<O>` when leptos 0.5 is used, as no scope is needed to transform the closure into a callback! (see https://github.com/lpotthast/leptonic/issues/5)
+impl<T: 'static, F: Fn(T) -> () + 'static> From<F> for Out<T> {
+    fn from(fun: F) -> Self {
+        Out::Consumer(fun.into())
+    }
+}
+
+impl<O: 'static> From<Consumer<O>> for Out<O> {
+    fn from(consumer: Consumer<O>) -> Self {
+        Out::Consumer(consumer)
+    }
+}
 
 impl<O: 'static> From<Callback<O>> for Out<O> {
     fn from(callback: Callback<O>) -> Self {

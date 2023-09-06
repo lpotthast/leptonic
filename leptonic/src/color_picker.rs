@@ -172,12 +172,12 @@ pub fn ColorPicker(
     let saturation = Signal::derive(move || hsv.get().saturation);
     let value = Signal::derive(move || hsv.get().value);
     let set_hue =
-        create_callback(move |new_hue| set_hsv.set(hsv.get_untracked().with_hue(new_hue)));
-    let set_saturation = create_callback(move |new_saturation| {
+        callback(move |new_hue| set_hsv.set(hsv.get_untracked().with_hue(new_hue)));
+    let set_saturation = callback(move |new_saturation| {
         set_hsv.set(hsv.get_untracked().with_saturation(new_saturation))
     });
     let set_value =
-        create_callback(move |new_value| set_hsv.set(hsv.get_untracked().with_value(new_value)));
+        callback(move |new_value| set_hsv.set(hsv.get_untracked().with_value(new_value)));
 
     let rgb = Signal::derive(move || RGB8::from(hsv.get()));
 
@@ -223,21 +223,21 @@ pub fn ColorPicker(
                     <FieldLabel>"R"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || rgb.get().r as f64)
-                        set=create_callback(move |_r| {})
+                        set=callback(move |_r| {})
                     />
                 </Field>
                 <Field style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"G"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || rgb.get().g as f64)
-                        set=create_callback(move |_g| {})
+                        set=callback(move |_g| {})
                     />
                 </Field>
                 <Field style="width: 32%; margin-right: 0%;">
                     <FieldLabel>"B"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || rgb.get().b as f64)
-                        set=create_callback(move |_b| {})
+                        set=callback(move |_b| {})
                     />
                 </Field>
             </div>

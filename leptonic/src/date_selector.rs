@@ -20,7 +20,7 @@ enum Selection {
 #[component]
 pub fn DateSelector(
     value: time::OffsetDateTime,
-    on_change: Callback<time::OffsetDateTime>,
+    #[prop(into)] on_change: Callback<time::OffsetDateTime>,
     #[prop(optional)] min: Option<time::OffsetDateTime>,
     #[prop(optional)] max: Option<time::OffsetDateTime>,
     #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: MaybeSignal<

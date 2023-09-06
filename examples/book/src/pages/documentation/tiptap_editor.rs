@@ -31,14 +31,14 @@ pub fn PageTiptapEditor() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <TiptapEditor disabled=disabled value=value set_value=create_callback(move |content| match content {
+                <TiptapEditor disabled=disabled value=value set_value=move |content| match content {
                     TiptapContent::Html(content) | TiptapContent::Json(content) => set_value.set(content),
-                }) />
+                }/>
             "#)}
         </Code>
 
-        <TiptapEditor disabled=disabled value=value set_value=create_callback(move |content| match content {
+        <TiptapEditor disabled=disabled value=value set_value=move |content| match content {
             TiptapContent::Html(content) | TiptapContent::Json(content) => set_value.set(content),
-        }) />
+        }/>
     }
 }
