@@ -6,7 +6,7 @@ use leptos_use::use_element_hover;
 use crate::{
     contexts::global_mouseup_event::GlobalMouseupEvent,
     math::project_into_range,
-    prelude::{Callable, Callback, Popover},
+    prelude::{Callable, Callback, Popover, callback},
     Out, RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 
@@ -59,12 +59,12 @@ struct Mark {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
+fn create_marks(
     min: f64,
     max: f64,
     step: Option<f64>,
     range: Memo<f64>,
-    in_range: F,
+    in_range: Callback<f64, Signal<bool>>,
     marks: SliderMarks,
     value_display: Option<Callback<f64, String>>,
 ) -> Signal<Vec<Mark>> {
@@ -89,7 +89,7 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                     }
                     marks_at.push(Mark {
                         percentage: crate::math::percentage_in_range(min, max, current),
-                        in_range: in_range(current),
+                        in_range: in_range.call(current),
                         name: match create_names {
                             true => Some(Cow::Owned(match value_display {
                                 Some(callback) => callback.call(current),
@@ -127,7 +127,7 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                             }
                             SliderMarkValue::Percentage(percentage) => percentage,
                         },
-                        in_range: in_range(value),
+                        in_range: in_range.call(value),
                         name: mark.name.clone(),
                     }
                 })
@@ -264,10 +264,10 @@ pub fn Slider(
         max,
         step,
         range,
-        move |v| match max > min {
+        callback(move |v| match max > min {
             true => Signal::derive(move || v <= value.get()),
             false => Signal::derive(move || v >= value.get()),
-        },
+        }),
         marks,
         value_display,
     );
@@ -303,7 +303,7 @@ pub fn Slider(
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
                         <div class="knob" node_ref=knob_el class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get()>
-                            <Popover show=move || show_popover.get()>
+                            <Popover show=show_popover>
                                 {
                                     move || {
                                         let value = value.get();
@@ -416,10 +416,10 @@ pub fn RangeSlider(
         max,
         step,
         range,
-        move |v| match max > min {
+        callback(move |v| match max > min {
             true => Signal::derive(move || v >= value_a.get() && v <= value_b.get()),
             false => Signal::derive(move || v <= value_a.get() && v >= value_b.get()),
-        },
+        }),
         marks,
         value_display,
     );
@@ -478,7 +478,7 @@ pub fn RangeSlider(
                 <div node_ref=bar_el class="bar">
                     <div class="knob-wrapper">
                         <div class="knob" node_ref=knob_a_el class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get()>
-                            <Popover show=move || show_a_popover.get()>
+                            <Popover show=show_a_popover>
                                 {
                                     move || {
                                         let value = value_a.get();
@@ -494,7 +494,7 @@ pub fn RangeSlider(
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
                         <div class="knob" node_ref=knob_b_el class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get()>
-                            <Popover show=move || show_b_popover.get()>
+                            <Popover show=show_b_popover>
                                 {
                                     move || {
                                         let value = value_b.get();

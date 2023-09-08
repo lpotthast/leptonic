@@ -71,19 +71,18 @@ fn select_next<O: SelectOption + 'static>(
 }
 
 #[component]
-pub fn Select<O, V>(
+pub fn Select<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Out<O>,
     #[prop(into)] search_text_provider: Callback<O, String>,
-    #[prop(into)] render_option: Callback<O, V>,
+    #[prop(into)] render_option: Callback<O, View>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
-    V: IntoView + 'static,
 {
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -138,8 +137,8 @@ where
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
         id_selector_string.clone(),
-        move || show_options.get_untracked(),
-        move || set_show_options.set(false),
+        show_options,
+        set_show_options.into(),
     );
 
     create_key_down_listener(move |e| {
@@ -303,12 +302,12 @@ where
 }
 
 #[component]
-pub fn OptionalSelect<O, V>(
+pub fn OptionalSelect<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
     #[prop(into)] set_selected: Out<Option<O>>,
     #[prop(into)] search_text_provider: Callback<O, String>,
-    #[prop(into)] render_option: Callback<O, V>,
+    #[prop(into)] render_option: Callback<O, View>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -316,7 +315,6 @@ pub fn OptionalSelect<O, V>(
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
-    V: IntoView + 'static,
 {
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -375,8 +373,8 @@ where
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
         id_selector_string.clone(),
-        move || show_options.get_untracked(),
-        move || set_show_options.set(false),
+        show_options,
+        set_show_options.into(),
     );
 
     create_key_down_listener(move |e| {
@@ -559,20 +557,19 @@ where
 }
 
 #[component]
-pub fn Multiselect<O, V>(
+pub fn Multiselect<O>(
     #[prop(optional, default=u64::MAX)] max: u64,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Out<Vec<O>>,
     #[prop(into)] search_text_provider: Callback<O, String>,
-    #[prop(into)] render_option: Callback<O, V>,
+    #[prop(into)] render_option: Callback<O, View>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + PartialOrd + Ord + 'static,
-    V: IntoView + 'static,
 {
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -647,8 +644,8 @@ where
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
         id_selector_string.clone(),
-        move || show_options.get_untracked(),
-        move || set_show_options.set(false),
+        show_options,
+        set_show_options.into(),
     );
 
     create_key_down_listener(move |e| {
@@ -828,10 +825,10 @@ where
     }
 }
 
-fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
+fn create_click_away_listener(
     id_selector_string: String,
-    when: W,
-    on_click_outside: O,
+    when: ReadSignal<bool>,
+    on_click_outside: Out<bool>,
 ) {
     let g_mouse_event =
         use_context::<GlobalClickEvent>().expect("Must be a child of the Root component.");
@@ -840,7 +837,7 @@ fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
         use wasm_bindgen::JsCast;
         let last_mouse_event = g_mouse_event.read_signal.get();
 
-        if when() {
+        if when.get_untracked() {
             if let Some(e) = last_mouse_event {
                 if let Some(target) = e.target() {
                     if let Some(target_elem) = target.dyn_ref::<HtmlElement>() {
@@ -850,7 +847,7 @@ fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
                                     // User clicked on the options list. Ignoring this global mouse event.
                                 } else {
                                     // User clicked outside.
-                                    on_click_outside();
+                                    on_click_outside.set(false);
                                 }
                             }
                             Err(err) => {

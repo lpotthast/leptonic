@@ -9,14 +9,14 @@ pub fn PageCollapsible() -> impl IntoView {
         <Collapsibles default_on_open=OnOpen::CloseOthers>
             <Stack spacing=Size::Em(0.6)>
                 <Collapsible
-                    header="Header1"
-                    body=view! { "Body1" } />
+                    header=move || "Header1".into_view()
+                    body=move || view! { "Body1" }.into_view() />
                 <Collapsible
-                    header="Header2"
-                    body=view! { "Body2" } />
+                    header=move || "Header2".into_view()
+                    body=move || view! { "Body2" }.into_view() />
                 <Collapsible
-                    header="Header3 - on_open::DoNothing"
-                    body=view! { "Body3" }
+                    header=move || "Header3 - on_open::DoNothing".into_view()
+                    body=move || view! { "Body3" }.into_view()
                     on_open=OnOpen::DoNothing />
             </Stack>
         </Collapsibles>

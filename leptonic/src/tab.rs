@@ -16,21 +16,18 @@ pub struct TabLabel {
 
 // TODO: We might want to take only `Children` and hide them when the tab is not active...
 #[component]
-pub fn Tab<L>(
+pub fn Tab(
     // TODO: Can / should we accept a String instead?
     #[prop(optional)] id: Option<Uuid>,
     /// Uniquely identifies this tab.
     #[prop(into)]
-    name: leptos::Oco<'static, str>,
-    label: L,
+    name: Oco<'static, str>,
+    #[prop(into)] label: View,
     #[prop(optional)] mount: Option<Mount>,
     #[prop(optional)] children: Option<ChildrenFn>,
     #[prop(into, optional)] on_show: Option<Callback<()>>,
     #[prop(into, optional)] on_hide: Option<Callback<()>>,
-) -> impl IntoView
-where
-    L: IntoView + 'static,
-{
+) -> impl IntoView {
     let id = id.unwrap_or_else(Uuid::new_v4);
     let tabs = use_context::<TabsContext>().unwrap();
 

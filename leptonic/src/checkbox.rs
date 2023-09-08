@@ -1,7 +1,7 @@
 use leptos::*;
 use uuid::Uuid;
 
-use crate::OptionalMaybeSignal;
+use crate::{OptionalMaybeSignal, Out};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CheckboxVariant {
@@ -68,18 +68,15 @@ impl Default for CheckboxSize {
 }
 
 #[component]
-pub fn Checkbox<T>(
+pub fn Checkbox(
     #[prop(into)] checked: Signal<bool>,
-    on_toggle: T,
+    #[prop(into)] set_checked: Out<bool>,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(optional)] id: Option<Uuid>,
     #[prop(optional)] variant: CheckboxVariant,
     #[prop(optional)] size: CheckboxSize,
-) -> impl IntoView
-where
-    T: Fn() + 'static,
-{
+) -> impl IntoView {
     let id = id.unwrap_or_else(Uuid::new_v4);
     view! {
         <leptonic-checkbox>
@@ -90,7 +87,7 @@ where
                 class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(true)
                 // TODO: Use aria-disabled instead?
                 class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
-                on:click=move |_| on_toggle()
+                on:click=move |_| set_checked.set(!checked.get_untracked())
                 prop:checked=move || checked.get()
             />
         </leptonic-checkbox>

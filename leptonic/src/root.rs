@@ -26,6 +26,7 @@ pub struct Leptonic {
     pub is_desktop_device: Signal<bool>,
 }
 
+// Note(lukas): We accept the generic, as applications will typically only use this component once and will never suffer from monomorphization code bloat.
 #[component]
 pub fn Root<T>(default_theme: T, children: Children) -> impl IntoView
 where

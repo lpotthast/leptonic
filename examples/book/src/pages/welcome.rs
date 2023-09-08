@@ -19,11 +19,9 @@ pub fn PageWelcome() -> impl IntoView {
             </H2>
 
             // TODO: Investigae: When using AppRoutes::Doc, browser navigation (back) does nothing...
-            <Link href=DocRoutes::Overview>
-                <Button size=ButtonSize::Big on_click=move |_| {} style="font-size: 1.5em; margin: 2em;">
-                    "Read the docs"
-                </Button>
-            </Link>
+            <LinkButton href=DocRoutes::Overview size=ButtonSize::Big style="font-size: 1.5em; margin: 2em;">
+                "Read the docs"
+            </LinkButton>
         </Box>
     }
 }

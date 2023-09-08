@@ -2,9 +2,14 @@ use std::fmt::{Display, Formatter};
 
 use leptos::{ev::MouseEvent, *};
 use leptos_icons::BsIcon;
+use leptos_router::{State, ToHref, A};
 use leptos_use::on_click_outside;
 
-use crate::{icon::Icon, prelude::Consumer, OptionalMaybeSignal};
+use crate::{
+    icon::Icon,
+    prelude::Consumer,
+    OptionalMaybeSignal,
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -180,5 +185,58 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
         <leptonic-btn-wrapper>
             { children() }
         </leptonic-btn-wrapper>
+    }
+}
+
+#[component]
+pub fn LinkButton<H>(
+    href: H,
+    #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
+    #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
+    #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
+    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: OptionalMaybeSignal<String>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
+    #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
+    #[prop(into, optional)]
+    title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
+    /// If `true`, the link is marked active when the location matches exactly;
+    /// if false, link is marked active if the current route starts with it.
+    #[prop(optional)]
+    exact: bool,
+    /// An object of any type that will be pushed to router state
+    #[prop(optional)]
+    state: Option<State>,
+    /// If `true`, the link will not add to the browser's history (so, pressing `Back`
+    /// will skip this page.)
+    #[prop(optional)]
+    replace: bool,
+    children: Children,
+) -> impl IntoView
+where
+    H: ToHref + 'static,
+{
+    view! {
+        <leptonic-link
+            id=id
+            class=move || {
+                let user = class.get();
+                let active = active.get().then(|| "active").unwrap_or_default();
+                format!("leptonic-btn {user} {active}")
+            }
+            data-variant=move || variant.get().as_str()
+            data-color=move || color.get().as_str()
+            data-size=move || size.get().as_str()
+            aria-disabled=move || disabled.get()
+            style=style
+        >
+            <A href=href exact=exact state=state.unwrap_or_default() replace=replace>
+                <div class="name">
+                    { children() }
+                </div>
+            </A>
+        </leptonic-link>
     }
 }

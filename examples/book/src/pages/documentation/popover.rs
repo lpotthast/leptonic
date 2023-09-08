@@ -22,7 +22,7 @@ pub fn PagePopover() -> impl IntoView {
 
                 view! {
                     <Skeleton node_ref=el animated=false width=Size::Em(10.0)>
-                        <Popover show=move || is_hovered.get()>
+                        <Popover show=is_hovered>
                             "1"
                         </Popover>
                         "Hover me!"
@@ -33,7 +33,7 @@ pub fn PagePopover() -> impl IntoView {
 
         <div node_ref=el style="margin-top: 3em; margin-bottom: 1em;">
             <Skeleton animated=false width=Size::Em(10.0)>
-                <Popover show=move || is_hovered.get()>
+                <Popover show=is_hovered>
                     "1"
                 </Popover>
                 "Hover me!"

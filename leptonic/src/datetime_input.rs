@@ -6,14 +6,14 @@ use crate::{
     date_selector::DateSelectorProps,
     datetime::{GuideMode, Type},
     prelude::{callback, DateSelector},
-    Margin, OptionalMaybeSignal,
+    Margin, OptionalMaybeSignal, Out,
 };
 
 #[component]
-pub fn DateTimeInput<S>(
+pub fn DateTimeInput(
     #[prop(optional, into)] label: OptionalMaybeSignal<String>,
     #[prop(into)] get: MaybeSignal<Option<time::OffsetDateTime>>,
-    set: S,
+    #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
     #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
     #[prop(into, optional)] id: Option<leptos::Oco<'static, str>>,
     #[prop(into, optional)] class: Option<leptos::Oco<'static, str>>,
@@ -26,10 +26,7 @@ pub fn DateTimeInput<S>(
     #[prop(optional)] guide_mode: GuideMode,
     // #[prop(into)] on_open: Option<Callback<()>>,
     // #[prop(into)] on_close: Option<Callback<()>>,
-) -> impl IntoView
-where
-    S: Fn(Option<time::OffsetDateTime>) + 'static,
-{
+) -> impl IntoView {
     let id = id.map(|it| it.into_owned());
 
     let class = class
@@ -71,7 +68,7 @@ where
                 return;
             }
         }
-        set(Some(new_value));
+        set.set(Some(new_value));
     });
 
     let date_selector = move || {

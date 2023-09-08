@@ -84,18 +84,13 @@ pub fn Collapsibles(default_on_open: OnOpen, children: Children) -> impl IntoVie
 }
 
 #[component]
-pub fn Collapsible<H, B>(
+pub fn Collapsible(
     /// Whether this collapsible should initially be opened.
-    #[prop(optional, default = false)]
-    open: bool,
+    #[prop(optional, default = false)] open: bool,
     #[prop(optional)] on_open: Option<OnOpen>,
-    header: H,
-    body: B,
-) -> impl IntoView
-where
-    H: IntoView + 'static,
-    B: IntoView + 'static,
-{
+    #[prop(into)] header: Producer<View>,
+    #[prop(into)] body: Producer<View>,
+) -> impl IntoView {
     let id = Uuid::new_v4();
     let id_str = id.to_string();
 
@@ -124,7 +119,7 @@ where
         <leptonic-collapsible id=id_str>
             <CollapsibleHeaderWrapper>
                 <CollapsibleHeader>
-                    { header }
+                    { header.produce() }
                 </CollapsibleHeader>
                 {move || match show.get() {
                     true => view! { <Icon icon=BsIcon::BsCaretUpFill/>},
@@ -132,7 +127,7 @@ where
                 }}
             </CollapsibleHeaderWrapper>
             <CollapsibleBody>
-                { body }
+                { body.produce() }
             </CollapsibleBody>
         </leptonic-collapsible>
     }

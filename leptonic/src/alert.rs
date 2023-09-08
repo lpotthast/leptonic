@@ -25,15 +25,12 @@ impl AlertVariant {
 // TODO: Use Slots for title and body when available.
 // TODO: Icon (or entire prepend) must be overridable.
 #[component]
-pub fn Alert<V>(
+pub fn Alert(
     #[prop(into)] variant: MaybeSignal<AlertVariant>,
-    #[prop(into)] title: Producer<V>,
+    #[prop(into)] title: Producer<View>,
     #[prop(into, optional)] centered: OptionalMaybeSignal<bool>,
     children: Children,
-) -> impl IntoView
-where
-    V: IntoView + 'static,
-{
+) -> impl IntoView {
     view! {
         <leptonic-alert data-variant=move || variant.get().to_str()>
             <div class="prepend">

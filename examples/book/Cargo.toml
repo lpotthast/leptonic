@@ -8,6 +8,8 @@ build = "build.rs"
 opt-level = "z"
 lto = "fat"
 debug = 0
+strip = true
+codegen-units = 1
 
 [dependencies]
 console_error_panic_hook = "0.1.7"

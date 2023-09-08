@@ -24,7 +24,7 @@ pub fn PageToast() -> impl IntoView {
             selected=variant
             set_selected=set_variant
             search_text_provider=move |o| format!("{o}")
-            render_option=move |o| format!("{o:?}")
+            render_option=move |o| format!("{o:?}").into_view()
             style="margin-bottom: 1em;"
         />
 
@@ -33,7 +33,7 @@ pub fn PageToast() -> impl IntoView {
             selected=timeout
             set_selected=set_timeout
             search_text_provider=move |o| format!("{o}")
-            render_option=move |o| format!("{o:?}")
+            render_option=move |o| format!("{o:?}").into_view()
             style="margin-bottom: 1em;"
         />
 

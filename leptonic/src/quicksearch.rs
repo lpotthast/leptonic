@@ -2,25 +2,21 @@ use crate::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn Quicksearch<T, IV>(
-    trigger: T,
+pub fn Quicksearch(
+    #[prop(into)] trigger: Callback<WriteSignal<bool>, View>,
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-) -> impl IntoView
-where
-    T: Fn(WriteSignal<bool>) -> IV + 'static,
-    IV: IntoView + 'static,
-{
+) -> impl IntoView {
     let (show_modal, set_show_modal) = create_signal(false);
     view! {
         <leptonic-quicksearch id=id class=class style=style>
-            { trigger(set_show_modal) }
+            { trigger.call(set_show_modal) }
             <QuicksearchModal
                 show_when=show_modal
                 query=query
-                on_cancel=move || set_show_modal.set(false)
+                on_cancel=move |()| set_show_modal.set(false)
             />
         </leptonic-quicksearch>
     }
@@ -48,14 +44,11 @@ pub struct QuicksearchOption {
 }
 
 #[component]
-fn QuicksearchModal<C>(
+fn QuicksearchModal(
     #[prop(into)] show_when: Signal<bool>,
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
-    on_cancel: C,
-) -> impl IntoView
-where
-    C: Fn() + Copy + 'static,
-{
+    #[prop(into)] on_cancel: Callback<()>, // TODO: Provide a type that does not require to explicitly specify the `()` type.
+) -> impl IntoView {
     let (input, set_input) = create_signal("".to_owned());
 
     let options = move || query.call(input.get());
@@ -64,7 +57,7 @@ where
     create_effect(move |_old| {
         if let Some(e) = g_keyboard_event.read_signal.get() {
             if show_when.get_untracked() && e.key().as_str() == "Escape" {
-                on_cancel();
+                on_cancel.call(());
             }
         }
     });
@@ -86,7 +79,7 @@ where
                     { move || options().into_iter().map(|option| view! {
                         <leptonic-quicksearch-result on:click=move |_| {
                                 option.on_select.call(());
-                                on_cancel();
+                                on_cancel.call(());
                             }>
                             { option.view.call(()) }
                         </leptonic-quicksearch-result>
@@ -95,7 +88,7 @@ where
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| (on_cancel)() color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_click=move |_| on_cancel.call(()) color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
