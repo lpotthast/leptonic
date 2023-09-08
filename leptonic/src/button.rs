@@ -4,7 +4,7 @@ use leptos::{ev::MouseEvent, *};
 use leptos_icons::BsIcon;
 use leptos_use::on_click_outside;
 
-use crate::{icon::Icon, OptionalMaybeSignal};
+use crate::{icon::Icon, prelude::Consumer, OptionalMaybeSignal};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -85,8 +85,8 @@ impl Display for ButtonSize {
 }
 
 #[component]
-pub fn Button<F>(
-    on_click: F,
+pub fn Button(
+    #[prop(into)] on_click: Consumer<MouseEvent>,
     #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
     #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
@@ -97,10 +97,7 @@ pub fn Button<F>(
     #[prop(into, optional)] class: OptionalMaybeSignal<String>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
-) -> impl IntoView
-where
-    F: Fn(MouseEvent) + 'static,
-{
+) -> impl IntoView {
     let has_variations = variations.0.as_ref().is_some();
 
     let variations = move || {
@@ -155,7 +152,7 @@ where
             on:click=move |e| {
                 if !disabled.get_untracked() {
                     e.stop_propagation();
-                    on_click(e);
+                    on_click.consume(e);
                 }
             }
         >
