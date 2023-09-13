@@ -851,7 +851,7 @@ fn create_click_away_listener(
                                 }
                             }
                             Err(err) => {
-                                error!("Error processing latest mouse event: {err:?}");
+                                tracing::error!("Error processing latest mouse event: {err:?}");
                             }
                         }
                     }
