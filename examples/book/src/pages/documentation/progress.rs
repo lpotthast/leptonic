@@ -27,13 +27,13 @@ pub fn PageProgress() -> impl IntoView {
 
         <NumberInput
             get=Signal::derive(move || progress.get().unwrap_or_default())
-            set=callback(move |v| set_progress.set(Some(v)))
+            set=move |v| set_progress.set(Some(v))
             style="margin-top: 1em;"
         />
 
         <Slider
             value=Signal::derive(move || progress.get().unwrap_or(0.0))
-            set_value=callback(move |v: f64| set_progress.set(Some((v * 100.0).round() / 100.0)))
+            set_value=move |v: f64| set_progress.set(Some((v * 100.0).round() / 100.0))
             min=0.0
             max=100.0
             step=0.01

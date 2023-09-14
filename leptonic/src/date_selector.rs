@@ -1,13 +1,13 @@
-use leptos::*;
+use leptos::{
+    leptos_dom::{Callable, Callback},
+    *,
+};
 use time::macros::format_description;
 use uuid::Uuid;
 
-use crate::{
-    datetime::{
-        is_in_range, start_of_next_month, start_of_previous_month, whole_days_in, Day, GuideMode,
-        InMonth, Month, SaveReplaceYear, Week, Year,
-    },
-    prelude::{Callable, Callback},
+use crate::datetime::{
+    is_in_range, start_of_next_month, start_of_previous_month, whole_days_in, Day, GuideMode,
+    InMonth, Month, SaveReplaceYear, Week, Year,
 };
 
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]

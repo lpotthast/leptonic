@@ -1,6 +1,9 @@
 use std::fmt::Debug;
 
-use leptos::*;
+use leptos::{
+    leptos_dom::{Callable, Callback, StoredCallback},
+    *,
+};
 use leptos_icons::BsIcon;
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
@@ -84,6 +87,8 @@ pub fn Select<O>(
 where
     O: SelectOption + 'static,
 {
+    let render_option = StoredCallback::new(render_option);
+
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
@@ -121,10 +126,10 @@ where
 
     let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
 
-    let select = callback(move |option: O| {
+    let select = StoredCallback::new(Callback::new(move |option: O| {
         set_selected.set(option);
         set_show_options.set(false);
-    });
+    }));
 
     let is_selected = move |option: &O| selected.with(|selected| selected == option);
 
@@ -242,7 +247,7 @@ where
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
-                        on_focus_change=callback(move |focused| {
+                        on_focus_change=move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
@@ -252,7 +257,7 @@ where
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
-                        })
+                        }
                         class="search"
                     />
 
@@ -316,6 +321,8 @@ pub fn OptionalSelect<O>(
 where
     O: SelectOption + 'static,
 {
+    let render_option = StoredCallback::new(render_option);
+
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
@@ -353,13 +360,15 @@ where
 
     let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
 
-    let select = callback(move |option: O| {
+    let set_selected_clone = set_selected.clone();
+
+    let select = StoredCallback::new(Callback::new(move |option: O| {
         set_selected.set(Some(option));
         set_show_options.set(false);
-    });
+    }));
 
     let deselect = move || {
-        set_selected.set(None);
+        set_selected_clone.set(None);
     };
 
     let is_selected = move |option: &O| selected.with(|selected| selected.as_ref() == Some(option));
@@ -497,7 +506,7 @@ where
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
-                        on_focus_change=callback(move |focused| {
+                        on_focus_change=move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
@@ -507,7 +516,7 @@ where
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
-                        })
+                        }
                         class="search"
                     />
 
@@ -571,6 +580,8 @@ pub fn Multiselect<O>(
 where
     O: SelectOption + PartialOrd + Ord + 'static,
 {
+    let render_option = StoredCallback::new(render_option);
+
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
@@ -608,7 +619,9 @@ where
 
     let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
 
-    let select = callback(move |option: O| {
+    let set_selected_clone = set_selected.clone();
+
+    let select = StoredCallback::new(Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
         if !vec.contains(&option) {
             vec.push(option); // TODO
@@ -617,17 +630,17 @@ where
         tracing::info!(?vec, "selected");
         set_selected.set(vec);
         set_show_options.set(false); // TODO: Make this optional.
-    });
+    }));
 
-    let deselect = callback(move |option: O| {
+    let deselect = StoredCallback::new(Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
         if let Some(pos) = vec.iter().position(|it| it == &option) {
             vec.remove(pos);
         }
         tracing::info!(?vec, "deselected");
-        set_selected.set(vec);
+        set_selected_clone.set(vec);
         // set_show_options.set(false); // TODO: Make this optional.
-    });
+    }));
 
     let is_selected = move |option: &O| selected.with(|selected| selected.contains(option));
 
@@ -743,10 +756,10 @@ where
                                     on:click=move |e| {
                                         e.stop_propagation();
                                     }
-                                    dismissible=callback(move |e: MouseEvent| {
+                                    dismissible=move |e: MouseEvent| {
                                         e.stop_propagation();
                                         deselect.call(clone.clone());
-                                    })>
+                                    }>
                                     { render_option.call(selected) }
                                 </Chip>
                             </leptonic-select-option>
@@ -766,7 +779,7 @@ where
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
-                        on_focus_change=callback(move |focused| {
+                        on_focus_change=move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
@@ -776,7 +789,7 @@ where
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
-                        })
+                        }
                         class="search"
                     />
 

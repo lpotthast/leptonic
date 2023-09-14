@@ -1,9 +1,9 @@
 use std::rc::Rc;
 
+use leptos::leptos_dom::{Callable, Callback};
 use leptos::*;
 use uuid::Uuid;
 
-use crate::prelude::{Callable, Callback};
 use crate::tabs::TabsContext;
 use crate::Mount;
 

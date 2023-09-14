@@ -1,5 +1,8 @@
 use crate::prelude::*;
-use leptos::*;
+use leptos::{
+    leptos_dom::{Callable, Callback, StoredCallback},
+    *,
+};
 
 #[component]
 pub fn Quicksearch(
@@ -37,9 +40,9 @@ pub fn QuicksearchTrigger(
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct QuicksearchOption {
-    pub view: Callback<(), View>,
+    pub view: Callback<(), View>, // TODO: Use ViewCallback when 0.5.0-rc2 or final is out!
     pub on_select: Callback<()>,
 }
 
@@ -49,6 +52,8 @@ fn QuicksearchModal(
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
     #[prop(into)] on_cancel: Callback<()>, // TODO: Provide a type that does not require to explicitly specify the `()` type.
 ) -> impl IntoView {
+    let on_cancel = StoredCallback::new(on_cancel);
+
     let (input, set_input) = create_signal("".to_owned());
 
     let options = move || query.call(input.get());
@@ -71,7 +76,7 @@ fn QuicksearchModal(
                     placeholder="Search"
                     class="search-input"
                     should_be_focused=show_when
-                    prepend=view! { ""}.into_view()
+                    prepend=().into_view()
                 />
             </ModalHeader>
             <ModalBody>

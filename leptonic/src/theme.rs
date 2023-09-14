@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::{leptos_dom::Callback, *};
 use leptos_icons::BsIcon;
 
 use crate::{prelude::*, toggle::ToggleProps, toggle::ToggleSize};
@@ -79,13 +79,12 @@ where
     let toggle = Toggle(ToggleProps {
         state: MaybeSignal::derive(move || theme_context.theme.get() == on),
         set_state: Some(
-            callback(move |val: bool| {
+            Callback::new(move |val: bool| {
                 theme_context.set_theme.update(|current| match val {
                     true => *current = on,
                     false => *current = off,
                 })
-            })
-            .into(),
+            }).into(),
         ),
         active: OptionalMaybeSignal(None),
         disabled: OptionalMaybeSignal(None),

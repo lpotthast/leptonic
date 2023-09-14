@@ -3,7 +3,7 @@ use crate::{
     RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 use indoc::formatdoc;
-use leptos::*;
+use leptos::{leptos_dom::Callback, *};
 
 #[component]
 pub fn ColorPreview(
@@ -171,13 +171,19 @@ pub fn ColorPicker(
     let hue = Signal::derive(move || hsv.get().hue);
     let saturation = Signal::derive(move || hsv.get().saturation);
     let value = Signal::derive(move || hsv.get().value);
+
+    let set_hsv_c1 = set_hsv.clone();
+    let set_hsv_c2 = set_hsv.clone();
+
     let set_hue =
-        callback(move |new_hue| set_hsv.set(hsv.get_untracked().with_hue(new_hue)));
-    let set_saturation = callback(move |new_saturation| {
-        set_hsv.set(hsv.get_untracked().with_saturation(new_saturation))
+        Callback::new(move |new_hue| set_hsv_c1.set(hsv.get_untracked().with_hue(new_hue)));
+
+    let set_saturation = Callback::new(move |new_saturation| {
+        set_hsv_c2.set(hsv.get_untracked().with_saturation(new_saturation))
     });
+
     let set_value =
-        callback(move |new_value| set_hsv.set(hsv.get_untracked().with_value(new_value)));
+        Callback::new(move |new_value| set_hsv.set(hsv.get_untracked().with_value(new_value)));
 
     let rgb = Signal::derive(move || RGB8::from(hsv.get()));
 
@@ -186,13 +192,13 @@ pub fn ColorPicker(
             <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; height: 20em;">
                 <ColorPreview rgb=rgb style="width: 20%; height: 100%;"/>
                 <ColorPalette hsv=hsv
-                    set_saturation=set_saturation
-                    set_value=set_value
+                    set_saturation=set_saturation.clone()
+                    set_value=set_value.clone()
                     style="width: 80%; height: 100%;"
                 />
             </div>
 
-            <HueSlider hue=hue set_hue=set_hue/>
+            <HueSlider hue=hue set_hue=set_hue.clone()/>
 
             <div style="display: flex; flex-direction: row;">
                 <Field style="width: 32%; margin-right: 2%;">
@@ -223,21 +229,18 @@ pub fn ColorPicker(
                     <FieldLabel>"R"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || rgb.get().r as f64)
-                        set=callback(move |_r| {})
                     />
                 </Field>
                 <Field style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"G"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || rgb.get().g as f64)
-                        set=callback(move |_g| {})
                     />
                 </Field>
                 <Field style="width: 32%; margin-right: 0%;">
                     <FieldLabel>"B"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || rgb.get().b as f64)
-                        set=callback(move |_b| {})
                     />
                 </Field>
             </div>

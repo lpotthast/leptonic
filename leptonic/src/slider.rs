@@ -1,12 +1,13 @@
 use std::borrow::Cow;
 
-use leptos::*;
+use leptos::{
+    leptos_dom::{Callable, Callback},
+    *,
+};
 use leptos_use::use_element_hover;
 
 use crate::{
-    contexts::global_mouseup_event::GlobalMouseupEvent,
-    math::project_into_range,
-    prelude::{Callable, Callback, Popover, callback},
+    contexts::global_mouseup_event::GlobalMouseupEvent, math::project_into_range, prelude::Popover,
     Out, RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 
@@ -91,7 +92,7 @@ fn create_marks(
                         percentage: crate::math::percentage_in_range(min, max, current),
                         in_range: in_range.call(current),
                         name: match create_names {
-                            true => Some(Cow::Owned(match value_display {
+                            true => Some(Cow::Owned(match &value_display {
                                 Some(callback) => callback.call(current),
                                 None => format!("{current}"),
                             })),
@@ -264,12 +265,12 @@ pub fn Slider(
         max,
         step,
         range,
-        callback(move |v| match max > min {
+        Callback::new(move |v| match max > min {
             true => Signal::derive(move || v <= value.get()),
             false => Signal::derive(move || v >= value.get()),
         }),
         marks,
-        value_display,
+        value_display.clone(),
     );
 
     view! {
@@ -307,7 +308,7 @@ pub fn Slider(
                                 {
                                     move || {
                                         let value = value.get();
-                                        match value_display {
+                                        match &value_display {
                                             Some(callback) => callback.call(value) ,
                                             None => format!("{value}"),
                                         }
@@ -416,13 +417,16 @@ pub fn RangeSlider(
         max,
         step,
         range,
-        callback(move |v| match max > min {
+        Callback::new(move |v| match max > min {
             true => Signal::derive(move || v >= value_a.get() && v <= value_b.get()),
             false => Signal::derive(move || v <= value_a.get() && v >= value_b.get()),
         }),
         marks,
-        value_display,
+        value_display.clone(),
     );
+
+    let value_display_a = value_display.clone();
+    let value_display_b = value_display;
 
     view! {
         <leptonic-slider
@@ -482,7 +486,7 @@ pub fn RangeSlider(
                                 {
                                     move || {
                                         let value = value_a.get();
-                                        match value_display {
+                                        match &value_display_a {
                                             Some(callback) => callback.call(value) ,
                                             None => format!("{value}"),
                                         }
@@ -498,7 +502,7 @@ pub fn RangeSlider(
                                 {
                                     move || {
                                         let value = value_b.get();
-                                        match value_display {
+                                        match &value_display_b {
                                             Some(callback) => callback.call(value) ,
                                             None => format!("{value}"),
                                         }

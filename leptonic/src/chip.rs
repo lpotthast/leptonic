@@ -1,14 +1,13 @@
 use std::fmt::{Display, Formatter};
 
-use leptos::*;
+use leptos::{
+    leptos_dom::{Callable, Callback},
+    *,
+};
 use leptos_icons::BsIcon;
 use web_sys::MouseEvent;
 
-use crate::{
-    icon::Icon,
-    prelude::{Callable, Callback},
-    OptionalMaybeSignal,
-};
+use crate::{icon::Icon, OptionalMaybeSignal};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ChipColor {

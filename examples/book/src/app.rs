@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use leptos::*;
+use leptos::{leptos_dom::Callback, *};
 use leptos_icons::BsIcon;
 use leptos_meta::{provide_meta_context, Title};
 use leptos_router::*;
@@ -140,43 +140,40 @@ pub fn Layout() -> impl IntoView {
         (
             "overview",
             QuicksearchOption {
-                view: callback(move |()| {
+                view: Callback::new(move |()| {
                     view! {
                         <Link href=DocRoutes::Overview class="search-link">
                             "Overview"
                         </Link>
                     }
-                    .into_view()
                 }),
-                on_select: callback(move |()| {}),
+                on_select: Callback::new(move |()| {}),
             },
         ),
         (
             "installation",
             QuicksearchOption {
-                view: callback(move |()| {
+                view: Callback::new(move |()| {
                     view! {
                         <Link href=DocRoutes::Installation class="search-link">
                             "Installation"
                         </Link>
                     }
-                    .into_view()
                 }),
-                on_select: callback(move |()| {}),
+                on_select: Callback::new(move |()| {}),
             },
         ),
         (
             "usage",
             QuicksearchOption {
-                view: callback(move |()| {
+                view: Callback::new(move |()| {
                     view! {
                         <Link href=DocRoutes::Usage class="search-link">
                             "Usage"
                         </Link>
                     }
-                    .into_view()
                 }),
-                on_select: callback(move |()| {}),
+                on_select: Callback::new(move |()| {}),
             },
         ),
     ];

@@ -1,11 +1,11 @@
-use leptos::*;
+use leptos::{leptos_dom::Callback, *};
 use time::format_description::well_known::Rfc3339;
 use web_sys::KeyboardEvent;
 
 use crate::{
     date_selector::DateSelectorProps,
     datetime::{GuideMode, Type},
-    prelude::{callback, DateSelector},
+    prelude::DateSelector,
     Margin, OptionalMaybeSignal, Out,
 };
 
@@ -60,21 +60,21 @@ pub fn DateTimeInput(
         }
     };
 
-    let on_change = callback(move |new_value| {
-        tracing::info!("Received new value {:?}", new_value);
-        // Skip propagating a change event when the received value does not deviate from the current value.
-        if let Some(current) = get.get() {
-            if current == new_value {
-                return;
-            }
-        }
-        set.set(Some(new_value));
-    });
+    let set = set.into_copy();
 
     let date_selector = move || {
         DateSelector(DateSelectorProps {
             value: get.get().unwrap(),
-            on_change,
+            on_change: Callback::new(move |new_value| {
+                tracing::info!("Received new value {:?}", new_value);
+                // Skip propagating a change event when the received value does not deviate from the current value.
+                if let Some(current) = get.get() {
+                    if current == new_value {
+                        return;
+                    }
+                }
+                set.set(Some(new_value));
+            }),
             min,
             max,
             guide_mode: guide_mode.into(),

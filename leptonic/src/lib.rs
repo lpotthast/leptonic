@@ -1,7 +1,10 @@
 use std::fmt::Display;
 
-use leptos::*;
-use prelude::{Callable, Callback, Consumer};
+use leptos::{
+    leptos_dom::{Callable, Callback, StoredCallback},
+    *,
+};
+use prelude::Consumer;
 
 pub mod alert;
 pub mod anchor;
@@ -131,19 +134,10 @@ pub mod prelude {
     pub use super::button::ButtonVariant;
     pub use super::button::ButtonWrapper;
     pub use super::button::LinkButton;
-    pub use super::callback::callback;
-    pub use super::callback::callback_arc;
-    pub use super::callback::callback_rc;
     pub use super::callback::consumer;
     pub use super::callback::producer;
-    pub use super::callback::simple_callback;
-    pub use super::callback::Callable;
-    pub use super::callback::Callback;
-    pub use super::callback::CallbackArc;
-    pub use super::callback::CallbackRc;
     pub use super::callback::Consumer;
     pub use super::callback::Producer;
-    pub use super::callback::SimpleCallback;
     pub use super::card::Card;
     pub use super::checkbox::Checkbox;
     pub use super::chip::Chip;
@@ -259,6 +253,7 @@ pub mod prelude {
     pub use super::typography::H5;
     pub use super::typography::H6;
     pub use super::typography::P;
+    pub use super::CopyableOut;
     pub use super::FontWeight;
     pub use super::Height;
     pub use super::Margin;
@@ -278,7 +273,22 @@ pub enum Language {
 pub enum Out<O: 'static> {
     Consumer(Consumer<O>),
     Callback(Callback<O, ()>),
+    StoredCallback(StoredCallback<O, ()>),
     WriteSignal(WriteSignal<O>),
+}
+
+pub enum CopyableOut<O: 'static> {
+    Consumer(Consumer<O>),
+    StoredCallback(StoredCallback<O, ()>),
+    WriteSignal(WriteSignal<O>),
+}
+
+impl<O: 'static> Copy for CopyableOut<O> {}
+
+impl<O: 'static> Clone for CopyableOut<O> {
+    fn clone(&self) -> Self {
+        *self
+    }
 }
 
 impl<O: 'static> Out<O> {
@@ -286,7 +296,27 @@ impl<O: 'static> Out<O> {
         match self {
             Out::Consumer(consumer) => consumer.consume(new_value),
             Out::Callback(callback) => callback.call(new_value),
+            Out::StoredCallback(callback) => callback.call(new_value),
             Out::WriteSignal(write_signal) => write_signal.set(new_value),
+        }
+    }
+
+    pub fn into_copy(self) -> CopyableOut<O> {
+        match self {
+            Out::Consumer(consumer) => CopyableOut::Consumer(consumer),
+            Out::Callback(callback) => CopyableOut::StoredCallback(StoredCallback::new(callback)),
+            Out::StoredCallback(stored_callback) => CopyableOut::StoredCallback(stored_callback),
+            Out::WriteSignal(write_signal) => CopyableOut::WriteSignal(write_signal),
+        }
+    }
+}
+
+impl<O: 'static> CopyableOut<O> {
+    pub fn set(&self, new_value: O) {
+        match self {
+            CopyableOut::Consumer(consumer) => consumer.consume(new_value),
+            CopyableOut::StoredCallback(callback) => callback.call(new_value),
+            CopyableOut::WriteSignal(write_signal) => write_signal.set(new_value),
         }
     }
 }
@@ -303,9 +333,15 @@ impl<O: 'static> From<Consumer<O>> for Out<O> {
     }
 }
 
-impl<O: 'static> From<Callback<O>> for Out<O> {
-    fn from(callback: Callback<O>) -> Self {
+impl<O: 'static> From<Callback<O, ()>> for Out<O> {
+    fn from(callback: Callback<O, ()>) -> Self {
         Out::Callback(callback)
+    }
+}
+
+impl<O: 'static> From<StoredCallback<O, ()>> for Out<O> {
+    fn from(callback: StoredCallback<O, ()>) -> Self {
+        Out::StoredCallback(callback)
     }
 }
 
@@ -315,13 +351,17 @@ impl<O: 'static> From<WriteSignal<O>> for Out<O> {
     }
 }
 
-impl<O: 'static> Clone for Out<O> {
+// TODO: Remove Clone bound once Callback implements Clone manually!
+impl<O: Clone + 'static> Clone for Out<O> {
     fn clone(&self) -> Self {
-        *self
+        match self {
+            Out::Consumer(inner) => Out::Consumer(inner.clone()),
+            Out::Callback(inner) => Out::Callback((*inner).clone()),
+            Out::StoredCallback(inner) => Out::StoredCallback(inner.clone()),
+            Out::WriteSignal(inner) => Out::WriteSignal(inner.clone()),
+        }
     }
 }
-
-impl<O: 'static> Copy for Out<O> {}
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Mount {

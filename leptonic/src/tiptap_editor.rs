@@ -112,7 +112,7 @@ pub fn TiptapEditor(
                 }
                 value=value
                 set_value=move |v| {
-                    if let Some(set_value) = set_value {
+                    if let Some(set_value) = &set_value {
                         set_value.set(v)
                     }
                 }

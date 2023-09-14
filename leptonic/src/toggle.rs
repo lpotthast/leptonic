@@ -74,7 +74,7 @@ pub fn Toggle(
                 class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 data-size=size.as_str()
                 data-variant=variant.as_str()
-                on:click=move |_| { if let Some(set) = set_state { set.set(!state.get_untracked()) } }
+                on:click=move |_| { if let Some(set) = &set_state { set.set(!state.get_untracked()) } }
             >
                 <span class="slider round" class:on=move || state.get()>
                     {
