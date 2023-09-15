@@ -3,11 +3,11 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageButton(cx: Scope) -> impl IntoView {
-    let (disabled, set_disabled) = create_signal(cx, false);
-    let (num_main_action_activated, set_num_main_action_activated) = create_signal(cx, 0);
-    let (num_secondary_action_activated, set_num_secondary_action_activated) = create_signal(cx, 0);
-    view! { cx,
+pub fn PageButton() -> impl IntoView {
+    let (disabled, set_disabled) = create_signal(false);
+    let (num_main_action_activated, set_num_main_action_activated) = create_signal(0);
+    let (num_secondary_action_activated, set_num_secondary_action_activated) = create_signal(0);
+    view! {
         <H1>"Buttons"</H1>
 
         <P>"Buttons are one of the most common input mechanisms with which your users can interact with your software."</P>
@@ -82,7 +82,7 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
             {indoc!(r#"
                 <Button on_click=move |_| {} disabled=true>"Disabled"</Button>
                 <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
-                <Button on_click=move |_| {} disabled=Signal::derive(cx, move || !disabled.get())>"Disabled"</Button>
+                <Button on_click=move |_| {} disabled=Signal::derive(move || !disabled.get())>"Disabled"</Button>
             "#)}
         </Code>
 
@@ -93,24 +93,24 @@ pub fn PageButton(cx: Scope) -> impl IntoView {
         <ButtonWrapper>
             <Button on_click=move |_| {} disabled=true>"Disabled"</Button>
             <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
-            <Button on_click=move |_| {} disabled=Signal::derive(cx, move || !disabled.get())>"Disabled"</Button>
+            <Button on_click=move |_| {} disabled=Signal::derive(move || !disabled.get())>"Disabled"</Button>
         </ButtonWrapper>
 
         <H2>"Variations"</H2>
 
         <Code>
             {indoc!(r#"
-                <Button on_click=move |_| {} variations=view!{cx,
+                <Button on_click=move |_| {} variations=view! {
                     <Button on_click=move |_| {}>"Secondary action"</Button>
-                }.into_view(cx)>
+                }.into_view()>
                     "MainAction"
                 </Button>
             "#)}
         </Code>
 
-        <Button on_click=move |_| {set_num_main_action_activated.update(|it| *it += 1)} variations=view!{cx,
+        <Button on_click=move |_| {set_num_main_action_activated.update(|it| *it += 1)} variations=view! {
                 <Button on_click=move |_| {set_num_secondary_action_activated.update(|it| *it += 1)}>"Secondary action"</Button>
-        }.into_view(cx)>
+        }.into_view()>
             "MainAction"
         </Button>
 

@@ -1,25 +1,22 @@
-use std::borrow::Cow;
-
-use leptos::*;
+use leptos::{leptos_dom::Callback, *};
 use time::format_description::well_known::Rfc3339;
 use web_sys::KeyboardEvent;
 
 use crate::{
     date_selector::DateSelectorProps,
     datetime::{GuideMode, Type},
-    prelude::{create_callback, DateSelector},
-    Margin, OptionalMaybeSignal,
+    prelude::DateSelector,
+    Margin, OptionalMaybeSignal, Out,
 };
 
 #[component]
-pub fn DateTimeInput<S>(
-    cx: Scope,
+pub fn DateTimeInput(
     #[prop(optional, into)] label: OptionalMaybeSignal<String>,
     #[prop(into)] get: MaybeSignal<Option<time::OffsetDateTime>>,
-    set: S,
+    #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
     #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
-    #[prop(into, optional)] id: Option<Cow<'static, str>>,
-    #[prop(into, optional)] class: Option<Cow<'static, str>>,
+    #[prop(into, optional)] id: Option<leptos::Oco<'static, str>>,
+    #[prop(into, optional)] class: Option<leptos::Oco<'static, str>>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(optional)] margin: Option<Margin>,
 
@@ -29,20 +26,17 @@ pub fn DateTimeInput<S>(
     #[prop(optional)] guide_mode: GuideMode,
     // #[prop(into)] on_open: Option<Callback<()>>,
     // #[prop(into)] on_close: Option<Callback<()>>,
-) -> impl IntoView
-where
-    S: Fn(Option<time::OffsetDateTime>) + 'static,
-{
+) -> impl IntoView {
     let id = id.map(|it| it.into_owned());
 
     let class = class
-        .map(|it| Cow::Owned(format!("leptonic-input datetime-selected {it}")))
-        .unwrap_or(Cow::Borrowed("leptonic-input datetime-selected "));
+        .map(|it| leptos::Oco::from(format!("leptonic-input datetime-selected {it}")))
+        .unwrap_or(leptos::Oco::from("leptonic-input datetime-selected "));
 
     let style = margin.map(|it| format!("--margin: {it}"));
 
-    let (open, set_open) = create_signal(cx, false);
-    let (in_focus, set_in_focus) = create_signal(cx, false);
+    let (open, set_open) = create_signal(false);
+    let (in_focus, set_in_focus) = create_signal(false);
 
     let on_key_down = move |event: KeyboardEvent| {
         let in_focus = in_focus.get();
@@ -66,32 +60,29 @@ where
         }
     };
 
-    let on_change = create_callback(cx, move |new_value| {
-        tracing::info!("Received new value {:?}", new_value);
-        // Skip propagating a change event when the received value does not deviate from the current value.
-        if let Some(current) = get.get() {
-            if current == new_value {
-                return;
-            }
-        }
-        set(Some(new_value));
-    });
+    let set = set.into_copy();
 
     let date_selector = move || {
-        DateSelector(
-            cx,
-            DateSelectorProps {
-                value: get.get().unwrap(),
-                on_change,
-                min,
-                max,
-                guide_mode: guide_mode.into(),
-            },
-        )
+        DateSelector(DateSelectorProps {
+            value: get.get().unwrap(),
+            on_change: Callback::new(move |new_value| {
+                tracing::info!("Received new value {:?}", new_value);
+                // Skip propagating a change event when the received value does not deviate from the current value.
+                if let Some(current) = get.get() {
+                    if current == new_value {
+                        return;
+                    }
+                }
+                set.set(Some(new_value));
+            }),
+            min,
+            max,
+            guide_mode: guide_mode.into(),
+        })
     };
 
     let time_selector = move || {
-        view! {cx,
+        view! {
             "TODO: Implement the time selector!"
             // <CrudOffsetDatetimeTimeSelector
             //     value={this.value.clone().unwrap_or_else(|| time::OffsetDateTime::now_utc())}
@@ -99,22 +90,22 @@ where
         }
     };
 
-    view! { cx,
+    view! {
         <leptonic-input-field style=style>
             {match prepend.0 {
-                Some(view) => view! { cx,
+                Some(view) => view! {
                     <div>
                         { view.get() }
                     </div>
-                }.into_view(cx),
-                None => ().into_view(cx),
+                }.into_view(),
+                None => ().into_view(),
             }}
             <input
                 id=id
                 class=class
                 placeholder=move || match &label.0 {
-                    Some(label) => Cow::Owned(label.get()),
-                    None => Cow::Borrowed(""),
+                    Some(label) => leptos::Oco::from(label.get()),
+                    None => leptos::Oco::from(""),
                 }
                 tabindex="0"
                 type="text"
@@ -126,16 +117,16 @@ where
                 on:keydown=on_key_down
             />
             <div class="datetime-dropdown-menu-ref">
-                <Show when=move || open.get() fallback=|_| ()>
+                <Show when=move || open.get() fallback=|| ()>
                     <div class="datetime-dropdown-menu">
                         {
                             match input_type {
-                                Type::Date => date_selector().into_view(cx),
-                                Type::Time => time_selector().into_view(cx),
-                                Type::DateTime => view! {cx,
+                                Type::Date => date_selector().into_view(),
+                                Type::Time => time_selector().into_view(),
+                                Type::DateTime => view! {
                                     {date_selector()}
                                     {time_selector()}
-                                }.into_view(cx),
+                                }.into_view(),
                             }
                         }
                     </div>

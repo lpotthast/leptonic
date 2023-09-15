@@ -3,8 +3,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageCallback(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageCallback() -> impl IntoView {
+    view! {
         <H1>"Callbacks"</H1>
 
         <Code>
@@ -17,7 +17,7 @@ pub fn PageCallback(cx: Scope) -> impl IntoView {
                 set_value.call(42);
 
                 if let Some(render) = maybe_render {
-                    let _view = render.call((cx, "foo".to_owned()));
+                    let _view = render.call(("foo".to_owned()));
                 }
             "#)}
         </Code>
@@ -103,8 +103,8 @@ pub fn PageCallback(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                view! {cx,
-                    <MyComponent set_value=create_callback(cx, move |v| {}) />
+                view! {
+                    <MyComponent set_value=create_callback(move |v| {}) />
                 }
             "#)}
         </Code>

@@ -1,7 +1,10 @@
 use std::fmt::Display;
 
-use leptos::*;
-use prelude::{Callable, Callback};
+use leptos::{
+    leptos_dom::{Callable, Callback, StoredCallback},
+    *,
+};
+use prelude::Consumer;
 
 pub mod alert;
 pub mod anchor;
@@ -81,7 +84,9 @@ impl<T: 'static, I: Into<MaybeSignal<T>>> From<I> for OptionalMaybeSignal<T> {
     }
 }
 
-impl<T: Clone + Default> SignalGet<T> for OptionalMaybeSignal<T> {
+impl<T: Clone + Default> SignalGet for OptionalMaybeSignal<T> {
+    type Value = T;
+
     fn get(&self) -> T {
         match &self.0 {
             Some(signal) => signal.get(),
@@ -97,7 +102,9 @@ impl<T: Clone + Default> SignalGet<T> for OptionalMaybeSignal<T> {
     }
 }
 
-impl<T: Clone + Default> SignalGetUntracked<T> for OptionalMaybeSignal<T> {
+impl<T: Clone + Default> SignalGetUntracked for OptionalMaybeSignal<T> {
+    type Value = T;
+
     fn get_untracked(&self) -> T {
         match &self.0 {
             Some(signal) => signal.get_untracked(),
@@ -126,15 +133,11 @@ pub mod prelude {
     pub use super::button::ButtonSize;
     pub use super::button::ButtonVariant;
     pub use super::button::ButtonWrapper;
-    pub use super::callback::create_callback;
-    pub use super::callback::create_callback_arc;
-    pub use super::callback::create_callback_rc;
-    pub use super::callback::create_simple_callback;
-    pub use super::callback::Callable;
-    pub use super::callback::Callback;
-    pub use super::callback::CallbackArc;
-    pub use super::callback::CallbackRc;
-    pub use super::callback::SimpleCallback;
+    pub use super::button::LinkButton;
+    pub use super::callback::consumer;
+    pub use super::callback::producer;
+    pub use super::callback::Consumer;
+    pub use super::callback::Producer;
     pub use super::card::Card;
     pub use super::checkbox::Checkbox;
     pub use super::chip::Chip;
@@ -250,6 +253,7 @@ pub mod prelude {
     pub use super::typography::H5;
     pub use super::typography::H6;
     pub use super::typography::P;
+    pub use super::CopyableOut;
     pub use super::FontWeight;
     pub use super::Height;
     pub use super::Margin;
@@ -267,24 +271,77 @@ pub enum Language {
 }
 
 pub enum Out<O: 'static> {
+    Consumer(Consumer<O>),
     Callback(Callback<O, ()>),
+    StoredCallback(StoredCallback<O, ()>),
     WriteSignal(WriteSignal<O>),
+}
+
+pub enum CopyableOut<O: 'static> {
+    Consumer(Consumer<O>),
+    StoredCallback(StoredCallback<O, ()>),
+    WriteSignal(WriteSignal<O>),
+}
+
+impl<O: 'static> Copy for CopyableOut<O> {}
+
+impl<O: 'static> Clone for CopyableOut<O> {
+    fn clone(&self) -> Self {
+        *self
+    }
 }
 
 impl<O: 'static> Out<O> {
     pub fn set(&self, new_value: O) {
         match self {
+            Out::Consumer(consumer) => consumer.consume(new_value),
             Out::Callback(callback) => callback.call(new_value),
+            Out::StoredCallback(callback) => callback.call(new_value),
             Out::WriteSignal(write_signal) => write_signal.set(new_value),
+        }
+    }
+
+    pub fn into_copy(self) -> CopyableOut<O> {
+        match self {
+            Out::Consumer(consumer) => CopyableOut::Consumer(consumer),
+            Out::Callback(callback) => CopyableOut::StoredCallback(StoredCallback::new(callback)),
+            Out::StoredCallback(stored_callback) => CopyableOut::StoredCallback(stored_callback),
+            Out::WriteSignal(write_signal) => CopyableOut::WriteSignal(write_signal),
         }
     }
 }
 
-// TODO: Add `impl<O: 'static> From<Fn<O>> for Out<O>` when leptos 0.5 is used, as no scope is needed to transform the closure into a callback! (see https://github.com/lpotthast/leptonic/issues/5)
+impl<O: 'static> CopyableOut<O> {
+    pub fn set(&self, new_value: O) {
+        match self {
+            CopyableOut::Consumer(consumer) => consumer.consume(new_value),
+            CopyableOut::StoredCallback(callback) => callback.call(new_value),
+            CopyableOut::WriteSignal(write_signal) => write_signal.set(new_value),
+        }
+    }
+}
 
-impl<O: 'static> From<Callback<O>> for Out<O> {
-    fn from(callback: Callback<O>) -> Self {
+impl<T: 'static, F: Fn(T) -> () + 'static> From<F> for Out<T> {
+    fn from(fun: F) -> Self {
+        Out::Consumer(fun.into())
+    }
+}
+
+impl<O: 'static> From<Consumer<O>> for Out<O> {
+    fn from(consumer: Consumer<O>) -> Self {
+        Out::Consumer(consumer)
+    }
+}
+
+impl<O: 'static> From<Callback<O, ()>> for Out<O> {
+    fn from(callback: Callback<O, ()>) -> Self {
         Out::Callback(callback)
+    }
+}
+
+impl<O: 'static> From<StoredCallback<O, ()>> for Out<O> {
+    fn from(callback: StoredCallback<O, ()>) -> Self {
+        Out::StoredCallback(callback)
     }
 }
 
@@ -294,13 +351,17 @@ impl<O: 'static> From<WriteSignal<O>> for Out<O> {
     }
 }
 
-impl<O: 'static> Clone for Out<O> {
+// TODO: Remove Clone bound once Callback implements Clone manually!
+impl<O: Clone + 'static> Clone for Out<O> {
     fn clone(&self) -> Self {
-        *self
+        match self {
+            Out::Consumer(inner) => Out::Consumer(inner.clone()),
+            Out::Callback(inner) => Out::Callback((*inner).clone()),
+            Out::StoredCallback(inner) => Out::StoredCallback(inner.clone()),
+            Out::WriteSignal(inner) => Out::WriteSignal(inner.clone()),
+        }
     }
 }
-
-impl<O: 'static> Copy for Out<O> {}
 
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy)]
 pub enum Mount {
@@ -314,14 +375,12 @@ pub enum Mount {
 }
 
 pub fn create_signal_ls<T: Clone + serde::Serialize + serde::de::DeserializeOwned>(
-    cx: Scope,
     key: &'static str,
     initial: T,
 ) -> (ReadSignal<T>, WriteSignal<T>) {
-    let (signal, set_signal) =
-        create_signal(cx, read_from_local_storage::<T>(key).unwrap_or(initial));
+    let (signal, set_signal) = create_signal(read_from_local_storage::<T>(key).unwrap_or(initial));
 
-    track_in_local_storage(cx, key, signal);
+    track_in_local_storage(key, signal);
 
     (signal, set_signal)
 }
@@ -342,16 +401,15 @@ pub fn read_from_local_storage<T: serde::de::DeserializeOwned>(key: &'static str
 }
 
 pub fn track_in_local_storage<T: serde::Serialize + Clone>(
-    cx: Scope,
     key: &'static str,
     signal: ReadSignal<T>,
 ) {
-    create_effect(cx, move |_old| {
+    create_effect(move |_old| {
         let storage = window().local_storage().ok()??;
         storage
             .set(key, serde_json::to_string(&signal.get()).ok()?.as_ref())
             .ok()
-    })
+    });
 }
 
 pub trait OptionDeref<T: std::ops::Deref> {
@@ -493,18 +551,17 @@ impl<T> TrackedElementClientBoundingRect<T>
 where
     T: Into<web_sys::Element> + Clone + 'static,
 {
-    pub fn new<El>(cx: Scope, el: El) -> Self
+    pub fn new<El>(el: El) -> Self
     where
-        El: Clone,
-        (Scope, El): Into<leptos_use::core::ElementMaybeSignal<T, web_sys::Element>>,
+        El: Clone + Into<leptos_use::core::ElementMaybeSignal<T, web_sys::Element>>,
     {
-        let (left, set_left) = create_signal(cx, 0.0);
-        let (top, set_top) = create_signal(cx, 0.0);
-        let (width, set_width) = create_signal(cx, 0.0);
-        let (height, set_height) = create_signal(cx, 0.0);
+        let (left, set_left) = create_signal(0.0);
+        let (top, set_top) = create_signal(0.0);
+        let (width, set_width) = create_signal(0.0);
+        let (height, set_height) = create_signal(0.0);
 
         Self {
-            el: store_value(cx, (cx, el).into()),
+            el: store_value(el.into()),
             left,
             set_left,
             top,
@@ -535,7 +592,7 @@ struct RelativeMousePosition {
 }
 
 impl RelativeMousePosition {
-    pub fn new<T>(cx: Scope, client_bounding_rect: TrackedElementClientBoundingRect<T>) -> Self
+    pub fn new<T>(client_bounding_rect: TrackedElementClientBoundingRect<T>) -> Self
     where
         T: Into<web_sys::Element> + Clone + 'static,
     {
@@ -543,13 +600,12 @@ impl RelativeMousePosition {
             x: cursor_x,
             y: cursor_y,
             ..
-        } = leptos_use::use_mouse(cx);
+        } = leptos_use::use_mouse();
 
-        let (x, set_x) = create_signal(cx, 0.0);
-        let (y, set_y) = create_signal(cx, 0.0);
+        let (x, set_x) = create_signal(0.0);
+        let (y, set_y) = create_signal(0.0);
 
         let _ = leptos_use::watch_throttled_with_options(
-            cx,
             move || (cursor_x.get(), cursor_y.get()),
             move |(cursor_x, cursor_y), _, _| {
                 set_x.set(*cursor_x);
@@ -562,7 +618,7 @@ impl RelativeMousePosition {
         );
 
         Self {
-            rel_mouse_pos: create_memo(cx, move |_| {
+            rel_mouse_pos: create_memo(move |_| {
                 let x = x.get() - client_bounding_rect.left.get();
                 let y = y.get() - client_bounding_rect.top.get();
                 let mut px = x / client_bounding_rect.width.get();

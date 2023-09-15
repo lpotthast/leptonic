@@ -3,7 +3,6 @@ use leptos_router::*;
 
 #[component]
 pub fn Link<H>(
-    cx: Scope,
     /// Used to calculate the link's `href` attribute. Will be resolved relative
     /// to the current route.
     href: H,
@@ -33,10 +32,10 @@ pub fn Link<H>(
 where
     H: ToHref + 'static,
 {
-    view! { cx,
+    view! {
         <leptonic-link id=id class=class style=style>
             <A href=href exact=exact state=state.unwrap_or_default() replace=replace>
-                { children(cx) }
+                { children() }
             </A>
         </leptonic-link>
     }
@@ -63,7 +62,6 @@ impl std::fmt::Display for LinkExtTarget {
 
 #[component]
 pub fn LinkExt<H>(
-    cx: Scope,
     /// Used to calculate the link's `href` attribute.
     href: H,
     target: LinkExtTarget,
@@ -81,14 +79,14 @@ where
     H: ToHref + 'static,
 {
     // NOTE(lukas): rel="noopener" is added for security reasons. See: https://developer.chrome.com/docs/lighthouse/best-practices/external-anchors-use-rel-noopener/
-    view! { cx,
+    view! {
         <leptonic-link id=id class=class style=style>
             <a
                 href=href.to_href()()
                 target=format!("{target}")
                 rel={ match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }
             >
-                { children(cx) }
+                { children() }
             </a>
         </leptonic-link>
     }

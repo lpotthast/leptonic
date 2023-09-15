@@ -3,8 +3,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageStack(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageStack() -> impl IntoView {
+    view! {
         <H1>"Stack"</H1>
 
         <H2>"Vertical stacks"</H2>

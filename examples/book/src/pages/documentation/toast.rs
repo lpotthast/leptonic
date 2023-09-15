@@ -5,13 +5,15 @@ use strum::IntoEnumIterator;
 use uuid::Uuid;
 
 #[component]
-pub fn PageToast(cx: Scope) -> impl IntoView {
-    let (variant, set_variant) = create_signal(cx, ToastVariant::Success);
-    let (timeout, set_timeout) = create_signal(cx, ToastTimeout::DefaultDelay);
-    let (header, set_header) = create_signal(cx, "Header".to_owned());
-    let (body, set_body) = create_signal(cx, "Body".to_owned());
+pub fn PageToast() -> impl IntoView {
+    let (variant, set_variant) = create_signal(ToastVariant::Success);
+    let (timeout, set_timeout) = create_signal(ToastTimeout::DefaultDelay);
+    let (header, set_header) = create_signal("Header".to_owned());
+    let (body, set_body) = create_signal("Body".to_owned());
 
-    view! { cx,
+    let toasts = expect_context::<Toasts>();
+
+    view! {
         <H1>"Toasts"</H1>
 
         <TextInput get=header set=set_header placeholder="Header text" style="margin-bottom: 1em;"/>
@@ -20,28 +22,28 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
         <Select
             options={ToastVariant::iter().collect::<Vec<_>>()}
             selected=variant
-            set_selected=create_callback(cx, move |v| set_variant.set(v))
-            search_text_provider=create_callback(cx, move |o| format!("{o}"))
-            render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
+            set_selected=set_variant
+            search_text_provider=move |o| format!("{o}")
+            render_option=move |o| format!("{o:?}").into_view()
             style="margin-bottom: 1em;"
         />
 
         <Select
             options=vec![ToastTimeout::None, ToastTimeout::DefaultDelay]
             selected=timeout
-            set_selected=create_callback(cx, move |v| set_timeout.set(v))
-            search_text_provider=create_callback(cx, move |o| format!("{o}"))
-            render_option=create_callback(cx, move |(_cx, o)| format!("{o:?}"))
+            set_selected=set_timeout
+            search_text_provider=move |o| format!("{o}")
+            render_option=move |o| format!("{o:?}").into_view()
             style="margin-bottom: 1em;"
         />
 
-        <Button on_click=move |_| { expect_context::<Toasts>(cx).push(
+        <Button on_click=move |_| { toasts.push(
             Toast {
                 id: Uuid::new_v4(),
                 created_at: time::OffsetDateTime::now_utc(),
                 variant: variant.get_untracked(),
-                header: header.get_untracked().into_view(cx),
-                body: body.get_untracked().into_view(cx),
+                header: header.get_untracked().into_view(),
+                body: body.get_untracked().into_view(),
                 timeout: timeout.get_untracked(),
             }) }>
             "Create Toast"
@@ -49,17 +51,21 @@ pub fn PageToast(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Button on_click=move |_| { expect_context::<Toasts>(cx).push(
-                    Toast {
-                        id: Uuid::new_v4(),
-                        created_at: time::OffsetDateTime::now_utc(),
-                        variant: variant.get_untracked(),
-                        header: header.get_untracked().into_view(cx),
-                        body: body.get_untracked().into_view(cx),
-                        timeout: timeout.get_untracked(),
-                    }) }>
-                    "Create Toast"
-                </Button>
+                let toasts = expect_context::<Toasts>();
+
+                view! {
+                    <Button on_click=move |_| { toasts.push(
+                        Toast {
+                            id: Uuid::new_v4(),
+                            created_at: time::OffsetDateTime::now_utc(),
+                            variant: variant.get_untracked(),
+                            header: header.get_untracked().into_view(),
+                            body: body.get_untracked().into_view(),
+                            timeout: timeout.get_untracked(),
+                        }) }>
+                        "Create Toast"
+                    </Button>
+                }
             "#)}
         </Code>
 

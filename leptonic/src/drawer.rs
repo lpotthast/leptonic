@@ -27,7 +27,6 @@ enum DrawerAnimationState {
 
 #[component]
 pub fn Drawer(
-    cx: Scope,
     side: DrawerSide,
     #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
@@ -35,17 +34,14 @@ pub fn Drawer(
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
-    let memoized_shown = create_memo(cx, move |_| shown.get());
+    let memoized_shown = create_memo(move |_| shown.get());
 
-    let (anim_state, set_anim_state) = create_signal(
-        cx,
-        match memoized_shown.get_untracked() {
-            true => DrawerAnimationState::Shown,
-            false => DrawerAnimationState::Hidden,
-        },
-    );
+    let (anim_state, set_anim_state) = create_signal(match memoized_shown.get_untracked() {
+        true => DrawerAnimationState::Shown,
+        false => DrawerAnimationState::Hidden,
+    });
 
-    let target_state = Signal::derive(cx, move || match memoized_shown.get() {
+    let target_state = Signal::derive(move || match memoized_shown.get() {
         true => DrawerAnimationState::Shown,
         false => DrawerAnimationState::Hidden,
     });
@@ -55,7 +51,6 @@ pub fn Drawer(
         resume,
         is_active: _,
     } = use_interval_fn_with_options(
-        cx,
         move || {
             // Advance towards target state.
             match (anim_state.get_untracked(), target_state.get_untracked()) {
@@ -90,7 +85,7 @@ pub fn Drawer(
     );
     pause();
 
-    create_effect(cx, move |_| {
+    create_effect(move |_| {
         let anim_state = anim_state.get();
         let target_state = target_state.get();
 
@@ -101,7 +96,7 @@ pub fn Drawer(
         }
     });
 
-    view! { cx,
+    view! {
         <leptonic-drawer
             id=id
             class=class
@@ -112,7 +107,7 @@ pub fn Drawer(
             style=style
             data-side=side.to_str()
         >
-            { children(cx) }
+            { children() }
         </leptonic-drawer>
     }
 }

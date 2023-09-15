@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use leptos::*;
 
 use crate::Mount;
@@ -8,8 +6,8 @@ use super::tab::TabLabel;
 
 #[derive(Debug, Clone)]
 pub struct TabHistory {
-    active: Option<Cow<'static, str>>,
-    previous: Option<Cow<'static, str>>,
+    active: Option<leptos::Oco<'static, str>>,
+    previous: Option<leptos::Oco<'static, str>>,
 }
 
 impl TabHistory {
@@ -20,15 +18,15 @@ impl TabHistory {
         }
     }
 
-    pub fn get_active(&self) -> Option<&Cow<'static, str>> {
+    pub fn get_active(&self) -> Option<&leptos::Oco<'static, str>> {
         self.active.as_ref()
     }
 
-    pub fn get_previous(&self) -> Option<&Cow<'static, str>> {
+    pub fn get_previous(&self) -> Option<&leptos::Oco<'static, str>> {
         self.previous.as_ref()
     }
 
-    pub fn push(&mut self, active: Cow<'static, str>) {
+    pub fn push(&mut self, active: leptos::Oco<'static, str>) {
         self.previous = self.active.clone();
         self.active = Some(active);
     }
@@ -53,47 +51,39 @@ pub struct TabsContext {
 }
 
 #[component]
-pub fn Tabs(
-    cx: Scope,
-    #[prop(optional)] mount: Option<Mount>,
-    children: Children,
-) -> impl IntoView {
-    let (history, set_history) = create_signal(cx, TabHistory::new());
-    let (tab_labels, set_tab_labels) = create_signal(cx, Vec::new());
-    provide_context::<TabsContext>(
-        cx,
-        TabsContext {
-            history,
-            set_history,
-            tab_labels,
-            set_tab_labels,
-            mount,
-        },
-    );
-    view! { cx,
+pub fn Tabs(#[prop(optional)] mount: Option<Mount>, children: Children) -> impl IntoView {
+    let (history, set_history) = create_signal(TabHistory::new());
+    let (tab_labels, set_tab_labels) = create_signal(Vec::new());
+    provide_context::<TabsContext>(TabsContext {
+        history,
+        set_history,
+        tab_labels,
+        set_tab_labels,
+        mount,
+    });
+    view! {
         <leptonic-tabs>
             <TabSelectors tab_labels history set_history/>
-            { children(cx) }
+            { children() }
         </leptonic-tabs>
     }
 }
 
 #[component]
 pub fn TabSelectors(
-    cx: Scope,
     tab_labels: ReadSignal<Vec<TabLabel>>,
     history: ReadSignal<TabHistory>,
     set_history: WriteSignal<TabHistory>,
 ) -> impl IntoView {
-    view! { cx,
+    view! {
         <leptonic-tab-selectors role="tablist">
             <For
                 each=move || tab_labels.get()
                 key=|label| label.id
-                view=move |cx, label| {
+                view=move |label| {
                     let n1 = label.name.clone();
                     let n2 = label.name.clone();
-                    view! { cx,
+                    view! {
                         <TabSelector
                             is_active=move || history.get().get_active() == Some(&n1.clone())
                             set_active=move || set_history.update(|history| history.push(n2.clone()))
@@ -108,17 +98,16 @@ pub fn TabSelectors(
 
 #[component]
 fn TabSelector<A, S>(
-    cx: Scope,
     is_active: A,
     set_active: S,
-    name: Cow<'static, str>,
+    name: leptos::Oco<'static, str>,
     label: View,
 ) -> impl IntoView
 where
     A: Fn() -> bool + 'static,
     S: Fn() + 'static,
 {
-    view! { cx,
+    view! {
         <leptonic-tab-selector
             data:for-name=name
             class:active=is_active

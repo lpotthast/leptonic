@@ -2,8 +2,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageAnchor(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageAnchor() -> impl IntoView {
+    view! {
         <H1>"Anchor"</H1>
 
         <H3 id="#test-heading">

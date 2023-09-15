@@ -55,7 +55,6 @@ impl ToggleVariant {
 
 #[component]
 pub fn Toggle(
-    cx: Scope,
     #[prop(into)] state: MaybeSignal<bool>,
     #[prop(into, optional)] set_state: Option<Out<bool>>,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
@@ -67,7 +66,7 @@ pub fn Toggle(
     #[prop(optional)] variant: ToggleVariant,
     #[prop(into, optional)] icons: Option<ToggleIcons>,
 ) -> impl IntoView {
-    view! { cx,
+    view! {
         <leptonic-toggle-wrapper class=class style=style>
             <leptonic-toggle
                 id=id
@@ -75,16 +74,16 @@ pub fn Toggle(
                 class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 data-size=size.as_str()
                 data-variant=variant.as_str()
-                on:click=move |_| { if let Some(set) = set_state { set.set(!state.get_untracked()) } }
+                on:click=move |_| { if let Some(set) = &set_state { set.set(!state.get_untracked()) } }
             >
                 <span class="slider round" class:on=move || state.get()>
                     {
                         move || icons.as_ref().map(|icons| {
                             let off_icon = icons.off;
                             let on_icon = icons.on;
-                            view! { cx,
+                            view! {
                                 <span class="icon-positioner">
-                                    <Show when=move || state.get() fallback=move |cx| view! {cx, <Icon icon=off_icon/> }>
+                                    <Show when=move || state.get() fallback=move || view! { <Icon icon=off_icon/> }>
                                         <Icon icon=on_icon/>
                                     </Show>
                                 </span>

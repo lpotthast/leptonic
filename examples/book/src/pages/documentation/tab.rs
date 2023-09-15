@@ -3,9 +3,9 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageTab(cx: Scope) -> impl IntoView {
-    let (test_reactive_label_bool, set_test_reactive_label_bool) = create_signal(cx, false);
-    view! { cx,
+pub fn PageTab() -> impl IntoView {
+    let (test_reactive_label_bool, set_test_reactive_label_bool) = create_signal(false);
+    view! {
         <H1>"Tabs"</H1>
 
         <P>
@@ -16,17 +16,17 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
         <Code>
             {indoc!(r#"
                 <Tabs mount=Mount::Once>
-                    <Tab name="tab-1" label="Tab 1">"Content of tab 1"</Tab>
-                    <Tab name="tab-2" label="Tab 2">"Content of tab 2"</Tab>
-                    <Tab name="tab-3" label="Tab 3">"Content of tab 3"</Tab>
+                    <Tab name="tab-1" label="Tab 1".into_view()>"Content of tab 1"</Tab>
+                    <Tab name="tab-2" label="Tab 2".into_view()>"Content of tab 2"</Tab>
+                    <Tab name="tab-3" label="Tab 3".into_view()>"Content of tab 3"</Tab>
                 </Tabs>
             "#)}
         </Code>
 
         <Tabs mount=Mount::Once>
-            <Tab name="tab-1" label="Tab 1">"Content of tab 1"</Tab>
-            <Tab name="tab-2" label="Tab 2">"Content of tab 2"</Tab>
-            <Tab name="tab-3" label="Tab 3">"Content of tab 3"</Tab>
+            <Tab name="tab-1" label="Tab 1".into_view()>"Content of tab 1"</Tab>
+            <Tab name="tab-2" label="Tab 2".into_view()>"Content of tab 2"</Tab>
+            <Tab name="tab-3" label="Tab 3".into_view()>"Content of tab 3"</Tab>
         </Tabs>
 
         <H2>"Reactivity"</H2>
@@ -37,11 +37,11 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let (bool, set_bool) = create_signal(cx, false);
+                let (bool, set_bool) = create_signal(false);
 
-                view! {cx,
+                view! {
                     <Tabs mount=Mount::Once>
-                        <Tab name="tab-1" label=view! {cx, "State: " {move || bool.get()}}>
+                        <Tab name="tab-1" label=view! { "State: " {move || bool.get()}}>
                             <Toggle state=bool on_toggle=move |s| set_bool.set(s) />
                         </Tab>
                         <Tab name="tab-2" label="Tab 2">
@@ -53,10 +53,10 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
         </Code>
 
         <Tabs mount=Mount::Once>
-            <Tab name="tab-1" label=view! {cx, "State: " {move || test_reactive_label_bool.get()}}>
+            <Tab name="tab-1" label=view! { "State: " {move || test_reactive_label_bool.get()}}.into_view()>
                 <Toggle state=test_reactive_label_bool set_state=set_test_reactive_label_bool/>
             </Tab>
-            <Tab name="tab-2" label="Tab 2">
+            <Tab name="tab-2" label="Tab 2".into_view()>
                 "Content of tab 2"
             </Tab>
         </Tabs>
@@ -86,17 +86,17 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
         </Code>
 
         <Tabs mount=Mount::Once>
-            <Tab name="outer-1" label="Outer 1">
+            <Tab name="outer-1" label="Outer 1".into_view()>
                 <Tabs>
-                    <Tab name="inner-1" label="Inner 1">
+                    <Tab name="inner-1" label="Inner 1".into_view()>
                         "This is a nested tab."
                     </Tab>
-                    <Tab name="inner-2" label="Inner 2">
+                    <Tab name="inner-2" label="Inner 2".into_view()>
                         "This tab is nested as well."
                     </Tab>
                 </Tabs>
             </Tab>
-            <Tab name="outer-2" label="Outer 2"></Tab>
+            <Tab name="outer-2" label="Outer 2".into_view()></Tab>
         </Tabs>
 
         <H2>"When are tabs rendered?"</H2>
@@ -129,17 +129,17 @@ pub fn PageTab(cx: Scope) -> impl IntoView {
         </ul>
 
         <Tabs mount=Mount::WhenShown>
-            <Tab name="outer-1" label="Outer 1">
+            <Tab name="outer-1" label="Outer 1".into_view()>
                 <Tabs>
-                    <Tab name="inner-1" label="Inner 1">
+                    <Tab name="inner-1" label="Inner 1".into_view()>
                         "This is a nested tab."
                     </Tab>
-                    <Tab name="inner-2" label="Inner 2">
+                    <Tab name="inner-2" label="Inner 2".into_view()>
                         "This tab is nested as well."
                     </Tab>
                 </Tabs>
             </Tab>
-            <Tab name="outer-2" label="Outer 2"></Tab>
+            <Tab name="outer-2" label="Outer 2".into_view()></Tab>
         </Tabs>
 
         // <H2>"Default tab"</H2>

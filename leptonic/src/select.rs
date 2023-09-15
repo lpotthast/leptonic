@@ -1,6 +1,9 @@
 use std::fmt::Debug;
 
-use leptos::*;
+use leptos::{
+    leptos_dom::{Callable, Callback, StoredCallback},
+    *,
+};
 use leptos_icons::BsIcon;
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
@@ -71,42 +74,42 @@ fn select_next<O: SelectOption + 'static>(
 }
 
 #[component]
-pub fn Select<O, V>(
-    cx: Scope,
+pub fn Select<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
-    #[prop(into)] set_selected: Callback<O>,
+    #[prop(into)] set_selected: Out<O>,
     #[prop(into)] search_text_provider: Callback<O, String>,
-    #[prop(into)] render_option: Callback<(Scope, O), V>,
+    #[prop(into)] render_option: Callback<O, View>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
-    V: IntoView + 'static,
 {
+    let render_option = StoredCallback::new(render_option);
+
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
 
-    let (focused, set_focused) = create_signal(cx, false);
-    let (show_options, set_show_options) = create_signal(cx, false);
+    let (focused, set_focused) = create_signal(false);
+    let (show_options, set_show_options) = create_signal(false);
 
     let autofocus_search =
-        autofocus_search.unwrap_or(expect_context::<Leptonic>(cx).is_desktop_device);
+        autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
 
     let search_should_be_focused =
-        Signal::derive(cx, move || show_options.get() && autofocus_search.get());
-    let (search_is_focused, set_search_is_focused) = create_signal(cx, false);
+        Signal::derive(move || show_options.get() && autofocus_search.get());
+    let (search_is_focused, set_search_is_focused) = create_signal(false);
 
-    let stored_options = store_value(cx, options);
-    let (preselected, set_preselected) = create_signal(cx, Option::<O>::None);
-    let memoized_preselected = create_memo(cx, move |_| preselected.get());
+    let stored_options = store_value(options);
+    let (preselected, set_preselected) = create_signal(Option::<O>::None);
+    let memoized_preselected = create_memo(move |_| preselected.get());
 
-    let (search, set_search) = create_signal(cx, "".to_owned());
+    let (search, set_search) = create_signal("".to_owned());
 
-    let filtered_options = create_memo(cx, move |_| {
+    let filtered_options = create_memo(move |_| {
         let lowercased_search = search.get().to_lowercase();
         stored_options
             .get_value()
@@ -121,14 +124,12 @@ where
             .collect::<Vec<O>>()
     });
 
-    let has_options = create_memo(cx, move |_| {
-        !filtered_options.with(|options| options.is_empty())
-    });
+    let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
 
-    let select = create_callback(cx, move |option: O| {
-        set_selected.call(option);
+    let select = StoredCallback::new(Callback::new(move |option: O| {
+        set_selected.set(option);
         set_show_options.set(false);
-    });
+    }));
 
     let is_selected = move |option: &O| selected.with(|selected| selected == option);
 
@@ -140,13 +141,12 @@ where
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
-        cx,
         id_selector_string.clone(),
-        move || show_options.get_untracked(),
-        move || set_show_options.set(false),
+        show_options,
+        set_show_options.into(),
     );
 
-    create_key_down_listener(cx, move |e| {
+    create_key_down_listener(move |e| {
         match (show_options.get_untracked(), focused.get_untracked()) {
             (true, _) => match e.key().as_str() {
                 "Escape" => set_show_options.set(false),
@@ -200,10 +200,10 @@ where
 
     let toggle_show = move || set_show_options.update(|val| *val = !*val);
 
-    let wrapper: NodeRef<html::Div> = create_node_ref(cx);
+    let wrapper: NodeRef<html::Div> = create_node_ref();
 
     // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
-    create_effect(cx, move |_| {
+    create_effect(move |_| {
         if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
@@ -214,7 +214,7 @@ where
         }
     });
 
-    view! { cx,
+    view! {
         // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
         <div
             node_ref=wrapper
@@ -232,12 +232,12 @@ where
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
-                    { move || render_option.call((cx, selected.get())) }
+                    { move || render_option.call(selected.get()) }
 
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
-                            false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                            true => view! { <Icon icon=BsIcon::BsCaretUpFill/>},
+                            false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
@@ -247,7 +247,7 @@ where
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
-                        on_focus_change=create_callback(cx, move |focused| {
+                        on_focus_change=move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
@@ -257,13 +257,13 @@ where
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
-                        })
+                        }
                         class="search"
                     />
 
                     <Show
                         when=move || show_options.get()
-                        fallback=move |_| ()
+                        fallback=move || ()
                     >
                         // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
                         { filtered_options.get().into_iter().map(|option| {
@@ -272,7 +272,7 @@ where
                             let clone3 = option.clone();
                             let clone4 = option.clone();
                             let clone5 = option.clone();
-                            view! { cx,
+                            view! {
                                 <leptonic-select-option
                                     class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
                                     class:selected=move || is_selected(&clone4)
@@ -286,18 +286,18 @@ where
                                         }
                                     }
                                 >
-                                    { render_option.call((cx, clone1)) }
+                                    { render_option.call(clone1) }
                                 </leptonic-select-option>
                             }
-                        }).collect_view(cx) }
+                        }).collect_view() }
 
                         { move || match has_options.get() {
-                            true => ().into_view(cx),
-                            false => view! {cx,
+                            true => ().into_view(),
+                            false => view! {
                                 <leptonic-select-no-search-results>
                                     "No options..."
                                 </leptonic-select-no-search-results>
-                            }.into_view(cx),
+                            }.into_view(),
                         } }
                     </Show>
                 </leptonic-select-options>
@@ -307,13 +307,12 @@ where
 }
 
 #[component]
-pub fn OptionalSelect<O, V>(
-    cx: Scope,
+pub fn OptionalSelect<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
     #[prop(into)] set_selected: Out<Option<O>>,
     #[prop(into)] search_text_provider: Callback<O, String>,
-    #[prop(into)] render_option: Callback<(Scope, O), V>,
+    #[prop(into)] render_option: Callback<O, View>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -321,29 +320,30 @@ pub fn OptionalSelect<O, V>(
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
-    V: IntoView + 'static,
 {
+    let render_option = StoredCallback::new(render_option);
+
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
 
-    let (focused, set_focused) = create_signal(cx, false);
-    let (show_options, set_show_options) = create_signal(cx, false);
+    let (focused, set_focused) = create_signal(false);
+    let (show_options, set_show_options) = create_signal(false);
 
     let autofocus_search =
-        autofocus_search.unwrap_or(expect_context::<Leptonic>(cx).is_desktop_device);
+        autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
 
     let search_should_be_focused =
-        Signal::derive(cx, move || show_options.get() && autofocus_search.get());
-    let (search_is_focused, set_search_is_focused) = create_signal(cx, false);
+        Signal::derive(move || show_options.get() && autofocus_search.get());
+    let (search_is_focused, set_search_is_focused) = create_signal(false);
 
-    let stored_options = store_value(cx, options);
-    let (preselected, set_preselected) = create_signal(cx, Option::<O>::None);
-    let memoized_preselected = create_memo(cx, move |_| preselected.get());
+    let stored_options = store_value(options);
+    let (preselected, set_preselected) = create_signal(Option::<O>::None);
+    let memoized_preselected = create_memo(move |_| preselected.get());
 
-    let (search, set_search) = create_signal(cx, "".to_owned());
+    let (search, set_search) = create_signal("".to_owned());
 
-    let filtered_options = create_memo(cx, move |_| {
+    let filtered_options = create_memo(move |_| {
         let lowercased_search = search.get().to_lowercase();
         stored_options
             .get_value()
@@ -358,17 +358,17 @@ where
             .collect::<Vec<_>>()
     });
 
-    let has_options = create_memo(cx, move |_| {
-        !filtered_options.with(|options| options.is_empty())
-    });
+    let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
 
-    let select = create_callback(cx, move |option: O| {
+    let set_selected_clone = set_selected.clone();
+
+    let select = StoredCallback::new(Callback::new(move |option: O| {
         set_selected.set(Some(option));
         set_show_options.set(false);
-    });
+    }));
 
     let deselect = move || {
-        set_selected.set(None);
+        set_selected_clone.set(None);
     };
 
     let is_selected = move |option: &O| selected.with(|selected| selected.as_ref() == Some(option));
@@ -381,13 +381,12 @@ where
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
-        cx,
         id_selector_string.clone(),
-        move || show_options.get_untracked(),
-        move || set_show_options.set(false),
+        show_options,
+        set_show_options.into(),
     );
 
-    create_key_down_listener(cx, move |e| {
+    create_key_down_listener(move |e| {
         match (show_options.get_untracked(), focused.get_untracked()) {
             (true, _) => match e.key().as_str() {
                 "Escape" => set_show_options.set(false),
@@ -441,10 +440,10 @@ where
 
     let toggle_show = move || set_show_options.update(|val| *val = !*val);
 
-    let wrapper: NodeRef<html::Div> = create_node_ref(cx);
+    let wrapper: NodeRef<html::Div> = create_node_ref();
 
     // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
-    create_effect(cx, move |_| {
+    create_effect(move |_| {
         if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
@@ -455,7 +454,7 @@ where
         }
     });
 
-    view! { cx,
+    view! {
         // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
         <div
             node_ref=wrapper
@@ -473,17 +472,17 @@ where
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
                     { move || match selected.get().clone() {
-                        None => ().into_view(cx),
-                        Some(selected) => view! {cx,
+                        None => ().into_view(),
+                        Some(selected) => view! {
                             <leptonic-select-option>
-                                { render_option.call((cx, selected)) }
+                                { render_option.call(selected) }
                             </leptonic-select-option>
-                        }.into_view(cx),
+                        }.into_view(),
                     }}
 
                     { match allow_deselect.get() {
-                        false => ().into_view(cx),
-                        true => view! {cx,
+                        false => ().into_view(),
+                        true => view! {
                             <leptonic-select-deselect-trigger on:click=move |e| {
                                 e.prevent_default();
                                 e.stop_propagation();
@@ -491,13 +490,13 @@ where
                             }>
                                 <Icon icon=BsIcon::BsXCircleFill/>
                             </leptonic-select-deselect-trigger>
-                        }.into_view(cx),
+                        }.into_view(),
                     }}
 
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
-                            false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                            true => view! { <Icon icon=BsIcon::BsCaretUpFill/>},
+                            false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
@@ -507,7 +506,7 @@ where
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
-                        on_focus_change=create_callback(cx, move |focused| {
+                        on_focus_change=move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
@@ -517,13 +516,13 @@ where
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
-                        })
+                        }
                         class="search"
                     />
 
                     <Show
                         when=move || show_options.get()
-                        fallback=move |_| ()
+                        fallback=move || ()
                     >
                         // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
                         { filtered_options.get().into_iter().map(|option| {
@@ -532,7 +531,7 @@ where
                             let clone3 = option.clone();
                             let clone4 = option.clone();
                             let clone5 = option.clone();
-                            view! { cx,
+                            view! {
                                 <leptonic-select-option
                                     class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
                                     class:selected=move || is_selected(&clone4)
@@ -546,18 +545,18 @@ where
                                         }
                                     }
                                 >
-                                    { render_option.call((cx, clone1)) }
+                                    { render_option.call(clone1) }
                                 </leptonic-select-option>
                             }
-                        }).collect_view(cx) }
+                        }).collect_view() }
 
                         { move || match has_options.get() {
-                            true => ().into_view(cx),
-                            false => view! {cx,
+                            true => ().into_view(),
+                            false => view! {
                                 <div class="option">
                                     "No options..."
                                 </div>
-                            }.into_view(cx),
+                            }.into_view(),
                         } }
                     </Show>
                 </leptonic-select-options>
@@ -567,43 +566,43 @@ where
 }
 
 #[component]
-pub fn Multiselect<O, V>(
-    cx: Scope,
+pub fn Multiselect<O>(
     #[prop(optional, default=u64::MAX)] max: u64,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
-    #[prop(into)] set_selected: Callback<Vec<O>>,
+    #[prop(into)] set_selected: Out<Vec<O>>,
     #[prop(into)] search_text_provider: Callback<O, String>,
-    #[prop(into)] render_option: Callback<(Scope, O), V>,
+    #[prop(into)] render_option: Callback<O, View>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     O: SelectOption + PartialOrd + Ord + 'static,
-    V: IntoView + 'static,
 {
+    let render_option = StoredCallback::new(render_option);
+
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
 
-    let (focused, set_focused) = create_signal(cx, false);
-    let (show_options, set_show_options) = create_signal(cx, false);
+    let (focused, set_focused) = create_signal(false);
+    let (show_options, set_show_options) = create_signal(false);
 
     let autofocus_search =
-        autofocus_search.unwrap_or(expect_context::<Leptonic>(cx).is_desktop_device);
+        autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
 
     let search_should_be_focused =
-        Signal::derive(cx, move || show_options.get() && autofocus_search.get());
-    let (search_is_focused, set_search_is_focused) = create_signal(cx, false);
+        Signal::derive(move || show_options.get() && autofocus_search.get());
+    let (search_is_focused, set_search_is_focused) = create_signal(false);
 
-    let stored_options = store_value(cx, options);
-    let (preselected, set_preselected) = create_signal(cx, Option::<O>::None);
-    let memoized_preselected = create_memo(cx, move |_| preselected.get());
+    let stored_options = store_value(options);
+    let (preselected, set_preselected) = create_signal(Option::<O>::None);
+    let memoized_preselected = create_memo(move |_| preselected.get());
 
-    let (search, set_search) = create_signal(cx, "".to_owned());
+    let (search, set_search) = create_signal("".to_owned());
 
-    let filtered_options = create_memo(cx, move |_| {
+    let filtered_options = create_memo(move |_| {
         let lowercased_search = search.get().to_lowercase();
         stored_options
             .get_value()
@@ -618,30 +617,30 @@ where
             .collect::<Vec<_>>()
     });
 
-    let has_options = create_memo(cx, move |_| {
-        !filtered_options.with(|options| options.is_empty())
-    });
+    let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
 
-    let select = create_callback(cx, move |option: O| {
+    let set_selected_clone = set_selected.clone();
+
+    let select = StoredCallback::new(Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
         if !vec.contains(&option) {
             vec.push(option); // TODO
         }
         vec.sort();
         tracing::info!(?vec, "selected");
-        set_selected.call(vec);
+        set_selected.set(vec);
         set_show_options.set(false); // TODO: Make this optional.
-    });
+    }));
 
-    let deselect = create_callback(cx, move |option: O| {
+    let deselect = StoredCallback::new(Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
         if let Some(pos) = vec.iter().position(|it| it == &option) {
             vec.remove(pos);
         }
         tracing::info!(?vec, "deselected");
-        set_selected.call(vec);
+        set_selected_clone.set(vec);
         // set_show_options.set(false); // TODO: Make this optional.
-    });
+    }));
 
     let is_selected = move |option: &O| selected.with(|selected| selected.contains(option));
 
@@ -657,13 +656,12 @@ where
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
-        cx,
         id_selector_string.clone(),
-        move || show_options.get_untracked(),
-        move || set_show_options.set(false),
+        show_options,
+        set_show_options.into(),
     );
 
-    create_key_down_listener(cx, move |e| {
+    create_key_down_listener(move |e| {
         match (show_options.get_untracked(), focused.get_untracked()) {
             (true, _) => match e.key().as_str() {
                 "Escape" => set_show_options.set(false),
@@ -717,10 +715,10 @@ where
 
     let toggle_show = move || set_show_options.update(|val| *val = !*val);
 
-    let wrapper: NodeRef<html::Div> = create_node_ref(cx);
+    let wrapper: NodeRef<html::Div> = create_node_ref();
 
     // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
-    create_effect(cx, move |_| {
+    create_effect(move |_| {
         if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
@@ -731,7 +729,7 @@ where
         }
     });
 
-    view! { cx,
+    view! {
         // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
         <div
             node_ref=wrapper
@@ -751,27 +749,27 @@ where
                     // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
                     { move || selected.get().into_iter().map(|selected| {
                         let clone = selected.clone();
-                        view! { cx,
+                        view! {
                             <leptonic-select-option>
                                 <Chip
                                     color=ChipColor::Secondary
                                     on:click=move |e| {
                                         e.stop_propagation();
                                     }
-                                    dismissible=create_callback(cx, move |e: MouseEvent| {
+                                    dismissible=move |e: MouseEvent| {
                                         e.stop_propagation();
                                         deselect.call(clone.clone());
-                                    })>
-                                    { render_option.call((cx, selected)) }
+                                    }>
+                                    { render_option.call(selected) }
                                 </Chip>
                             </leptonic-select-option>
-                        }}).collect_view(cx)
+                        }}).collect_view()
                     }
 
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! {cx, <Icon icon=BsIcon::BsCaretUpFill/>},
-                            false => view! {cx, <Icon icon=BsIcon::BsCaretDownFill/>}
+                            true => view! { <Icon icon=BsIcon::BsCaretUpFill/>},
+                            false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
@@ -781,7 +779,7 @@ where
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
-                        on_focus_change=create_callback(cx, move |focused| {
+                        on_focus_change=move |focused| {
                             // We only update our state as long as show_options is true.
                             // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
                             // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
@@ -791,13 +789,13 @@ where
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
-                        })
+                        }
                         class="search"
                     />
 
                     <Show
                         when=move || show_options.get()
-                        fallback=move |_| ()
+                        fallback=move || ()
                     >
                         // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
                         { filtered_options.get().into_iter().map(|option| {
@@ -806,7 +804,7 @@ where
                             let clone3 = option.clone();
                             let clone4 = option.clone();
                             let clone5 = option.clone();
-                            view! { cx,
+                            view! {
                                 <leptonic-select-option
                                     class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
                                     class:selected=move || is_selected(&clone4)
@@ -820,18 +818,18 @@ where
                                         }
                                     }
                                 >
-                                    { render_option.call((cx, clone1)) }
+                                    { render_option.call(clone1) }
                                 </leptonic-select-option>
                             }
-                        }).collect_view(cx) }
+                        }).collect_view() }
 
                         { move || match has_options.get() {
-                            true => ().into_view(cx),
-                            false => view! {cx,
+                            true => ().into_view(),
+                            false => view! {
                                 <div class="option">
                                     "No options..."
                                 </div>
-                            }.into_view(cx),
+                            }.into_view(),
                         } }
                     </Show>
                 </leptonic-select-options>
@@ -840,20 +838,19 @@ where
     }
 }
 
-fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
-    cx: Scope,
+fn create_click_away_listener(
     id_selector_string: String,
-    when: W,
-    on_click_outside: O,
+    when: ReadSignal<bool>,
+    on_click_outside: Out<bool>,
 ) {
     let g_mouse_event =
-        use_context::<GlobalClickEvent>(cx).expect("Must be a child of the Root component.");
+        use_context::<GlobalClickEvent>().expect("Must be a child of the Root component.");
 
-    create_effect(cx, move |_old| {
+    create_effect(move |_old| {
         use wasm_bindgen::JsCast;
         let last_mouse_event = g_mouse_event.read_signal.get();
 
-        if when() {
+        if when.get_untracked() {
             if let Some(e) = last_mouse_event {
                 if let Some(target) = e.target() {
                     if let Some(target_elem) = target.dyn_ref::<HtmlElement>() {
@@ -863,11 +860,11 @@ fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
                                     // User clicked on the options list. Ignoring this global mouse event.
                                 } else {
                                     // User clicked outside.
-                                    on_click_outside();
+                                    on_click_outside.set(false);
                                 }
                             }
                             Err(err) => {
-                                error!("Error processing latest mouse event: {err:?}");
+                                tracing::error!("Error processing latest mouse event: {err:?}");
                             }
                         }
                     }
@@ -877,11 +874,11 @@ fn create_click_away_listener<W: Fn() -> bool + 'static, O: Fn() + 'static>(
     });
 }
 
-fn create_key_down_listener<T: Fn(KeyboardEvent) + 'static>(cx: Scope, then: T) {
+fn create_key_down_listener<T: Fn(KeyboardEvent) + 'static>(then: T) {
     let g_keyboard_event =
-        use_context::<GlobalKeyboardEvent>(cx).expect("Must be a child of the Root component.");
+        use_context::<GlobalKeyboardEvent>().expect("Must be a child of the Root component.");
 
-    create_effect(cx, move |_old| {
+    create_effect(move |_old| {
         let g_keyboard_event = g_keyboard_event.read_signal.get();
         if let Some(e) = g_keyboard_event {
             then(e);

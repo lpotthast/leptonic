@@ -4,19 +4,19 @@ use leptos::*;
 use leptos_icons::BsIcon;
 
 #[component]
-pub fn PageToggle(cx: Scope) -> impl IntoView {
-    let (state, set_state) = create_signal(cx, false);
+pub fn PageToggle() -> impl IntoView {
+    let (state, set_state) = create_signal(false);
 
-    view! { cx,
+    view! {
         <H1>"Toggle"</H1>
 
         <P>"A toggle is a representation of a boolean value."</P>
 
         <Code>
             {indoc!(r#"
-                let (state, set_state) = create_signal(cx, false);
+                let (state, set_state) = create_signal(false);
 
-                view! {cx,
+                view! {
                     <Toggle state=state set_state=set_state/>
                 }
             "#)}
@@ -30,9 +30,9 @@ pub fn PageToggle(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let (state, set_state) = create_signal(cx, false);
+                let (state, set_state) = create_signal(false);
 
-                view! {cx,
+                view! {
                     <Toggle state=state set_state=set_state icons=ToggleIcons {
                         on: BsIcon::BsFolderFill.into(),
                         off: BsIcon::BsFolder.into(),

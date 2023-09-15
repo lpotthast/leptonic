@@ -3,12 +3,12 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageModal(cx: Scope) -> impl IntoView {
-    let (show_modal, set_show_modal) = create_signal(cx, false);
-    let (show_modal2, set_show_modal2) = create_signal(cx, false);
-    let (show_confirm_modal, set_show_input_modal) = create_signal(cx, false);
+pub fn PageModal() -> impl IntoView {
+    let (show_modal, set_show_modal) = create_signal(false);
+    let (show_modal2, set_show_modal2) = create_signal(false);
+    let (show_confirm_modal, set_show_input_modal) = create_signal(false);
 
-    view! { cx,
+    view! {
         <H1>"Modals"</H1>
 
         <P><Button on_click=move |_| set_show_modal.set(true)>"Show staged modal"</Button></P>
@@ -65,7 +65,6 @@ pub fn PageModal(cx: Scope) -> impl IntoView {
 
 #[component]
 pub fn ConfirmModal<A, C>(
-    cx: Scope,
     #[prop(into)] show_when: Signal<bool>,
     requires_confirmation_of: String,
     on_accept: A,
@@ -75,12 +74,12 @@ where
     A: Fn() + Copy + 'static,
     C: Fn() + Copy + 'static,
 {
-    let (input, set_input) = create_signal(cx, "".to_owned());
+    let (input, set_input) = create_signal("".to_owned());
     let required = requires_confirmation_of.clone();
-    let confirmed = Signal::derive(cx, move || input.get() == required);
-    let disabled: OptionalMaybeSignal<bool> = Signal::derive(cx, move || !confirmed.get()).into();
+    let confirmed = Signal::derive(move || input.get() == required);
+    let disabled: OptionalMaybeSignal<bool> = Signal::derive(move || !confirmed.get()).into();
 
-    view! { cx,
+    view! {
         <Modal show_when=show_when>
             <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
             <ModalBody>

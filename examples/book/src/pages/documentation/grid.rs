@@ -3,8 +3,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageGrid(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageGrid() -> impl IntoView {
+    view! {
         <H1>"Grid"</H1>
 
         <Code>

@@ -20,7 +20,6 @@ impl StackOrientation {
 
 #[component]
 pub fn Stack(
-    cx: Scope,
     spacing: Size,
     #[prop(optional)] orientation: StackOrientation,
     #[prop(into, optional)] id: Option<AttributeValue>,
@@ -28,7 +27,7 @@ pub fn Stack(
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
-    view! { cx,
+    view! {
         <leptonic-stack
             id=id
             class=class
@@ -36,7 +35,7 @@ pub fn Stack(
             style=style
             style=("--gap", format!("{spacing}"))
         >
-            { children(cx) }
+            { children() }
         </leptonic-stack>
     }
 }

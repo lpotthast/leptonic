@@ -2,8 +2,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageChangelog(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageChangelog() -> impl IntoView {
+    view! {
         <H1>"Changelog"</H1>
 
         <H2>"0.2.0"</H2>
@@ -46,7 +46,7 @@ pub fn PageChangelog(cx: Scope) -> impl IntoView {
             <li>"Prop `progress` of the ProgressBar is now a MaybeSignal."</li>
             <li>
                 "Prop `title` of the Alert is now a Callback instead of a generic Fn closure."
-                " Expect the now necessary `create_callback(cx, move || {})` when instantiating a component with a callback prop to become a simple `move || {}` after a migration to leptos 0.5!"
+                " Expect the now necessary `create_callback(move |()| {})` when instantiating a component with a callback prop to become a simple `move || {}` after a migration to leptos 0.5!"
             </li>
             <li>"The Slider `step` prop is now optional, making continuous sliders with maximum precision easier to set up."</li>
             <li>"The `Input` component was split into `TextInput`, `PasswordInput` and `NumberInput`. Their `label` prop was renamed to `placeholder`. The `InputType` enum was removed."</li>

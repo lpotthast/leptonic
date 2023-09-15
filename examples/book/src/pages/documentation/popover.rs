@@ -4,11 +4,11 @@ use leptos::*;
 use leptos_use::use_element_hover;
 
 #[component]
-pub fn PagePopover(cx: Scope) -> impl IntoView {
-    let el = create_node_ref(cx);
-    let is_hovered = use_element_hover(cx, el);
+pub fn PagePopover() -> impl IntoView {
+    let el = create_node_ref();
+    let is_hovered = use_element_hover(el);
 
-    view! { cx,
+    view! {
         <H1>"Popover"</H1>
 
         <P>
@@ -17,12 +17,12 @@ pub fn PagePopover(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let el = create_node_ref(cx);
-                let is_hovered = use_element_hover(cx, el);
+                let el = create_node_ref();
+                let is_hovered = use_element_hover(el);
 
-                view! {cx,
+                view! {
                     <Skeleton node_ref=el animated=false width=Size::Em(10.0)>
-                        <Popover show=move || is_hovered.get()>
+                        <Popover show=is_hovered>
                             "1"
                         </Popover>
                         "Hover me!"
@@ -33,7 +33,7 @@ pub fn PagePopover(cx: Scope) -> impl IntoView {
 
         <div node_ref=el style="margin-top: 3em; margin-bottom: 1em;">
             <Skeleton animated=false width=Size::Em(10.0)>
-                <Popover show=move || is_hovered.get()>
+                <Popover show=is_hovered>
                     "1"
                 </Popover>
                 "Hover me!"

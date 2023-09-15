@@ -1,10 +1,10 @@
 use leptos::*;
 
 #[component]
-pub fn Slide(cx: Scope, inn: Signal<bool>, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn Slide(inn: Signal<bool>, children: Children) -> impl IntoView {
+    view! {
         <div class="leptonic-slide" data-in=move || inn.get()>
-            { children(cx) }
+            { children() }
         </div>
     }
 }

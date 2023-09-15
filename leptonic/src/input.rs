@@ -1,20 +1,20 @@
 use std::ops::Deref;
 
-use leptos::{html::ElementDescriptor, *};
+use leptos::{
+    html::ElementDescriptor,
+    leptos_dom::{Callable, Callback},
+    *,
+};
 use web_sys::HtmlInputElement;
 
-use crate::{
-    prelude::{Callable, Callback, create_callback},
-    OptionalMaybeSignal, Out,
-};
+use crate::{OptionalMaybeSignal, Out};
 
 fn prepare_autofocus<
     T: ElementDescriptor + Clone + Deref<Target = web_sys::HtmlInputElement> + 'static,
 >(
-    cx: Scope,
     node_ref: NodeRef<T>,
 ) {
-    node_ref.on_load(cx, move |elem| {
+    node_ref.on_load(move |elem| {
         let outcome = elem.focus();
         if let Err(err) = outcome {
             tracing::error!(?err, "Could not update autofocus.");
@@ -23,11 +23,10 @@ fn prepare_autofocus<
 }
 
 fn use_focus<T: ElementDescriptor + Clone + Deref<Target = web_sys::HtmlInputElement> + 'static>(
-    cx: Scope,
     focus: Signal<bool>,
     node_ref: NodeRef<T>,
 ) {
-    create_effect(cx, move |_prev| {
+    create_effect(move |_prev| {
         let focus = focus.get();
         let elem = node_ref.get();
         if let Some(elem) = elem {
@@ -44,7 +43,6 @@ fn use_focus<T: ElementDescriptor + Clone + Deref<Target = web_sys::HtmlInputEle
 
 #[component]
 pub fn TextInput(
-    cx: Scope,
     #[prop(into)] get: MaybeSignal<String>,
     #[prop(into, optional)] set: Option<Out<String>>,
     #[prop(optional, into)] placeholder: OptionalMaybeSignal<String>,
@@ -57,41 +55,44 @@ pub fn TextInput(
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let node_ref: NodeRef<leptos::html::Input> = create_node_ref(cx);
+    let node_ref: NodeRef<leptos::html::Input> = create_node_ref();
 
     if autofocus {
-        prepare_autofocus(cx, node_ref);
+        prepare_autofocus(node_ref);
     }
 
     if let Some(focus) = should_be_focused {
-        use_focus(cx, focus, node_ref);
+        use_focus(focus, node_ref);
     }
 
-    view! { cx,
+    let set_clone = set.clone();
+    let on_focus_change_clone = on_focus_change.clone();
+
+    view! {
         <leptonic-input style=style>
             <input
                 node_ref=node_ref
                 id=id
                 class=class
                 placeholder=move || match &placeholder.0 {
-                    Some(label) => std::borrow::Cow::Owned(label.get()),
-                    None => std::borrow::Cow::Borrowed(""),
+                    Some(label) => leptos::Oco::from(label.get()),
+                    None => leptos::Oco::from(""),
                 }
                 type="text"
                 prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 prop:value=move || get.get()
-                on:change=move |e| { if let Some(set) = set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set) = set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = on_focus_change { cb.call(true) }; }
+                on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
+                on:keyup=move |e| { if let Some(set) = &set_clone { set.set(event_target::<HtmlInputElement>(&e).value()) } }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change_clone { cb.call(true) }; }
             />
             {match prepend.0 {
-                Some(view) => view! { cx,
+                Some(view) => view! {
                     <div>
                         { view.get() }
                     </div>
-                }.into_view(cx),
-                None => ().into_view(cx),
+                }.into_view(),
+                None => ().into_view(),
             }}
         </leptonic-input>
     }
@@ -99,7 +100,6 @@ pub fn TextInput(
 
 #[component]
 pub fn PasswordInput(
-    cx: Scope,
     #[prop(into)] get: MaybeSignal<String>,
     #[prop(into, optional)] set: Option<Out<String>>,
     #[prop(optional, into)] placeholder: OptionalMaybeSignal<String>,
@@ -112,41 +112,44 @@ pub fn PasswordInput(
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let node_ref: NodeRef<leptos::html::Input> = create_node_ref(cx);
+    let node_ref: NodeRef<leptos::html::Input> = create_node_ref();
 
     if autofocus {
-        prepare_autofocus(cx, node_ref);
+        prepare_autofocus(node_ref);
     }
 
     if let Some(focus) = should_be_focused {
-        use_focus(cx, focus, node_ref);
+        use_focus(focus, node_ref);
     }
 
-    view! { cx,
+    let set_clone = set.clone();
+    let on_focus_change_clone = on_focus_change.clone();
+
+    view! {
         <leptonic-input style=style>
             <input
                 node_ref=node_ref
                 id=id
                 class=class
                 placeholder=move || match &placeholder.0 {
-                    Some(label) => std::borrow::Cow::Owned(label.get()),
-                    None => std::borrow::Cow::Borrowed(""),
+                    Some(label) => leptos::Oco::from(label.get()),
+                    None => leptos::Oco::from(""),
                 }
                 type="password"
                 prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 prop:value=move || get.get()
-                on:change=move |e| { if let Some(set) = set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set) = set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = on_focus_change { cb.call(true) }; }
+                on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
+                on:keyup=move |e| { if let Some(set) = &set_clone { set.set(event_target::<HtmlInputElement>(&e).value()) } }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change_clone { cb.call(true) }; }
             />
             {match prepend.0 {
-                Some(view) => view! { cx,
+                Some(view) => view! {
                     <div>
                         { view.get() }
                     </div>
-                }.into_view(cx),
-                None => ().into_view(cx),
+                }.into_view(),
+                None => ().into_view(),
             }}
         </leptonic-input>
     }
@@ -154,7 +157,6 @@ pub fn PasswordInput(
 
 #[component]
 pub fn NumberInput(
-    cx: Scope,
     #[prop(into)] get: MaybeSignal<f64>,
     #[prop(into, optional)] set: Option<Out<f64>>,
     #[prop(optional)] min: Option<f64>,
@@ -170,18 +172,18 @@ pub fn NumberInput(
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let node_ref: NodeRef<leptos::html::Input> = create_node_ref(cx);
+    let node_ref: NodeRef<leptos::html::Input> = create_node_ref();
 
     if autofocus {
-        prepare_autofocus(cx, node_ref);
+        prepare_autofocus(node_ref);
     }
 
     if let Some(focus) = should_be_focused {
-        use_focus(cx, focus, node_ref);
+        use_focus(focus, node_ref);
     }
 
     let set_value = set.map(|set| {
-        create_callback(cx, move |v: String| {
+        Callback::new(move |v: String| {
             let parsed = str::parse::<f64>(&v).ok();
             if let Some(parsed) = parsed {
                 set.set(parsed);
@@ -189,15 +191,18 @@ pub fn NumberInput(
         })
     });
 
-    view! { cx,
+    let set_value_clone = set_value.clone();
+    let on_focus_change_clone = on_focus_change.clone();
+
+    view! {
         <leptonic-input style=style>
             <input
                 node_ref=node_ref
                 id=id
                 class=class
                 placeholder=move || match &placeholder.0 {
-                    Some(label) => std::borrow::Cow::Owned(label.get()),
-                    None => std::borrow::Cow::Borrowed(""),
+                    Some(label) => leptos::Oco::from(label.get()),
+                    None => leptos::Oco::from(""),
                 }
                 type="number"
                 min=min
@@ -205,18 +210,18 @@ pub fn NumberInput(
                 step=step
                 prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 prop:value=move || get.get()
-                on:change=move |e| { if let Some(set_value) = set_value { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set_value) = set_value { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = on_focus_change { cb.call(true) }; }
+                on:change=move |e| { if let Some(set_value) = &set_value { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
+                on:keyup=move |e| { if let Some(set_value) = &set_value_clone { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change_clone { cb.call(true) }; }
             />
             {match prepend.0 {
-                Some(view) => view! { cx,
+                Some(view) => view! {
                     <div>
                         { view.get() }
                     </div>
-                }.into_view(cx),
-                None => ().into_view(cx),
+                }.into_view(),
+                None => ().into_view(),
             }}
         </leptonic-input>
     }

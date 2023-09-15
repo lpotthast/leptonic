@@ -5,7 +5,6 @@ use crate::Size;
 
 #[component]
 pub fn Skeleton(
-    cx: Scope,
     #[prop(into, optional)] width: Option<Size>,
     #[prop(into, optional)] height: Option<Size>,
     #[prop(into, optional, default = true)] animated: bool,
@@ -17,14 +16,14 @@ pub fn Skeleton(
     let width = width.unwrap_or(Size::Percent(100.0));
     let height = height.unwrap_or(Size::Auto);
 
-    let element = create_node_ref(cx);
+    let element = create_node_ref();
 
     let UseElementSizeReturn {
         width: el_width,
         height: _,
-    } = use_element_size(cx, element);
+    } = use_element_size(element);
 
-    view! { cx,
+    view! {
         <leptonic-skeleton
             node_ref=element
             id=id
@@ -36,7 +35,7 @@ pub fn Skeleton(
             style=("--el-width", move || format!("{}px", el_width.get()))
         >
             { match children {
-                Some(children) => children(cx),
+                Some(children) => children(),
                 None => Fragment::new(vec![]),
             } }
         </leptonic-skeleton>

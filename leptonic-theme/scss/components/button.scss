@@ -25,6 +25,15 @@
     border-radius: var(--button-border-radius);
     transition: all 0.1s ease-in-out;
     opacity: var(--button-box-shadow-opacity);
+
+    user-select: none;
+    pointer-events: none;
+  }
+
+  a:hover, a:active {
+    color: inherit;
+    text-decoration: inherit;
+    cursor: inherit;
   }
 
   &.has-variations {

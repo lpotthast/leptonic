@@ -4,8 +4,8 @@ use leptos::*;
 use crate::app::AppRoutes;
 
 #[component]
-pub fn PageErr404(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageErr404() -> impl IntoView {
+    view! {
         <Grid spacing=Size::Zero class="err-404">
             <Row>
                 <Col sm=6 xs=12 class="info" h_align=ColAlign::Center>

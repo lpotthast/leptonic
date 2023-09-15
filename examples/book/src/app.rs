@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use leptos::*;
+use leptos::{leptos_dom::Callback, *};
 use leptos_icons::BsIcon;
 use leptos_meta::{provide_meta_context, Title};
 use leptos_router::*;
@@ -42,19 +42,18 @@ impl ToHref for AppRoutes {
 }
 
 #[component]
-pub fn App(cx: Scope) -> impl IntoView {
-    provide_meta_context(cx);
+pub fn App() -> impl IntoView {
+    provide_meta_context();
 
     view! {
-        cx,
         <Title text="Leptonic"/>
         <Root default_theme=LeptonicTheme::default()>
             <Router>
                 <Routes>
-                    <Route path="" view=|cx| view! { cx, <Layout/> }>
-                        <Route path=AppRoutes::Welcome view=|cx| view! { cx, <PageWelcome/> }/>
+                    <Route path="" view=|| view! { <Layout/> }>
+                        <Route path=AppRoutes::Welcome view=|| view! { <PageWelcome/> }/>
                         <DocRoutes path=AppRoutes::Doc/>
-                        <Route path=AppRoutes::NotFound view=|cx| view! { cx, <PageErr404 /> }/>
+                        <Route path=AppRoutes::NotFound view=|| view! { <PageErr404 /> }/>
                     </Route>
                 </Routes>
             </Router>
@@ -101,20 +100,18 @@ impl AppLayoutContext {
 }
 
 #[component]
-pub fn Layout(cx: Scope) -> impl IntoView {
-    let is_small = use_media_query(cx, "(max-width: 800px)");
-    let router_context = use_router(cx);
-    let is_doc = create_memo(cx, move |_| {
-        router_context.pathname().get().starts_with("/doc")
-    });
+pub fn Layout() -> impl IntoView {
+    let is_small = use_media_query("(max-width: 800px)");
+    let router_context = use_router();
+    let is_doc = create_memo(move |_| router_context.pathname().get().starts_with("/doc"));
 
     // The main drawer is only used on mobile / small screens!.
-    let (main_drawer_closed, set_main_drawer_closed) = create_signal(cx, true);
-    let (doc_drawer_closed, set_doc_drawer_closed) = create_signal(cx, false);
+    let (main_drawer_closed, set_main_drawer_closed) = create_signal(true);
+    let (doc_drawer_closed, set_doc_drawer_closed) = create_signal(false);
 
     // Always close the doc-drawer when the application is now small.
     // Always open the doc-drawer when the application is no longer small.
-    create_effect(cx, move |_| {
+    create_effect(move |_| {
         if is_small.get() {
             set_doc_drawer_closed.set(true);
         } else {
@@ -123,7 +120,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
     });
 
     // Always close the main-drawer when the application is no longer small.
-    create_effect(cx, move |_| {
+    create_effect(move |_| {
         if !is_small.get() {
             set_main_drawer_closed.set(true);
         }
@@ -137,92 +134,91 @@ pub fn Layout(cx: Scope) -> impl IntoView {
         set_doc_drawer_closed,
     };
 
-    provide_context(cx, ctx);
+    provide_context(ctx);
 
     let search_options = vec![
         (
             "overview",
             QuicksearchOption {
-                view: create_callback(cx, move |cx| {
-                    view! {cx,
+                view: Callback::new(move |()| {
+                    view! {
                         <Link href=DocRoutes::Overview class="search-link">
                             "Overview"
                         </Link>
                     }
-                    .into_view(cx)
                 }),
-                on_select: create_callback(cx, move |_| {}),
+                on_select: Callback::new(move |()| {}),
             },
         ),
         (
             "installation",
             QuicksearchOption {
-                view: create_callback(cx, move |cx| {
-                    view! {cx,
+                view: Callback::new(move |()| {
+                    view! {
                         <Link href=DocRoutes::Installation class="search-link">
                             "Installation"
                         </Link>
                     }
-                    .into_view(cx)
                 }),
-                on_select: create_callback(cx, move |_| {}),
+                on_select: Callback::new(move |()| {}),
             },
         ),
         (
             "usage",
             QuicksearchOption {
-                view: create_callback(cx, move |cx| {
-                    view! {cx,
+                view: Callback::new(move |()| {
+                    view! {
                         <Link href=DocRoutes::Usage class="search-link">
                             "Usage"
                         </Link>
                     }
-                    .into_view(cx)
                 }),
-                on_select: create_callback(cx, move |_| {}),
+                on_select: Callback::new(move |()| {}),
             },
         ),
     ];
 
-    let logo = move || view! {cx,
-        <Link href="">
-            <img src="/res/leptonic.svg" id="logo" alt="Leptonic logo"/>
-        </Link>
+    let logo = move || {
+        view! {
+            <Link href="">
+                <img src="/res/leptonic.svg" id="logo" alt="Leptonic logo"/>
+            </Link>
+        }
     };
 
-    view! { cx,
+    view! {
         <AppBar id="app-bar" height=APP_BAR_HEIGHT>
             <div id="app-bar-content">
                 <Stack id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
                     { move || match (is_doc.get(), is_small.get()) {
-                        (false, true) => logo().into_view(cx),
-                        (true, true) => view! {cx,
+                        (false, true) => logo().into_view(),
+                        (true, true) => view! {
                             <Icon id="mobile-menu-trigger" icon=BsIcon::BsList on:click=move |_| ctx.toggle_doc_drawer()/>
                             { logo }
-                        }.into_view(cx),
-                        (_, false) => view! {cx,
+                        }.into_view(),
+                        (_, false) => view! {
                             { logo }
                             <Link href=AppRoutes::Doc>
                                 <H3 style="margin: 0 0 0 0.5em">
                                     "Docs"
                                 </H3>
                             </Link>
-                        }.into_view(cx),
+                        }.into_view(),
                     } }
                 </Stack>
 
                 <Stack id="center" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     <Quicksearch
                         id="quicksearch"
-                        trigger=move |cx, set_quicksearch| view! {cx,
+                        trigger=move |set_quicksearch| view! {
                             <QuicksearchTrigger id="quicksearch-trigger" set_quicksearch=set_quicksearch>
                                 { move || match is_small.get() {
-                                    true => view! {cx, <Icon icon=BsIcon::BsSearch />}.into_view(cx),
-                                    false => view! {cx, "Search"}.into_view(cx),
+                                    true => view! { <Icon icon=BsIcon::BsSearch />}.into_view(),
+                                    false => view! { "Search"}.into_view(),
                                 } }
                             </QuicksearchTrigger>
                         }
-                        query=create_callback(cx, move |search: String| {
+                        query=move |search: String| {
                             if search.is_empty() {
                                 return vec![];
                             }
@@ -231,16 +227,16 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                                 .filter(|it| it.0.to_lowercase().contains(&lower_search))
                                 .map(|it| it.1.clone())
                                 .collect::<Vec<_>>()
-                        })
+                        }
                     />
                 </Stack>
 
                 <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     { move || match is_small.get() {
-                        true => view! {cx,
+                        true => view! {
                             <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
-                        }.into_view(cx),
-                        false => view! {cx,
+                        }.into_view(),
+                        false => view! {
                             <Link href=DocRoutes::Changelog>"v0.2.0"</Link>
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
@@ -248,7 +244,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
                             </LinkExt>
 
                             <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
-                        }.into_view(cx),
+                        }.into_view(),
                     } }
                 </Stack>
             </div>
@@ -258,7 +254,7 @@ pub fn Layout(cx: Scope) -> impl IntoView {
             // <Outlet/> will show nested child routes.
             <Outlet/>
 
-            <Drawer id="main-drawer" shown=Signal::derive(cx, move || !main_drawer_closed.get()) side=DrawerSide::Right style=format!("top: {APP_BAR_HEIGHT}")>
+            <Drawer id="main-drawer" shown=Signal::derive(move || !main_drawer_closed.get()) side=DrawerSide::Right style=format!("top: {APP_BAR_HEIGHT}")>
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) class="menu">
 
                     <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank style="font-size: 3em;">

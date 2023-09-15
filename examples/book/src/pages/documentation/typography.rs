@@ -3,8 +3,8 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageTypography(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageTypography() -> impl IntoView {
+    view! {
         <H1>"Typography"</H1>
 
         <Separator />

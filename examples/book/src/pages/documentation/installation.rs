@@ -5,8 +5,8 @@ use leptos::*;
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
-pub fn PageInstallation(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageInstallation() -> impl IntoView {
+    view! {
         <H1 id="#installation">
             "Installation"
             <Anchor href="#installation" title="Direct link to an overview of installation instructions."/>

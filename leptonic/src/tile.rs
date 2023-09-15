@@ -1,10 +1,10 @@
 use leptos::*;
 
 #[component]
-pub fn Tile(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn Tile(children: Children) -> impl IntoView {
+    view! {
         <div class="leptonic-tile">
-            { children(cx) }
+            { children() }
         </div>
     }
 }

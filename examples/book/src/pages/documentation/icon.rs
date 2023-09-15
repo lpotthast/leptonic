@@ -4,8 +4,8 @@ use leptos::*;
 use leptos_icons::BsIcon;
 
 #[component]
-pub fn PageIcon(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageIcon() -> impl IntoView {
+    view! {
         <H1>"Icons"</H1>
 
         <P>"Icons are supported through the "<LinkExt target=LinkExtTarget::Blank href="https://github.com/Carlosted/leptos-icons">"https://github.com/Carlosted/leptos-icons"</LinkExt> " crate."</P>

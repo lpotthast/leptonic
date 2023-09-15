@@ -1,13 +1,15 @@
-use std::{
-    borrow::Cow,
-    fmt::{Display, Formatter},
-};
+use std::fmt::{Display, Formatter};
 
 use leptos::{ev::MouseEvent, *};
 use leptos_icons::BsIcon;
+use leptos_router::{State, ToHref, A};
 use leptos_use::on_click_outside;
 
-use crate::{icon::Icon, OptionalMaybeSignal};
+use crate::{
+    icon::Icon,
+    prelude::Consumer,
+    OptionalMaybeSignal,
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -88,9 +90,8 @@ impl Display for ButtonSize {
 }
 
 #[component]
-pub fn Button<F>(
-    cx: Scope,
-    on_click: F,
+pub fn Button(
+    #[prop(into)] on_click: Consumer<MouseEvent>,
     #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
     #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
@@ -101,22 +102,19 @@ pub fn Button<F>(
     #[prop(into, optional)] class: OptionalMaybeSignal<String>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
-) -> impl IntoView
-where
-    F: Fn(MouseEvent) + 'static,
-{
+) -> impl IntoView {
     let has_variations = variations.0.as_ref().is_some();
 
     let variations = move || {
         if has_variations {
             let (dropdown_open, set_dropdown_open): (ReadSignal<bool>, WriteSignal<bool>) =
-                create_signal(cx, false);
-            let dropdown_trigger = create_node_ref::<html::Div>(cx);
-            let _ = on_click_outside(cx, dropdown_trigger, move |_| {
+                create_signal(false);
+            let dropdown_trigger = create_node_ref::<html::Div>();
+            let _ = on_click_outside(dropdown_trigger, move |_| {
                 set_dropdown_open.set(false);
             });
             Some(
-                view! {cx,
+                view! {
                     <div class="dropdown-trigger" node_ref=dropdown_trigger on:click=move |e| {
                         if !disabled.get_untracked() {
                             set_dropdown_open.update(|it| *it = !*it);
@@ -128,7 +126,7 @@ where
                                 true => BsIcon::BsCaretUp,
                                 false => BsIcon::BsCaretDown,
                             };
-                            view! {cx,
+                            view! {
                                 <Icon icon=icon/>
                             }
                         }}
@@ -138,17 +136,17 @@ where
                         { variations.get() }
                     </div>
                 }
-                .into_view(cx),
+                .into_view(),
             )
         } else {
             None
         }
     };
 
-    view! { cx,
+    view! {
         <button
             id=id
-            class=move || class.0.as_ref().map(|it| Cow::Owned(format!("{} leptonic-btn", it.get()))).unwrap_or(Cow::Borrowed("leptonic-btn"))
+            class=move || class.0.as_ref().map(|it| format!("{} leptonic-btn", it.get())).unwrap_or("leptonic-btn".to_string())
             class:has-variations=has_variations
             class:active=move || active.get()
             data-variant=move || variant.get().as_str()
@@ -159,12 +157,12 @@ where
             on:click=move |e| {
                 if !disabled.get_untracked() {
                     e.stop_propagation();
-                    on_click(e);
+                    on_click.consume(e);
                 }
             }
         >
             <div class="name">
-                { children(cx) }
+                { children() }
             </div>
 
             { variations }
@@ -173,19 +171,72 @@ where
 }
 
 #[component]
-pub fn ButtonGroup(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn ButtonGroup(children: Children) -> impl IntoView {
+    view! {
         <leptonic-btn-group>
-            { children(cx) }
+            { children() }
         </leptonic-btn-group>
     }
 }
 
 #[component]
-pub fn ButtonWrapper(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn ButtonWrapper(children: Children) -> impl IntoView {
+    view! {
         <leptonic-btn-wrapper>
-            { children(cx) }
+            { children() }
         </leptonic-btn-wrapper>
+    }
+}
+
+#[component]
+pub fn LinkButton<H>(
+    href: H,
+    #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
+    #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
+    #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
+    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: OptionalMaybeSignal<String>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
+    #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
+    #[prop(into, optional)]
+    title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
+    /// If `true`, the link is marked active when the location matches exactly;
+    /// if false, link is marked active if the current route starts with it.
+    #[prop(optional)]
+    exact: bool,
+    /// An object of any type that will be pushed to router state
+    #[prop(optional)]
+    state: Option<State>,
+    /// If `true`, the link will not add to the browser's history (so, pressing `Back`
+    /// will skip this page.)
+    #[prop(optional)]
+    replace: bool,
+    children: Children,
+) -> impl IntoView
+where
+    H: ToHref + 'static,
+{
+    view! {
+        <leptonic-link
+            id=id
+            class=move || {
+                let user = class.get();
+                let active = active.get().then(|| "active").unwrap_or_default();
+                format!("leptonic-btn {user} {active}")
+            }
+            data-variant=move || variant.get().as_str()
+            data-color=move || color.get().as_str()
+            data-size=move || size.get().as_str()
+            aria-disabled=move || disabled.get()
+            style=style
+        >
+            <A href=href exact=exact state=state.unwrap_or_default() replace=replace>
+                <div class="name">
+                    { children() }
+                </div>
+            </A>
+        </leptonic-link>
     }
 }

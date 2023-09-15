@@ -7,8 +7,8 @@ use leptos_router::ToHref;
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
-pub fn PageLink(cx: Scope) -> impl IntoView {
-    view! { cx,
+pub fn PageLink() -> impl IntoView {
+    view! {
         <H1>"Links"</H1>
 
         <P>"Links bring your users to a different place of your application."</P>
@@ -43,27 +43,25 @@ pub fn PageLink(cx: Scope) -> impl IntoView {
             <Icon id="github-icon" icon=BsIcon::BsGithub style="font-size: 3em;"/>
         </LinkExt>
 
-        <H2>"Children"</H2>
+        <H2>"Link Buttons"</H2>
 
-        <P>"As you have already seen, links of any form can contain arbitrary children and are not restraint to simple text nodes. Everything can be a link."</P>
+        <P>"It is likely that you want to render a link in the form of a button. Please respect the HTML standard and do not render a <Button> inside a <Link>."</P>
 
-        <P>"Wonder how the routing behavior of the \"Read the docs\" button on the welcome page was implemented?"</P>
+        <P>"Use the "<Code inline=true>"<LinkButton>"</Code>" component, which accepts most props from both the <Link> as well as the <Button> component."</P>
+
+        <P>"The \"Read the docs\" button on the welcome page was implemented this way!"</P>
 
         <Code>
             {indoc!(r#"
-                <Link href=DocRoutes::Overview>
-                    <Button on_click=move |_| {}>
-                        "Read the docs"
-                    </Button>
-                </Link>
+                <LinkButton href=DocRoutes::Overview>
+                    "Read the docs"
+                </LinkButton>
             "#)}
         </Code>
 
-        <Link href=DocRoutes::Overview>
-            <Button on_click=move |_| {}>
-                "Read the docs"
-            </Button>
-        </Link>
+        <LinkButton href=DocRoutes::Overview>
+            "Read the docs"
+        </LinkButton>
 
         <H2>"Styling"</H2>
 

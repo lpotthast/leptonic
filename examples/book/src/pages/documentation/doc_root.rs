@@ -161,62 +161,62 @@ impl ToHref for DocRoutes {
 // You can define other routes in their own component.
 // Use a #[component(transparent)] that returns a <Route/>.
 #[component(transparent)]
-pub fn DocRoutes<P>(cx: Scope, path: P) -> impl IntoView
+pub fn DocRoutes<P>(path: P) -> impl IntoView
 where
     P: std::fmt::Display,
 {
-    view! {cx,
-        <Route path=path view=|cx| view! {cx, <DocLayout/>}>
-            <Route path="" view=|cx| view! { cx, <Redirect path=DocRoutes::Overview/> }/>
-            <Route path=DocRoutes::Overview view=|cx| view! { cx, <PageOverview/> }/>
-            <Route path=DocRoutes::Installation view=|cx| view! { cx, <PageInstallation/> }/>
-            <Route path=DocRoutes::Usage view=|cx| view! { cx, <PageUsage/> }/>
-            <Route path=DocRoutes::Themes view=|cx| view! { cx, <PageThemes/> }/>
-            <Route path=DocRoutes::Changelog view=|cx| view! { cx, <PageChangelog/> }/>
+    view! {
+        <Route path=path view=|| view! { <DocLayout/>}>
+            <Route path="" view=|| view! { <Redirect path=DocRoutes::Overview/> }/>
+            <Route path=DocRoutes::Overview view=|| view! { <PageOverview/> }/>
+            <Route path=DocRoutes::Installation view=|| view! { <PageInstallation/> }/>
+            <Route path=DocRoutes::Usage view=|| view! { <PageUsage/> }/>
+            <Route path=DocRoutes::Themes view=|| view! { <PageThemes/> }/>
+            <Route path=DocRoutes::Changelog view=|| view! { <PageChangelog/> }/>
 
-            <Route path=DocRoutes::Stack view=|cx| view! { cx, <PageStack/> }/>
-            <Route path=DocRoutes::Grid view=|cx| view! { cx, <PageGrid/> }/>
-            <Route path=DocRoutes::Separator view=|cx| view! { cx, <PageSeparator/> }/>
-            <Route path=DocRoutes::Skeleton view=|cx| view! { cx, <PageSkeleton/> }/>
-            <Route path=DocRoutes::AppBar view=|cx| view! { cx, <PageAppBar/> }/>
-            <Route path=DocRoutes::Drawer view=|cx| view! { cx, <PageDrawer/> }/>
-            <Route path=DocRoutes::Tab view=|cx| view! { cx, <PageTab/> }/>
-            <Route path=DocRoutes::Table view=|cx| view! { cx, <PageTable/> }/>
-            <Route path=DocRoutes::Collapsible view=|cx| view! { cx, <PageCollapsible/> }/>
+            <Route path=DocRoutes::Stack view=|| view! { <PageStack/> }/>
+            <Route path=DocRoutes::Grid view=|| view! { <PageGrid/> }/>
+            <Route path=DocRoutes::Separator view=|| view! { <PageSeparator/> }/>
+            <Route path=DocRoutes::Skeleton view=|| view! { <PageSkeleton/> }/>
+            <Route path=DocRoutes::AppBar view=|| view! { <PageAppBar/> }/>
+            <Route path=DocRoutes::Drawer view=|| view! { <PageDrawer/> }/>
+            <Route path=DocRoutes::Tab view=|| view! { <PageTab/> }/>
+            <Route path=DocRoutes::Table view=|| view! { <PageTable/> }/>
+            <Route path=DocRoutes::Collapsible view=|| view! { <PageCollapsible/> }/>
 
-            <Route path=DocRoutes::Button view=|cx| view! { cx, <PageButton/> }/>
-            <Route path=DocRoutes::Input view=|cx| view! { cx, <PageInput/> }/>
-            <Route path=DocRoutes::TiptapEditor view=|cx| view! { cx, <PageTiptapEditor/> }/>
-            <Route path=DocRoutes::DateTime view=|cx| view! { cx, <PageDateTime/> }/>
-            <Route path=DocRoutes::Slider view=|cx| view! { cx, <PageSlider/> }/>
-            <Route path=DocRoutes::Select view=|cx| view! { cx, <PageSelect/> }/>
-            <Route path=DocRoutes::Toggle view=|cx| view! { cx, <PageToggle/> }/>
-            <Route path=DocRoutes::ColorPicker view=|cx| view! { cx, <PageColorPicker/> }/>
+            <Route path=DocRoutes::Button view=|| view! { <PageButton/> }/>
+            <Route path=DocRoutes::Input view=|| view! { <PageInput/> }/>
+            <Route path=DocRoutes::TiptapEditor view=|| view! { <PageTiptapEditor/> }/>
+            <Route path=DocRoutes::DateTime view=|| view! { <PageDateTime/> }/>
+            <Route path=DocRoutes::Slider view=|| view! { <PageSlider/> }/>
+            <Route path=DocRoutes::Select view=|| view! { <PageSelect/> }/>
+            <Route path=DocRoutes::Toggle view=|| view! { <PageToggle/> }/>
+            <Route path=DocRoutes::ColorPicker view=|| view! { <PageColorPicker/> }/>
 
-            <Route path=DocRoutes::Alert view=|cx| view! { cx, <PageAlert/> }/>
-            <Route path=DocRoutes::Toast view=|cx| view! { cx, <PageToast/> }/>
-            <Route path=DocRoutes::Modal view=|cx| view! { cx, <PageModal/> }/>
-            <Route path=DocRoutes::Progress view=|cx| view! { cx, <PageProgress/> }/>
-            <Route path=DocRoutes::Popover view=|cx| view! { cx, <PagePopover/> }/>
-            <Route path=DocRoutes::Chip view=|cx| view! { cx, <PageChip/> }/>
-            <Route path=DocRoutes::Kbd view=|cx| view! { cx, <PageKbd/> }/>
+            <Route path=DocRoutes::Alert view=|| view! { <PageAlert/> }/>
+            <Route path=DocRoutes::Toast view=|| view! { <PageToast/> }/>
+            <Route path=DocRoutes::Modal view=|| view! { <PageModal/> }/>
+            <Route path=DocRoutes::Progress view=|| view! { <PageProgress/> }/>
+            <Route path=DocRoutes::Popover view=|| view! { <PagePopover/> }/>
+            <Route path=DocRoutes::Chip view=|| view! { <PageChip/> }/>
+            <Route path=DocRoutes::Kbd view=|| view! { <PageKbd/> }/>
 
-            <Route path=DocRoutes::Typography view=|cx| view! { cx, <PageTypography/> }/>
-            <Route path=DocRoutes::Icon view=|cx| view! { cx, <PageIcon/> }/>
-            <Route path=DocRoutes::Link view=|cx| view! { cx, <PageLink/> }/>
-            <Route path=DocRoutes::Anchor view=|cx| view! { cx, <PageAnchor/> }/>
-            <Route path=DocRoutes::Callback view=|cx| view! { cx, <PageCallback/> }/>
+            <Route path=DocRoutes::Typography view=|| view! { <PageTypography/> }/>
+            <Route path=DocRoutes::Icon view=|| view! { <PageIcon/> }/>
+            <Route path=DocRoutes::Link view=|| view! { <PageLink/> }/>
+            <Route path=DocRoutes::Anchor view=|| view! { <PageAnchor/> }/>
+            <Route path=DocRoutes::Callback view=|| view! { <PageCallback/> }/>
 
-            <Route path=DocRoutes::Transition view=|cx| view! { cx, <PageTransition/> }/>
+            <Route path=DocRoutes::Transition view=|| view! { <PageTransition/> }/>
 
-            <Route path=DocRoutes::NotFound view=|cx| view! { cx, <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
+            <Route path=DocRoutes::NotFound view=|| view! { <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
         </Route>
     }
 }
 
 #[component]
-pub fn DocLayout(cx: Scope) -> impl IntoView {
-    let app_layout_context = expect_context::<AppLayoutContext>(cx);
+pub fn DocLayout() -> impl IntoView {
+    let app_layout_context = expect_context::<AppLayoutContext>();
 
     let drawer_class = move || match app_layout_context.is_small.get() {
         true => "mobile",
@@ -224,14 +224,13 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
     };
 
     let close_doc_drawer_on_mobile = move || {
-        let ctx = expect_context::<AppLayoutContext>(cx);
-        if ctx.is_small.get_untracked() {
-            ctx.close_doc_drawer();
+        if app_layout_context.is_small.get_untracked() {
+            app_layout_context.close_doc_drawer();
         }
     };
 
-    let drawer_content = view! {cx,
-        <DrawerSection header=move |cx| view! {cx,
+    let drawer_content = view! {
+        <DrawerSection header=move || view! {
             <Icon icon=BsIcon::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
@@ -243,7 +242,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move |cx| view! {cx,
+        <DrawerSection header=move || view! {
             <Icon icon=BsIcon::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
@@ -262,7 +261,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move |cx| view! {cx,
+        <DrawerSection header=move || view! {
             <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
@@ -280,7 +279,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move |cx| view! {cx,
+        <DrawerSection header=move || view! {
             <Icon icon=BsIcon::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
@@ -297,7 +296,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move |cx| view! {cx,
+        <DrawerSection header=move || view! {
             <Icon icon=BsIcon::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
@@ -309,7 +308,7 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move |cx| view! {cx,
+        <DrawerSection header=move || view! {
             <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
@@ -318,12 +317,12 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
         </DrawerSection>
     };
 
-    view! { cx,
+    view! {
         <Box id="doc-layout">
             <Drawer
                 side=DrawerSide::Left
                 id="doc-drawer"
-                shown=Signal::derive(cx, move || !app_layout_context.doc_drawer_closed.get())
+                shown=Signal::derive(move || !app_layout_context.doc_drawer_closed.get())
                 class=drawer_class
                 style=format!("top: {APP_BAR_HEIGHT}")
             >
@@ -341,24 +340,24 @@ pub fn DocLayout(cx: Scope) -> impl IntoView {
 }
 
 #[component]
-pub fn DrawerSection<H, IV>(cx: Scope, header: H, children: Children) -> impl IntoView
+pub fn DrawerSection<H, IV>(header: H, children: Children) -> impl IntoView
 where
-    H: Fn(Scope) -> IV + 'static,
+    H: Fn() -> IV + 'static,
     IV: IntoView + 'static,
 {
-    view! {cx,
+    view! {
         <div class="drawer-section">
             <div class="section-header">
-                { header(cx) }
+                { header() }
             </div>
-            { children(cx) }
+            { children() }
         </div>
     }
 }
 
 #[component]
-pub fn New(cx: Scope) -> impl IntoView {
-    view! {cx,
+pub fn New() -> impl IntoView {
+    view! {
         <Chip style="color: var(--primary-color); background-color: transparent; margin: 0; padding: 0;">
             "NEW"
         </Chip>

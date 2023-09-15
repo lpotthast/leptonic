@@ -1,12 +1,14 @@
 use std::borrow::Cow;
 
-use leptos::*;
+use leptos::{
+    leptos_dom::{Callable, Callback},
+    *,
+};
 use leptos_use::use_element_hover;
 
 use crate::{
-    contexts::global_mouseup_event::GlobalMouseupEvent,
-    prelude::{Callable, Callback, Popover},
-    Out, RelativeMousePosition, TrackedElementClientBoundingRect, math::project_into_range,
+    contexts::global_mouseup_event::GlobalMouseupEvent, math::project_into_range, prelude::Popover,
+    Out, RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -58,19 +60,18 @@ struct Mark {
 }
 
 #[allow(clippy::too_many_arguments)]
-fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
-    cx: Scope,
+fn create_marks(
     min: f64,
     max: f64,
     step: Option<f64>,
     range: Memo<f64>,
-    in_range: F,
+    in_range: Callback<f64, Signal<bool>>,
     marks: SliderMarks,
     value_display: Option<Callback<f64, String>>,
 ) -> Signal<Vec<Mark>> {
     match marks {
-        SliderMarks::None => Signal::derive(cx, Vec::new),
-        SliderMarks::Automatic { create_names } => Signal::derive(cx, move || match step {
+        SliderMarks::None => Signal::derive(Vec::new),
+        SliderMarks::Automatic { create_names } => Signal::derive(move || match step {
             Some(step) => {
                 let mut marks_at = Vec::new();
                 let cap = 20.0;
@@ -89,9 +90,9 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                     }
                     marks_at.push(Mark {
                         percentage: crate::math::percentage_in_range(min, max, current),
-                        in_range: in_range(current),
+                        in_range: in_range.call(current),
                         name: match create_names {
-                            true => Some(Cow::Owned(match value_display {
+                            true => Some(Cow::Owned(match &value_display {
                                 Some(callback) => callback.call(current),
                                 None => format!("{current}"),
                             })),
@@ -110,7 +111,7 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
             }
             None => Vec::new(),
         }),
-        SliderMarks::Custom(marks) => Signal::derive(cx, move || {
+        SliderMarks::Custom(marks) => Signal::derive(move || {
             marks
                 .iter()
                 .map(|mark| {
@@ -127,7 +128,7 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
                             }
                             SliderMarkValue::Percentage(percentage) => percentage,
                         },
-                        in_range: in_range(value),
+                        in_range: in_range.call(value),
                         name: mark.name.clone(),
                     }
                 })
@@ -137,27 +138,27 @@ fn create_marks<F: Fn(f64) -> Signal<bool> + 'static>(
 }
 
 #[component]
-fn Marks(cx: Scope, marks: Signal<Vec<Mark>>) -> impl IntoView {
-    view! {cx,
+fn Marks(marks: Signal<Vec<Mark>>) -> impl IntoView {
+    view! {
         <div class="marks">
             {
                 move || marks.get().into_iter()
                     .map(|mark| {
                         let style = format!("left: {}%", mark.percentage * 100.0);
-                        view! {cx,
+                        view! {
                             <div class="mark" class:in-range=move || mark.in_range.get() style=style>
                                 { match &mark.name {
-                                    Some(name) => view! {cx,
+                                    Some(name) => view! {
                                         <div class="title">
                                             {name.clone()}
                                         </div>
-                                    }.into_view(cx),
-                                    None => ().into_view(cx)
+                                    }.into_view(),
+                                    None => ().into_view()
                                 } }
                             </div>
                         }
                     })
-                    .collect_view(cx)
+                    .collect_view()
             }
         </div>
     }
@@ -180,24 +181,19 @@ impl Default for SliderPopover {
 }
 
 impl SliderPopover {
-    fn to_maybe_signal(
-        self,
-        cx: Scope,
-        knob_el: NodeRef<html::Div>,
-        knob: &KnobControl,
-    ) -> MaybeSignal<bool> {
+    fn to_maybe_signal(self, knob_el: NodeRef<html::Div>, knob: &KnobControl) -> MaybeSignal<bool> {
         match self {
             SliderPopover::Never => MaybeSignal::Static(false),
             SliderPopover::When { hovered, dragged } => match (hovered, dragged) {
                 (true, true) => {
-                    let knob_is_hovered = use_element_hover(cx, knob_el);
+                    let knob_is_hovered = use_element_hover(knob_el);
                     let listening = knob.listening;
-                    MaybeSignal::Dynamic(Signal::derive(cx, move || {
+                    MaybeSignal::Dynamic(Signal::derive(move || {
                         knob_is_hovered.get() || listening.get()
                     }))
                 }
                 (true, false) => {
-                    let knob_is_hovered = use_element_hover(cx, knob_el);
+                    let knob_is_hovered = use_element_hover(knob_el);
                     MaybeSignal::Dynamic(knob_is_hovered)
                 }
                 (false, true) => MaybeSignal::Dynamic(knob.listening.into()),
@@ -210,7 +206,6 @@ impl SliderPopover {
 
 #[component]
 pub fn Slider(
-    cx: Scope,
     #[prop(into)] value: MaybeSignal<f64>,
     #[prop(into)] set_value: Out<f64>,
     min: f64,
@@ -226,16 +221,16 @@ pub fn Slider(
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView {
-    let range = create_memo(cx, move |_| max - min);
+    let range = create_memo(move |_| max - min);
 
-    let bar_el: NodeRef<html::Div> = create_node_ref(cx);
-    let bar = TrackedElementClientBoundingRect::new(cx, bar_el);
-    let cursor = RelativeMousePosition::new(cx, bar);
-    let knob_el: NodeRef<html::Div> = create_node_ref(cx);
-    let knob = KnobControl::new(cx, min, max, step, value);
-    let show_popover = popover.to_maybe_signal(cx, knob_el, &knob);
+    let bar_el: NodeRef<html::Div> = create_node_ref();
+    let bar = TrackedElementClientBoundingRect::new(bar_el);
+    let cursor = RelativeMousePosition::new(bar);
+    let knob_el: NodeRef<html::Div> = create_node_ref();
+    let knob = KnobControl::new(min, max, step, value);
+    let show_popover = popover.to_maybe_signal(knob_el, &knob);
 
-    let range_style = Signal::derive(cx, move || {
+    let range_style = Signal::derive(move || {
         format!(
             "left: 0%; width: {}%;",
             knob.clipped_value_percent.get() * 100.0
@@ -246,15 +241,15 @@ pub fn Slider(
     let GlobalMouseupEvent {
         read_signal: mouse_up,
         ..
-    } = expect_context(cx);
-    create_effect(cx, move |_| {
+    } = expect_context();
+    create_effect(move |_| {
         if mouse_up.get().is_some() {
             knob.set_listening.set(false);
         }
     });
 
     // While this slider is "listening", project the relative cursor position into the sliders value range and propagate.
-    create_effect(cx, move |_| {
+    create_effect(move |_| {
         if knob.listening.get() {
             set_value.set(project_into_range(
                 cursor.rel_mouse_pos.get().0,
@@ -266,20 +261,19 @@ pub fn Slider(
     });
 
     let marks = create_marks(
-        cx,
         min,
         max,
         step,
         range,
-        move |v| match max > min {
-            true => Signal::derive(cx, move || v <= value.get()),
-            false => Signal::derive(cx, move || v >= value.get()),
-        },
+        Callback::new(move |v| match max > min {
+            true => Signal::derive(move || v <= value.get()),
+            false => Signal::derive(move || v >= value.get()),
+        }),
         marks,
-        value_display,
+        value_display.clone(),
     );
 
-    view! {cx,
+    view! {
         <leptonic-slider
             id=id
             data-variant=variant.to_str()
@@ -310,11 +304,11 @@ pub fn Slider(
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
                         <div class="knob" node_ref=knob_el class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get()>
-                            <Popover show=move || show_popover.get()>
+                            <Popover show=show_popover>
                                 {
                                     move || {
                                         let value = value.get();
-                                        match value_display {
+                                        match &value_display {
                                             Some(callback) => callback.call(value) ,
                                             None => format!("{value}"),
                                         }
@@ -334,7 +328,6 @@ pub fn Slider(
 
 #[component]
 pub fn RangeSlider(
-    cx: Scope,
     #[prop(into)] value_a: MaybeSignal<f64>,
     #[prop(into)] value_b: MaybeSignal<f64>,
     #[prop(into)] set_value_a: Out<f64>,
@@ -352,19 +345,19 @@ pub fn RangeSlider(
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView {
-    let range = create_memo(cx, move |_| max - min);
+    let range = create_memo(move |_| max - min);
 
-    let bar_el: NodeRef<html::Div> = create_node_ref(cx);
-    let bar = TrackedElementClientBoundingRect::new(cx, bar_el);
-    let cursor = RelativeMousePosition::new(cx, bar);
-    let knob_a_el: NodeRef<html::Div> = create_node_ref(cx);
-    let knob_b_el: NodeRef<html::Div> = create_node_ref(cx);
-    let knob_a = KnobControl::new(cx, min, max, step, value_a);
-    let knob_b = KnobControl::new(cx, min, max, step, value_b);
-    let show_a_popover = popover.to_maybe_signal(cx, knob_a_el, &knob_a);
-    let show_b_popover = popover.to_maybe_signal(cx, knob_b_el, &knob_b);
+    let bar_el: NodeRef<html::Div> = create_node_ref();
+    let bar = TrackedElementClientBoundingRect::new(bar_el);
+    let cursor = RelativeMousePosition::new(bar);
+    let knob_a_el: NodeRef<html::Div> = create_node_ref();
+    let knob_b_el: NodeRef<html::Div> = create_node_ref();
+    let knob_a = KnobControl::new(min, max, step, value_a);
+    let knob_b = KnobControl::new(min, max, step, value_b);
+    let show_a_popover = popover.to_maybe_signal(knob_a_el, &knob_a);
+    let show_b_popover = popover.to_maybe_signal(knob_b_el, &knob_b);
 
-    let range_style = Signal::derive(cx, move || {
+    let range_style = Signal::derive(move || {
         format!(
             "left: {}%; width: {}%;",
             knob_a.clipped_value_percent.get() * 100.0,
@@ -376,8 +369,8 @@ pub fn RangeSlider(
     let GlobalMouseupEvent {
         read_signal: mouse_up,
         ..
-    } = expect_context(cx);
-    create_effect(cx, move |_| {
+    } = expect_context();
+    create_effect(move |_| {
         if mouse_up.get().is_some() {
             knob_a.set_listening.set(false);
             knob_b.set_listening.set(false);
@@ -385,12 +378,12 @@ pub fn RangeSlider(
     });
 
     // Project the relative cursor position into the sliders value range.
-    let projected_value_from_cursor = create_memo(cx, move |_| {
+    let projected_value_from_cursor = create_memo(move |_| {
         project_into_range(cursor.rel_mouse_pos.get().0, range.get(), min, step)
     });
 
     // While this slider is "listening", propagate the projected value.
-    create_effect(cx, move |_| {
+    create_effect(move |_| {
         if knob_a.listening.get() {
             let projected_value_from_cursor = projected_value_from_cursor.get();
             let b = value_b.get_untracked();
@@ -420,20 +413,22 @@ pub fn RangeSlider(
     });
 
     let marks = create_marks(
-        cx,
         min,
         max,
         step,
         range,
-        move |v| match max > min {
-            true => Signal::derive(cx, move || v >= value_a.get() && v <= value_b.get()),
-            false => Signal::derive(cx, move || v <= value_a.get() && v >= value_b.get()),
-        },
+        Callback::new(move |v| match max > min {
+            true => Signal::derive(move || v >= value_a.get() && v <= value_b.get()),
+            false => Signal::derive(move || v <= value_a.get() && v >= value_b.get()),
+        }),
         marks,
-        value_display,
+        value_display.clone(),
     );
 
-    view! {cx,
+    let value_display_a = value_display.clone();
+    let value_display_b = value_display;
+
+    view! {
         <leptonic-slider
             id=id
             data-variant=variant.to_str()
@@ -487,11 +482,11 @@ pub fn RangeSlider(
                 <div node_ref=bar_el class="bar">
                     <div class="knob-wrapper">
                         <div class="knob" node_ref=knob_a_el class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get()>
-                            <Popover show=move || show_a_popover.get()>
+                            <Popover show=show_a_popover>
                                 {
                                     move || {
                                         let value = value_a.get();
-                                        match value_display {
+                                        match &value_display_a {
                                             Some(callback) => callback.call(value) ,
                                             None => format!("{value}"),
                                         }
@@ -503,11 +498,11 @@ pub fn RangeSlider(
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
                         <div class="knob" node_ref=knob_b_el class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get()>
-                            <Popover show=move || show_b_popover.get()>
+                            <Popover show=show_b_popover>
                                 {
                                     move || {
                                         let value = value_b.get();
-                                        match value_display {
+                                        match &value_display_b {
                                             Some(callback) => callback.call(value) ,
                                             None => format!("{value}"),
                                         }
@@ -534,9 +529,9 @@ struct KnobControl {
 }
 
 impl KnobControl {
-    pub fn new(cx: Scope, min: f64, max: f64, step: Option<f64>, value: MaybeSignal<f64>) -> Self {
-        let range = create_memo(cx, move |_| max - min);
-        let clipped_value = Signal::derive(cx, move || {
+    pub fn new(min: f64, max: f64, step: Option<f64>, value: MaybeSignal<f64>) -> Self {
+        let range = create_memo(move |_| max - min);
+        let clipped_value = Signal::derive(move || {
             let value = value.get();
             if !(min..=max).contains(&value) && !(max..=min).contains(&value) {
                 tracing::warn!(
@@ -554,13 +549,11 @@ impl KnobControl {
                 None => clipped,
             }
         });
-        let clipped_value_percent = Signal::derive(cx, move || {
-            ((min.abs() - clipped_value.get()) / range.get()).abs()
-        });
-        let style = Signal::derive(cx, move || {
-            format!("left: {}%", clipped_value_percent.get() * 100.0)
-        });
-        let (listening, set_listening) = create_signal(cx, false);
+        let clipped_value_percent =
+            Signal::derive(move || ((min.abs() - clipped_value.get()) / range.get()).abs());
+        let style =
+            Signal::derive(move || format!("left: {}%", clipped_value_percent.get() * 100.0));
+        let (listening, set_listening) = create_signal(false);
         Self {
             clipped_value,
             clipped_value_percent,

@@ -20,7 +20,7 @@ pub struct ModalData {
 #[derive(Clone)]
 pub enum ModalChildren {
     Once(View),
-    Dynamic(Rc<ChildrenFn>, Scope),
+    Dynamic(Rc<ChildrenFn>),
 }
 
 #[derive(Copy, Clone)]
@@ -30,22 +30,22 @@ pub struct ModalRootContext {
 }
 
 #[component]
-pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
-    let (modals, set_modals) = create_signal(cx, IndexMap::new());
-    provide_context::<ModalRootContext>(cx, ModalRootContext { modals, set_modals });
-    view! { cx,
-        { children(cx) }
+pub fn ModalRoot(children: Children) -> impl IntoView {
+    let (modals, set_modals) = create_signal(IndexMap::new());
+    provide_context::<ModalRootContext>(ModalRootContext { modals, set_modals });
+    view! {
+        { children() }
 
         <leptonic-modal-host>
-            <Show fallback=|_cx| view! { cx, } when=move || !modals.get().is_empty()>
+            <Show fallback=|| () when=move || !modals.get().is_empty()>
                 <leptonic-modal-backdrop></leptonic-modal-backdrop>
 
                 <leptonic-modals>
-                    {move || modals.get().last().map(|(_, modal)| view! { cx,
+                    {move || modals.get().last().map(|(_, modal)| view! {
                         <leptonic-modal id=modal.id.clone() class=modal.class.clone()>
                             { match &modal.children {
                                 ModalChildren::Once(view) => view.clone(),
-                                ModalChildren::Dynamic(children, cx) => children(*cx).into_view(*cx)
+                                ModalChildren::Dynamic(children) => children().into_view()
                             } }
                         </leptonic-modal>
                     })}
@@ -57,18 +57,17 @@ pub fn ModalRoot(cx: Scope, children: Children) -> impl IntoView {
 
 #[component]
 pub fn Modal(
-    cx: Scope,
     #[prop(into)] show_when: MaybeSignal<bool>,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] class: Option<String>,
     children: Children,
 ) -> impl IntoView {
-    let modals = use_context::<ModalRootContext>(cx).unwrap();
-    let children = children(cx).into_view(cx); // TODO: Is it ok to build this view once?
+    let modals = use_context::<ModalRootContext>().unwrap();
+    let children = children().into_view(); // TODO: Is it ok to build this view once?
 
     let internal_id = Uuid::new_v4();
 
-    create_effect(cx, move |_| match show_when.get() {
+    create_effect(move |_| match show_when.get() {
         true => modals.set_modals.update(|modals| {
             modals.insert(
                 internal_id,
@@ -86,25 +85,23 @@ pub fn Modal(
     });
 
     // Intentionally empty, as children are rendered using the modal root.
-    view! { cx,
-    }
+    view! {}
 }
 
 // TODO: Show a modal in a different scope. This way, not including a shown modal anymore would remove it.
 #[component]
 pub fn ModalFn(
-    cx: Scope,
     #[prop(into)] show_when: MaybeSignal<bool>, // TODO: When https://github.com/leptos-rs/leptos/pull/918 is merged, this should receive a rework!
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] class: Option<String>,
     children: ChildrenFn,
 ) -> impl IntoView {
-    let modals = use_context::<ModalRootContext>(cx).unwrap();
+    let modals = use_context::<ModalRootContext>().unwrap();
     let children = Rc::new(children);
 
     let internal_id = Uuid::new_v4();
 
-    create_effect(cx, move |_| match show_when.get() {
+    create_effect(move |_| match show_when.get() {
         true => modals.set_modals.update(|modals| {
             modals.insert(
                 internal_id,
@@ -112,7 +109,7 @@ pub fn ModalFn(
                     internal_id,
                     id: id.clone(),
                     class: class.clone(),
-                    children: ModalChildren::Dynamic(children.clone(), cx),
+                    children: ModalChildren::Dynamic(children.clone()),
                 },
             );
         }),
@@ -122,46 +119,44 @@ pub fn ModalFn(
     });
 
     // Intentionally empty, as children are rendered using the modal root.
-    view! { cx,
-    }
+    view! {}
 }
 
 #[component]
-pub fn ModalHeader(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn ModalHeader(children: Children) -> impl IntoView {
+    view! {
         <leptonic-modal-header>
-            { children(cx) }
+            { children() }
         </leptonic-modal-header>
     }
 }
 
 #[component]
-pub fn ModalTitle(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn ModalTitle(children: Children) -> impl IntoView {
+    view! {
         <leptonic-modal-title>
-            { children(cx) }
+            { children() }
         </leptonic-modal-title>
     }
 }
 
 #[component]
 pub fn ModalBody(
-    cx: Scope,
     children: Children,
     #[prop(into, optional)] style: OptionalMaybeSignal<String>,
 ) -> impl IntoView {
-    view! { cx,
+    view! {
         <leptonic-modal-body style=move || style.0.as_ref().map(|it| it.get())>
-            { children(cx) }
+            { children() }
         </leptonic-modal-body>
     }
 }
 
 #[component]
-pub fn ModalFooter(cx: Scope, children: Children) -> impl IntoView {
-    view! { cx,
+pub fn ModalFooter(children: Children) -> impl IntoView {
+    view! {
         <leptonic-modal-footer>
-            { children(cx) }
+            { children() }
         </leptonic-modal-footer>
     }
 }

@@ -3,21 +3,21 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
-pub fn PageColorPicker(cx: Scope) -> impl IntoView {
-    let (hsv, set_hsv) = create_signal(cx, HSV::new());
+pub fn PageColorPicker() -> impl IntoView {
+    let (hsv, set_hsv) = create_signal(HSV::new());
 
-    let (hsv_test, set_hsv_test) = create_signal(cx, HSV::new());
-    let hsv_test_rgb_preview = Signal::derive(cx, move || hsv_test.get().into_rgb8());
+    let (hsv_test, set_hsv_test) = create_signal(HSV::new());
+    let hsv_test_rgb_preview = Signal::derive(move || hsv_test.get().into_rgb8());
 
-    view! { cx,
+    view! {
         <H1>"Color Picker"</H1>
 
         <P>"Select colors using the "<Code inline=true>"<ColorPicker>"</Code>" component."</P>
 
         <Code>
             {indoc!(r#"
-                let (hsv, set_hsv) = create_signal(cx, HSV::new());
-                view! {cx,
+                let (hsv, set_hsv) = create_signal(HSV::new());
+                view! {
                     <ColorPicker hsv=hsv set_hsv=set_hsv/>
                 }
             "#)}
@@ -33,8 +33,8 @@ pub fn PageColorPicker(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let (hsv_test, set_hsv_test) = create_signal(cx, HSV::new());
-                let hsv_test_rgb_preview = Signal::derive(cx, move || hsv_test.get().into_rgb8());
+                let (hsv, set_hsv) = create_signal(HSV::new());
+                let rgb = Signal::derive(move || hsv.get().into_rgb8());
             "#)}
         </Code>
 
@@ -44,8 +44,8 @@ pub fn PageColorPicker(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                view! {cx,
-                    <ColorPreview rgb=hsv_test_rgb_preview style="width: 5em%; height: 5em;"/>
+                view! {
+                    <ColorPreview rgb=rgb style="width: 5em%; height: 5em;"/>
                 }
             "#)}
         </Code>
@@ -62,19 +62,21 @@ pub fn PageColorPicker(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                view! {cx,
-                    <ColorPalette hsv=hsv_test
-                        set_saturation=create_callback(cx, move |s| set_hsv_test.update(|hsv| hsv.saturation = s))
-                        set_value=create_callback(cx, move |v| set_hsv_test.update(|hsv| hsv.value = v))
+                view! {
+                    <ColorPalette
+                        hsv=hsv_test
+                        set_saturation=move |s| set_hsv.update(|hsv| hsv.saturation = s)
+                        set_value=move |v| set_hsv.update(|hsv| hsv.value = v)
                         style="width: 10em; height: 5em;"
                     />
                 }
             "#)}
         </Code>
 
-        <ColorPalette hsv=hsv_test
-            set_saturation=create_callback(cx, move |s| set_hsv_test.update(|hsv| hsv.saturation = s))
-            set_value=create_callback(cx, move |v| set_hsv_test.update(|hsv| hsv.value = v))
+        <ColorPalette
+            hsv=hsv_test
+            set_saturation=move |s| set_hsv_test.update(|hsv| hsv.saturation = s)
+            set_value=move |v| set_hsv_test.update(|hsv| hsv.value = v)
             style="width: 10em; height: 5em;"
         />
 
@@ -88,18 +90,18 @@ pub fn PageColorPicker(cx: Scope) -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                view! {cx,
+                view! {
                     <HueSlider
-                        hue=Signal::derive(cx, move || hsv_test.get().hue)
-                        set_hue=create_callback(cx, move |h| set_hsv_test.update(|hsv| hsv.hue = h))
+                        hue=Signal::derive(move || hsv.get().hue)
+                        set_hue=move |hue| set_hsv.update(|hsv| hsv.hue = hue)
                     />
                 }
             "#)}
         </Code>
 
         <HueSlider
-            hue=Signal::derive(cx, move || hsv_test.get().hue)
-            set_hue=create_callback(cx, move |h| set_hsv_test.update(|hsv| hsv.hue = h))
+            hue=Signal::derive(move || hsv_test.get().hue)
+            set_hue=move |hue| set_hsv_test.update(|hsv| hsv.hue = hue)
         />
 
         <P>"If you look at the source of Leptonic's <ColorPicker>, you will see that there is not much more to it as what you saw here!"</P>

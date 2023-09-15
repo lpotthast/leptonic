@@ -1,5 +1,4 @@
 use leptos::{html::Div, *};
-use tracing::info;
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum CollapseAxis {
@@ -15,14 +14,13 @@ impl Default for CollapseAxis {
 
 #[component]
 pub fn Collapse(
-    cx: Scope,
     #[prop(into)] show: Signal<bool>,
     #[prop(optional)] axis: CollapseAxis,
     children: Children,
 ) -> impl IntoView {
-    let content: NodeRef<Div> = create_node_ref(cx);
+    let content: NodeRef<Div> = create_node_ref();
 
-    let style = Signal::derive(cx, move || {
+    let style = Signal::derive(move || {
         let show = show.get();
         let el_axis_dimension = content
             .get()
@@ -31,7 +29,6 @@ pub fn Collapse(
                 CollapseAxis::Y => el.scroll_height(),
             })
             .unwrap_or(0);
-        info!("dim: {el_axis_dimension}");
         match axis {
             CollapseAxis::X => format!(
                 "min-width: 0px; width: {}px",
@@ -44,14 +41,14 @@ pub fn Collapse(
         }
     });
 
-    view! { cx,
+    view! {
         <div class="leptonic-collapse"
             class:width=move || {axis == CollapseAxis::X}
             class:height=move || {axis == CollapseAxis::Y}
             style=move || style.get()
         >
             <div class="content" class:show=move || show.get() node_ref=content>
-                { children(cx) }
+                { children() }
             </div>
         </div>
     }
