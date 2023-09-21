@@ -40,7 +40,7 @@ pub fn QuicksearchTrigger(
     }
 }
 
-#[derive(Clone)]
+// TODO: Add clone in rc3
 pub struct QuicksearchOption {
     pub view: Callback<(), View>, // TODO: Use ViewCallback when 0.5.0-rc2 or final is out!
     pub on_select: Callback<()>,

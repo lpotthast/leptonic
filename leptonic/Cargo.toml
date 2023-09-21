@@ -17,7 +17,7 @@ keywords = ["leptos", "components", "component-library"]
 indexmap = "2.0.0"
 indoc = "2.0.1"
 js-sys = "0.3.64"
-leptos = { version = "0.5.0-rc1", features = ["csr"] }
+leptos = { version = "0.5.0-rc2", features = ["csr"] }
 leptos-tiptap = "0.3.0-rc1"
 leptos-use = { git = "https://github.com/Synphonyte/leptos-use", features = ["math"] }
 leptos_icons = { version = "0.0.16-beta", features = [
@@ -43,7 +43,7 @@ leptos_icons = { version = "0.0.16-beta", features = [
     "BsJustify",
     "BsXCircleFill",
 ] }
-leptos_router = "0.5.0-rc1"
+leptos_router = "0.5.0-rc2"
 serde = "1.0.171"
 serde-wasm-bindgen = "0.5.0"
 serde_json = "1.0.103"

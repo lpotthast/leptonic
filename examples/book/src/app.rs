@@ -223,10 +223,12 @@ pub fn Layout() -> impl IntoView {
                                 return vec![];
                             }
                             let lower_search = search.to_lowercase();
-                            search_options.iter()
-                                .filter(|it| it.0.to_lowercase().contains(&lower_search))
-                                .map(|it| it.1.clone())
-                                .collect::<Vec<_>>()
+                            // TODO: Re-enable in rc3
+                            //search_options.iter()
+                            //    .filter(|it| it.0.to_lowercase().contains(&lower_search))
+                            //    .map(|it| it.1.clone())
+                            //    .collect::<Vec<_>>()
+                            Vec::new()
                         }
                     />
                 </Stack>

@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use leptos::{
-    leptos_dom::{Callable, Callback},
+    leptos_dom::{Callable, Callback, StoredCallback},
     *,
 };
 use leptos_use::use_element_hover;
@@ -67,7 +67,7 @@ fn create_marks(
     range: Memo<f64>,
     in_range: Callback<f64, Signal<bool>>,
     marks: SliderMarks,
-    value_display: Option<Callback<f64, String>>,
+    value_display: Option<StoredCallback<f64, String>>,
 ) -> Signal<Vec<Mark>> {
     match marks {
         SliderMarks::None => Signal::derive(Vec::new),
@@ -260,6 +260,9 @@ pub fn Slider(
         }
     });
 
+    // TODO: Remove in rc3
+    let value_display = value_display.map(|it| StoredCallback::new(it));
+
     let marks = create_marks(
         min,
         max,
@@ -411,6 +414,9 @@ pub fn RangeSlider(
             }
         }
     });
+
+    // TODO: Remove in rc3
+    let value_display = value_display.map(|it| StoredCallback::new(it));
 
     let marks = create_marks(
         min,
