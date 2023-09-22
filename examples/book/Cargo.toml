@@ -14,7 +14,7 @@ codegen-units = 1
 [dependencies]
 console_error_panic_hook = "0.1.7"
 indoc = "2.0.1"
-leptonic = { path = "../../leptonic" }
+leptonic = { path = "../../leptonic", features = ["csr"] }
 leptos = { version = "0.5.0-rc1", features = ["csr"] }
 leptos-use = { git = "https://github.com/Synphonyte/leptos-use" }
 leptos_icons = { version = "0.0.16-beta", features = [

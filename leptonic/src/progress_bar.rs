@@ -6,7 +6,7 @@ pub fn ProgressBar(
     #[prop(into, default = MaybeSignal::Static(100.0))] max: MaybeSignal<f64>,
     #[prop(into)] progress: MaybeSignal<Option<f64>>,
 ) -> impl IntoView {
-    let el = create_node_ref();
+    let el: NodeRef<leptos::html::Custom> = create_node_ref();
 
     let UseElementSizeReturn { width, height: _ } = use_element_size(el);
 
