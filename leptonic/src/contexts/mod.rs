@@ -6,4 +6,4 @@ pub mod global_mouseup_event;
 pub mod global_resize_event;
 pub mod global_scroll_event;
 
-pub type WasmClosure<T> = Rc<Box<wasm_bindgen::closure::Closure<dyn FnMut(T)>>>;
+pub type WasmClosure<T> = Option<Rc<Box<wasm_bindgen::closure::Closure<dyn FnMut(T)>>>>;

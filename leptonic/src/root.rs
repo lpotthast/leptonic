@@ -1,7 +1,7 @@
 use std::rc::Rc;
 
 use leptos::*;
-use leptos_use::use_event_listener;
+use leptos_use::{use_document, use_event_listener, use_window};
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{Event, KeyboardEvent, MouseEvent};
 
@@ -32,67 +32,91 @@ pub fn Root<T>(default_theme: T, children: Children) -> impl IntoView
 where
     T: Theme + 'static,
 {
+    use std::ops::Deref;
+
     if let Some(_root_context) = use_context::<Leptonic>() {
         tracing::warn!("The <Root> component must only be used once! Detected that <Root> was rendered when it was already rendered higher up the stack. Remove this usage.");
     }
 
-    let win = window();
-    let doc = document();
+    let win = use_window();
+    let doc = use_document();
 
     // KEY DOWN
     let (g_keyboard_event, set_g_keyboard_event) = create_signal::<Option<KeyboardEvent>>(None);
-    let onkeydown = Closure::wrap(
-        Box::new(move |e| set_g_keyboard_event.set(Some(e))) as Box<dyn FnMut(KeyboardEvent)>
-    );
-    doc.set_onkeydown(Some(onkeydown.as_ref().unchecked_ref()));
+    let mut onkeydown = None;
+    if let Some(doc) = doc.deref() {
+        let closure =
+            Closure::wrap(Box::new(move |e| set_g_keyboard_event.set(Some(e)))
+                as Box<dyn FnMut(KeyboardEvent)>);
+        doc.set_onkeydown(Some(closure.as_ref().unchecked_ref()));
+        onkeydown = Some(Rc::new(Box::new(closure)))
+    }
     provide_context(GlobalKeyboardEvent::new(
-        Rc::new(Box::new(onkeydown)),
+        onkeydown,
         g_keyboard_event,
         set_g_keyboard_event,
     ));
 
     // CLICK
     let (g_click_event, set_g_click_event) = create_signal::<Option<MouseEvent>>(None);
-    let onclick = Closure::wrap(
-        Box::new(move |e| set_g_click_event.set(Some(e))) as Box<dyn FnMut(MouseEvent)>
-    );
-    doc.set_onclick(Some(onclick.as_ref().unchecked_ref()));
+    let mut onclick = None;
+    if let Some(doc) = doc.deref() {
+        let closure = Closure::wrap(
+            Box::new(move |e| set_g_click_event.set(Some(e))) as Box<dyn FnMut(MouseEvent)>
+        );
+        doc.set_onclick(Some(closure.as_ref().unchecked_ref()));
+        onclick = Some(Rc::new(Box::new(closure)));
+    }
     provide_context(GlobalClickEvent::new(
-        Rc::new(Box::new(onclick)),
+        onclick,
         g_click_event,
         set_g_click_event,
     ));
 
     // MOUSE UP
     let (g_mouseup_event, set_g_mouseup_event) = create_signal::<Option<MouseEvent>>(None);
-    let onmouseup = Closure::wrap(
-        Box::new(move |e| set_g_mouseup_event.set(Some(e))) as Box<dyn FnMut(MouseEvent)>
-    );
-    doc.set_onmouseup(Some(onmouseup.as_ref().unchecked_ref()));
+    let onmouseup = None;
+    if let Some(doc) = doc.deref() {
+        let closure = Closure::wrap(
+            Box::new(move |e| set_g_mouseup_event.set(Some(e))) as Box<dyn FnMut(MouseEvent)>
+        );
+        doc.set_onmouseup(Some(closure.as_ref().unchecked_ref()));
+        onmouseup = Some(Rc::new(Box::new(closure)));
+    }
     provide_context(GlobalMouseupEvent::new(
-        Rc::new(Box::new(onmouseup)),
+        onmouseup,
         g_mouseup_event,
         set_g_mouseup_event,
     ));
 
     // RESIZE
     let (g_resize_event, set_g_resize_event) = create_signal::<Option<Event>>(None);
-    let onresize =
-        Closure::wrap(Box::new(move |e| set_g_resize_event.set(Some(e))) as Box<dyn FnMut(Event)>);
-    win.set_onresize(Some(onresize.as_ref().unchecked_ref()));
+    let mut onresize = None;
+    if let Some(win) = win.deref() {
+        let closure = Closure::wrap(
+            Box::new(move |e| set_g_resize_event.set(Some(e))) as Box<dyn FnMut(Event)>
+        );
+        win.set_onresize(Some(closure.as_ref().unchecked_ref()));
+        onresize = Some(Rc::new(Box::new(closure)));
+    }
     provide_context(GlobalResizeEvent::new(
-        Rc::new(Box::new(onresize)),
+        onresize,
         g_resize_event,
         set_g_resize_event,
     ));
 
     // SCROLL
     let (g_scroll_event, set_g_scroll_event) = create_signal::<Option<Event>>(None);
-    let onscroll =
-        Closure::wrap(Box::new(move |e| set_g_scroll_event.set(Some(e))) as Box<dyn FnMut(Event)>);
-    doc.set_onscroll(Some(onscroll.as_ref().unchecked_ref()));
+    let mut onscroll = None;
+    if let Some(doc) = doc.deref() {
+        let closure = Closure::wrap(
+            Box::new(move |e| set_g_scroll_event.set(Some(e))) as Box<dyn FnMut(Event)>
+        );
+        doc.set_onscroll(Some(closure.as_ref().unchecked_ref()));
+        onscroll = Some(Rc::new(Box::new(closure)));
+    }
     provide_context(GlobalScrollEvent::new(
-        Rc::new(Box::new(onscroll)),
+        onscroll,
         g_scroll_event,
         set_g_scroll_event,
     ));
@@ -105,17 +129,21 @@ where
             DocumentIndeterminable,
             SetPropertyFailed,
         }
-        let inner_height = window()
-            .inner_height()
-            .map_err(|_| Error::InnerHeightIndeterminable)?;
-        let inner_height = inner_height.as_f64().ok_or(Error::InnerHeightNotNumber)?;
-        document()
-            .document_element()
-            .ok_or(Error::DocumentIndeterminable)?
-            .unchecked_into::<web_sys::HtmlElement>()
-            .style()
-            .set_property("--leptonic-vh", format!("{inner_height}px").as_str())
-            .map_err(|_| Error::SetPropertyFailed)?;
+        if let Some(window) = use_window().deref() {
+            let inner_height = window
+                .inner_height()
+                .map_err(|_| Error::InnerHeightIndeterminable)?;
+            let inner_height = inner_height.as_f64().ok_or(Error::InnerHeightNotNumber)?;
+            if let Some(document) = use_document().deref() {
+                document
+                    .document_element()
+                    .ok_or(Error::DocumentIndeterminable)?
+                    .unchecked_into::<web_sys::HtmlElement>()
+                    .style()
+                    .set_property("--leptonic-vh", format!("{inner_height}px").as_str())
+                    .map_err(|_| Error::SetPropertyFailed)?;
+            }
+        }
         std::result::Result::<(), Error>::Ok(())
     };
 
@@ -123,21 +151,28 @@ where
         tracing::warn!(?err, "Could not calculate real viewport height");
     }
 
-    let _cleanup = use_event_listener(window(), leptos::ev::resize, move |_e| {
-        if let Err(err) = update_vh() {
-            tracing::warn!(?err, "Could not calculate real viewport height");
-        }
-    });
+    if let Some(win) = win.deref() {
+        let _cleanup = use_event_listener(win.clone(), leptos::ev::resize, move |_e| {
+            if let Err(err) = update_vh() {
+                tracing::warn!(?err, "Could not calculate real viewport height");
+            }
+        });
+    }
 
     // Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent
-    let (is_mobile_device, _set_is_mobile_device) = create_signal(
-        window()
-            .navigator()
-            .user_agent()
-            .unwrap()
-            .to_lowercase()
-            .contains("mobi"),
-    );
+    let is_mobile_device = Signal::derive(move || {
+        use_window()
+            .as_ref()
+            .map(|window| {
+                window
+                    .navigator()
+                    .user_agent()
+                    .unwrap()
+                    .to_lowercase()
+                    .contains("mobi")
+            })
+            .unwrap_or(false)
+    });
 
     // Adding this context also serves the check at the start of this component!
     provide_context(Leptonic {

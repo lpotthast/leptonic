@@ -4,6 +4,7 @@ use leptos::{
     leptos_dom::{Callable, Callback, StoredCallback},
     *,
 };
+use leptos_use::use_window;
 use prelude::Consumer;
 
 pub mod alert;
@@ -386,18 +387,20 @@ pub fn create_signal_ls<T: Clone + serde::Serialize + serde::de::DeserializeOwne
 }
 
 pub fn read_from_local_storage<T: serde::de::DeserializeOwned>(key: &'static str) -> Option<T> {
-    let storage = window().local_storage().ok()??;
-    let stored = storage.get(key).ok()??;
-    match serde_json::from_str(&stored) {
-        Ok(des) => Some(des),
-        Err(err) => {
-            tracing::error!(
-                "Could not deserialize local-storage value at key '{key}'. Received '{stored}'. Tried to convert to '{ty}'. App may continue using a default value. Err: {err}",
-                ty = std::any::type_name::<T>()
-            );
-            None
+    use_window().as_ref().and_then(|window| {
+        let storage = window.local_storage().ok()??;
+        let stored = storage.get(key).ok()??;
+        match serde_json::from_str(&stored) {
+            Ok(des) => Some(des),
+            Err(err) => {
+                tracing::error!(
+                    "Could not deserialize local-storage value at key '{key}'. Received '{stored}'. Tried to convert to '{ty}'. App may continue using a default value. Err: {err}",
+                    ty = std::any::type_name::<T>()
+                );
+                None
+            }
         }
-    }
+    })
 }
 
 pub fn track_in_local_storage<T: serde::Serialize + Clone>(
@@ -405,10 +408,15 @@ pub fn track_in_local_storage<T: serde::Serialize + Clone>(
     signal: ReadSignal<T>,
 ) {
     create_effect(move |_old| {
-        let storage = window().local_storage().ok()??;
-        storage
-            .set(key, serde_json::to_string(&signal.get()).ok()?.as_ref())
-            .ok()
+        use std::ops::Deref;
+        if let Some(window) = use_window().deref() {
+            let storage = window.local_storage().ok()??;
+            storage
+                .set(key, serde_json::to_string(&signal.get()).ok()?.as_ref())
+                .ok()
+        } else {
+            Some(())
+        }
     });
 }
 
