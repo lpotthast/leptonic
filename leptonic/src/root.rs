@@ -75,7 +75,7 @@ where
 
     // MOUSE UP
     let (g_mouseup_event, set_g_mouseup_event) = create_signal::<Option<MouseEvent>>(None);
-    let onmouseup = None;
+    let mut onmouseup = None;
     if let Some(doc) = doc.deref() {
         let closure = Closure::wrap(
             Box::new(move |e| set_g_mouseup_event.set(Some(e))) as Box<dyn FnMut(MouseEvent)>
