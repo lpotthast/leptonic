@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 
 use leptos::{
-    leptos_dom::{Callable, Callback, StoredCallback},
+    Callable, Callback, StoredValue,
     *,
 };
 use leptos_use::use_element_hover;
@@ -67,7 +67,7 @@ fn create_marks(
     range: Memo<f64>,
     in_range: Callback<f64, Signal<bool>>,
     marks: SliderMarks,
-    value_display: Option<StoredCallback<f64, String>>,
+    value_display: Option<StoredValue<Callback<f64, String>>>,
 ) -> Signal<Vec<Mark>> {
     match marks {
         SliderMarks::None => Signal::derive(Vec::new),
@@ -93,7 +93,7 @@ fn create_marks(
                         in_range: in_range.call(current),
                         name: match create_names {
                             true => Some(Cow::Owned(match &value_display {
-                                Some(callback) => callback.call(current),
+                                Some(callback) => callback.get_value().call(current),
                                 None => format!("{current}"),
                             })),
                             false => None,
@@ -261,7 +261,7 @@ pub fn Slider(
     });
 
     // TODO: Remove in rc3
-    let value_display = value_display.map(|it| StoredCallback::new(it));
+    let value_display = value_display.map(|it| StoredValue::new(it));
 
     let marks = create_marks(
         min,
@@ -312,7 +312,7 @@ pub fn Slider(
                                     move || {
                                         let value = value.get();
                                         match &value_display {
-                                            Some(callback) => callback.call(value) ,
+                                            Some(callback) => callback.get_value().call(value),
                                             None => format!("{value}"),
                                         }
                                     }
@@ -416,7 +416,7 @@ pub fn RangeSlider(
     });
 
     // TODO: Remove in rc3
-    let value_display = value_display.map(|it| StoredCallback::new(it));
+    let value_display = value_display.map(|it| StoredValue::new(it));
 
     let marks = create_marks(
         min,
@@ -493,7 +493,7 @@ pub fn RangeSlider(
                                     move || {
                                         let value = value_a.get();
                                         match &value_display_a {
-                                            Some(callback) => callback.call(value) ,
+                                            Some(callback) => callback.get_value().call(value),
                                             None => format!("{value}"),
                                         }
                                     }
@@ -509,7 +509,7 @@ pub fn RangeSlider(
                                     move || {
                                         let value = value_b.get();
                                         match &value_display_b {
-                                            Some(callback) => callback.call(value) ,
+                                            Some(callback) => callback.get_value().call(value),
                                             None => format!("{value}"),
                                         }
                                     }

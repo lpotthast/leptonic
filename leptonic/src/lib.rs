@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use leptos::{
-    leptos_dom::{Callable, Callback, StoredCallback},
+    Callable, Callback, StoredValue,
     *,
 };
 use leptos_use::use_window;
@@ -274,13 +274,13 @@ pub enum Language {
 pub enum Out<O: 'static> {
     Consumer(Consumer<O>),
     Callback(Callback<O, ()>),
-    StoredCallback(StoredCallback<O, ()>),
+    StoredCallback(StoredValue<Callback<O, ()>>),
     WriteSignal(WriteSignal<O>),
 }
 
 pub enum CopyableOut<O: 'static> {
     Consumer(Consumer<O>),
-    StoredCallback(StoredCallback<O, ()>),
+    StoredCallback(StoredValue<Callback<O, ()>>),
     WriteSignal(WriteSignal<O>),
 }
 
@@ -297,7 +297,7 @@ impl<O: 'static> Out<O> {
         match self {
             Out::Consumer(consumer) => consumer.consume(new_value),
             Out::Callback(callback) => callback.call(new_value),
-            Out::StoredCallback(callback) => callback.call(new_value),
+            Out::StoredCallback(callback) => callback.get_value().call(new_value),
             Out::WriteSignal(write_signal) => write_signal.set(new_value),
         }
     }
@@ -305,7 +305,7 @@ impl<O: 'static> Out<O> {
     pub fn into_copy(self) -> CopyableOut<O> {
         match self {
             Out::Consumer(consumer) => CopyableOut::Consumer(consumer),
-            Out::Callback(callback) => CopyableOut::StoredCallback(StoredCallback::new(callback)),
+            Out::Callback(callback) => CopyableOut::StoredCallback(StoredValue::new(callback)),
             Out::StoredCallback(stored_callback) => CopyableOut::StoredCallback(stored_callback),
             Out::WriteSignal(write_signal) => CopyableOut::WriteSignal(write_signal),
         }
@@ -316,7 +316,7 @@ impl<O: 'static> CopyableOut<O> {
     pub fn set(&self, new_value: O) {
         match self {
             CopyableOut::Consumer(consumer) => consumer.consume(new_value),
-            CopyableOut::StoredCallback(callback) => callback.call(new_value),
+            CopyableOut::StoredCallback(callback) => callback.get_value().call(new_value),
             CopyableOut::WriteSignal(write_signal) => write_signal.set(new_value),
         }
     }
@@ -340,8 +340,8 @@ impl<O: 'static> From<Callback<O, ()>> for Out<O> {
     }
 }
 
-impl<O: 'static> From<StoredCallback<O, ()>> for Out<O> {
-    fn from(callback: StoredCallback<O, ()>) -> Self {
+impl<O: 'static> From<StoredValue<Callback<O, ()>>> for Out<O> {
+    fn from(callback: StoredValue<Callback<O, ()>>) -> Self {
         Out::StoredCallback(callback)
     }
 }

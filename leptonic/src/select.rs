@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use leptos::{
-    leptos_dom::{Callable, Callback, StoredCallback},
+    Callable, Callback, StoredValue,
     *,
 };
 use leptos_icons::BsIcon;
@@ -87,7 +87,7 @@ pub fn Select<O>(
 where
     O: SelectOption + 'static,
 {
-    let render_option = StoredCallback::new(render_option);
+    let render_option = StoredValue::new(render_option);
 
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -126,7 +126,7 @@ where
 
     let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
 
-    let select = StoredCallback::new(Callback::new(move |option: O| {
+    let select = StoredValue::new(Callback::new(move |option: O| {
         set_selected.set(option);
         set_show_options.set(false);
     }));
@@ -180,7 +180,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.call(preselected)
+                            select.get_value().call(preselected)
                         }
                     }
                 }
@@ -232,7 +232,7 @@ where
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
-                    { move || render_option.call(selected.get()) }
+                    { move || render_option.get_value().call(selected.get()) }
 
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
@@ -282,11 +282,11 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.call(clone2.clone())
+                                            select.get_value().call(clone2.clone())
                                         }
                                     }
                                 >
-                                    { render_option.call(clone1) }
+                                    { render_option.get_value().call(clone1) }
                                 </leptonic-select-option>
                             }
                         }).collect_view() }
@@ -321,7 +321,7 @@ pub fn OptionalSelect<O>(
 where
     O: SelectOption + 'static,
 {
-    let render_option = StoredCallback::new(render_option);
+    let render_option = StoredValue::new(render_option);
 
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -362,7 +362,7 @@ where
 
     let set_selected_clone = set_selected.clone();
 
-    let select = StoredCallback::new(Callback::new(move |option: O| {
+    let select = StoredValue::new(Callback::new(move |option: O| {
         set_selected.set(Some(option));
         set_show_options.set(false);
     }));
@@ -420,7 +420,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.call(preselected)
+                            select.get_value().call(preselected)
                         }
                     }
                 }
@@ -475,7 +475,7 @@ where
                         None => ().into_view(),
                         Some(selected) => view! {
                             <leptonic-select-option>
-                                { render_option.call(selected) }
+                                { render_option.get_value().call(selected) }
                             </leptonic-select-option>
                         }.into_view(),
                     }}
@@ -541,11 +541,11 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.call(clone2.clone())
+                                            select.get_value().call(clone2.clone())
                                         }
                                     }
                                 >
-                                    { render_option.call(clone1) }
+                                    { render_option.get_value().call(clone1) }
                                 </leptonic-select-option>
                             }
                         }).collect_view() }
@@ -580,7 +580,7 @@ pub fn Multiselect<O>(
 where
     O: SelectOption + PartialOrd + Ord + 'static,
 {
-    let render_option = StoredCallback::new(render_option);
+    let render_option = StoredValue::new(render_option);
 
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -621,7 +621,7 @@ where
 
     let set_selected_clone = set_selected.clone();
 
-    let select = StoredCallback::new(Callback::new(move |option: O| {
+    let select = StoredValue::new(Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
         if !vec.contains(&option) {
             vec.push(option); // TODO
@@ -632,7 +632,7 @@ where
         set_show_options.set(false); // TODO: Make this optional.
     }));
 
-    let deselect = StoredCallback::new(Callback::new(move |option: O| {
+    let deselect = StoredValue::new(Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
         if let Some(pos) = vec.iter().position(|it| it == &option) {
             vec.remove(pos);
@@ -695,7 +695,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.call(preselected)
+                            select.get_value().call(preselected)
                         }
                     }
                 }
@@ -758,9 +758,9 @@ where
                                     }
                                     dismissible=move |e: MouseEvent| {
                                         e.stop_propagation();
-                                        deselect.call(clone.clone());
+                                        deselect.get_value().call(clone.clone());
                                     }>
-                                    { render_option.call(selected) }
+                                    { render_option.get_value().call(selected) }
                                 </Chip>
                             </leptonic-select-option>
                         }}).collect_view()
@@ -814,11 +814,11 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.call(clone2.clone())
+                                            select.get_value().call(clone2.clone())
                                         }
                                     }
                                 >
-                                    { render_option.call(clone1) }
+                                    { render_option.get_value().call(clone1) }
                                 </leptonic-select-option>
                             }
                         }).collect_view() }

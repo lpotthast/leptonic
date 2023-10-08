@@ -1,7 +1,7 @@
 use std::fmt::{Display, Formatter};
 
 use leptos::{
-    leptos_dom::{Callable, Callback},
+    Callable, Callback,
     *,
 };
 use leptos_icons::BsIcon;

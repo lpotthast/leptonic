@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use leptos::{
-    leptos_dom::{Callable, Callback, StoredCallback},
+    Callable, Callback, StoredValue,
     *,
 };
 
@@ -52,7 +52,7 @@ fn QuicksearchModal(
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
     #[prop(into)] on_cancel: Callback<()>, // TODO: Provide a type that does not require to explicitly specify the `()` type.
 ) -> impl IntoView {
-    let on_cancel = StoredCallback::new(on_cancel);
+    let on_cancel = StoredValue::new(on_cancel);
 
     let (input, set_input) = create_signal("".to_owned());
 
@@ -62,7 +62,7 @@ fn QuicksearchModal(
     create_effect(move |_old| {
         if let Some(e) = g_keyboard_event.read_signal.get() {
             if show_when.get_untracked() && e.key().as_str() == "Escape" {
-                on_cancel.call(());
+                on_cancel.get_value().call(());
             }
         }
     });
@@ -84,7 +84,7 @@ fn QuicksearchModal(
                     { move || options().into_iter().map(|option| view! {
                         <leptonic-quicksearch-result on:click=move |_| {
                                 option.on_select.call(());
-                                on_cancel.call(());
+                                on_cancel.get_value().call(());
                             }>
                             { option.view.call(()) }
                         </leptonic-quicksearch-result>
@@ -93,7 +93,7 @@ fn QuicksearchModal(
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| on_cancel.call(()) color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_click=move |_| on_cancel.get_value().call(()) color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>

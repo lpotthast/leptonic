@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use leptos::leptos_dom::{Callable, Callback};
+use leptos::{Callable, Callback};
 use leptos::*;
 use uuid::Uuid;
 

@@ -80,7 +80,7 @@ pub fn TabSelectors(
             <For
                 each=move || tab_labels.get()
                 key=|label| label.id
-                view=move |label| {
+                children=move |label| {
                     let n1 = label.name.clone();
                     let n2 = label.name.clone();
                     view! {

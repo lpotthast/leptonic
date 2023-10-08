@@ -3,7 +3,7 @@ use crate::{
     RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 use indoc::formatdoc;
-use leptos::{leptos_dom::Callback, *};
+use leptos::{Callback, *};
 
 #[component]
 pub fn ColorPreview(
