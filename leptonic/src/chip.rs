@@ -1,9 +1,6 @@
 use std::fmt::{Display, Formatter};
 
-use leptos::{
-    Callable, Callback,
-    *,
-};
+use leptos::*;
 use leptos_icons::BsIcon;
 use web_sys::MouseEvent;
 

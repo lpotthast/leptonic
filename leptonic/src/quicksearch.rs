@@ -1,8 +1,5 @@
 use crate::prelude::*;
-use leptos::{
-    Callable, Callback, StoredValue,
-    *,
-};
+use leptos::*;
 
 #[component]
 pub fn Quicksearch(

@@ -1,9 +1,6 @@
 use std::borrow::Cow;
 
-use leptos::{
-    Callable, Callback, StoredValue,
-    *,
-};
+use leptos::*;
 use leptos_use::use_element_hover;
 
 use crate::{

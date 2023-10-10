@@ -1,9 +1,6 @@
 use std::fmt::Debug;
 
-use leptos::{
-    Callable, Callback, StoredValue,
-    *,
-};
+use leptos::*;
 use leptos_icons::BsIcon;
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 

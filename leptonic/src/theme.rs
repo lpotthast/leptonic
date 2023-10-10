@@ -1,4 +1,4 @@
-use leptos::{Callback, *};
+use leptos::*;
 use leptos_icons::BsIcon;
 
 use crate::{prelude::*, toggle::ToggleProps, toggle::ToggleSize};

@@ -1,9 +1,6 @@
 use std::fmt::Display;
 
-use leptos::{
-    Callable, Callback, StoredValue,
-    *,
-};
+use leptos::*;
 use leptos_use::use_window;
 use prelude::Consumer;
 
