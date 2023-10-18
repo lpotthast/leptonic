@@ -33,7 +33,7 @@ impl<T: 'static> Clone for Consumer<T> {
     }
 }
 
-impl<T: 'static> leptos::leptos_dom::Callable<T, ()> for Consumer<T> {
+impl<T: 'static> leptos::Callable<T, ()> for Consumer<T> {
     fn call(&self, arg: T) -> () {
         self.consume(arg)
     }
@@ -88,7 +88,7 @@ impl<R: 'static> Clone for Producer<R> {
     }
 }
 
-impl<R: 'static> leptos::leptos_dom::Callable<(), R> for Producer<R> {
+impl<R: 'static> leptos::Callable<(), R> for Producer<R> {
     fn call(&self, _arg: ()) -> R {
         self.produce()
     }

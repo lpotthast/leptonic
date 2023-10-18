@@ -142,7 +142,7 @@ pub fn ToastRoot(children: Children) -> impl IntoView {
             <For
                 each=move || toasts.get()
                 key=|toast| toast.id
-                view=move |toast| {
+                children=move |toast| {
                     view! {
                         <Toast toast/>
                     }

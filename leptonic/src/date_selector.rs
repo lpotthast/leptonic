@@ -1,7 +1,4 @@
-use leptos::{
-    leptos_dom::{Callable, Callback},
-    *,
-};
+use leptos::*;
 use time::macros::format_description;
 use uuid::Uuid;
 
@@ -174,7 +171,7 @@ pub fn DateSelector(
                         <For
                             each=move || years.get()
                             key=|year| year.number
-                            view=move |year| {
+                            children=move |year| {
                                 view! {
                                     <div on:click=move |_e| select_year(year)
                                         class="year"
@@ -195,7 +192,7 @@ pub fn DateSelector(
                         <For
                             each=move || months.get()
                             key=|month| month.index
-                            view=move |month| {
+                            children=move |month| {
                                 let mon = month.clone();
                                 view! {
                                     <div on:click=move |_e| select_month(mon.clone())
@@ -217,7 +214,7 @@ pub fn DateSelector(
                         <For
                             each=move || short_weekday_names.get()
                             key=|short_weekday_name| short_weekday_name.clone()
-                            view=move |short_weekday_name| {
+                            children=move |short_weekday_name| {
                                 view! {
                                     <div class={"weekday-name"}>
                                         {short_weekday_name}
@@ -231,13 +228,13 @@ pub fn DateSelector(
                         <For
                             each=move || weeks.get()
                             key=|week| week.id
-                            view=move |week| {
+                            children=move |week| {
                                 view! {
                                     <div class="week">
                                         <For
                                             each=move || week.days.clone()
                                             key=|day| day.id
-                                            view=move |day| {
+                                            children=move |day| {
                                                 let d = day.clone();
                                                 view! {
                                                     <div

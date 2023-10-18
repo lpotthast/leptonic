@@ -2,7 +2,6 @@ use std::ops::Deref;
 
 use leptos::{
     html::ElementDescriptor,
-    leptos_dom::{Callable, Callback},
     *,
 };
 use web_sys::HtmlInputElement;
