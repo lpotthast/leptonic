@@ -14,15 +14,15 @@ categories = ["gui"]
 keywords = ["leptos", "components", "component-library"]
 
 [dependencies]
-indexmap = "2.0.0"
-indoc = "2.0.1"
+indexmap = "2.0.2"
+indoc = "2.0.4"
 js-sys = "0.3.64"
 leptos = "0.5.1"
-leptos-tiptap = "0.3.0-rc1"
-leptos-use = { git = "https://github.com/Synphonyte/leptos-use", features = [
+leptos-tiptap = "0.4.0"
+leptos-use = { version = "0.7.1", features = [
     "math",
 ] }
-leptos_icons = { version = "0.0.16-beta", features = [
+leptos_icons = { version = "0.1.0", features = [
     "BsSun",
     "BsMoon",
     "BsCheckCircleFill",
@@ -46,18 +46,18 @@ leptos_icons = { version = "0.0.16-beta", features = [
     "BsXCircleFill",
 ] }
 leptos_router = "0.5.1"
-serde = "1.0.171"
-serde-wasm-bindgen = "0.5.0"
-serde_json = "1.0.103"
+serde = "1.0.189"
+serde-wasm-bindgen = "0.6.0"
+serde_json = "1.0.107"
 strum = { version = "0.25.0", features = ["derive"] }
-time = { version = "0.3.23", features = [
+time = { version = "0.3.30", features = [
     "wasm-bindgen",
     "macros",
     "serde",
     "serde-well-known",
 ] }
-tracing = "0.1.37"
-uuid = { version = "1.4.0", features = ["v4", "v7", "js", "serde"] }
+tracing = "0.1.39"
+uuid = { version = "1.4.1", features = ["v4", "v7", "js", "serde"] }
 wasm-bindgen = "0.2.87"
 # TODO: What of all below is really required?
 web-sys = { version = "0.3.64", features = [
