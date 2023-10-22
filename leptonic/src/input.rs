@@ -1,16 +1,11 @@
 use std::ops::Deref;
 
-use leptos::{
-    html::ElementDescriptor,
-    *,
-};
+use leptos::{html::ElementDescriptor, *};
 use web_sys::HtmlInputElement;
 
 use crate::{OptionalMaybeSignal, Out};
 
-fn prepare_autofocus<
-    T: ElementDescriptor + Clone + Deref<Target = web_sys::HtmlInputElement> + 'static,
->(
+fn prepare_autofocus<T: ElementDescriptor + Clone + Deref<Target = HtmlInputElement> + 'static>(
     node_ref: NodeRef<T>,
 ) {
     node_ref.on_load(move |elem| {
@@ -21,7 +16,7 @@ fn prepare_autofocus<
     });
 }
 
-fn use_focus<T: ElementDescriptor + Clone + Deref<Target = web_sys::HtmlInputElement> + 'static>(
+fn use_focus<T: ElementDescriptor + Clone + Deref<Target = HtmlInputElement> + 'static>(
     focus: Signal<bool>,
     node_ref: NodeRef<T>,
 ) {
@@ -54,7 +49,7 @@ pub fn TextInput(
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let node_ref: NodeRef<leptos::html::Input> = create_node_ref();
+    let node_ref: NodeRef<html::Input> = create_node_ref();
 
     if autofocus {
         prepare_autofocus(node_ref);
@@ -111,7 +106,7 @@ pub fn PasswordInput(
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let node_ref: NodeRef<leptos::html::Input> = create_node_ref();
+    let node_ref: NodeRef<html::Input> = create_node_ref();
 
     if autofocus {
         prepare_autofocus(node_ref);
@@ -171,7 +166,7 @@ pub fn NumberInput(
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let node_ref: NodeRef<leptos::html::Input> = create_node_ref();
+    let node_ref: NodeRef<html::Input> = create_node_ref();
 
     if autofocus {
         prepare_autofocus(node_ref);

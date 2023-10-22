@@ -3,7 +3,7 @@ use leptos::*;
 
 #[component]
 pub fn Quicksearch(
-    #[prop(into)] trigger: Callback<WriteSignal<bool>, View>,
+    #[prop(into)] trigger: ViewCallback<WriteSignal<bool>>,
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -16,7 +16,7 @@ pub fn Quicksearch(
             <QuicksearchModal
                 show_when=show_modal
                 query=query
-                on_cancel=move |()| set_show_modal.set(false)
+                on_cancel=move || set_show_modal.set(false)
             />
         </leptonic-quicksearch>
     }
@@ -39,7 +39,7 @@ pub fn QuicksearchTrigger(
 
 // TODO: Add clone in rc3
 pub struct QuicksearchOption {
-    pub view: Callback<(), View>, // TODO: Use ViewCallback when 0.5.0-rc2 or final is out!
+    pub view: ViewProducer,
     pub on_select: Callback<()>,
 }
 
@@ -47,7 +47,7 @@ pub struct QuicksearchOption {
 fn QuicksearchModal(
     #[prop(into)] show_when: Signal<bool>,
     #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
-    #[prop(into)] on_cancel: Callback<()>, // TODO: Provide a type that does not require to explicitly specify the `()` type.
+    #[prop(into)] on_cancel: Producer<()>,
 ) -> impl IntoView {
     let on_cancel = StoredValue::new(on_cancel);
 

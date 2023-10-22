@@ -136,6 +136,8 @@ pub mod prelude {
     pub use super::callback::producer;
     pub use super::callback::Consumer;
     pub use super::callback::Producer;
+    pub use super::callback::ViewCallback;
+    pub use super::callback::ViewProducer;
     pub use super::card::Card;
     pub use super::checkbox::Checkbox;
     pub use super::chip::Chip;
@@ -251,7 +253,6 @@ pub mod prelude {
     pub use super::typography::H5;
     pub use super::typography::H6;
     pub use super::typography::P;
-    pub use super::CopyableOut;
     pub use super::FontWeight;
     pub use super::Height;
     pub use super::Margin;
@@ -271,19 +272,12 @@ pub enum Language {
 pub enum Out<O: 'static> {
     Consumer(Consumer<O>),
     Callback(Callback<O, ()>),
-    StoredCallback(StoredValue<Callback<O, ()>>),
     WriteSignal(WriteSignal<O>),
 }
 
-pub enum CopyableOut<O: 'static> {
-    Consumer(Consumer<O>),
-    StoredCallback(StoredValue<Callback<O, ()>>),
-    WriteSignal(WriteSignal<O>),
-}
+impl<O: 'static> Copy for Out<O> {}
 
-impl<O: 'static> Copy for CopyableOut<O> {}
-
-impl<O: 'static> Clone for CopyableOut<O> {
+impl<O: 'static> Clone for Out<O> {
     fn clone(&self) -> Self {
         *self
     }
@@ -294,27 +288,7 @@ impl<O: 'static> Out<O> {
         match self {
             Out::Consumer(consumer) => consumer.consume(new_value),
             Out::Callback(callback) => callback.call(new_value),
-            Out::StoredCallback(callback) => callback.get_value().call(new_value),
             Out::WriteSignal(write_signal) => write_signal.set(new_value),
-        }
-    }
-
-    pub fn into_copy(self) -> CopyableOut<O> {
-        match self {
-            Out::Consumer(consumer) => CopyableOut::Consumer(consumer),
-            Out::Callback(callback) => CopyableOut::StoredCallback(StoredValue::new(callback)),
-            Out::StoredCallback(stored_callback) => CopyableOut::StoredCallback(stored_callback),
-            Out::WriteSignal(write_signal) => CopyableOut::WriteSignal(write_signal),
-        }
-    }
-}
-
-impl<O: 'static> CopyableOut<O> {
-    pub fn set(&self, new_value: O) {
-        match self {
-            CopyableOut::Consumer(consumer) => consumer.consume(new_value),
-            CopyableOut::StoredCallback(callback) => callback.get_value().call(new_value),
-            CopyableOut::WriteSignal(write_signal) => write_signal.set(new_value),
         }
     }
 }
@@ -337,27 +311,9 @@ impl<O: 'static> From<Callback<O, ()>> for Out<O> {
     }
 }
 
-impl<O: 'static> From<StoredValue<Callback<O, ()>>> for Out<O> {
-    fn from(callback: StoredValue<Callback<O, ()>>) -> Self {
-        Out::StoredCallback(callback)
-    }
-}
-
 impl<O: 'static> From<WriteSignal<O>> for Out<O> {
     fn from(write_signal: WriteSignal<O>) -> Self {
         Out::WriteSignal(write_signal)
-    }
-}
-
-// TODO: Remove Clone bound once Callback implements Clone manually!
-impl<O: Clone + 'static> Clone for Out<O> {
-    fn clone(&self) -> Self {
-        match self {
-            Out::Consumer(inner) => Out::Consumer(inner.clone()),
-            Out::Callback(inner) => Out::Callback((*inner).clone()),
-            Out::StoredCallback(inner) => Out::StoredCallback(inner.clone()),
-            Out::WriteSignal(inner) => Out::WriteSignal(inner.clone()),
-        }
     }
 }
 

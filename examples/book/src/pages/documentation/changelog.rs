@@ -6,6 +6,28 @@ pub fn PageChangelog() -> impl IntoView {
     view! {
         <H1>"Changelog"</H1>
 
+        <H2>"0.3.0"</H2>
+
+        <H3>"Added:"</H3>
+        <ul>
+            <li>"The `Consumer` type. Use `Consumer<In>` when you would otherwise write `Callback<In, ()>`."</li>
+            <li>"The `Producer` type. Use `Producer<Out>` when you would otherwise write `Callback<(), Out>`."</li>
+            <li>"The `ViewProducer` type. Use `ViewProducer` when you would otherwise write `Callback<(), leptos::View>`."</li>
+            <li>"The `ViewCallback` type. Use `ViewCallback<In>` when you would otherwise write `Callback<In, leptos::View>`."</li>
+        </ul>
+
+        <H3>"Changed:"</H3>
+        <ul>
+            <li>"Updated to leptos 0.5.1. No more `cx`!"</li>
+            <li>"The `render_option` prop for select inputs no longer requires you to call `.into_view()` on whatever your closure returns."</li>
+            <li>"Collapsibles now use the slot approach."</li>
+        </ul>
+
+        <H3>"Removed:"</H3>
+        <ul>
+            <li>"The `Callback` and `Callable` types moved into leptos itself. They should still be accessible on most use-sites as they are now imported with `use leptos::*`, which should already be present in most places the leptonic Callback was used before."</li>
+        </ul>
+
         <H2>"0.2.0"</H2>
 
         <H3>"Added:"</H3>

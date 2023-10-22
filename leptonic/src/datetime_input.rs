@@ -15,8 +15,8 @@ pub fn DateTimeInput(
     #[prop(into)] get: MaybeSignal<Option<time::OffsetDateTime>>,
     #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
     #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
-    #[prop(into, optional)] id: Option<leptos::Oco<'static, str>>,
-    #[prop(into, optional)] class: Option<leptos::Oco<'static, str>>,
+    #[prop(into, optional)] id: Option<Oco<'static, str>>,
+    #[prop(into, optional)] class: Option<Oco<'static, str>>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(optional)] margin: Option<Margin>,
 
@@ -59,8 +59,6 @@ pub fn DateTimeInput(
             }
         }
     };
-
-    let set = set.into_copy();
 
     let date_selector = move || {
         DateSelector(DateSelectorProps {

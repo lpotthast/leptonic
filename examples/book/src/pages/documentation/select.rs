@@ -85,7 +85,7 @@ pub fn PageSelect() -> impl IntoView {
                     <Select
                         options=vec![Foo::A, Foo::B, Foo::C]
                         search_text_provider=move |o| format!("{o}")
-                        render_option=move |o| format!("{o:?}").into_view()
+                        render_option=move |o| format!("{o:?}")
                         selected=selected
                         set_selected=move |v| set_selected.set(v)
                     />
@@ -96,7 +96,7 @@ pub fn PageSelect() -> impl IntoView {
         <Select
             options=vec![Foo::A, Foo::B, Foo::C]
             search_text_provider=move |o| format!("{o}")
-            render_option=move |o| format!("{o:?}").into_view()
+            render_option=move |o| format!("{o:?}")
             selected=selected
             set_selected=move |v| set_selected.set(v)
         />
@@ -125,7 +125,7 @@ pub fn PageSelect() -> impl IntoView {
         <OptionalSelect
             options=vec![Foo::A, Foo::B, Foo::C]
             search_text_provider=move |o| format!("{o:?}")
-            render_option=move |o| format!("{o:?}").into_view()
+            render_option=move |o| format!("{o:?}")
             selected=selected_opt
             set_selected=set_selected_opt
             allow_deselect=true
@@ -143,7 +143,7 @@ pub fn PageSelect() -> impl IntoView {
                     <Multiselect
                         options=vec![Foo::A, Foo::B, Foo::C]
                         search_text_provider=move |o| format!("{o}")
-                        render_option=move |o| format!("{o:?}").into_view()
+                        render_option=move |o| format!("{o:?}")
                         selected=selected_multi
                         set_selected=move |v| set_selected_multi.set(v)
                     />
@@ -154,7 +154,7 @@ pub fn PageSelect() -> impl IntoView {
         <Multiselect
             options=vec![Foo::A, Foo::B, Foo::C]
             search_text_provider=move |o| format!("{o}")
-            render_option=move |o| format!("{o:?}").into_view()
+            render_option=move |o| format!("{o:?}")
             selected=selected_multi
             set_selected=move |v| set_selected_multi.set(v)
         />
@@ -165,7 +165,7 @@ pub fn PageSelect() -> impl IntoView {
             options=vec![Foo::A, Foo::B, Foo::C]
             max=2
             search_text_provider=move |o| format!("{o}")
-            render_option=move |o| format!("{o:?}").into_view()
+            render_option=move |o| format!("{o:?}")
             selected=selected_multi2
             set_selected=set_selected_multi2
         />
@@ -223,7 +223,7 @@ pub fn PageSelect() -> impl IntoView {
                     <Select
                         options=selectable_users.clone()
                         search_text_provider=move |o| format!("{o}")
-                        render_option=move |o: User| format!("{}", o.name).into_view()
+                        render_option=move |o: User| format!("{}", o.name)
                         selected=selected_user
                         set_selected=move |v| set_selected_user.set(v)
                     />
@@ -236,7 +236,7 @@ pub fn PageSelect() -> impl IntoView {
         <Select
             options=selectable_users.clone()
             search_text_provider=move |o: User| o.to_string()
-            render_option=move |o: User| o.name.to_string().into_view()
+            render_option=move |o: User| o.name.to_string()
             selected=selected_user
             set_selected=move |v| set_selected_user.set(v)
         />
