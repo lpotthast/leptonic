@@ -80,9 +80,9 @@ pub fn PageButton() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Button on_click=move |_| {} disabled=true>"Disabled"</Button>
+                <Button on_click=move |_| {} disabled=true>"Always Disabled"</Button>
                 <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
-                <Button on_click=move |_| {} disabled=Signal::derive(move || !disabled.get())>"Disabled"</Button>
+                <Button on_click=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
             "#)}
         </Code>
 
@@ -91,9 +91,9 @@ pub fn PageButton() -> impl IntoView {
         </div>
 
         <ButtonWrapper>
-            <Button on_click=move |_| {} disabled=true>"Disabled"</Button>
+            <Button on_click=move |_| {} disabled=true>"Always Disabled"</Button>
             <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
-            <Button on_click=move |_| {} disabled=Signal::derive(move || !disabled.get())>"Disabled"</Button>
+            <Button on_click=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
         </ButtonWrapper>
 
         <H2>"Variations"</H2>
