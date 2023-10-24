@@ -37,10 +37,11 @@ pub fn QuicksearchTrigger(
     }
 }
 
-// TODO: Add clone in rc3
+#[derive(Debug, Clone)]
 pub struct QuicksearchOption {
+    pub label: Oco<'static, str>,
     pub view: ViewProducer,
-    pub on_select: Callback<()>,
+    pub on_select: Producer<()>,
 }
 
 #[component]
@@ -76,7 +77,7 @@ fn QuicksearchModal(
                     prepend=().into_view()
                 />
             </ModalHeader>
-            <ModalBody>
+            <ModalBody style="overflow: auto;">
                 <leptonic-quicksearch-results>
                     { move || options().into_iter().map(|option| view! {
                         <leptonic-quicksearch-result on:click=move |_| {

@@ -3,7 +3,7 @@ leptonic-modal.quicksearch-modal {
     width: auto;
     min-width: unset;
     max-width: 45em;
-    margin-top: -33vh;
+    max-height: 80em;
 
     leptonic-modal-header {
         padding: 0;
@@ -28,9 +28,8 @@ leptonic-modal.quicksearch-modal {
     leptonic-quicksearch-results {
         width: 100%;
         display: flex;
-        justify-content: center;
-        align-items: flex-start;
         flex-direction: column;
+        overflow: scroll;
 
         leptonic-quicksearch-result {
             width: 100%;

@@ -137,45 +137,38 @@ pub fn Layout() -> impl IntoView {
     provide_context(ctx);
 
     let search_options = vec![
-        (
-            "overview",
-            QuicksearchOption {
-                view: ViewProducer::new(move || {
-                    view! {
-                        <Link href=DocRoutes::Overview class="search-link">
-                            "Overview"
-                        </Link>
-                    }
-                }),
-                on_select: Callback::new(move |()| {}),
-            },
-        ),
-        (
-            "installation",
-            QuicksearchOption {
-                view: ViewProducer::new(move || {
-                    view! {
-                        <Link href=DocRoutes::Installation class="search-link">
-                            "Installation"
-                        </Link>
-                    }
-                }),
-                on_select: Callback::new(move |()| {}),
-            },
-        ),
-        (
-            "usage",
-            QuicksearchOption {
-                view: ViewProducer::new(move || {
-                    view! {
-                        <Link href=DocRoutes::Usage class="search-link">
-                            "Usage"
-                        </Link>
-                    }
-                }),
-                on_select: Callback::new(move |()| {}),
-            },
-        ),
+        create_search_option(DocRoutes::Overview, "Overview"),
+        create_search_option(DocRoutes::Installation, "Installation"),
+        create_search_option(DocRoutes::Usage, "Usage"),
+        create_search_option(DocRoutes::Themes, "Themes"),
+        create_search_option(DocRoutes::Changelog, "Changelog"),
+        create_search_option(DocRoutes::Stack, "Grid"),
+        create_search_option(DocRoutes::Separator, "Separator"),
+        create_search_option(DocRoutes::Skeleton, "App Bar"),
+        create_search_option(DocRoutes::Drawer, "Drawer"),
+        create_search_option(DocRoutes::Tab, "Tabs"),
+        create_search_option(DocRoutes::Table, "Table"),
+        create_search_option(DocRoutes::Collapsible, "Collapsible"),
+        create_search_option(DocRoutes::Button, "Button"),
+        create_search_option(DocRoutes::Input, "Input"),
+        create_search_option(DocRoutes::TiptapEditor, "Tiptap Editor"),
+        create_search_option(DocRoutes::DateTime, "Date & Time"),
+        create_search_option(DocRoutes::Slider, "Slider"),
+        create_search_option(DocRoutes::Select, "Select"),
+        create_search_option(DocRoutes::ColorPicker, "Color Picker"),
+        create_search_option(DocRoutes::Alert, "Alert"),
+        create_search_option(DocRoutes::Toast, "Toast"),
+        create_search_option(DocRoutes::Modal, "Modal"),
+        create_search_option(DocRoutes::Progress, "Progress"),
+        create_search_option(DocRoutes::Popover, "Popover"),
+        create_search_option(DocRoutes::Chip, "Chip"),
+        create_search_option(DocRoutes::Kbd, "Keyboard"),
+        create_search_option(DocRoutes::Typography, "Typography"),
+        create_search_option(DocRoutes::Icon, "Icon"),
+        create_search_option(DocRoutes::Link, "Link"),
+        create_search_option(DocRoutes::Anchor, "Anchor"),
+        create_search_option(DocRoutes::Callback, "Callback"),
+        create_search_option(DocRoutes::Transition, "Transition"),
     ];
 
     let logo = move || {
@@ -223,12 +216,10 @@ pub fn Layout() -> impl IntoView {
                                 return vec![];
                             }
                             let lower_search = search.to_lowercase();
-                            // TODO: Re-enable in rc3
-                            //search_options.iter()
-                            //    .filter(|it| it.0.to_lowercase().contains(&lower_search))
-                            //    .map(|it| it.1.clone())
-                            //    .collect::<Vec<_>>()
-                            Vec::new()
+                            search_options.iter()
+                                .filter(|it| it.label.to_lowercase().contains(&lower_search))
+                                .map(|it| it.clone())
+                                .collect::<Vec<_>>()
                         }
                     />
                 </Stack>
@@ -269,5 +260,19 @@ pub fn Layout() -> impl IntoView {
                 </Stack>
             </Drawer>
         </Box>
+    }
+}
+
+fn create_search_option(route: DocRoutes, label: &'static str) -> QuicksearchOption {
+    QuicksearchOption {
+        label: label.into(),
+        view: ViewProducer::new(move || {
+            view! {
+                <Link href=route class="search-link">
+                    {label}
+                </Link>
+            }
+        }),
+        on_select: Producer::new(move || {}),
     }
 }
