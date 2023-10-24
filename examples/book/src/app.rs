@@ -218,7 +218,7 @@ pub fn Layout() -> impl IntoView {
                             let lower_search = search.to_lowercase();
                             search_options.iter()
                                 .filter(|it| it.label.to_lowercase().contains(&lower_search))
-                                .map(|it| it.clone())
+                                .cloned()
                                 .collect::<Vec<_>>()
                         }
                     />
