@@ -9,7 +9,7 @@ leptonic-progress-bar {
     background-color: transparent;
     user-select: none;
 
-    &[date-indeterminate] {
+    &[data-indeterminate] {
         leptonic-progress-bar-background {
             display: block;
 

@@ -23,9 +23,14 @@ pub fn PageChangelog() -> impl IntoView {
             <li>"Collapsibles now use the slot approach."</li>
         </ul>
 
+        <H3>"Fixed:"</H3>
+        <ul>
+            <li>"Fixed a bug which prevented progress bars in their indeterminate state to animate."</li>
+        </ul>
+
         <H3>"Removed:"</H3>
         <ul>
-            <li>"The `Callback` and `Callable` types moved into leptos itself. They should still be accessible on most use-sites as they are now imported with `use leptos::*`, which should already be present in most places the leptonic Callback was used before."</li>
+            <li>"The `Callback` and `Callable` types moved into leptos itself! They should still be accessible on most use-sites as they are now imported with `use leptos::*`, which should already be present in most places the leptonic Callback was used before."</li>
         </ul>
 
         <H2>"0.2.0"</H2>
