@@ -142,18 +142,10 @@ pub fn use_collapsible_header() -> CollapsibleHeaderWrapperContext {
 }
 
 #[slot]
-pub struct CollapsibleStateIndicator {
-    #[prop(optional)]
-    children: Option<Children>,
-}
-
-#[slot]
 pub struct CollapsibleHeader {
     children: Children,
     #[prop(into, optional)]
     class: Option<AttributeValue>,
-    #[prop(optional)]
-    collapsible_state_indicator: Option<CollapsibleStateIndicator>,
 }
 
 #[component]
@@ -166,12 +158,9 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
                 { (collapsible_header.children)() }
             </leptonic-collapsible-header>
 
-            { move || match &collapsible_header.collapsible_state_indicator {
-                Some(i) => view! {}.into_view(),
-                None => match ctx2.collapsible_ctx.show.get() {
-                    true => view! { <Icon icon=BsIcon::BsCaretUpFill/>}.into_view(),
-                    false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}.into_view()
-                }
+            { move ||  match ctx2.collapsible_ctx.show.get() {
+                true => view! { <Icon icon=BsIcon::BsCaretUpFill/>}.into_view(),
+                false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}.into_view()
             } }
         </leptonic-collapsible-header-wrapper>
     }
