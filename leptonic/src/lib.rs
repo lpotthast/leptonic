@@ -149,6 +149,37 @@ impl<T: Clone + Default> SignalGetUntracked for OptionalMaybeSignal<T> {
     }
 }
 
+impl<T: IntoAttribute + Clone> IntoAttribute for OptionalMaybeSignal<T> {
+    fn into_attribute(self) -> Attribute {
+        match self.0 {
+            Some(t) => t.into_attribute(), // Requires T to be Clone!
+            None => Attribute::Option(None),
+        }
+    }
+
+    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
+        match self.0 {
+            Some(t) => t.into_attribute(), // Requires T to be Clone!
+            None => Attribute::Option(None),
+        }
+    }
+}
+
+pub trait MaybeSignalExt<T: 'static> {
+    fn map<U: 'static, F: Fn(T) -> U + 'static>(self, mapper: F) -> MaybeSignal<U>;
+}
+
+impl<T: Clone + 'static> MaybeSignalExt<T> for MaybeSignal<T> {
+    fn map<U: 'static, F: Fn(T) -> U + 'static>(self, mapper: F) -> MaybeSignal<U> {
+        match self {
+            MaybeSignal::Static(v) => MaybeSignal::Static(mapper(v)),
+            MaybeSignal::Dynamic(sig) => {
+                MaybeSignal::Dynamic(Signal::derive(move || mapper(sig.get())))
+            }
+        }
+    }
+}
+
 pub mod prelude {
     pub use leptos_tiptap::*;
 
