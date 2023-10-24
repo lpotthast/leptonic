@@ -68,6 +68,37 @@ impl<T: 'static, I: Into<Signal<T>>> From<I> for OptionalSignal<T> {
 #[derive(Debug, Clone)]
 pub struct OptionalMaybeSignal<T: 'static>(Option<MaybeSignal<T>>);
 
+impl<T: Clone> OptionalMaybeSignal<T> {
+    pub fn or<D: Into<MaybeSignal<T>>>(self, default: D) -> MaybeSignal<T> {
+        match self.0 {
+            Some(maybe_signal) => maybe_signal,
+            None => default.into(),
+        }
+    }
+
+    pub fn or_default(self) -> MaybeSignal<T>
+    where
+        T: Default,
+    {
+        match self.0 {
+            Some(maybe_signal) => maybe_signal,
+            None => MaybeSignal::Static(T::default()),
+        }
+    }
+
+    pub fn map<U: 'static, F: Fn(T) -> U + 'static>(self, map: F) -> OptionalMaybeSignal<U> {
+        match self.0 {
+            Some(maybe_signal) => match maybe_signal {
+                MaybeSignal::Static(v) => MaybeSignal::Static(map(v)).into(),
+                MaybeSignal::Dynamic(sig) => {
+                    MaybeSignal::Dynamic(Signal::derive(move || map(sig.get()))).into()
+                }
+            },
+            None => OptionalMaybeSignal(None),
+        }
+    }
+}
+
 impl<T: Copy> Copy for OptionalMaybeSignal<T> {}
 
 impl<T> Default for OptionalMaybeSignal<T> {
