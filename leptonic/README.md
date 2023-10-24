@@ -7,10 +7,11 @@ Visit [leptonic.dev](https://leptonic.dev) for installation instructions, compon
 ## Leptos compatibility
 
 | Crate version | Compatible Leptos version |
-|---------------|---------------------------|
-| 0.1           | 0.4                       |
-| 0.2           | 0.4                       |
-| 0.3.0-rc1     | 0.5.0-rc1                 |
+|-------------|-------------------------|
+| 0.1         | 0.4                     |
+| 0.2         | 0.4                     |
+| 0.3.0-rc1   | 0.5.0-rc1               |
+| 0.3         | 0.5                     |
 
 ## MSRV
 
