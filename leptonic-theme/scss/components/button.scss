@@ -127,10 +127,10 @@
       }
     }
 
-    &[aria-disabled],
-    &[aria-disabled]:hover,
-    &[aria-disabled]:focus,
-    &[aria-disabled]:active {
+    &[aria-disabled="true"],
+    &[aria-disabled="true"]:hover,
+    &[aria-disabled="true"]:focus,
+    &[aria-disabled="true"]:active {
       background-color: #e2e2e2;
       border-color: #e2e2e2;
       color: #9a9a9a;
@@ -260,10 +260,10 @@
       }
     }
 
-    &[aria-disabled],
-    &[aria-disabled]:hover,
-    &[aria-disabled]:focus,
-    &[aria-disabled]:active {
+    &[aria-disabled="true"],
+    &[aria-disabled="true"]:hover,
+    &[aria-disabled="true"]:focus,
+    &[aria-disabled="true"]:active {
       background-color: #e2e2e2;
       border-color: #e2e2e2;
       color: #9a9a9a;
@@ -404,10 +404,10 @@
       }
     }
 
-    &[aria-disabled],
-    &[aria-disabled]:hover,
-    &[aria-disabled]:focus,
-    &[aria-disabled]:active {
+    &[aria-disabled="true"],
+    &[aria-disabled="true"]:hover,
+    &[aria-disabled="true"]:focus,
+    &[aria-disabled="true"]:active {
       background-color: #e2e2e2;
       border-color: #e2e2e2;
       color: #9a9a9a;
