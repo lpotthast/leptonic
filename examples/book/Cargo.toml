@@ -15,8 +15,8 @@ codegen-units = 1
 console_error_panic_hook = "0.1.7"
 indoc = "2.0.4"
 leptonic = { path = "../../leptonic", features = ["csr"] }
-leptos = { version = "0.5.1", features = ["csr"] }
-leptos-use = "0.7.1"
+leptos = { version = "0.5.2", features = ["csr"] }
+leptos-use = "0.8.2"
 leptos_icons = { version = "0.1.0", features = [
     "BsGithub",
     "BsSearch",
@@ -35,19 +35,19 @@ leptos_icons = { version = "0.1.0", features = [
     "BsBell",
     "BsPower",
 ] }
-leptos_meta = { version = "0.5.1", features = ["csr"] }
-leptos_router = { version = "0.5.1", features = ["csr"] }
+leptos_meta = { version = "0.5.2", features = ["csr"] }
+leptos_router = { version = "0.5.2", features = ["csr"] }
 ordered-float = "4.1.1"
-serde = "1.0.189"
-serde-wasm-bindgen = "0.6.0"
-serde_json = "1.0.107"
+serde = "1.0.192"
+serde-wasm-bindgen = "0.6.1"
+serde_json = "1.0.108"
 strum = { version = "0.25.0", features = ["derive"] }
 time = { version = "0.3.30", features = ["wasm-bindgen"] }
-tracing = "0.1.39"
+tracing = "0.1.40"
 tracing-subscriber = "0.3.17"
 tracing-wasm = "0.2.1"
-uuid = { version = "1.4.1", features = ["js", "v4", "v7", "serde"] }
-wasm-bindgen = "0.2.87"
+uuid = { version = "1.5.0", features = ["js", "v4", "v7", "serde"] }
+wasm-bindgen = "0.2.88"
 
 [build-dependencies]
 leptonic-theme = { path = "../../leptonic-theme" }
