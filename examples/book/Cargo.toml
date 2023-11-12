@@ -4,6 +4,15 @@ version = "0.1.0"
 edition = "2021"
 build = "build.rs"
 
+[profile.dev]
+# Slightly higher optimization for our code. This should increase incremental compilation times.
+opt-level = 1
+#debug = false
+[profile.dev.package."*"]
+# High optimization for our dependencies. This should increase performance drastically whithout hitting our incremental compilation times.
+# This will lead to obscure error messages from third party libraries. Comment this out when experiencing a tricky bug.
+opt-level = 3
+
 [profile.release]
 opt-level = "z"
 lto = "fat"
