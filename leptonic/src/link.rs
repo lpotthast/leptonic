@@ -1,6 +1,8 @@
 use leptos::*;
 use leptos_router::*;
 
+use crate::OptionalMaybeSignal;
+
 #[component]
 pub fn Link<H>(
     /// Used to calculate the link's `href` attribute. Will be resolved relative
@@ -65,6 +67,7 @@ pub fn LinkExt<H>(
     /// Used to calculate the link's `href` attribute.
     href: H,
     target: LinkExtTarget,
+    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     // TODO: Impl this prop
     // /// If `true`, the link will not add to the browser's history (so, pressing `Back`
     // /// will skip this page.)
@@ -84,6 +87,7 @@ where
             <a
                 href=href.to_href()()
                 target=format!("{target}")
+                prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
                 rel={ match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }
             >
                 { children() }
