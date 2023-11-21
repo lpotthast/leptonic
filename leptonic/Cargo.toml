@@ -46,7 +46,7 @@ leptos_icons = { version = "0.1.0", features = [
     "BsXCircleFill",
 ] }
 leptos_router = "0.5.2"
-serde = "1.0.192"
+serde = "1.0.193"
 serde-wasm-bindgen = "0.6.1"
 serde_json = "1.0.108"
 strum = { version = "0.25.0", features = ["derive"] }
