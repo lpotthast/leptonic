@@ -57,7 +57,7 @@ time = { version = "0.3.30", features = [
     "serde-well-known",
 ] }
 tracing = "0.1.40"
-uuid = { version = "1.5.0", features = ["v4", "v7", "js", "serde"] }
+uuid = { version = "1.6.1", features = ["v4", "js", "serde"] }
 wasm-bindgen = "0.2.88"
 # TODO: What of all below is really required?
 web-sys = { version = "0.3.65", features = [
