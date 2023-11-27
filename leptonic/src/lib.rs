@@ -335,6 +335,7 @@ pub enum Out<O: 'static> {
     Consumer(Consumer<O>),
     Callback(Callback<O, ()>),
     WriteSignal(WriteSignal<O>),
+    RwSignal(RwSignal<O>),
 }
 
 impl<O: 'static> Copy for Out<O> {}
@@ -351,6 +352,7 @@ impl<O: 'static> Out<O> {
             Out::Consumer(consumer) => consumer.consume(new_value),
             Out::Callback(callback) => callback.call(new_value),
             Out::WriteSignal(write_signal) => write_signal.set(new_value),
+            Out::RwSignal(rw_signal) => rw_signal.set(new_value),
         }
     }
 }
@@ -376,6 +378,12 @@ impl<O: 'static> From<Callback<O, ()>> for Out<O> {
 impl<O: 'static> From<WriteSignal<O>> for Out<O> {
     fn from(write_signal: WriteSignal<O>) -> Self {
         Out::WriteSignal(write_signal)
+    }
+}
+
+impl<O: 'static> From<RwSignal<O>> for Out<O> {
+    fn from(rw_signal: RwSignal<O>) -> Self {
+        Out::RwSignal(rw_signal)
     }
 }
 
