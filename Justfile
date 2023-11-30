@@ -1,5 +1,7 @@
+# See: https://github.com/casey/just
+
 # Lists all available commands.
-list:
+default:
   just --list
 
 # Find the minimum supported rust version
