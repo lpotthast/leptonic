@@ -24,7 +24,7 @@ codegen-units = 1
 console_error_panic_hook = "0.1.7"
 indoc = "2.0.4"
 leptonic = { path = "../../leptonic", features = ["csr"] }
-leptos = { version = "0.5.2", features = ["csr"] }
+leptos = { version = "0.5.4", features = ["csr"] }
 leptos-use = "0.8.2"
 leptos_icons = { version = "0.1.0", features = [
     "BsGithub",
@@ -44,8 +44,8 @@ leptos_icons = { version = "0.1.0", features = [
     "BsBell",
     "BsPower",
 ] }
-leptos_meta = { version = "0.5.2", features = ["csr"] }
-leptos_router = { version = "0.5.2", features = ["csr"] }
+leptos_meta = { version = "0.5.4", features = ["csr"] }
+leptos_router = { version = "0.5.4", features = ["csr"] }
 ordered-float = "4.1.1"
 serde = "1.0.193"
 serde-wasm-bindgen = "0.6.1"
@@ -56,7 +56,7 @@ tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
 tracing-wasm = "0.2.1"
 uuid = { version = "1.6.1", features = ["js", "v4", "serde"] }
-wasm-bindgen = "0.2.88"
+wasm-bindgen = "0.2.89"
 
 [build-dependencies]
 leptonic-theme = { path = "../../leptonic-theme" }

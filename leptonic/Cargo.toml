@@ -16,8 +16,8 @@ keywords = ["leptos", "components", "component-library"]
 [dependencies]
 indexmap = "2.1.0"
 indoc = "2.0.4"
-js-sys = "0.3.65"
-leptos = "0.5.2"
+js-sys = "0.3.66"
+leptos = "0.5.4"
 leptos-tiptap = "0.4.0"
 leptos-use = { version = "0.8.2", features = [
     "math",
@@ -45,7 +45,7 @@ leptos_icons = { version = "0.1.0", features = [
     "BsJustify",
     "BsXCircleFill",
 ] }
-leptos_router = "0.5.2"
+leptos_router = "0.5.4"
 serde = "1.0.193"
 serde-wasm-bindgen = "0.6.1"
 serde_json = "1.0.108"
@@ -58,9 +58,9 @@ time = { version = "0.3.30", features = [
 ] }
 tracing = "0.1.40"
 uuid = { version = "1.6.1", features = ["v4", "js", "serde"] }
-wasm-bindgen = "0.2.88"
+wasm-bindgen = "0.2.89"
 # TODO: What of all below is really required?
-web-sys = { version = "0.3.65", features = [
+web-sys = { version = "0.3.66", features = [
     "DomRect",
     "Event",
     "EventTarget",
@@ -70,9 +70,9 @@ web-sys = { version = "0.3.65", features = [
 ] }
 
 [dev-dependencies]
-wasm-bindgen = "0.2.88"
-wasm-bindgen-test = "0.3.38"
-web-sys = "0.3.65"
+wasm-bindgen = "0.2.89"
+wasm-bindgen-test = "0.3.39"
+web-sys = "0.3.66"
 
 [features]
 csr = ["leptos/csr"]
