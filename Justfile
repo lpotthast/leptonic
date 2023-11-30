@@ -24,12 +24,13 @@ setup-rust-stable:
 
 # Install dependencies for building, running examples, profiling and more...
 install-tools:
-  cargo install trunk
+  cargo install --git https://github.com/ctron/trunk --branch trunk-ng trunk-ng
   cargo install twiggy
   cargo install cargo-expand
   cargo install cargo-whatfeatures
   cargo install cargo-upgrades
   cargo install cargo-edit
+  cargo install cargo-clean-all
 
 # Serve the Book example
 serve:
