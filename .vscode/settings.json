@@ -1,5 +1,10 @@
 {
     "cSpell.words": [
         "leptos"
+    ],
+    "rust-analyzer.linkedProjects": [
+        "./leptonic/Cargo.toml",
+        "./leptonic-theme/Cargo.toml",
+        "./examples/book/Cargo.toml"
     ]
 }
