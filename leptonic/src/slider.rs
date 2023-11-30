@@ -32,14 +32,16 @@ pub enum SliderMarks {
     Automatic {
         create_names: bool,
     },
-    Custom(Vec<SliderMark>),
+    Custom {
+        marks: Vec<SliderMark>,
+    },
 }
 
 #[derive(Debug, Clone)]
 
 pub struct SliderMark {
-    value: SliderMarkValue,
-    name: Option<Cow<'static, str>>,
+    pub value: SliderMarkValue,
+    pub name: Option<Cow<'static, str>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -108,9 +110,29 @@ fn create_marks(
             }
             None => Vec::new(),
         }),
-        SliderMarks::Custom(marks) => Signal::derive(move || {
+        SliderMarks::Custom { marks } => Signal::derive(move || {
             marks
                 .iter()
+                .filter(|mark| {
+                    match mark.value {
+                        SliderMarkValue::Value(value) => {
+                            if value < min || value > max {
+                                tracing::warn!(?mark, min, max, "value of custom slider mark is outside slider range");
+                                false
+                            } else {
+                                true
+                            }
+                        },
+                        SliderMarkValue::Percentage(percentage) => {
+                            if percentage < 0.0 || percentage > 1.0 {
+                                tracing::warn!(?mark, "percentage of custom slider mark is outside 0..1 range");
+                                false
+                            } else {
+                                true
+                            }
+                        }
+                    }
+                })
                 .map(|mark| {
                     let value = match mark.value {
                         SliderMarkValue::Value(value) => value,

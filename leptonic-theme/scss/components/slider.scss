@@ -129,7 +129,8 @@ leptonic-slider {
 
             .title {
                 color: var(--slider-mark-title-color);
-                margin-left: -4px;
+                width: fit-content;
+                transform: translateX(-50%);
                 margin-top: calc(var(--slider-bar-wrapper-height) * 0.5);
             }
 

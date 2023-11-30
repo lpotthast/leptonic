@@ -98,9 +98,65 @@ pub fn PageSlider() -> impl IntoView {
             value_display=move |v| format!("{v:.0}")/>
 
         <P>
-            "Note that marks are only helpful when dealing with sliders having a limited number of selectable values, meaning ones with small ranges and a big stepping values. "
-            "Automatic mark generation is currently limited to creating 20 evenly spaced marks. Continuous sliders will not create thousands of them."
+            "Note that marks are only helpful when dealing with sliders having a limited number of selectable values, meaning ones with small ranges and a high stepping value. "
+            "Automatic mark generation is currently limited to creating 20 evenly spaced marks so that continuous sliders will not create thousands of them."
         </P>
+
+        <P>
+            "You can also specify custom marks! Custom marks will be validated. "
+            "If the specified value is outside the sliders [min..max] range or the percentage is outside the [0..1] range, the mark will be excluded and a warning will be logged to the console."
+        </P>
+
+        <Code>
+            {indoc!(r#"
+                let (value, set_value) = create_signal(6.0);
+                view! {
+                    <Slider min=1.0 max=10.0 step=1.0
+                        value=value set_value=set_value
+                        marks=SliderMarks::Custom {
+                            marks: vec![
+                                SliderMark {
+                                    value: SliderMarkValue::Value(5.5),
+                                    name: Some("5.5".into())
+                                },
+                                SliderMark {
+                                    value: SliderMarkValue::Value(7.0),
+                                    name: Some("7".into())
+                                },
+                                SliderMark {
+                                    value: SliderMarkValue::Percentage(0.888),
+                                    name: Some("88%".into())
+                                },
+                                SliderMark {
+                                    value: SliderMarkValue::Value(20.0),
+                                    name: Some("this mark will not show up".into())
+                                }
+                            ]
+                        }
+                        value_display=move |v| format!("{v:.0}")/>
+                }
+            "#)}
+        </Code>
+
+        <Slider min=1.0 max=10.0 step=1.0
+            value=value1 set_value=set_value1
+            marks=SliderMarks::Custom {
+                marks: vec![
+                    SliderMark {
+                        value: SliderMarkValue::Value(5.5),
+                        name: Some("5.5".into())
+                    },
+                    SliderMark {
+                        value: SliderMarkValue::Value(7.0),
+                        name: Some("7".into())
+                    },
+                    SliderMark {
+                        value: SliderMarkValue::Percentage(0.888),
+                        name: Some("88%".into())
+                    }
+                ]
+            }
+            value_display=move |v| format!("{v:.0}")/>
 
         <H2>"Arbitrary ranges"</H2>
 
