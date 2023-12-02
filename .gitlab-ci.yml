@@ -58,21 +58,21 @@ variables:
 book-build:
   stage: build
   extends: .book-with-cache
-  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:1.71.0
+  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:latest
   needs: []
   artifacts:
     paths:
       - examples/book/dist/
   script:
     - cd examples/book
-    # This is only required to run the build.rs file once before calling `trunk build`.
+    # This is only required to run the build.rs file once before calling `trunk-ng build`.
     - cargo check
-    - trunk build --release --public-url "/"
+    - trunk-ng build --release --public-url "/"
 
 book-test:
   stage: test
   extends: .book-with-cache
-  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:1.71.0
+  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:latest
   needs: []
   script:
     - cd examples/book
