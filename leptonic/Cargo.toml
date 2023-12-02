@@ -78,3 +78,6 @@ web-sys = "0.3.66"
 csr = ["leptos/csr"]
 ssr = ["leptos/ssr", "leptos-use/ssr"]
 hydrate = ["leptos/hydrate"]
+
+[lints]
+workspace = true
