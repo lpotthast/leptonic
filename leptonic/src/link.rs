@@ -4,6 +4,7 @@ use leptos_router::*;
 use crate::OptionalMaybeSignal;
 
 #[component]
+#[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
 pub fn Link<H>(
     /// Used to calculate the link's `href` attribute. Will be resolved relative
     /// to the current route.
@@ -54,15 +55,16 @@ pub enum LinkExtTarget {
 impl std::fmt::Display for LinkExtTarget {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            LinkExtTarget::Blank => f.write_str("_blank"),
-            LinkExtTarget::Parent => f.write_str("_parent"),
-            LinkExtTarget::Sel => f.write_str("_self"),
-            LinkExtTarget::Top => f.write_str("_top"),
+            Self::Blank => f.write_str("_blank"),
+            Self::Parent => f.write_str("_parent"),
+            Self::Sel => f.write_str("_self"),
+            Self::Top => f.write_str("_top"),
         }
     }
 }
 
 #[component]
+#[allow(clippy::needless_pass_by_value)] // `H` could be `&H`.
 pub fn LinkExt<H>(
     /// Used to calculate the link's `href` attribute.
     href: H,
@@ -87,7 +89,7 @@ where
             <a
                 href=href.to_href()()
                 target=format!("{target}")
-                prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                prop:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
                 rel={ match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }
             >
                 { children() }

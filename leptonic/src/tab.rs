@@ -6,10 +6,10 @@ use uuid::Uuid;
 use crate::tabs::TabsContext;
 use crate::Mount;
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct TabLabel {
     pub id: Uuid,
-    pub name: leptos::Oco<'static, str>,
+    pub name: Oco<'static, str>,
     pub label: Rc<View>,
 }
 
@@ -28,7 +28,7 @@ pub fn Tab(
     #[prop(into, optional)] on_hide: Option<Callback<()>>,
 ) -> impl IntoView {
     let id = id.unwrap_or_else(Uuid::new_v4);
-    let tabs = use_context::<TabsContext>().unwrap();
+    let tabs = expect_context::<TabsContext>();
 
     let mount = mount.or(tabs.mount).unwrap_or(Mount::Once);
 
@@ -39,7 +39,7 @@ pub fn Tab(
             id,
             name: name.get_value(),
             label: Rc::new(label.into_view()),
-        })
+        });
     });
 
     if tabs.history.get_untracked().get_active().is_none() {

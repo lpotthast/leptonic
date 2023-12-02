@@ -13,12 +13,12 @@ pub enum ToastVariant {
 }
 
 impl ToastVariant {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            ToastVariant::Success => "success",
-            ToastVariant::Info => "info",
-            ToastVariant::Warn => "warn",
-            ToastVariant::Error => "error",
+            Self::Success => "success",
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Error => "error",
         }
     }
 }
@@ -37,7 +37,7 @@ impl Default for ToastVariant {
 
 #[derive(Debug, Clone)]
 pub struct Toast {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub created_at: time::OffsetDateTime,
     pub variant: ToastVariant,
     pub header: View,
@@ -45,7 +45,7 @@ pub struct Toast {
     pub timeout: ToastTimeout,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(unused)]
 pub enum ToastTimeout {
     None,
@@ -56,14 +56,14 @@ pub enum ToastTimeout {
 impl std::fmt::Display for ToastTimeout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ToastTimeout::None => f.write_str("None"),
-            ToastTimeout::DefaultDelay => f.write_str("Default delay"),
-            ToastTimeout::CustomDelay(_) => f.write_str("Custom delay"),
+            Self::None => f.write_str("None"),
+            Self::DefaultDelay => f.write_str("Default delay"),
+            Self::CustomDelay(_) => f.write_str("Custom delay"),
         }
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct Toasts {
     pub toasts: ReadSignal<Vec<Toast>>,
     set_toasts: WriteSignal<Vec<Toast>>,
@@ -86,7 +86,7 @@ impl Toasts {
                     });
                 },
                 match &toast.timeout {
-                    ToastTimeout::None => panic!("unreachable"),
+                    ToastTimeout::None => unreachable!(),
                     ToastTimeout::DefaultDelay => std::time::Duration::from_secs(3),
                     ToastTimeout::CustomDelay(delay) => std::time::Duration::from_nanos(
                         delay.whole_nanoseconds().try_into().unwrap_or(u64::MAX),
@@ -109,7 +109,7 @@ impl Toasts {
 
     /// Removes all toasts. Does not interfere with scheduled removals of pushed toasts.
     pub fn clear(&self) {
-        self.set_toasts.update(|toasts| toasts.clear())
+        self.set_toasts.update(Vec::clear);
     }
 }
 
@@ -153,7 +153,7 @@ pub fn ToastRoot(children: Children) -> impl IntoView {
 }
 
 // TODO: Incorporate
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum ToastHorizontalPosition {
     Left,
@@ -161,7 +161,7 @@ pub enum ToastHorizontalPosition {
 }
 
 // TODO: Incorporate
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[allow(dead_code)]
 pub enum ToastVerticalPosition {
     Top,

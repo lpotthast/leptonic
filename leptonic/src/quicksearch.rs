@@ -52,7 +52,7 @@ fn QuicksearchModal(
 ) -> impl IntoView {
     let on_cancel = StoredValue::new(on_cancel);
 
-    let (input, set_input) = create_signal("".to_owned());
+    let (input, set_input) = create_signal(String::new());
 
     let options = move || query.call(input.get());
 

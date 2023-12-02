@@ -12,9 +12,9 @@ enum Foo {
 impl std::fmt::Display for Foo {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Foo::A => f.write_str("A"),
-            Foo::B => f.write_str("B"),
-            Foo::C => f.write_str("C"),
+            Self::A => f.write_str("A"),
+            Self::B => f.write_str("B"),
+            Self::C => f.write_str("C"),
         }
     }
 }
@@ -32,6 +32,7 @@ impl std::fmt::Display for User {
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageSelect() -> impl IntoView {
     let (selected, set_selected) = create_signal(Foo::A);
     let (selected_opt, set_selected_opt) = create_signal(Option::<Foo>::None);
@@ -59,14 +60,14 @@ pub fn PageSelect() -> impl IntoView {
         <P>"Lets assume this type definition, providing us with a set of values to choose from."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
                 enum Foo {
                     A,
                     B,
                     C,
                 }
-            "#)}
+            ")}
         </Code>
 
         <H2>"Variants"</H2>
@@ -222,8 +223,8 @@ pub fn PageSelect() -> impl IntoView {
                     <P>"Selected user is: " { move || selected_user.get().to_string() }</P>
                     <Select
                         options=selectable_users.clone()
-                        search_text_provider=move |o| format!("{o}")
-                        render_option=move |o: User| format!("{}", o.name)
+                        search_text_provider=move |o| o.to_string()
+                        render_option=move |o: User| o.name
                         selected=selected_user
                         set_selected=move |v| set_selected_user.set(v)
                     />
@@ -236,7 +237,7 @@ pub fn PageSelect() -> impl IntoView {
         <Select
             options=selectable_users.clone()
             search_text_provider=move |o: User| o.to_string()
-            render_option=move |o: User| o.name.to_string()
+            render_option=move |o: User| o.name
             selected=selected_user
             set_selected=move |v| set_selected_user.set(v)
         />
@@ -246,7 +247,7 @@ pub fn PageSelect() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --select-padding
                 --select-min-height
                 --select-selected-color
@@ -272,7 +273,7 @@ pub fn PageSelect() -> impl IntoView {
                 --select-item-preselected-background-color
                 --select-item-hover-background-color
                 --select-item-selected-background-color
-            "#)}
+            ")}
         </Code>
     }
 }

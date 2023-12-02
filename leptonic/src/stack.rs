@@ -2,7 +2,7 @@ use leptos::*;
 
 use crate::Size;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, Copy, Default)]
 pub enum StackOrientation {
     #[default]
     Vertical,
@@ -10,10 +10,10 @@ pub enum StackOrientation {
 }
 
 impl StackOrientation {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            StackOrientation::Vertical => "vertical",
-            StackOrientation::Horizontal => "horizontal",
+            Self::Vertical => "vertical",
+            Self::Horizontal => "horizontal",
         }
     }
 }

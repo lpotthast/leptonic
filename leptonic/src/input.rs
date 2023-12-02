@@ -59,9 +59,6 @@ pub fn TextInput(
         use_focus(focus, node_ref);
     }
 
-    let set_clone = set.clone();
-    let on_focus_change_clone = on_focus_change.clone();
-
     view! {
         <leptonic-input style=style>
             <input
@@ -69,16 +66,16 @@ pub fn TextInput(
                 id=id
                 class=class
                 placeholder=move || match &placeholder.0 {
-                    Some(label) => leptos::Oco::from(label.get()),
-                    None => leptos::Oco::from(""),
+                    Some(label) => Oco::from(label.get()),
+                    None => Oco::from(""),
                 }
                 type="text"
-                prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                prop:disabled=move || disabled.0.as_ref().map_or(false, SignalGet::get)
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set) = &set_clone { set.set(event_target::<HtmlInputElement>(&e).value()) } }
+                on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
                 on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change_clone { cb.call(true) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.call(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {
@@ -116,9 +113,6 @@ pub fn PasswordInput(
         use_focus(focus, node_ref);
     }
 
-    let set_clone = set.clone();
-    let on_focus_change_clone = on_focus_change.clone();
-
     view! {
         <leptonic-input style=style>
             <input
@@ -130,12 +124,12 @@ pub fn PasswordInput(
                     None => leptos::Oco::from(""),
                 }
                 type="password"
-                prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                prop:disabled=move || disabled.0.as_ref().map_or(false, SignalGet::get)
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set) = &set_clone { set.set(event_target::<HtmlInputElement>(&e).value()) } }
+                on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
                 on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change_clone { cb.call(true) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.call(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {
@@ -185,9 +179,6 @@ pub fn NumberInput(
         })
     });
 
-    let set_value_clone = set_value.clone();
-    let on_focus_change_clone = on_focus_change.clone();
-
     view! {
         <leptonic-input style=style>
             <input
@@ -202,12 +193,12 @@ pub fn NumberInput(
                 min=min
                 max=max
                 step=step
-                prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                prop:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set_value) = &set_value { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set_value) = &set_value_clone { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
+                on:keyup=move |e| { if let Some(set_value) = &set_value { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
                 on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change_clone { cb.call(true) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.call(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {

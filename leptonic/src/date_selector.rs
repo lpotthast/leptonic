@@ -15,6 +15,7 @@ enum Selection {
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn DateSelector(
     value: time::OffsetDateTime,
     #[prop(into)] on_change: Callback<time::OffsetDateTime>,
@@ -70,12 +71,12 @@ pub fn DateSelector(
         move |_| set_staging.update(|staging| *staging = start_of_next_month(*staging));
     let select_previous_year = move |_| {
         set_staging
-            .update(|staging| *staging = staging.save_replace_year(staging.year() - 1).unwrap())
+            .update(|staging| *staging = staging.save_replace_year(staging.year() - 1).unwrap());
         // TODO: Set set_years_starting_at to Some(self.staging.year() - 4),
     };
     let select_next_year = move |_| {
         set_staging
-            .update(|staging| *staging = staging.save_replace_year(staging.year() + 1).unwrap())
+            .update(|staging| *staging = staging.save_replace_year(staging.year() + 1).unwrap());
         // TODO: Set set_years_starting_at to Some(self.staging.year() - 4),
     };
     let select_previous_years = move |_| {
@@ -85,8 +86,8 @@ pub fn DateSelector(
                     0 => None,
                     _ => Some(years[0].number - (3 * 7)),
                 }
-            })
-        })
+            });
+        });
     };
     let select_next_years = move |_| {
         years.with(|years| {
@@ -95,8 +96,8 @@ pub fn DateSelector(
                     0 => None,
                     _ => Some(years[years.len() - 1].number + 1),
                 }
-            })
-        })
+            });
+        });
     };
     let select_year = move |year: Year| {
         if !year.disabled {
@@ -110,7 +111,7 @@ pub fn DateSelector(
             set_staging.update(|staging| {
                 *staging = staging
                     .save_replace_month(time::Month::try_from(month.index).unwrap())
-                    .unwrap()
+                    .unwrap();
             });
             set_show.update(|show| *show = Selection::Day);
         }
@@ -193,14 +194,14 @@ pub fn DateSelector(
                             each=move || months.get()
                             key=|month| month.index
                             children=move |month| {
-                                let mon = month.clone();
+                                let month_clone = month.clone();
                                 view! {
-                                    <div on:click=move |_e| select_month(mon.clone())
+                                    <div on:click=move |_e| select_month(month_clone.clone())
                                         class="month"
                                         class:is-staging=month.is_staging
                                         class:is-now=month.is_now
                                         class:disabled=month.disabled>
-                                        {month.name.clone()}
+                                        {month.name}
                                     </div>
                                 }
                             }
@@ -235,10 +236,9 @@ pub fn DateSelector(
                                             each=move || week.days.clone()
                                             key=|day| day.id
                                             children=move |day| {
-                                                let d = day.clone();
                                                 view! {
                                                     <div
-                                                        on:click=move |_e| select_day(d.clone())
+                                                        on:click=move |_e| select_day(day)
                                                         class="day"
                                                         class:is-staging=day.is_staging
                                                         class:is-now=day.is_now
@@ -342,6 +342,9 @@ pub fn create_weeks(
     min: Option<&time::OffsetDateTime>,
     max: Option<&time::OffsetDateTime>,
 ) -> Vec<Week> {
+    const WEEKS_TO_DISPLAY: u8 = 6;
+    const DAYS_PER_WEEK: u8 = 7;
+
     let now = time::OffsetDateTime::now_utc();
     // Calculate the index of the first day of the month (in current locale).
 
@@ -364,14 +367,12 @@ pub fn create_weeks(
 
     let days_in_previous_month = whole_days_in(prev_month.year(), prev_month.month());
 
-    const WEEKS_TO_DISPLAY: u8 = 6;
     let mut weeks = Vec::<Week>::with_capacity(WEEKS_TO_DISPLAY as usize);
     for w in 0..WEEKS_TO_DISPLAY {
         let mut week = Week {
             id: Uuid::new_v4(),
-            days: Vec::with_capacity(7),
+            days: Vec::with_capacity(DAYS_PER_WEEK as usize),
         };
-        const DAYS_PER_WEEK: u8 = 7;
         for d in 0..DAYS_PER_WEEK {
             let i = d + w * DAYS_PER_WEEK;
 

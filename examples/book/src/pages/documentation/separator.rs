@@ -8,9 +8,9 @@ pub fn PageSeparator() -> impl IntoView {
         <H1>"Separators"</H1>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <Separator />
-            "#)}
+            ")}
         </Code>
 
         <Separator />

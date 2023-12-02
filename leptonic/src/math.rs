@@ -3,12 +3,12 @@ pub(crate) fn percentage_in_range(min: f64, max: f64, value: f64) -> f64 {
 }
 
 pub(crate) fn value_in_range(min: f64, max: f64, percentage: f64) -> f64 {
-    min + (max - min) * percentage
+    (max - min).mul_add(percentage, min)
 }
 
 /// Rounds to the nearest possible step value if a step is provided.
 pub(crate) fn project_into_range(value: f64, range: f64, min: f64, step: Option<f64>) -> f64 {
-    let projected = value * range + min;
+    let projected = value.mul_add(range, min);
     match step {
         Some(step) => (projected / step).round() * step,
         None => projected,

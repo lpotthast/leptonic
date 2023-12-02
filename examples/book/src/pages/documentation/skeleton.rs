@@ -14,9 +14,9 @@ pub fn PageSkeleton() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <Skeleton height=Size::Em(5.0)/>
-            "#)}
+            ")}
         </Code>
 
         <P>
@@ -36,9 +36,9 @@ pub fn PageSkeleton() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <Skeleton animated=false height=Size::Em(5.0)/>
-            "#)}
+            ")}
         </Code>
 
         <P>"The skeleton will render as:"</P>
@@ -79,13 +79,13 @@ pub fn PageSkeleton() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --skeleton-background-color
                 --skeleton-animation-highlight-color
                 --skeleton-border-radius
                 --skeleton-padding
                 --skeleton-cursor
-            "#)}
+            ")}
         </Code>
     }
 }

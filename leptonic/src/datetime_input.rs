@@ -27,11 +27,11 @@ pub fn DateTimeInput(
     // #[prop(into)] on_open: Option<Callback<()>>,
     // #[prop(into)] on_close: Option<Callback<()>>,
 ) -> impl IntoView {
-    let id = id.map(|it| it.into_owned());
+    let id = id.map(Oco::into_owned);
 
     let class = class
-        .map(|it| leptos::Oco::from(format!("leptonic-input datetime-selected {it}")))
-        .unwrap_or(leptos::Oco::from("leptonic-input datetime-selected "));
+        .map(|it| Oco::from(format!("leptonic-input datetime-selected {it}")))
+        .unwrap_or_else(|| Oco::from("leptonic-input datetime-selected "));
 
     let style = margin.map(|it| format!("--margin: {it}"));
 
@@ -107,7 +107,7 @@ pub fn DateTimeInput(
                 }
                 tabindex="0"
                 type="text"
-                prop:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                prop:disabled=move || disabled.0.as_ref().map_or(false, SignalGet::get)
                 prop:value=move || get.get().map(|it| it.format(&Rfc3339).expect("Formatting to Rfc3339 to be non-fallible.")).unwrap_or_default()
                 on:click=move |_| set_open.update(|open| *open = !*open)
                 on:focusin=move |_| set_in_focus.set(true)

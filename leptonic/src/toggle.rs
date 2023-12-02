@@ -10,11 +10,11 @@ pub enum ToggleSize {
 }
 
 impl ToggleSize {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            ToggleSize::Small => "small",
-            ToggleSize::Normal => "normal",
-            ToggleSize::Big => "big",
+            Self::Small => "small",
+            Self::Normal => "normal",
+            Self::Big => "big",
         }
     }
 }
@@ -31,7 +31,7 @@ impl Default for ToggleSize {
     }
 }
 
-#[derive(Debug, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ToggleIcons {
     pub off: leptos_icons::Icon,
     pub on: leptos_icons::Icon,
@@ -45,10 +45,10 @@ pub enum ToggleVariant {
 }
 
 impl ToggleVariant {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            ToggleVariant::Sliding => "sliding",
-            ToggleVariant::Stationary => "stationary",
+            Self::Sliding => "sliding",
+            Self::Stationary => "stationary",
         }
     }
 }
@@ -70,8 +70,8 @@ pub fn Toggle(
         <leptonic-toggle-wrapper class=class style=style>
             <leptonic-toggle
                 id=id
-                class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(true)
-                class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                class:active=move || active.0.as_ref().map(SignalGet::get).unwrap_or(true)
+                class:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
                 data-size=size.as_str()
                 data-variant=variant.as_str()
                 on:click=move |_| { if let Some(set) = &set_state { set.set(!state.get_untracked()) } }

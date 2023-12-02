@@ -5,6 +5,7 @@ use leptos::*;
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageInstallation() -> impl IntoView {
     view! {
         <H1 id="#installation">
@@ -22,11 +23,11 @@ pub fn PageInstallation() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 cargo add leptonic
                 cargo add --build leptonic-theme
                 cargo add --build leptos-tiptap-build
-            "#)}
+            ")}
         </Code>
 
         <P>

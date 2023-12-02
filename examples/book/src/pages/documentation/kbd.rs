@@ -16,9 +16,9 @@ pub fn PageKbd() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <KbdKey key=Key::Option/>
-            "#)}
+            ")}
         </Code>
 
         <KbdKey key=Key::Option/>
@@ -34,9 +34,9 @@ pub fn PageKbd() -> impl IntoView {
         <P>"Note that these component do not listen for key-presses. Their sole purpose is to unify rendering of key caps and shortcuts!"</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <KbdShortcut keys=[Key::Command, Key::Enter]/>
-            "#)}
+            ")}
         </Code>
 
         <KbdShortcut keys=[Key::Command, Key::Enter]/>
@@ -88,7 +88,7 @@ pub fn PageKbd() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --leptonic-kbd-key-color
                 --leptonic-kbd-key-background-color
                 --leptonic-kbd-key-margin
@@ -100,7 +100,7 @@ pub fn PageKbd() -> impl IntoView {
                 --leptonic-kbd-concatenate-margin
                 --leptonic-kbd-concatenate-padding
                 --leptonic-kbd-concatenate-border-radius
-            "#)}
+            ")}
         </Code>
     }
 }

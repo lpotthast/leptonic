@@ -31,7 +31,7 @@ pub fn PageTypography() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --typography-font-family
                 --typography-h1-margin
                 --typography-h1-font-size
@@ -66,7 +66,7 @@ pub fn PageTypography() -> impl IntoView {
                 --typography-inline-code-margin
                 --typography-inline-code-padding
                 --typography-inline-code-line-height
-            "#)}
+            ")}
         </Code>
     }
 }

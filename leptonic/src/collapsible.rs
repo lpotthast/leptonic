@@ -19,8 +19,7 @@ impl Default for OnOpen {
     }
 }
 
-// TODO: Debug
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct CollapsiblesContext {
     pub default_on_open: OnOpen,
     pub collapsibles: Arc<RwLock<Vec<CollapsibleContext>>>,
@@ -51,8 +50,7 @@ impl CollapsiblesContext {
     }
 }
 
-// TODO: Debug
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct CollapsibleContext {
     pub id: Uuid,
     pub show: ReadSignal<bool>,
@@ -65,7 +63,7 @@ impl CollapsibleContext {
     pub fn toggle(&self) {
         self.set_show.update(|it| *it = !*it);
         if let Some(parent) = &self.parent {
-            parent.collapsible_changed(self.id, self.on_open, self.show.get())
+            parent.collapsible_changed(self.id, self.on_open, self.show.get());
         }
     }
 }
@@ -102,10 +100,9 @@ pub fn use_collapsible(open: bool, on_open: Option<OnOpen>) -> CollapsibleContex
         parent: parent.clone(),
     };
 
-    match parent.as_mut() {
-        Some(parent) => parent.register(ctx.clone()),
-        None => {}
-    };
+    if let Some(parent) = parent.as_mut() {
+        parent.register(ctx.clone());
+    }
     provide_context(ctx.clone());
 
     ctx
@@ -130,10 +127,14 @@ pub fn Collapsible(
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct CollapsibleHeaderWrapperContext {
     collapsible_ctx: CollapsibleContext,
 }
 
+/// # Panics
+///
+/// Will panic if not called under a `Collapsible` component.
 pub fn use_collapsible_header() -> CollapsibleHeaderWrapperContext {
     CollapsibleHeaderWrapperContext {
         collapsible_ctx: use_context::<CollapsibleContext>()

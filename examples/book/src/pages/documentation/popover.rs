@@ -45,9 +45,9 @@ pub fn PagePopover() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --popover-content-background-color
-            "#)}
+            ")}
         </Code>
     }
 }

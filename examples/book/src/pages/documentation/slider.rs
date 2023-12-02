@@ -4,6 +4,8 @@ use leptos::*;
 use leptos_icons::BsIcon;
 
 #[component]
+#[allow(clippy::too_many_lines)]
+#[allow(clippy::similar_names)]
 pub fn PageSlider() -> impl IntoView {
     let (value1, set_value1) = create_signal(6.0);
     let (value2, set_value2) = create_signal(4.2);
@@ -236,7 +238,7 @@ pub fn PageSlider() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --slider-margin
                 --slider-bar-height
                 --slider-bar-background-color
@@ -260,7 +262,7 @@ pub fn PageSlider() -> impl IntoView {
                 --slider-mark-color-in-range
                 --slider-mark-title-color
                 --slider-mark-title-color-in-range
-            "#)}
+            ")}
         </Code>
     }
 }

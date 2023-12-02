@@ -3,20 +3,20 @@ use std::fmt::{Debug, Formatter};
 
 /// A callback which returns nothing.
 /// Use `Consumer<In>` when you would otherwise write `Callback<In, ()>`.
-pub struct Consumer<In: 'static = ()>(leptos::StoredValue<Box<dyn Fn(In) -> ()>>);
+pub struct Consumer<In: 'static = ()>(leptos::StoredValue<Box<dyn Fn(In)>>);
 
 impl<In: 'static> Consumer<In> {
-    pub fn new<F: Fn(In) -> () + 'static>(fun: F) -> Self {
+    pub fn new<F: Fn(In) + 'static>(fun: F) -> Self {
         Self(leptos::store_value(Box::new(fun)))
     }
 
     pub fn consume(&self, arg: In) {
-        self.0.with_value(|cb| cb(arg))
+        self.0.with_value(|cb| cb(arg));
     }
 }
 
 impl<In: 'static> std::ops::Deref for Consumer<In> {
-    type Target = leptos::StoredValue<Box<dyn Fn(In) -> ()>>;
+    type Target = leptos::StoredValue<Box<dyn Fn(In)>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -32,8 +32,8 @@ impl<In: 'static> Clone for Consumer<In> {
 }
 
 impl<In: 'static> leptos::Callable<In, ()> for Consumer<In> {
-    fn call(&self, arg: In) -> () {
-        self.consume(arg)
+    fn call(&self, arg: In) {
+        self.consume(arg);
     }
 }
 
@@ -43,13 +43,13 @@ impl<In: 'static> Debug for Consumer<In> {
     }
 }
 
-pub fn consumer<In: 'static, F: Fn(In) -> () + 'static>(fun: F) -> Consumer<In> {
+pub fn consumer<In: 'static, F: Fn(In) + 'static>(fun: F) -> Consumer<In> {
     Consumer::new(fun)
 }
 
-impl<In: 'static, F: Fn(In) -> () + 'static> From<F> for Consumer<In> {
+impl<In: 'static, F: Fn(In) + 'static> From<F> for Consumer<In> {
     fn from(fun: F) -> Self {
-        Consumer::new(fun)
+        Self::new(fun)
     }
 }
 
@@ -101,12 +101,13 @@ pub fn producer<Out: 'static, F: Fn() -> Out + 'static>(fun: F) -> Producer<Out>
 
 impl<Out: 'static, F: Fn() -> Out + 'static> From<F> for Producer<Out> {
     fn from(fun: F) -> Self {
-        Producer::new(fun)
+        Self::new(fun)
     }
 }
 
 /// A callback which returns a `leptos::View` without requiring any input.
 /// Use `ViewProducer` when you would otherwise write `Callback<(), leptos::View>`.
+#[derive(Clone, Copy)]
 pub struct ViewProducer(leptos::StoredValue<Box<dyn Fn() -> View>>);
 
 impl ViewProducer {
@@ -124,14 +125,6 @@ impl std::ops::Deref for ViewProducer {
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-impl Copy for ViewProducer {}
-
-impl Clone for ViewProducer {
-    fn clone(&self) -> Self {
-        *self
     }
 }
 
@@ -153,7 +146,7 @@ pub fn view_producer<V: leptos::IntoView, F: Fn() -> V + 'static>(fun: F) -> Vie
 
 impl<V: leptos::IntoView, F: Fn() -> V + 'static> From<F> for ViewProducer {
     fn from(fun: F) -> Self {
-        ViewProducer::new(move || fun().into_view())
+        Self::new(move || fun().into_view())
     }
 }
 
@@ -203,6 +196,6 @@ pub fn view_callback<In: 'static, V: leptos::IntoView, F: Fn(In) -> V + 'static>
 
 impl<In: 'static, V: leptos::IntoView, F: Fn(In) -> V + 'static> From<F> for ViewCallback<In> {
     fn from(fun: F) -> Self {
-        ViewCallback::new(move |t| fun(t).into_view())
+        Self::new(move |t| fun(t).into_view())
     }
 }

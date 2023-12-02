@@ -11,6 +11,7 @@ pub struct GlobalResizeEvent {
 }
 
 impl GlobalResizeEvent {
+    #[allow(clippy::used_underscore_binding)]
     pub fn new(
         _closure: WasmClosure<Event>,
         read_signal: ReadSignal<Option<Event>>,

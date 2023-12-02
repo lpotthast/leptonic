@@ -97,49 +97,49 @@ pub enum DocRoutes {
 }
 
 impl DocRoutes {
-    pub fn route(self) -> &'static str {
+    pub const fn route(self) -> &'static str {
         match self {
-            DocRoutes::Overview => "overview",
-            DocRoutes::Installation => "installation",
-            DocRoutes::Usage => "usage",
-            DocRoutes::Themes => "themes",
-            DocRoutes::Changelog => "changelog",
+            Self::Overview => "overview",
+            Self::Installation => "installation",
+            Self::Usage => "usage",
+            Self::Themes => "themes",
+            Self::Changelog => "changelog",
 
-            DocRoutes::Stack => "stack",
-            DocRoutes::Grid => "grid",
-            DocRoutes::Separator => "separator",
-            DocRoutes::Skeleton => "skeleton",
-            DocRoutes::AppBar => "app-bar",
-            DocRoutes::Drawer => "drawer",
-            DocRoutes::Tab => "tabs",
-            DocRoutes::Table => "table",
-            DocRoutes::Collapsible => "collapsible",
+            Self::Stack => "stack",
+            Self::Grid => "grid",
+            Self::Separator => "separator",
+            Self::Skeleton => "skeleton",
+            Self::AppBar => "app-bar",
+            Self::Drawer => "drawer",
+            Self::Tab => "tabs",
+            Self::Table => "table",
+            Self::Collapsible => "collapsible",
 
-            DocRoutes::Button => "button",
-            DocRoutes::Input => "input",
-            DocRoutes::TiptapEditor => "tiptap-editor",
-            DocRoutes::DateTime => "date-time",
-            DocRoutes::Slider => "slider",
-            DocRoutes::Select => "select",
-            DocRoutes::Toggle => "toggle",
-            DocRoutes::ColorPicker => "color-picker",
+            Self::Button => "button",
+            Self::Input => "input",
+            Self::TiptapEditor => "tiptap-editor",
+            Self::DateTime => "date-time",
+            Self::Slider => "slider",
+            Self::Select => "select",
+            Self::Toggle => "toggle",
+            Self::ColorPicker => "color-picker",
 
-            DocRoutes::Alert => "alert",
-            DocRoutes::Toast => "toast",
-            DocRoutes::Modal => "modal",
-            DocRoutes::Progress => "progress",
-            DocRoutes::Popover => "popover",
-            DocRoutes::Chip => "chip",
-            DocRoutes::Kbd => "kbd",
+            Self::Alert => "alert",
+            Self::Toast => "toast",
+            Self::Modal => "modal",
+            Self::Progress => "progress",
+            Self::Popover => "popover",
+            Self::Chip => "chip",
+            Self::Kbd => "kbd",
 
-            DocRoutes::Typography => "typography",
-            DocRoutes::Icon => "icon",
-            DocRoutes::Link => "link",
-            DocRoutes::Anchor => "anchor",
-            DocRoutes::Callback => "callback",
+            Self::Typography => "typography",
+            Self::Icon => "icon",
+            Self::Link => "link",
+            Self::Anchor => "anchor",
+            Self::Callback => "callback",
 
-            DocRoutes::Transition => "transition",
-            DocRoutes::NotFound => "*", // Leptos requires this to be be named "*"!
+            Self::Transition => "transition",
+            Self::NotFound => "*", // Leptos requires this to be be named "*"!
         }
     }
 }
@@ -161,10 +161,7 @@ impl ToHref for DocRoutes {
 // You can define other routes in their own component.
 // Use a #[component(transparent)] that returns a <Route/>.
 #[component(transparent)]
-pub fn DocRoutes<P>(path: P) -> impl IntoView
-where
-    P: std::fmt::Display,
-{
+pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
     view! {
         <Route path=path view=|| view! { <DocLayout/>}>
             <Route path="" view=|| view! { <Redirect path=DocRoutes::Overview/> }/>
@@ -215,6 +212,7 @@ where
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn DocLayout() -> impl IntoView {
     let app_layout_context = expect_context::<AppLayoutContext>();
 

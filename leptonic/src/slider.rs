@@ -16,15 +16,16 @@ pub enum SliderVariant {
 }
 
 impl SliderVariant {
-    fn to_str(self) -> &'static str {
+    const fn to_str(self) -> &'static str {
         match self {
-            SliderVariant::Block => "block",
-            SliderVariant::Round => "round",
+            Self::Block => "block",
+            Self::Round => "round",
         }
     }
 }
 
 #[derive(Default, Debug, Clone)]
+#[allow(variant_size_differences)]
 pub enum SliderMarks {
     #[default]
     None,
@@ -38,7 +39,6 @@ pub enum SliderMarks {
 }
 
 #[derive(Debug, Clone)]
-
 pub struct SliderMark {
     pub value: SliderMarkValue,
     pub name: Option<Cow<'static, str>>,
@@ -78,7 +78,7 @@ fn create_marks(
                 let step_multiplier = f64::max(1.0, f64::round(estimate / cap));
                 let mut current = min;
 
-                let rounding_error_offset = 0.000001;
+                let rounding_error_offset = 0.000_001;
                 loop {
                     if max > min {
                         if current > max + rounding_error_offset {
@@ -124,11 +124,11 @@ fn create_marks(
                             }
                         },
                         SliderMarkValue::Percentage(percentage) => {
-                            if percentage < 0.0 || percentage > 1.0 {
+                            if (0.0..=1.0).contains(&percentage) {
+                                true
+                            } else {
                                 tracing::warn!(?mark, "percentage of custom slider mark is outside 0..1 range");
                                 false
-                            } else {
-                                true
                             }
                         }
                     }
@@ -202,8 +202,8 @@ impl Default for SliderPopover {
 impl SliderPopover {
     fn to_maybe_signal(self, knob_el: NodeRef<html::Div>, knob: &KnobControl) -> MaybeSignal<bool> {
         match self {
-            SliderPopover::Never => MaybeSignal::Static(false),
-            SliderPopover::When { hovered, dragged } => match (hovered, dragged) {
+            Self::Never => MaybeSignal::Static(false),
+            Self::When { hovered, dragged } => match (hovered, dragged) {
                 (true, true) => {
                     let knob_is_hovered = use_element_hover(knob_el);
                     let listening = knob.listening;
@@ -218,7 +218,7 @@ impl SliderPopover {
                 (false, true) => MaybeSignal::Dynamic(knob.listening.into()),
                 (false, false) => MaybeSignal::Static(false),
             },
-            SliderPopover::Always => MaybeSignal::Static(true),
+            Self::Always => MaybeSignal::Static(true),
         }
     }
 }
@@ -275,7 +275,7 @@ pub fn Slider(
                 range.get(),
                 min,
                 step,
-            ))
+            ));
         }
     });
 
@@ -346,6 +346,8 @@ pub fn Slider(
 }
 
 #[component]
+#[allow(clippy::similar_names)]
+#[allow(clippy::too_many_lines)]
 pub fn RangeSlider(
     #[prop(into)] value_a: MaybeSignal<f64>,
     #[prop(into)] value_b: MaybeSignal<f64>,
@@ -380,7 +382,7 @@ pub fn RangeSlider(
         format!(
             "left: {}%; width: {}%;",
             knob_a.clipped_value_percent.get() * 100.0,
-            knob_b.clipped_value_percent.get() * 100.0 - knob_a.clipped_value_percent.get() * 100.0
+            knob_b.clipped_value_percent.get().mul_add(100.0, -knob_a.clipped_value_percent.get() * 100.0)
         )
     });
 
@@ -463,9 +465,9 @@ pub fn RangeSlider(
                 let distance_to_a = (value_a.get() - could_be).abs();
                 let distance_to_b = (value_b.get() - could_be).abs();
                 if distance_to_a < distance_to_b {
-                    knob_a.set_listening.set(true)
+                    knob_a.set_listening.set(true);
                 } else {
-                    knob_b.set_listening.set(true)
+                    knob_b.set_listening.set(true);
                 }
             }
             on:touchstart=move |_e| {
@@ -486,9 +488,9 @@ pub fn RangeSlider(
                     let distance_to_a = (value_a.get() - could_be).abs();
                     let distance_to_b = (value_b.get() - could_be).abs();
                     if distance_to_a < distance_to_b {
-                        knob_a.set_listening.set(true)
+                        knob_a.set_listening.set(true);
                     } else {
-                        knob_b.set_listening.set(true)
+                        knob_b.set_listening.set(true);
                     }
                 }
             }
@@ -548,7 +550,7 @@ struct KnobControl {
 }
 
 impl KnobControl {
-    pub fn new(min: f64, max: f64, step: Option<f64>, value: MaybeSignal<f64>) -> Self {
+    pub(crate) fn new(min: f64, max: f64, step: Option<f64>, value: MaybeSignal<f64>) -> Self {
         let range = create_memo(move |_| max - min);
         let clipped_value = Signal::derive(move || {
             let value = value.get();

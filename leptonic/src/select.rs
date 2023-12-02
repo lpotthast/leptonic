@@ -71,6 +71,7 @@ fn select_next<O: SelectOption + 'static>(
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn Select<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
@@ -104,7 +105,7 @@ where
     let (preselected, set_preselected) = create_signal(Option::<O>::None);
     let memoized_preselected = create_memo(move |_| preselected.get());
 
-    let (search, set_search) = create_signal("".to_owned());
+    let (search, set_search) = create_signal(String::new());
 
     let filtered_options = create_memo(move |_| {
         let lowercased_search = search.get().to_lowercase();
@@ -121,7 +122,7 @@ where
             .collect::<Vec<O>>()
     });
 
-    let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
+    let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));
 
     let select = StoredValue::new(Callback::new(move |option: O| {
         set_selected.set(option);
@@ -138,7 +139,7 @@ where
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
-        id_selector_string.clone(),
+        id_selector_string,
         show_options,
         set_show_options.into(),
     );
@@ -149,7 +150,7 @@ where
                 "Escape" => set_show_options.set(false),
                 "Backspace" => {
                     if !search_is_focused.get_untracked() {
-                        set_show_options.set(false)
+                        set_show_options.set(false);
                     }
                 }
                 "ArrowUp" => {
@@ -177,7 +178,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.get_value().call(preselected)
+                            select.get_value().call(preselected);
                         }
                     }
                 }
@@ -204,7 +205,7 @@ where
         if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
-                wrapper.focus().unwrap();
+                wrapper.focus().expect("wrapper to be focusable");
             } else {
                 tracing::warn!("missing node_ref");
             }
@@ -279,7 +280,7 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.get_value().call(clone2.clone())
+                                            select.get_value().call(clone2.clone());
                                         }
                                     }
                                 >
@@ -304,6 +305,7 @@ where
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn OptionalSelect<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
@@ -338,7 +340,7 @@ where
     let (preselected, set_preselected) = create_signal(Option::<O>::None);
     let memoized_preselected = create_memo(move |_| preselected.get());
 
-    let (search, set_search) = create_signal("".to_owned());
+    let (search, set_search) = create_signal(String::new());
 
     let filtered_options = create_memo(move |_| {
         let lowercased_search = search.get().to_lowercase();
@@ -355,9 +357,7 @@ where
             .collect::<Vec<_>>()
     });
 
-    let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
-
-    let set_selected_clone = set_selected.clone();
+    let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));
 
     let select = StoredValue::new(Callback::new(move |option: O| {
         set_selected.set(Some(option));
@@ -365,7 +365,7 @@ where
     }));
 
     let deselect = move || {
-        set_selected_clone.set(None);
+        set_selected.set(None);
     };
 
     let is_selected = move |option: &O| selected.with(|selected| selected.as_ref() == Some(option));
@@ -378,7 +378,7 @@ where
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
-        id_selector_string.clone(),
+        id_selector_string,
         show_options,
         set_show_options.into(),
     );
@@ -389,7 +389,7 @@ where
                 "Escape" => set_show_options.set(false),
                 "Backspace" => {
                     if !search_is_focused.get_untracked() {
-                        set_show_options.set(false)
+                        set_show_options.set(false);
                     }
                 }
                 "ArrowUp" => {
@@ -417,7 +417,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.get_value().call(preselected)
+                            select.get_value().call(preselected);
                         }
                     }
                 }
@@ -444,7 +444,7 @@ where
         if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
-                wrapper.focus().unwrap();
+                wrapper.focus().expect("wrapper to be focusable");
             } else {
                 tracing::warn!("missing node_ref");
             }
@@ -468,13 +468,13 @@ where
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
-                    { move || match selected.get().clone() {
-                        None => ().into_view(),
+                    { move || match selected.get() {
                         Some(selected) => view! {
                             <leptonic-select-option>
                                 { render_option.get_value().call(selected) }
                             </leptonic-select-option>
                         }.into_view(),
+                        None => ().into_view(),
                     }}
 
                     { match allow_deselect.get() {
@@ -538,7 +538,7 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.get_value().call(clone2.clone())
+                                            select.get_value().call(clone2.clone());
                                         }
                                     }
                                 >
@@ -563,6 +563,7 @@ where
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn Multiselect<O>(
     #[prop(optional, default=u64::MAX)] max: u64,
     #[prop(into)] options: MaybeSignal<Vec<O>>,
@@ -597,7 +598,7 @@ where
     let (preselected, set_preselected) = create_signal(Option::<O>::None);
     let memoized_preselected = create_memo(move |_| preselected.get());
 
-    let (search, set_search) = create_signal("".to_owned());
+    let (search, set_search) = create_signal(String::new());
 
     let filtered_options = create_memo(move |_| {
         let lowercased_search = search.get().to_lowercase();
@@ -614,9 +615,7 @@ where
             .collect::<Vec<_>>()
     });
 
-    let has_options = create_memo(move |_| !filtered_options.with(|options| options.is_empty()));
-
-    let set_selected_clone = set_selected.clone();
+    let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));
 
     let select = StoredValue::new(Callback::new(move |option: O| {
         let mut vec = selected.get_untracked();
@@ -635,25 +634,25 @@ where
             vec.remove(pos);
         }
         tracing::info!(?vec, "deselected");
-        set_selected_clone.set(vec);
+        set_selected.set(vec);
         // set_show_options.set(false); // TODO: Make this optional.
     }));
 
     let is_selected = move |option: &O| selected.with(|selected| selected.contains(option));
 
     let is_disabled = move |option: &O| {
-        selected.with(|selected| selected.contains(option) || selected.len() == max as usize)
+        selected.with(|selected| selected.contains(option) || selected.len() as u64 == max)
     };
 
     let is_disabled_untracked = move |option: &O| {
         selected
-            .with_untracked(|selected| selected.contains(option) || selected.len() == max as usize)
+            .with_untracked(|selected| selected.contains(option) || selected.len() as u64 == max)
     };
 
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
     create_click_away_listener(
-        id_selector_string.clone(),
+        id_selector_string,
         show_options,
         set_show_options.into(),
     );
@@ -664,7 +663,7 @@ where
                 "Escape" => set_show_options.set(false),
                 "Backspace" => {
                     if !search_is_focused.get_untracked() {
-                        set_show_options.set(false)
+                        set_show_options.set(false);
                     }
                 }
                 "ArrowUp" => {
@@ -692,7 +691,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.get_value().call(preselected)
+                            select.get_value().call(preselected);
                         }
                     }
                 }
@@ -719,7 +718,7 @@ where
         if !show_options.get() && search_is_focused.get_untracked() {
             // TODO: Use with() when available.
             if let Some(wrapper) = wrapper.get() {
-                wrapper.focus().unwrap();
+                wrapper.focus().expect("wrapper to be focusable");
             } else {
                 tracing::warn!("missing node_ref");
             }
@@ -811,7 +810,7 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.get_value().call(clone2.clone())
+                                            select.get_value().call(clone2.clone());
                                         }
                                     }
                                 >

@@ -11,9 +11,9 @@ pub fn PageDateTime() -> impl IntoView {
         <P>"Select dates using the calendar-like "<Code inline=true>"<DateSelector>"</Code>" component."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
-            "#)}
+            ")}
         </Code>
 
         <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
@@ -21,9 +21,9 @@ pub fn PageDateTime() -> impl IntoView {
         <P>"The date selector can also start with the year selection."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>
-            "#)}
+            ")}
         </Code>
 
         <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>

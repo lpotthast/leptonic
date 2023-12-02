@@ -12,12 +12,12 @@ pub enum AlertVariant {
 }
 
 impl AlertVariant {
-    pub fn to_str(&self) -> &'static str {
+    pub const fn to_str(&self) -> &'static str {
         match self {
-            AlertVariant::Success => "success",
-            AlertVariant::Info => "info",
-            AlertVariant::Warn => "warn",
-            AlertVariant::Danger => "danger",
+            Self::Success => "success",
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Danger => "danger",
         }
     }
 }
@@ -41,7 +41,7 @@ pub fn Alert(
                     AlertVariant::Danger => view! { <Icon icon=BsIcon::BsExclamationTriangleFill /> },
                 }}
             </div>
-            <div class="content" class:centered=move || centered.0.as_ref().map(|it| it.get()).unwrap_or(false)>
+            <div class="content" class:centered=move || centered.0.as_ref().map_or(false, SignalGet::get)>
                 <div class="title">
                     { move || title.produce() }
                 </div>

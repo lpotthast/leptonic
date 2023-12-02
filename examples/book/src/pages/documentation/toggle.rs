@@ -13,13 +13,13 @@ pub fn PageToggle() -> impl IntoView {
         <P>"A toggle is a representation of a boolean value."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 let (state, set_state) = create_signal(false);
 
                 view! {
                     <Toggle state=state set_state=set_state/>
                 }
-            "#)}
+            ")}
         </Code>
 
         <Toggle state=state set_state=set_state/>
@@ -29,7 +29,7 @@ pub fn PageToggle() -> impl IntoView {
         <P>"A toggle can be configured with a pair of icons. One icon being rendered in the off position, the other being rendered in the on position."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 let (state, set_state) = create_signal(false);
 
                 view! {
@@ -38,7 +38,7 @@ pub fn PageToggle() -> impl IntoView {
                         off: BsIcon::BsFolder.into(),
                     }/>
                 }
-            "#)}
+            ")}
         </Code>
 
         <Toggle state=state set_state=set_state icons=ToggleIcons {

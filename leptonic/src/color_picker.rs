@@ -172,14 +172,10 @@ pub fn ColorPicker(
     let saturation = Signal::derive(move || hsv.get().saturation);
     let value = Signal::derive(move || hsv.get().value);
 
-    let set_hsv_c1 = set_hsv.clone();
-    let set_hsv_c2 = set_hsv.clone();
-
-    let set_hue =
-        Callback::new(move |new_hue| set_hsv_c1.set(hsv.get_untracked().with_hue(new_hue)));
+    let set_hue = Callback::new(move |new_hue| set_hsv.set(hsv.get_untracked().with_hue(new_hue)));
 
     let set_saturation = Callback::new(move |new_saturation| {
-        set_hsv_c2.set(hsv.get_untracked().with_saturation(new_saturation))
+        set_hsv.set(hsv.get_untracked().with_saturation(new_saturation));
     });
 
     let set_value =
@@ -192,13 +188,13 @@ pub fn ColorPicker(
             <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; height: 20em;">
                 <ColorPreview rgb=rgb style="width: 20%; height: 100%;"/>
                 <ColorPalette hsv=hsv
-                    set_saturation=set_saturation.clone()
-                    set_value=set_value.clone()
+                    set_saturation=set_saturation
+                    set_value=set_value
                     style="width: 80%; height: 100%;"
                 />
             </div>
 
-            <HueSlider hue=hue set_hue=set_hue.clone()/>
+            <HueSlider hue=hue set_hue=set_hue/>
 
             <div style="display: flex; flex-direction: row;">
                 <Field style="width: 32%; margin-right: 2%;">
@@ -228,19 +224,19 @@ pub fn ColorPicker(
                 <Field style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"R"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
-                        get=Signal::derive(move || rgb.get().r as f64)
+                        get=Signal::derive(move || f64::from(rgb.get().r))
                     />
                 </Field>
                 <Field style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"G"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
-                        get=Signal::derive(move || rgb.get().g as f64)
+                        get=Signal::derive(move || f64::from(rgb.get().g))
                     />
                 </Field>
                 <Field style="width: 32%; margin-right: 0%;">
                     <FieldLabel>"B"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
-                        get=Signal::derive(move || rgb.get().b as f64)
+                        get=Signal::derive(move || f64::from(rgb.get().b))
                     />
                 </Field>
             </div>

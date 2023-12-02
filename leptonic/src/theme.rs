@@ -14,15 +14,15 @@ pub enum LeptonicTheme {
 impl Theme for LeptonicTheme {
     fn name(&self) -> &'static str {
         match self {
-            LeptonicTheme::Light => "light",
-            LeptonicTheme::Dark => "dark",
+            Self::Light => "light",
+            Self::Dark => "dark",
         }
     }
 
     fn icon(&self) -> leptos_icons::Icon {
         match self {
-            LeptonicTheme::Light => BsIcon::BsSun.into(),
-            LeptonicTheme::Dark => BsIcon::BsMoon.into(),
+            Self::Light => BsIcon::BsSun.into(),
+            Self::Dark => BsIcon::BsMoon.into(),
         }
     }
 }
@@ -83,7 +83,7 @@ where
                 theme_context.set_theme.update(|current| match val {
                     true => *current = on,
                     false => *current = off,
-                })
+                });
             }).into(),
         ),
         active: OptionalMaybeSignal(None),

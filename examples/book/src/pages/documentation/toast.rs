@@ -45,7 +45,7 @@ pub fn PageToast() -> impl IntoView {
                 header: header.get_untracked().into_view(),
                 body: body.get_untracked().into_view(),
                 timeout: timeout.get_untracked(),
-            }) }>
+            }); }>
             "Create Toast"
         </Button>
 
@@ -74,7 +74,7 @@ pub fn PageToast() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --toast-border-radius
                 --toast-header-border-bottom
                 --toast-header-padding
@@ -95,7 +95,7 @@ pub fn PageToast() -> impl IntoView {
                 --toast-error-header-color
                 --toast-error-message-background
                 --toast-error-message-color
-            "#)}
+            ")}
         </Code>
     }
 }

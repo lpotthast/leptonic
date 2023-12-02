@@ -9,7 +9,7 @@ use crate::OptionalMaybeSignal;
 // TODO: Add mount prop.
 // TODO: Add dialog component, making modal the underlying technology?
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct ModalData {
     pub internal_id: Uuid,
     pub id: Option<String>,
@@ -23,7 +23,16 @@ pub enum ModalChildren {
     Dynamic(Rc<ChildrenFn>),
 }
 
-#[derive(Copy, Clone)]
+impl std::fmt::Debug for ModalChildren {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Once(_view) => f.debug_tuple("Once").finish(),
+            Self::Dynamic(_children) => f.debug_tuple("Dynamic").finish(),
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
 pub struct ModalRootContext {
     pub modals: ReadSignal<IndexMap<Uuid, ModalData>>,
     pub set_modals: WriteSignal<IndexMap<Uuid, ModalData>>,
@@ -62,7 +71,7 @@ pub fn Modal(
     #[prop(into, optional)] class: Option<String>,
     children: Children,
 ) -> impl IntoView {
-    let modals = use_context::<ModalRootContext>().unwrap();
+    let modals = expect_context::<ModalRootContext>();
     let children = children().into_view(); // TODO: Is it ok to build this view once?
 
     let internal_id = Uuid::new_v4();
@@ -96,7 +105,7 @@ pub fn ModalFn(
     #[prop(into, optional)] class: Option<String>,
     children: ChildrenFn,
 ) -> impl IntoView {
-    let modals = use_context::<ModalRootContext>().unwrap();
+    let modals = expect_context::<ModalRootContext>();
     let children = Rc::new(children);
 
     let internal_id = Uuid::new_v4();
@@ -146,7 +155,7 @@ pub fn ModalBody(
     #[prop(into, optional)] style: OptionalMaybeSignal<String>,
 ) -> impl IntoView {
     view! {
-        <leptonic-modal-body style=move || style.0.as_ref().map(|it| it.get())>
+        <leptonic-modal-body style=move || style.0.as_ref().map(SignalGet::get)>
             { children() }
         </leptonic-modal-body>
     }

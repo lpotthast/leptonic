@@ -79,7 +79,7 @@ pub fn PageTable() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 // Table wrapper
                 --table-wrapper-box-shadow-color
 
@@ -94,7 +94,7 @@ pub fn PageTable() -> impl IntoView {
                 --table-column-background-if-ordered
                 --table-header-cell-padding
                 --table-body-cell-padding
-            "#)}
+            ")}
         </Code>
     }
 }

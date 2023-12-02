@@ -52,7 +52,7 @@ pub fn PageChip() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --chip-font-size
                 --chip-margin
                 --chip-padding
@@ -82,7 +82,7 @@ pub fn PageChip() -> impl IntoView {
                 --chip-danger-text-color-hover
                 --chip-danger-background-color
                 --chip-danger-background-color-hover
-            "#)}
+            ")}
         </Code>
     }
 }

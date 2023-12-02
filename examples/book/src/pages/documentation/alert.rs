@@ -28,7 +28,7 @@ pub fn PageAlert() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --alert-margin
                 --alert-padding
                 --alert-primary-background-color
@@ -41,7 +41,7 @@ pub fn PageAlert() -> impl IntoView {
                 --alert-warn-color
                 --alert-danger-background-color
                 --alert-danger-color
-            "#)}
+            ")}
         </Code>
     }
 }

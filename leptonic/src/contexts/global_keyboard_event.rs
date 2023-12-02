@@ -11,6 +11,7 @@ pub struct GlobalKeyboardEvent {
 }
 
 impl GlobalKeyboardEvent {
+    #[allow(clippy::used_underscore_binding)]
     pub fn new(
         _closure: WasmClosure<KeyboardEvent>,
         read_signal: ReadSignal<Option<KeyboardEvent>>,

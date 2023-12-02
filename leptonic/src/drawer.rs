@@ -9,10 +9,10 @@ pub enum DrawerSide {
 }
 
 impl DrawerSide {
-    pub fn to_str(self) -> &'static str {
+    pub const fn to_str(self) -> &'static str {
         match self {
-            DrawerSide::Left => "left",
-            DrawerSide::Right => "right",
+            Self::Left => "left",
+            Self::Right => "right",
         }
     }
 }
@@ -26,6 +26,7 @@ enum DrawerAnimationState {
 }
 
 #[component]
+#[allow(clippy::match_same_arms)]
 pub fn Drawer(
     side: DrawerSide,
     #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
@@ -56,22 +57,22 @@ pub fn Drawer(
             match (anim_state.get_untracked(), target_state.get_untracked()) {
                 (DrawerAnimationState::Shown, DrawerAnimationState::Shown) => {}
                 (DrawerAnimationState::Shown, DrawerAnimationState::Hidden) => {
-                    set_anim_state.set(DrawerAnimationState::Hiding)
+                    set_anim_state.set(DrawerAnimationState::Hiding);
                 }
                 (DrawerAnimationState::Showing, DrawerAnimationState::Shown) => {
-                    set_anim_state.set(DrawerAnimationState::Shown)
+                    set_anim_state.set(DrawerAnimationState::Shown);
                 }
                 (DrawerAnimationState::Showing, DrawerAnimationState::Hidden) => {
-                    set_anim_state.set(DrawerAnimationState::Hiding)
+                    set_anim_state.set(DrawerAnimationState::Hiding);
                 }
                 (DrawerAnimationState::Hiding, DrawerAnimationState::Shown) => {
-                    set_anim_state.set(DrawerAnimationState::Showing)
+                    set_anim_state.set(DrawerAnimationState::Showing);
                 }
                 (DrawerAnimationState::Hiding, DrawerAnimationState::Hidden) => {
-                    set_anim_state.set(DrawerAnimationState::Hidden)
+                    set_anim_state.set(DrawerAnimationState::Hidden);
                 }
                 (DrawerAnimationState::Hidden, DrawerAnimationState::Shown) => {
-                    set_anim_state.set(DrawerAnimationState::Showing)
+                    set_anim_state.set(DrawerAnimationState::Showing);
                 }
                 (DrawerAnimationState::Hidden, DrawerAnimationState::Hidden) => {}
                 _ => tracing::error!("Reached an unexpected branch!"),
@@ -89,10 +90,10 @@ pub fn Drawer(
         let anim_state = anim_state.get();
         let target_state = target_state.get();
 
-        if anim_state != target_state {
-            resume();
-        } else {
+        if anim_state == target_state {
             pause();
+        } else {
+            resume();
         }
     });
 

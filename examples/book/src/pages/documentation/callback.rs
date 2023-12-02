@@ -83,9 +83,9 @@ pub fn PageCallback() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 #[prop(into, optional)] set_value: Option<Callback<String>>
-            "#)}
+            ")}
         </Code>
 
         <P>
@@ -94,19 +94,19 @@ pub fn PageCallback() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 #[prop(into, optional)] render: Option<Callback<(Scope, MyType), View>>
-            "#)}
+            ")}
         </Code>
 
         <P>"Create it when instantiating your component using the "<Code inline=true>"create_callback"</Code>" convenience function."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 view! {
                     <MyComponent set_value=create_callback(move |v| {}) />
                 }
-            "#)}
+            ")}
         </Code>
 
         <P>

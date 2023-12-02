@@ -6,27 +6,27 @@ use super::tab::TabLabel;
 
 #[derive(Debug, Clone)]
 pub struct TabHistory {
-    active: Option<leptos::Oco<'static, str>>,
-    previous: Option<leptos::Oco<'static, str>>,
+    active: Option<Oco<'static, str>>,
+    previous: Option<Oco<'static, str>>,
 }
 
 impl TabHistory {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             active: None,
             previous: None,
         }
     }
 
-    pub fn get_active(&self) -> Option<&leptos::Oco<'static, str>> {
+    pub const fn get_active(&self) -> Option<&Oco<'static, str>> {
         self.active.as_ref()
     }
 
-    pub fn get_previous(&self) -> Option<&leptos::Oco<'static, str>> {
+    pub const fn get_previous(&self) -> Option<&Oco<'static, str>> {
         self.previous.as_ref()
     }
 
-    pub fn push(&mut self, active: leptos::Oco<'static, str>) {
+    pub fn push(&mut self, active: Oco<'static, str>) {
         self.previous = self.active.clone();
         self.active = Some(active);
     }
@@ -38,7 +38,7 @@ impl Default for TabHistory {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct TabsContext {
     pub history: ReadSignal<TabHistory>,
     pub set_history: WriteSignal<TabHistory>,
@@ -100,7 +100,7 @@ pub fn TabSelectors(
 fn TabSelector<A, S>(
     is_active: A,
     set_active: S,
-    name: leptos::Oco<'static, str>,
+    name: Oco<'static, str>,
     label: View,
 ) -> impl IntoView
 where

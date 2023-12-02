@@ -15,12 +15,12 @@ pub fn PageColorPicker() -> impl IntoView {
         <P>"Select colors using the "<Code inline=true>"<ColorPicker>"</Code>" component."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 let (hsv, set_hsv) = create_signal(HSV::new());
                 view! {
                     <ColorPicker hsv=hsv set_hsv=set_hsv/>
                 }
-            "#)}
+            ")}
         </Code>
 
         <ColorPicker hsv=hsv set_hsv=set_hsv/>
@@ -32,10 +32,10 @@ pub fn PageColorPicker() -> impl IntoView {
         <P>"Let's define a HSV color with a derived RGB representation. We will use them for the next component on this page."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 let (hsv, set_hsv) = create_signal(HSV::new());
                 let rgb = Signal::derive(move || hsv.get().into_rgb8());
-            "#)}
+            ")}
         </Code>
 
         <H3>ColorPreview</H3>
@@ -89,14 +89,14 @@ pub fn PageColorPicker() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 view! {
                     <HueSlider
                         hue=Signal::derive(move || hsv.get().hue)
                         set_hue=move |hue| set_hsv.update(|hsv| hsv.hue = hue)
                     />
                 }
-            "#)}
+            ")}
         </Code>
 
         <HueSlider
@@ -111,7 +111,7 @@ pub fn PageColorPicker() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --color-palette-knob-size
                 --color-palette-knob-border-width
                 --color-palette-knob-border-color
@@ -123,7 +123,7 @@ pub fn PageColorPicker() -> impl IntoView {
                 --color-palette-knob-halo-background-color
                 --color-palette-knob-transition-speed
                 --color-palette-knob-box-shadow
-            "#)}
+            ")}
         </Code>
     }
 }

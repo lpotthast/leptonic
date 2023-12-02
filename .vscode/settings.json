@@ -1,6 +1,29 @@
 {
     "cSpell.words": [
-        "leptos"
+        "bindgen",
+        "collapsibles",
+        "datetime",
+        "focusin",
+        "focusout",
+        "indoc",
+        "keydown",
+        "keyup",
+        "leptos",
+        "mousedown",
+        "mouseenter",
+        "mouseup",
+        "noopener",
+        "onclick",
+        "onkeydown",
+        "onmouseup",
+        "onresize",
+        "onscroll",
+        "tabindex",
+        "tiptap",
+        "touchend",
+        "touchmove",
+        "touchstart",
+        "uuid"
     ],
     "rust-analyzer.linkedProjects": [
         "./leptonic/Cargo.toml",

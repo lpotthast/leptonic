@@ -14,13 +14,13 @@ pub fn PageProgress() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 let (progress, set_progress) = create_signal(Some(34.0));
 
                 view! {
                     <ProgressBar progress=progress/>
                 }
-            "#)}
+            ")}
         </Code>
 
         <ProgressBar progress=progress/>
@@ -49,9 +49,9 @@ pub fn PageProgress() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <ProgressBar progress=create_signal(None).0 />
-            "#)}
+            ")}
         </Code>
 
         <ProgressBar progress=create_signal(None).0 />
@@ -61,7 +61,7 @@ pub fn PageProgress() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --progress-bar-height
                 --progress-bar-border-radius
                 --progress-bar-background-color
@@ -70,7 +70,7 @@ pub fn PageProgress() -> impl IntoView {
                 --progress-bar-fill-background-color
                 --progress-bar-fill-transition
                 --progress-bar-color
-            "#)}
+            ")}
         </Code>
     }
 }

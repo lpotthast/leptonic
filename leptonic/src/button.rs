@@ -20,11 +20,11 @@ pub enum ButtonVariant {
 }
 
 impl ButtonVariant {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            ButtonVariant::Flat => "flat",
-            ButtonVariant::Outlined => "outlined",
-            ButtonVariant::Filled => "filled",
+            Self::Flat => "flat",
+            Self::Outlined => "outlined",
+            Self::Filled => "filled",
         }
     }
 }
@@ -47,14 +47,14 @@ pub enum ButtonColor {
 }
 
 impl ButtonColor {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            ButtonColor::Primary => "primary",
-            ButtonColor::Secondary => "secondary",
-            ButtonColor::Success => "success",
-            ButtonColor::Info => "info",
-            ButtonColor::Warn => "warn",
-            ButtonColor::Danger => "danger",
+            Self::Primary => "primary",
+            Self::Secondary => "secondary",
+            Self::Success => "success",
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Danger => "danger",
         }
     }
 }
@@ -74,11 +74,11 @@ pub enum ButtonSize {
 }
 
 impl ButtonSize {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            ButtonSize::Small => "small",
-            ButtonSize::Normal => "normal",
-            ButtonSize::Big => "big",
+            Self::Small => "small",
+            Self::Normal => "normal",
+            Self::Big => "big",
         }
     }
 }
@@ -146,7 +146,7 @@ pub fn Button(
     view! {
         <button
             id=id
-            class=move || class.0.as_ref().map(|it| format!("{} leptonic-btn", it.get())).unwrap_or("leptonic-btn".to_string())
+            class=move || class.0.as_ref().map(|it| format!("{} leptonic-btn", it.get())).unwrap_or_else(|| "leptonic-btn".to_string())
             class:has-variations=has_variations
             class:active=move || active.get()
             data-variant=move || variant.get().as_str()
@@ -189,6 +189,7 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
 }
 
 #[component]
+#[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
 pub fn LinkButton<H>(
     href: H,
     #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
@@ -223,7 +224,7 @@ where
             id=id
             class=move || {
                 let user = class.get();
-                let active = active.get().then(|| "active").unwrap_or_default();
+                let active = active.get().then_some("active").unwrap_or_default();
                 format!("leptonic-btn {user} {active}")
             }
             data-variant=move || variant.get().as_str()

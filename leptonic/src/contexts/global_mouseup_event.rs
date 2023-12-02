@@ -11,6 +11,7 @@ pub struct GlobalMouseupEvent {
 }
 
 impl GlobalMouseupEvent {
+    #[allow(clippy::used_underscore_binding)]
     pub fn new(
         _closure: WasmClosure<MouseEvent>,
         read_signal: ReadSignal<Option<MouseEvent>>,

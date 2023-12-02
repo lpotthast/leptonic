@@ -25,10 +25,10 @@ pub fn PageIcon() -> impl IntoView {
         <P>"We can simply include these icons like this, using the "<Code inline=true>"<Icon>"</Code> " component provided by this library."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <Icon icon=BsIcon::BsFolderFill/>
                 <Icon icon=BsIcon::BsFolder/>
-            "#)}
+            ")}
         </Code>
 
         <Icon icon=BsIcon::BsFolderFill style="font-size: 6em;"/>

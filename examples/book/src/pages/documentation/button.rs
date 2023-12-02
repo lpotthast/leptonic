@@ -3,6 +3,7 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageButton() -> impl IntoView {
     let (disabled, set_disabled) = create_signal(false);
     let (num_main_action_activated, set_num_main_action_activated) = create_signal(0);
@@ -122,7 +123,7 @@ pub fn PageButton() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --button-border-size
                 --button-border-radius
                 --button-box-shadow-opacity
@@ -234,7 +235,7 @@ pub fn PageButton() -> impl IntoView {
                 --button-filled-danger-border-color
                 --button-filled-danger-border-color-hover
                 --button-filled-danger-box-shadow-color
-            "#)}
+            ")}
         </Code>
     }
 }

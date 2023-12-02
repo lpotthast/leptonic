@@ -1,5 +1,6 @@
 // TODO: Add HSL, CMYK, ...
 #[derive(Debug, Clone, Copy)]
+#[allow(variant_size_differences)]
 pub enum ColorSpace {
     HSV(HSV),
     RGB8(RGB8),
@@ -16,7 +17,8 @@ pub struct HSV {
 impl HSV {
     /// Hue starting at red (0.0 degrees) with full saturation (1.0) and full value (1.0).
     /// This is a sensitive way to construct a new HSV value.
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             hue: 0.0,
             saturation: 1.0,
@@ -24,7 +26,8 @@ impl HSV {
         }
     }
 
-    pub fn from_hue_fully_saturated(hue: f64) -> Self {
+    #[must_use]
+    pub const fn from_hue_fully_saturated(hue: f64) -> Self {
         Self {
             hue,
             saturation: 1.0,
@@ -32,7 +35,8 @@ impl HSV {
         }
     }
 
-    pub fn with_hue(self, hue: f64) -> Self {
+    #[must_use]
+    pub const fn with_hue(self, hue: f64) -> Self {
         Self {
             hue,
             saturation: self.saturation,
@@ -40,7 +44,8 @@ impl HSV {
         }
     }
 
-    pub fn with_saturation(self, saturation: f64) -> Self {
+    #[must_use]
+    pub const fn with_saturation(self, saturation: f64) -> Self {
         Self {
             hue: self.hue,
             saturation,
@@ -48,7 +53,8 @@ impl HSV {
         }
     }
 
-    pub fn with_value(self, value: f64) -> Self {
+    #[must_use]
+    pub const fn with_value(self, value: f64) -> Self {
         Self {
             hue: self.hue,
             saturation: self.saturation,
@@ -77,7 +83,7 @@ pub struct RGB8 {
 }
 
 impl RGB8 {
-    pub fn new() -> RGB8 {
+    pub const fn new() -> Self {
         Self { r: 0, g: 0, b: 0 }
     }
 
@@ -110,7 +116,7 @@ impl std::fmt::UpperHex for RGB8 {
 
 impl std::fmt::Display for RGB8 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("#{:X}", self))
+        f.write_fmt(format_args!("#{self:X}"))
     }
 }
 
@@ -130,6 +136,7 @@ pub struct RGBA8 {
 
 impl From<HSV> for RGB8 {
     // Expectations: 0 ≤ H < 360, 0 ≤ S ≤ 1 and 0 ≤ V ≤ 1:
+    #[allow(clippy::many_single_char_names)]
     fn from(hsv: HSV) -> Self {
         let (h, s, v) = (hsv.hue, hsv.saturation, hsv.value);
 
@@ -159,11 +166,12 @@ impl From<HSV> for RGB8 {
             ((b + m) * 255.0) as u8,
         );
 
-        RGB8 { r, g, b }
+        Self { r, g, b }
     }
 }
 
 impl From<RGB8> for HSV {
+    #[allow(clippy::many_single_char_names)]
     fn from(rgb: RGB8) -> Self {
         let RGB8 { r, g, b } = rgb;
 
@@ -192,7 +200,7 @@ impl From<RGB8> for HSV {
 
         let value = c_max;
 
-        HSV {
+        Self {
             hue,
             saturation,
             value,

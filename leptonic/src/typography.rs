@@ -1,5 +1,6 @@
 use leptos::*;
 
+#[derive(Debug, Clone, Copy)]
 pub enum TypographyVariant {
     H1,
     H2,

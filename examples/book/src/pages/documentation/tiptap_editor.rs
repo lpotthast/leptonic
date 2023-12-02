@@ -30,11 +30,11 @@ pub fn PageTiptapEditor() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <TiptapEditor disabled=disabled value=value set_value=move |content| match content {
                     TiptapContent::Html(content) | TiptapContent::Json(content) => set_value.set(content),
                 }/>
-            "#)}
+            ")}
         </Code>
 
         <TiptapEditor disabled=disabled value=value set_value=move |content| match content {

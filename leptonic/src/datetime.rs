@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Year {
     pub number: i32,
     pub is_staging: bool,
@@ -8,7 +8,7 @@ pub struct Year {
     pub disabled: bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Month {
     /// base 1
     pub index: u8,
@@ -18,7 +18,7 @@ pub struct Month {
     pub disabled: bool,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Week {
     pub id: Uuid,
     pub days: Vec<Day>, // Not always full?
@@ -31,7 +31,7 @@ pub enum InMonth {
     Next,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Day {
     pub id: Uuid,
     /// base 1
@@ -44,7 +44,7 @@ pub struct Day {
     pub is_now: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GuideMode {
     CalendarFirst,
     YearFirst,
@@ -56,7 +56,7 @@ impl Default for GuideMode {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
     Date,
     Time,
@@ -114,7 +114,7 @@ pub fn whole_days_in(year: i32, month: time::Month) -> u8 {
     )
     .unwrap()
         - time::Date::from_calendar_date(year, month, 1).unwrap();
-    duration.whole_days() as u8
+    u8::try_from(duration.whole_days()).expect("no truncation or sign loss")
 }
 
 pub fn is_in_range(

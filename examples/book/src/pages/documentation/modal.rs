@@ -48,7 +48,7 @@ pub fn PageModal() -> impl IntoView {
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --modal-color
                 --modal-background-color
                 --modal-padding
@@ -58,7 +58,7 @@ pub fn PageModal() -> impl IntoView {
                 --modal-footer-padding
                 --modal-border-radius
                 --modal-box-shadow
-            "#)}
+            ")}
         </Code>
     }
 }
@@ -74,7 +74,7 @@ where
     A: Fn() + Copy + 'static,
     C: Fn() + Copy + 'static,
 {
-    let (input, set_input) = create_signal("".to_owned());
+    let (input, set_input) = create_signal(String::new());
     let required = requires_confirmation_of.clone();
     let confirmed = Signal::derive(move || input.get() == required);
     let disabled: OptionalMaybeSignal<bool> = Signal::derive(move || !confirmed.get()).into();

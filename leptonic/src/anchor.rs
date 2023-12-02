@@ -5,6 +5,7 @@ use leptos::*;
 use crate::prelude::*;
 
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn Anchor(
     #[prop(into)] href: Cow<'static, str>,
     #[prop(into)] title: Cow<'static, str>,

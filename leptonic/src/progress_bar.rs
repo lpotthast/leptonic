@@ -21,7 +21,7 @@ pub fn ProgressBar(
                     true => 0.0,
                     false => pos_progress / max,
                 };
-                f64::max(f64::min(percentage, 1.0), 0.0)
+                percentage.clamp(0.0, 1.0)
             })
     });
 
@@ -33,7 +33,7 @@ pub fn ProgressBar(
     });
 
     let fill_style = Signal::derive(move || match fill_width_px.get() {
-        Some(px) => format!("width: {}px", px),
+        Some(px) => format!("width: {px}px"),
         None => "width: 20%".to_owned(),
     });
 
@@ -48,7 +48,7 @@ pub fn ProgressBar(
                     <leptonic-progress-info>
                         { move || match percentage_done.get() {
                             Some(percentage_done) => format!("{:.2} %", (percentage_done * 100.0)),
-                            None => "".to_owned()
+                            None => String::new()
                         } }
                     </leptonic-progress-info>
                 </Show>

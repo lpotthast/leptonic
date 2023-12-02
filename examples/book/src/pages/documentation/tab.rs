@@ -3,6 +3,7 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageTab() -> impl IntoView {
     let (test_reactive_label_bool, set_test_reactive_label_bool) = create_signal(false);
     view! {

@@ -4,7 +4,7 @@ use leptos::*;
 use crate::app::AppRoutes;
 
 #[component]
-pub fn PageErr404() -> impl IntoView {
+pub(crate) fn PageErr404() -> impl IntoView {
     view! {
         <Grid spacing=Size::Zero class="err-404">
             <Row>

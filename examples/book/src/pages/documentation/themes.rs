@@ -30,9 +30,9 @@ pub fn PageThemes() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
-            "#)}
+            ")}
         </Code>
 
         <P>

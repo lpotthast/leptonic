@@ -172,10 +172,8 @@ pub trait MaybeSignalExt<T: 'static> {
 impl<T: Clone + 'static> MaybeSignalExt<T> for MaybeSignal<T> {
     fn map<U: 'static, F: Fn(T) -> U + 'static>(self, mapper: F) -> MaybeSignal<U> {
         match self {
-            MaybeSignal::Static(v) => MaybeSignal::Static(mapper(v)),
-            MaybeSignal::Dynamic(sig) => {
-                MaybeSignal::Dynamic(Signal::derive(move || mapper(sig.get())))
-            }
+            Self::Static(v) => MaybeSignal::Static(mapper(v)),
+            Self::Dynamic(sig) => MaybeSignal::Dynamic(Signal::derive(move || mapper(sig.get()))),
         }
     }
 }
@@ -327,10 +325,12 @@ pub mod prelude {
     pub use super::Width;
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum Language {
     En,
 }
 
+#[derive(Debug)]
 pub enum Out<O: 'static> {
     Consumer(Consumer<O>),
     Callback(Callback<O, ()>),
@@ -349,41 +349,41 @@ impl<O: 'static> Clone for Out<O> {
 impl<O: 'static> Out<O> {
     pub fn set(&self, new_value: O) {
         match self {
-            Out::Consumer(consumer) => consumer.consume(new_value),
-            Out::Callback(callback) => callback.call(new_value),
-            Out::WriteSignal(write_signal) => write_signal.set(new_value),
-            Out::RwSignal(rw_signal) => rw_signal.set(new_value),
+            Self::Consumer(consumer) => consumer.consume(new_value),
+            Self::Callback(callback) => callback.call(new_value),
+            Self::WriteSignal(write_signal) => write_signal.set(new_value),
+            Self::RwSignal(rw_signal) => rw_signal.set(new_value),
         }
     }
 }
 
-impl<T: 'static, F: Fn(T) -> () + 'static> From<F> for Out<T> {
+impl<T: 'static, F: Fn(T) + 'static> From<F> for Out<T> {
     fn from(fun: F) -> Self {
-        Out::Consumer(fun.into())
+        Self::Consumer(fun.into())
     }
 }
 
 impl<O: 'static> From<Consumer<O>> for Out<O> {
     fn from(consumer: Consumer<O>) -> Self {
-        Out::Consumer(consumer)
+        Self::Consumer(consumer)
     }
 }
 
 impl<O: 'static> From<Callback<O, ()>> for Out<O> {
     fn from(callback: Callback<O, ()>) -> Self {
-        Out::Callback(callback)
+        Self::Callback(callback)
     }
 }
 
 impl<O: 'static> From<WriteSignal<O>> for Out<O> {
     fn from(write_signal: WriteSignal<O>) -> Self {
-        Out::WriteSignal(write_signal)
+        Self::WriteSignal(write_signal)
     }
 }
 
 impl<O: 'static> From<RwSignal<O>> for Out<O> {
     fn from(rw_signal: RwSignal<O>) -> Self {
-        Out::RwSignal(rw_signal)
+        Self::RwSignal(rw_signal)
     }
 }
 
@@ -409,6 +409,7 @@ pub fn create_signal_ls<T: Clone + serde::Serialize + serde::de::DeserializeOwne
     (signal, set_signal)
 }
 
+#[must_use]
 pub fn read_from_local_storage<T: serde::de::DeserializeOwned>(key: &'static str) -> Option<T> {
     use_window().as_ref().and_then(|window| {
         let storage = window.local_storage().ok()??;
@@ -431,8 +432,7 @@ pub fn track_in_local_storage<T: serde::Serialize + Clone>(
     signal: ReadSignal<T>,
 ) {
     create_effect(move |_old| {
-        use std::ops::Deref;
-        if let Some(window) = use_window().deref() {
+        if let Some(window) = &*use_window() {
             let storage = window.local_storage().ok()??;
             storage
                 .set(key, serde_json::to_string(&signal.get()).ok()?.as_ref())
@@ -455,13 +455,11 @@ impl<T: std::ops::Deref> OptionDeref<T> for Option<T> {
     }
 
     fn deref_or<'a>(&'a self, default: &'a T::Target) -> &'a T::Target {
-        self.as_ref().map(std::ops::Deref::deref).unwrap_or(default)
+        self.as_ref().map_or(default, std::ops::Deref::deref)
     }
 
     fn deref_or_else<'a, F: Fn() -> &'a T::Target>(&'a self, default: F) -> &'a T::Target {
-        self.as_ref()
-            .map(std::ops::Deref::deref)
-            .unwrap_or_else(default)
+        self.as_ref().map_or_else(default, std::ops::Deref::deref)
     }
 }
 
@@ -478,12 +476,12 @@ pub enum Size {
 impl Display for Size {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Size::Zero => f.write_str("0px"), // Having a unit is relevant here. Using it inside a calc() functions would otherwise not work!
-            Size::Px(px) => f.write_fmt(format_args!("{px}px")),
-            Size::Em(em) => f.write_fmt(format_args!("{em}em")),
-            Size::Rem(rem) => f.write_fmt(format_args!("{rem}rem")),
-            Size::Percent(percent) => f.write_fmt(format_args!("{percent}%")),
-            Size::Auto => f.write_str("auto"),
+            Self::Zero => f.write_str("0px"), // Having a unit is relevant here. Using it inside a calc() functions would otherwise not work!
+            Self::Px(px) => f.write_fmt(format_args!("{px}px")),
+            Self::Em(em) => f.write_fmt(format_args!("{em}em")),
+            Self::Rem(rem) => f.write_fmt(format_args!("{rem}rem")),
+            Self::Percent(percent) => f.write_fmt(format_args!("{percent}%")),
+            Self::Auto => f.write_str("auto"),
         }
     }
 }
@@ -511,19 +509,19 @@ pub enum FontWeight {
 impl Display for FontWeight {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            FontWeight::W100 => f.write_str("100"),
-            FontWeight::W200 => f.write_str("200"),
-            FontWeight::W300 => f.write_str("300"),
-            FontWeight::W400 => f.write_str("400"),
-            FontWeight::W500 => f.write_str("500"),
-            FontWeight::W600 => f.write_str("600"),
-            FontWeight::W700 => f.write_str("700"),
-            FontWeight::W800 => f.write_str("800"),
-            FontWeight::W900 => f.write_str("900"),
-            FontWeight::WLighter => f.write_str("lighter"),
-            FontWeight::WNormal => f.write_str("normal"),
-            FontWeight::WBold => f.write_str("bold"),
-            FontWeight::WBolder => f.write_str("bolder"),
+            Self::W100 => f.write_str("100"),
+            Self::W200 => f.write_str("200"),
+            Self::W300 => f.write_str("300"),
+            Self::W400 => f.write_str("400"),
+            Self::W500 => f.write_str("500"),
+            Self::W600 => f.write_str("600"),
+            Self::W700 => f.write_str("700"),
+            Self::W800 => f.write_str("800"),
+            Self::W900 => f.write_str("900"),
+            Self::WLighter => f.write_str("lighter"),
+            Self::WNormal => f.write_str("normal"),
+            Self::WBold => f.write_str("bold"),
+            Self::WBolder => f.write_str("bolder"),
         }
     }
 }
@@ -542,15 +540,15 @@ pub enum Margin {
 impl Display for Margin {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Margin::Top(size) => f.write_fmt(format_args!("{size} 0 0 0")),
-            Margin::Right(size) => f.write_fmt(format_args!("0 {size} 0 0")),
-            Margin::Bottom(size) => f.write_fmt(format_args!("0 0 {size} 0")),
-            Margin::Left(size) => f.write_fmt(format_args!("0 0 0 {size}")),
-            Margin::All(size) => f.write_fmt(format_args!("{size}")),
-            Margin::Double(vertical, horizontal) => {
+            Self::Top(size) => f.write_fmt(format_args!("{size} 0 0 0")),
+            Self::Right(size) => f.write_fmt(format_args!("0 {size} 0 0")),
+            Self::Bottom(size) => f.write_fmt(format_args!("0 0 {size} 0")),
+            Self::Left(size) => f.write_fmt(format_args!("0 0 0 {size}")),
+            Self::All(size) => f.write_fmt(format_args!("{size}")),
+            Self::Double(vertical, horizontal) => {
                 f.write_fmt(format_args!("{vertical} {horizontal}"))
             }
-            Margin::Full(top, right, bottom, left) => {
+            Self::Full(top, right, bottom, left) => {
                 f.write_fmt(format_args!("{top} {right} {bottom} {left}"))
             }
         }
@@ -558,18 +556,18 @@ impl Display for Margin {
 }
 
 /// Keep track of an elements position and size.
-/// Call track_client_rect to update the signal state.
+/// Call `track_client_rect` to update the signal state.
 #[derive(Debug, Clone)]
 struct TrackedElementClientBoundingRect<T: Into<web_sys::Element> + Clone + 'static> {
     el: StoredValue<leptos_use::core::ElementMaybeSignal<T, web_sys::Element>>,
     /// Distance of the tracked element to the left of the viewport.
-    pub left: ReadSignal<f64>,
+    pub(crate) left: ReadSignal<f64>,
     /// Distance of the tracked element to the top of the viewport.
-    pub top: ReadSignal<f64>,
+    pub(crate) top: ReadSignal<f64>,
     /// Width of the tracked element.
-    pub width: ReadSignal<f64>,
+    pub(crate) width: ReadSignal<f64>,
     /// Height of the tracked element.
-    pub height: ReadSignal<f64>,
+    pub(crate) height: ReadSignal<f64>,
     set_left: WriteSignal<f64>,
     set_top: WriteSignal<f64>,
     set_width: WriteSignal<f64>,
@@ -582,7 +580,7 @@ impl<T> TrackedElementClientBoundingRect<T>
 where
     T: Into<web_sys::Element> + Clone + 'static,
 {
-    pub fn new<El>(el: El) -> Self
+    pub(crate) fn new<El>(el: El) -> Self
     where
         El: Clone + Into<leptos_use::core::ElementMaybeSignal<T, web_sys::Element>>,
     {
@@ -604,7 +602,7 @@ where
         }
     }
 
-    pub fn track_client_rect(&self) {
+    pub(crate) fn track_client_rect(&self) {
         self.el.with_value(|maybe_signal| {
             if let Some(el) = maybe_signal.get_untracked() {
                 let el: web_sys::Element = el.into();
@@ -623,7 +621,7 @@ struct RelativeMousePosition {
 }
 
 impl RelativeMousePosition {
-    pub fn new<T>(client_bounding_rect: TrackedElementClientBoundingRect<T>) -> Self
+    pub(crate) fn new<T>(client_bounding_rect: TrackedElementClientBoundingRect<T>) -> Self
     where
         T: Into<web_sys::Element> + Clone + 'static,
     {
@@ -652,10 +650,8 @@ impl RelativeMousePosition {
             rel_mouse_pos: create_memo(move |_| {
                 let x = x.get() - client_bounding_rect.left.get();
                 let y = y.get() - client_bounding_rect.top.get();
-                let mut px = x / client_bounding_rect.width.get();
-                let mut py = y / client_bounding_rect.height.get();
-                px = f64::max(0.0, f64::min(1.0, px));
-                py = f64::max(0.0, f64::min(1.0, py));
+                let px = (x / client_bounding_rect.width.get()).clamp(0.0, 1.0);
+                let py = (y / client_bounding_rect.height.get()).clamp(0.0, 1.0);
                 (px, py)
             }),
         }

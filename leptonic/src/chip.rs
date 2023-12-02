@@ -18,14 +18,14 @@ pub enum ChipColor {
 }
 
 impl ChipColor {
-    pub fn as_str(&self) -> &'static str {
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            ChipColor::Primary => "primary",
-            ChipColor::Secondary => "secondary",
-            ChipColor::Success => "success",
-            ChipColor::Info => "info",
-            ChipColor::Warn => "warn",
-            ChipColor::Danger => "danger",
+            Self::Primary => "primary",
+            Self::Secondary => "secondary",
+            Self::Success => "success",
+            Self::Info => "info",
+            Self::Warn => "warn",
+            Self::Danger => "danger",
         }
     }
 }
@@ -46,7 +46,7 @@ pub fn Chip(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <leptonic-chip id=id class=class style=style data-color=move || color.0.as_ref().map(|it| it.get()).unwrap_or(Default::default()).as_str()>
+        <leptonic-chip id=id class=class style=style data-color=move || color.0.as_ref().map_or_else(|| ChipColor::default(), SignalGet::get).as_str()>
             { children() }
             { match dismissible {
                 Some(callback) => view! {

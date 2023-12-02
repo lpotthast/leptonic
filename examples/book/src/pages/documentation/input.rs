@@ -3,13 +3,14 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageInput() -> impl IntoView {
     let (text, set_text) = create_signal("text".to_owned());
     let (password, set_password) = create_signal("secret".to_owned());
     let (number, set_number) = create_signal(4.2);
     let number_string = Signal::derive(move || format!("{:.1}", number.get()));
 
-    let (placeholder_input, set_placeholder_input) = create_signal("".to_owned());
+    let (placeholder_input, set_placeholder_input) = create_signal(String::new());
 
     view! {
         <H1>"Inputs"</H1>
@@ -96,12 +97,12 @@ pub fn PageInput() -> impl IntoView {
         </P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 view! {
                     <Input get=text set=set_text/>
                     <Input get=text set=create_callback(move |v: String| set_text.set(v))/>
                 }
-            "#)}
+            ")}
         </Code>
 
         <H2>"Placeholder"</H2>
@@ -110,13 +111,13 @@ pub fn PageInput() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let (text, set_text) = create_signal("".to_owned());
+                let (text, set_text) = create_signal(String::new());
                 view! {
                     <TextInput get=text set=set_text placeholder="This is a placeholder"/>
                     <Button
                         variant=ButtonVariant::Flat
                         size=ButtonSize::Small
-                        on_click=move |_| set_text.set("".to_owned())>
+                        on_click=move |_| set_text.set(String::new())>
                         "Clear input"
                     </Button>
                 }
@@ -124,14 +125,14 @@ pub fn PageInput() -> impl IntoView {
         </Code>
 
         <TextInput get=placeholder_input set=set_placeholder_input placeholder="This is a placeholder"/>
-        <Button variant=ButtonVariant::Flat size=ButtonSize::Small on_click=move |_| set_placeholder_input.set("".to_owned())>"Clear input"</Button>
+        <Button variant=ButtonVariant::Flat size=ButtonSize::Small on_click=move |_| set_placeholder_input.set(String::new())>"Clear input"</Button>
 
         <H2>"Styling"</H2>
 
         <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
         <Code>
-            {indoc!(r#"
+            {indoc!(r"
                 --input-padding
                 --input-color
                 --input-background-color
@@ -140,7 +141,7 @@ pub fn PageInput() -> impl IntoView {
                 --input-border-radius
                 --input-min-height
                 --input-focused-border-color
-            "#)}
+            ")}
         </Code>
     }
 }

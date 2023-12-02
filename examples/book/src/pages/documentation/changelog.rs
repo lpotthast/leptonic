@@ -2,6 +2,7 @@ use leptonic::prelude::*;
 use leptos::*;
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn PageChangelog() -> impl IntoView {
     view! {
         <H1>"Changelog"</H1>

@@ -18,11 +18,11 @@ pub enum AppRoutes {
 }
 
 impl AppRoutes {
-    pub fn route(self) -> &'static str {
+    pub const fn route(self) -> &'static str {
         match self {
-            AppRoutes::Welcome => "",
-            AppRoutes::Doc => "doc",
-            AppRoutes::NotFound => "*", // Leptos requires this to be be named "*"!
+            Self::Welcome => "",
+            Self::Doc => "doc",
+            Self::NotFound => "*", // Leptos requires this to be be named "*"!
         }
     }
 }
@@ -100,6 +100,7 @@ impl AppLayoutContext {
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn Layout() -> impl IntoView {
     let is_small = use_media_query("(max-width: 800px)");
     let router_context = use_router();

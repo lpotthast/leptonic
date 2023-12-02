@@ -14,14 +14,14 @@ pub enum CheckboxVariant {
 }
 
 impl CheckboxVariant {
-    pub fn class_name(&self) -> &'static str {
+    pub const fn class_name(&self) -> &'static str {
         match self {
-            CheckboxVariant::Primary => "type-primary",
-            CheckboxVariant::Secondary => "type-secondary",
-            CheckboxVariant::Success => "type-success",
-            CheckboxVariant::Info => "type-info",
-            CheckboxVariant::Warn => "type-warn",
-            CheckboxVariant::Danger => "type-danger",
+            Self::Primary => "type-primary",
+            Self::Secondary => "type-secondary",
+            Self::Success => "type-success",
+            Self::Info => "type-info",
+            Self::Warn => "type-warn",
+            Self::Danger => "type-danger",
         }
     }
 }
@@ -46,11 +46,11 @@ pub enum CheckboxSize {
 }
 
 impl CheckboxSize {
-    pub fn class_name(&self) -> &'static str {
+    pub const fn class_name(&self) -> &'static str {
         match self {
-            CheckboxSize::Small => "small",
-            CheckboxSize::Normal => "normal",
-            CheckboxSize::Big => "big",
+            Self::Small => "small",
+            Self::Normal => "normal",
+            Self::Big => "big",
         }
     }
 }
@@ -84,9 +84,9 @@ pub fn Checkbox(
                 type="checkbox"
                 id=id.to_string()
                 class=format!("{} {}", variant, size)
-                class:active=move || active.0.as_ref().map(|it| it.get()).unwrap_or(true)
+                class:active=move || active.0.as_ref().map_or(true, SignalGet::get)
                 // TODO: Use aria-disabled instead?
-                class:disabled=move || disabled.0.as_ref().map(|it| it.get()).unwrap_or(false)
+                class:disabled=move || disabled.0.as_ref().map_or(false, SignalGet::get)
                 on:click=move |_| set_checked.set(!checked.get_untracked())
                 prop:checked=move || checked.get()
             />
