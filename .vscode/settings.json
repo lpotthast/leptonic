@@ -6,6 +6,7 @@
         "focusin",
         "focusout",
         "indoc",
+        "itertools",
         "keydown",
         "keyup",
         "leptos",

@@ -304,8 +304,6 @@ pub mod prelude {
     pub use super::transitions::slide::Slide;
     pub use super::transitions::zoom::Zoom;
     pub use super::typography::Code;
-    pub use super::typography::Typography;
-    pub use super::typography::TypographyVariant;
     pub use super::typography::H1;
     pub use super::typography::H2;
     pub use super::typography::H3;

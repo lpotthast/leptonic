@@ -1,99 +1,19 @@
 use leptos::*;
 use leptos_icons::{Icon, VsIcon};
+use leptos_use::use_window;
 
 use crate::prelude::{Button, ButtonVariant};
-
-#[derive(Debug, Clone, Copy)]
-pub enum TypographyVariant {
-    H1,
-    H2,
-    H3,
-    H4,
-    H5,
-    H6,
-    Paragraph,
-    Code { inline: bool },
-}
-
-#[component]
-pub fn Typography(
-    variant: TypographyVariant,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
-    children: ChildrenFn,
-) -> impl IntoView {
-    match variant {
-        TypographyVariant::H1 => H1(H1Props {
-            id,
-            class,
-            style,
-            children,
-        })
-        .into_view(),
-        TypographyVariant::H2 => H2(H2Props {
-            id,
-            class,
-            style,
-            children,
-        })
-        .into_view(),
-        TypographyVariant::H3 => H3(H3Props {
-            id,
-            class,
-            style,
-            children,
-        })
-        .into_view(),
-        TypographyVariant::H4 => H4(H4Props {
-            id,
-            class,
-            style,
-            children,
-        })
-        .into_view(),
-        TypographyVariant::H5 => H5(H5Props {
-            id,
-            class,
-            style,
-            children,
-        })
-        .into_view(),
-        TypographyVariant::H6 => H6(H6Props {
-            id,
-            class,
-            style,
-            children,
-        })
-        .into_view(),
-        TypographyVariant::Paragraph => P(PProps {
-            id,
-            class,
-            style,
-            children,
-        })
-        .into_view(),
-        TypographyVariant::Code { inline } => Code(CodeProps {
-            id,
-            class,
-            style,
-            inline: Some(inline),
-            children,
-        })
-        .into_view(),
-    }
-}
 
 #[component]
 pub fn H1(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    children: ChildrenFn,
+    children: Children,
 ) -> impl IntoView {
     view! {
         <h1 id=id class=class style=style>
-            {children()}
+            { children() }
         </h1>
     }
 }
@@ -103,11 +23,11 @@ pub fn H2(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    children: ChildrenFn,
+    children: Children,
 ) -> impl IntoView {
     view! {
         <h2 id=id class=class style=style>
-            {children()}
+            { children() }
         </h2>
     }
 }
@@ -117,11 +37,11 @@ pub fn H3(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    children: ChildrenFn,
+    children: Children,
 ) -> impl IntoView {
     view! {
         <h3 id=id class=class style=style>
-            {children()}
+            { children() }
         </h3>
     }
 }
@@ -131,11 +51,11 @@ pub fn H4(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    children: ChildrenFn,
+    children: Children,
 ) -> impl IntoView {
     view! {
         <h4 id=id class=class style=style>
-            {children()}
+            { children() }
         </h4>
     }
 }
@@ -145,11 +65,11 @@ pub fn H5(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    children: ChildrenFn,
+    children: Children,
 ) -> impl IntoView {
     view! {
         <h5 id=id class=class style=style>
-            {children()}
+            { children() }
         </h5>
     }
 }
@@ -159,11 +79,11 @@ pub fn H6(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    children: ChildrenFn,
+    children: Children,
 ) -> impl IntoView {
     view! {
         <h6 id=id class=class style=style>
-            {children()}
+            { children() }
         </h6>
     }
 }
@@ -173,11 +93,11 @@ pub fn P(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    children: ChildrenFn,
+    children: Children,
 ) -> impl IntoView {
     view! {
         <p id=id class=class style=style>
-            {children()}
+            { children() }
         </p>
     }
 }
@@ -188,55 +108,88 @@ pub fn Code(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(optional)] inline: Option<bool>,
-    children: ChildrenFn,
+    #[prop(optional)] show_copy_button: Option<bool>,
+    #[prop(optional)] on_copy: Option<Callback<Result<(), ()>>>,
+    children: Children,
 ) -> impl IntoView {
-    let code_text = store_value(itertools::Itertools::intersperse(
-        children().nodes.iter().map(|e| match e {
-            View::Text(t) => t.content.to_owned(),
-            _ => panic!("non-text children are not allowed: {:?}", e.to_owned()),
-        }),
-        "\n".into(),
-    )
-    .collect::<String>());
+    let code_text = store_value(
+        itertools::Itertools::intersperse(
+            children().nodes.iter().map(|e| match e {
+                View::Text(t) => t.content.to_owned(),
+                _ => panic!("non-text children are not allowed: {:?}", e.to_owned()),
+            }),
+            "\n".into(),
+        )
+        .collect::<String>(),
+    );
 
-    code_text.with_value(|code_text| {
-        tracing::info!("code_text: {:?}", code_text.len());
-        tracing::info!("code_text: {:?}", code_text);
+    let show_copy_button = show_copy_button.unwrap_or_else(|| !inline.unwrap_or(false));
+    let on_success = move || {
+        if let Some(on_copy) = on_copy {
+            on_copy.call(Ok(()))
+        }
+    };
+    let on_err = move || {
+        if let Some(on_copy) = on_copy {
+            on_copy.call(Err(()))
+        } else {
+            tracing::warn!("copy to clipboard failed")
+        }
+    };
+    let copy_btn = show_copy_button.then(|| {
+        view!(
+            <Button
+                class="leptonic-code-copy-button"
+                variant=ButtonVariant::Flat
+                on_click=move |_| copy_to_clipboard(
+                    code_text.with_value(|c| c.clone()),
+                    on_success,
+                    on_err
+                )>
+                <Icon icon=Icon::from(VsIcon::VsCopy)/>
+            </Button>
+        )
     });
 
-    let show_copy_button = !inline.unwrap_or(false);
     view! {
         <leptonic-code inline=inline.map(|it| it.to_string())>
             <leptonic-code-text id=id class=class style=style inline=inline.map(|it| it.to_string()) >
-                {children()}
+                { code_text.get_value() }
             </leptonic-code-text>
-            {show_copy_button.then_some(
-                view!(
-                    <Button
-                        class="leptonic-code-copy-button"
-                        variant=ButtonVariant::Flat
-                        on_click=move |_| {
-                            use wasm_bindgen_futures::spawn_local;
-                            let _task = spawn_local(async move {
-                                let window = web_sys::window().expect("window"); // { obj: val };
-                                let nav = window.navigator().clipboard();
-                                match nav {
-                                    Some(a) => {
-                                        let p = a.write_text(&code_text.with_value(|c| c.clone()));
-                                        let _result = wasm_bindgen_futures::JsFuture::from(p)
-                                            .await
-                                            .expect("clipboard populated");
-                                        // info!("clippyboy worked");
-                                    }
-                                    None => {
-                                        // warn!("failed to copy clippyboy");
-                                    }
-                                };
-                            });
-                        }><Icon icon=Icon::from(VsIcon::VsCopy)/>
-                    </Button>
-                )
-            )}
+            { copy_btn }
         </leptonic-code>
+    }
+}
+
+fn copy_to_clipboard<T: AsRef<str>, S: Fn() + 'static, E: Fn() + 'static>(
+    text: T,
+    on_success: S,
+    on_err: E,
+) {
+    match use_window().navigator() {
+        Some(navigator) => {
+            match navigator.clipboard() {
+                Some(clipboard) => {
+                    let promise = clipboard.write_text(text.as_ref());
+                    let future = wasm_bindgen_futures::JsFuture::from(promise);
+                    wasm_bindgen_futures::spawn_local(async move {
+                        match future.await {
+                            Ok(_result) => {
+                                on_success();
+                            }
+                            Err(_err) => {
+                                on_err();
+                            }
+                        }
+                    });
+                }
+                None => {
+                    on_err();
+                }
+            };
+        }
+        None => {
+            on_err();
+        }
     }
 }
