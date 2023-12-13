@@ -180,7 +180,7 @@ where
         <ThemeProvider theme=create_signal_ls("theme", default_theme)>
             <ToastRoot>
                 <ModalRoot>
-                    <Box style="min-height: 100%; min-width: 100%; display: flex; flex-direction: column;">
+                    <Box style="min-height: 100vh; min-width: 100vh; display: flex; flex-direction: column;">
                         { children() }
                     </Box>
                 </ModalRoot>
