@@ -49,10 +49,10 @@ leptos_icons = { version = "0.1.0", features = [
 ] }
 leptos_router = "0.5.4"
 serde = "1.0.193"
-serde-wasm-bindgen = "0.6.1"
+serde-wasm-bindgen = "0.6.3"
 serde_json = "1.0.108"
 strum = { version = "0.25.0", features = ["derive"] }
-time = { version = "0.3.30", features = [
+time = { version = "0.3.31", features = [
     "wasm-bindgen",
     "macros",
     "serde",
