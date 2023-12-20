@@ -18,9 +18,9 @@ pub trait SelectSearchable {
     }
 }
 
-pub trait SelectOption: Debug + Clone + PartialEq + Eq {}
+pub trait SelectOption: Debug + Clone + PartialEq {}
 
-impl<T: Debug + Clone + PartialEq + Eq> SelectOption for T {}
+impl<T: Debug + Clone + PartialEq> SelectOption for T {}
 
 // TODO: select_previous and select_next could be made more efficient.
 // If we would know that the initial vec from which the current preselect'ed option was taken didn't change
