@@ -81,7 +81,6 @@ unused_extern_crates = "deny"
 # overrides
 unreachable_pub = { level = "allow", priority = 1 }
 
-
 [lints.clippy]
 pedantic = "warn"
 nursery = "warn"
