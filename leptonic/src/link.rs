@@ -87,7 +87,7 @@ where
     view! {
         <leptonic-link id=id class=class style=style>
             <a
-                href=href.to_href()()
+                href=move || href.to_href()()
                 target=format!("{target}")
                 prop:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
                 rel={ match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }
