@@ -23,9 +23,9 @@ codegen-units = 1
 [dependencies]
 console_error_panic_hook = "0.1.7"
 indoc = "2.0.4"
-leptonic = { path = "../../leptonic", features = ["csr"] }
+leptonic = { path = "../../leptonic", features = ["csr", "clipboard"] }
 leptos = { version = "0.5.4", features = ["csr"] }
-leptos-use = "0.8.2"
+leptos-use = "0.9.0"
 leptos_icons = { version = "0.1.0", features = [
     "BsGithub",
     "BsSearch",

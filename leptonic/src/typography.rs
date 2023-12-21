@@ -1,6 +1,5 @@
 use leptos::*;
 use leptos_icons::{Icon, VsIcon};
-use leptos_use::use_window;
 
 use crate::prelude::{Button, ButtonVariant};
 
@@ -136,6 +135,7 @@ pub fn Code(
             tracing::warn!("copy to clipboard failed")
         }
     };
+
     let copy_btn = show_copy_button.then(|| {
         view!(
             <Button
@@ -161,12 +161,13 @@ pub fn Code(
     }
 }
 
+#[cfg(feature = "clipboard")]
 fn copy_to_clipboard<T: AsRef<str>, S: Fn() + 'static, E: Fn() + 'static>(
     text: T,
     on_success: S,
     on_err: E,
 ) {
-    match use_window().navigator() {
+    match leptos_use::use_window().navigator() {
         Some(navigator) => {
             match navigator.clipboard() {
                 Some(clipboard) => {
@@ -192,4 +193,13 @@ fn copy_to_clipboard<T: AsRef<str>, S: Fn() + 'static, E: Fn() + 'static>(
             on_err();
         }
     }
+}
+
+#[cfg(not(feature = "clipboard"))]
+fn copy_to_clipboard<T: AsRef<str>, S: Fn() + 'static, E: Fn() + 'static>(
+    _text: T,
+    _on_success: S,
+    _on_err: E,
+) {
+    tracing::warn!("Clipboard related functionality requires leptonic's 'Clipboard' feature as well as '--cfg=web_sys_unstable_apis'.")
 }
