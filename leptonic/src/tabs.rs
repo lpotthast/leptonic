@@ -54,18 +54,19 @@ pub struct TabsContext {
 pub fn Tabs(#[prop(optional)] mount: Option<Mount>, children: Children) -> impl IntoView {
     let (history, set_history) = create_signal(TabHistory::new());
     let (tab_labels, set_tab_labels) = create_signal(Vec::new());
-    provide_context::<TabsContext>(TabsContext {
-        history,
-        set_history,
-        tab_labels,
-        set_tab_labels,
-        mount,
-    });
     view! {
-        <leptonic-tabs>
-            <TabSelectors tab_labels history set_history/>
-            { children() }
-        </leptonic-tabs>
+        <Provider value=TabsContext {
+            history,
+            set_history,
+            tab_labels,
+            set_tab_labels,
+            mount,
+        }>
+            <leptonic-tabs>
+                <TabSelectors tab_labels history set_history/>
+                { children() }
+            </leptonic-tabs>
+        </Provider>
     }
 }
 
