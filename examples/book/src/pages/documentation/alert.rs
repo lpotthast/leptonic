@@ -10,7 +10,7 @@ pub fn PageAlert() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Alert variant=AlertVariant::Success title=|_| "Success".into_view()>"Action completed."</Alert>
+                <Alert variant=AlertVariant::Success title=|| "Success".into_view()>"Action completed."</Alert>
             "#)}
         </Code>
 
