@@ -1,8 +1,45 @@
-# See: https://github.com/casey/just
+# Run `cargo install just`. Then simply run `just` to get a list of executable recepies.
+# See https://github.com/casey/just for furthrt details about Just.
 
 # Lists all available commands.
 default:
   just --list
+
+# Perform a one-time setup to get up and running with Rust development.
+once:
+  just enable-wasm
+  just use-stable
+  just install-tools
+
+# Enable the WASM target, enabling frontend build.
+enable-wasm:
+  rustup target add wasm32-unknown-unknown
+
+# Enable the nightly Rust compiler
+use-nightly:
+  rustup default nightly
+  rustup update
+
+# Enable the stable Rust compiler
+use-stable:
+  rustup default stable
+  rustup update
+
+# Install dependencies for building, running examples, profiling and more...
+install-tools:
+  cargo install cargo-clean-all # Clean up build artifact cluttering up your system.
+  cargo install cargo-edit # Make `cargo upgrade` available, upgrading dependencies in your Cargo.toml.
+  cargo install cargo-expand # Expand macros, super helpful ehn debugging procedural macros.
+  cargo install cargo-llvm-lines # Count lines of LLVM IR per generic function.
+  cargo install cargo-sort # Sort the dependencies section of a Cargo.toml file.
+  cargo install cargo-udeps # Find unused dependencies.
+  cargo install cargo-upgrades # Check for upgradable dependencies.
+  cargo install cargo-watch # Run a command and watch for filesystem changes.
+  cargo install cargo-whatfeatures # Inspect features made available by a specific crate.
+  cargo install just # Tool to execute the recepies of this Justfile.
+  cargo install tokei # Count your code, line counts, quickly.
+  cargo install trunk # Build, watch, server WASM frontends.
+  cargo install twiggy # Inspect WASM bundles.
 
 # Find the minimum supported rust version
 msrv:
@@ -10,31 +47,9 @@ msrv:
     cargo msrv --min "2021" --path leptonic
     cargo msrv --min "2021" --path leptonic-theme
 
-# Enable the nightly compiler
-setup-rust-nightly:
-  rustup default nightly
-  rustup target add wasm32-unknown-unknown
-  rustup update
-
-# Enable the stable compiler
-setup-rust-stable:
-  rustup default stable
-  rustup target add wasm32-unknown-unknown
-  rustup update
-
-# Install dependencies for building, running examples, profiling and more...
-install-tools:
-  cargo install --git https://github.com/ctron/trunk --branch trunk-ng trunk-ng
-  cargo install twiggy
-  cargo install cargo-expand
-  cargo install cargo-whatfeatures
-  cargo install cargo-upgrades
-  cargo install cargo-edit
-  cargo install cargo-clean-all
-
 # Serve the Book example
 serve:
-  cd ./examples/book && trunk-ng serve
+  cd ./examples/book && trunk serve
 
 # Check which process is occupying the given port.
 # This can help you find out which process to kill if some process has gone rogue.
