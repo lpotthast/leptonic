@@ -5,7 +5,7 @@ use leptos_use::use_element_hover;
 
 #[component]
 pub fn PagePopover() -> impl IntoView {
-    let el: NodeRef<html::Div> = create_node_ref();
+    let el: NodeRef<leptos::html::Div> = create_node_ref();
     let is_hovered = use_element_hover(el);
 
     view! {

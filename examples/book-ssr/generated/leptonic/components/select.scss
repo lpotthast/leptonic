@@ -1,0 +1,151 @@
+.leptonic-select-wrapper {
+    display: inline; // Most not be `contents` or item would not be focusable.
+
+    &,
+    &:focus,
+    &:active {
+        outline: none;
+    }
+
+    &:focus,
+    &:active {
+        leptonic-select {
+            leptonic-select-selected {
+                border-color: var(--select-focused-border-color);
+            }
+        }
+    }
+
+    leptonic-select.active {
+        leptonic-select-selected {
+            border-color: var(--select-focused-border-color);
+        }
+    }
+}
+
+leptonic-select {
+    display: block;
+    position: relative;
+    border: none;
+    cursor: pointer;
+
+    leptonic-select-selected {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        align-items: center;
+        flex-wrap: wrap;
+
+        z-index: 2;
+        width: 100%;
+        min-height: var(--select-min-height);
+
+        padding: var(--select-padding);
+        margin: 0;
+
+        color: var(--select-selected-color);
+        background: var(--select-selected-background-color);
+
+        border: var(--select-selected-border);
+        border-bottom: var(--select-selected-border-bottom);
+        border-radius: var(--select-selected-border-radius);
+
+        leptonic-select-deselect-trigger {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            right: 2.2em;
+            color: #878787;
+            background-color: #353535;
+            border-radius: 1em;
+            font-size: 1.2em;
+
+            &:hover {
+                color: var(--input-color);
+            }
+        }
+
+        leptonic-select-show-trigger {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: absolute;
+            right: 0.75em;
+            margin-top: 0.1em;
+            color: #bfbfbf;
+            border-radius: 1em;
+            font-size: 1.1em;
+
+            &:hover {
+                color: var(--input-color);
+            }
+        }
+    }
+
+    &[data-variant="multiselect"] {
+        leptonic-select-selected {
+            leptonic-select-option {
+                leptonic-chip {
+                    margin: 0.1em 0.4em 0.1em 0;
+                    border-radius: 0.8em;
+                }
+            }
+        }
+    }
+
+    leptonic-select-options {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        flex-direction: column;
+        width: 100%;
+        background-color: var(--select-dropdown-background-color);
+        box-shadow: var(--select-dropdown-shadow);
+        border: none;
+        border-top: none;
+        max-height: 14em;
+        overflow-y: scroll;
+        z-index: 999;
+
+        box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 5px -3px, rgba(0, 0, 0, 0.14) 0px 8px 10px 1px, rgba(0, 0, 0, 0.12) 0px 3px 14px 2px;
+        border-radius: 0.25em;
+
+        &.shown {
+            display: flex;
+        }
+
+        leptonic-input {
+            input.search {
+                margin: 0.3em;
+                border: 1px solid lightgray;
+                padding: 0.5em 0.75em;
+            }
+        }
+
+        leptonic-select-option {
+            padding: 0.6em;
+            user-select: none;
+
+            &:hover {
+                background-color: var(--select-item-hover-background-color);
+            }
+
+            &.disabled {
+                color: var(--select-item-disabled-color);
+                background-color: var(--select-item-disabled-background-color);
+            }
+
+            &.preselected {
+                background-color: var(--select-item-preselected-background-color);
+            }
+        }
+
+        leptonic-select-no-search-results {
+            padding: 0.6em;
+            user-select: none;
+            cursor: default;
+        }
+    }
+}

@@ -1,0 +1,244 @@
+@use "sass:math";
+
+$-class-prefix: "leptonic-grid-";
+$-grid-columns: 12;
+$-tiers: (
+  // Must be ordered from LOW to HIGH!
+  xs: 0em,
+  sm: 48em,
+  md: 64em,
+  lg: 75em,
+  xl: 83em
+);
+
+@function tier-min($tier) {
+  @if map-has-key($-tiers, $tier) {
+    @return map-get($-tiers, $tier);
+  }
+
+  @warn "Unknown `#{$tier}` in $tiers.";
+  @return null;
+}
+
+@mixin respond-to-tier($tier) {
+  @if map-has-key($-tiers, $tier) {
+    @media only screen and (min-width: #{map-get($-tiers, $tier)}) {
+      @content;
+    }
+  }
+
+  @else {
+    @warn "Unfortunately, no value could be retrieved from `#{$-tiers}`. Please make sure it is defined in the `$tiers` map.";
+  }
+}
+
+@mixin flex-start {
+  justify-content: flex-start;
+  //noinspection CssOverwrittenProperties
+  text-align: left; // For backwards compatibility.
+  //noinspection CssOverwrittenProperties
+  text-align: start; // Modern approach, but "experimental" for Microsoft -.-
+}
+
+@mixin flex-center {
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin flex-end {
+  justify-content: flex-end;
+  //noinspection CssOverwrittenProperties
+  text-align: right; // For backwards compatibility.
+  //noinspection CssOverwrittenProperties
+  text-align: end; // Modern approach, but "experimental" for Microsoft -.-
+}
+
+@mixin flex-top {
+  align-items: flex-start;
+}
+
+@mixin flex-middle {
+  align-items: center;
+  align-self: center; // added. keep?
+}
+
+@mixin flex-bottom {
+  align-items: flex-end;
+}
+
+@mixin flex-around {
+  justify-content: space-around;
+}
+
+@mixin flex-between {
+  justify-content: space-between;
+}
+
+@mixin flex-first {
+  order: -1;
+}
+
+@mixin flex-last {
+  order: 1;
+}
+
+@mixin produce {
+
+  // General styling
+  #{$-class-prefix}container,
+  #{$-class-prefix}container-fluid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--leptonic-grid-spacing);
+    width: 100%;
+  }
+
+  #{$-class-prefix}row {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: row;
+    flex: 1 1 auto;
+    flex-wrap: wrap;
+
+    gap: var(--leptonic-grid-spacing);
+
+    &.#{$-class-prefix}row-flex-row-reverse {
+      flex-direction: row-reverse;
+    }
+
+    &.#{$-class-prefix}row-flex-col-reverse {
+      flex-direction: column-reverse;
+    }
+  }
+
+  #{$-class-prefix}col {
+    box-sizing: border-box;
+    display: flex;
+    flex: 1 0 auto;
+    max-width: 100%;
+
+    &.#{$-class-prefix}col-flex-col {
+      flex-direction: column;
+    }
+
+    &.#{$-class-prefix}col-flex-col-reverse {
+      flex-direction: column-reverse;
+    }
+
+    &.#{$-class-prefix}col-flex-row {
+      flex-direction: row;
+    }
+
+    &.#{$-class-prefix}col-flex-row-reverse {
+      flex-direction: row-reverse;
+    }
+
+    &.#{$-class-prefix}col-flex-start {
+      @include flex-start;
+    }
+
+    &.#{$-class-prefix}col-flex-center {
+      @include flex-center;
+    }
+
+    &.#{$-class-prefix}col-flex-end {
+      @include flex-end;
+    }
+
+    &.#{$-class-prefix}col-flex-top {
+      @include flex-top;
+    }
+
+    &.#{$-class-prefix}col-flex-middle {
+      @include flex-middle;
+    }
+
+    &.#{$-class-prefix}col-flex-bottom {
+      @include flex-bottom;
+    }
+
+    &.#{$-class-prefix}col-flex-around {
+      @include flex-around;
+    }
+
+    &.#{$-class-prefix}col-flex-between {
+      @include flex-between;
+    }
+
+    &.#{$-class-prefix}col-flex-first {
+      @include flex-first;
+    }
+
+    &.#{$-class-prefix}col-flex-last {
+      @include flex-last;
+    }
+  }
+
+  /*
+   * Generates classes and media queries for each defined tier:
+   */
+  @each $tier-name, $tier-min in $-tiers {
+
+    @for $i from 0 to $-grid-columns {
+      [data-#{$tier-name}-offset="#{$i}"] {
+        margin-left: 0;
+      }
+    }
+
+    @media only screen and (min-width: $tier-min) {
+
+      @for $i from 1 through $-grid-columns {
+        [data-#{$tier-name}="#{$i}"] {
+          $percentage: percentage(math.div($i, $-grid-columns));
+          flex-basis: calc($percentage - var(--leptonic-grid-spacing));
+        }
+      }
+
+      @for $i from 0 to $-grid-columns {
+        [data-#{$tier-name}-offset="#{$i}"] {
+          margin-left: percentage(math.div($i, $-grid-columns));
+        }
+      }
+
+      .#{$-class-prefix}col-flex-start-#{$tier-name} {
+        @include flex-start;
+      }
+
+      .#{$-class-prefix}col-flex-center-#{$tier-name} {
+        @include flex-center;
+      }
+
+      .#{$-class-prefix}col-flex-end-#{$tier-name} {
+        @include flex-end;
+      }
+
+      .#{$-class-prefix}col-flex-top-#{$tier-name} {
+        @include flex-top;
+      }
+
+      .#{$-class-prefix}col-flex-middle-#{$tier-name} {
+        @include flex-middle;
+      }
+
+      .#{$-class-prefix}col-flex-bottom-#{$tier-name} {
+        @include flex-bottom;
+      }
+
+      .#{$-class-prefix}col-flex-around-#{$tier-name} {
+        @include flex-around;
+      }
+
+      .#{$-class-prefix}col-flex-between-#{$tier-name} {
+        @include flex-between;
+      }
+
+      .#{$-class-prefix}col-flex-first-#{$tier-name} {
+        @include flex-first;
+      }
+
+      .#{$-class-prefix}col-flex-last-#{$tier-name} {
+        @include flex-last;
+      }
+    }
+  }
+}

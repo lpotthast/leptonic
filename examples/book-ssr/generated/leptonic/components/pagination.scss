@@ -1,0 +1,24 @@
+.leptonic-pagination {
+  margin-top: 0.5em;
+
+  .items-per-page-selector {
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: center;
+    margin-right: 3em;
+
+    .label {
+      margin-right: 0.5em;
+      color: #555555;
+      font-weight: 300;
+    }
+  }
+
+  .pagination-info {
+    font-size: 0.7em;
+    font-weight: 300;
+    color: var(--grey-4);
+    user-select: none;
+  }
+}

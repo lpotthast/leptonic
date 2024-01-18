@@ -1,0 +1,90 @@
+leptonic-progress-bar {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    width: 100%;
+    height: var(--progress-bar-height);
+    border: none;
+    border-radius: 0;
+    background-color: transparent;
+    user-select: none;
+
+    &[data-indeterminate] {
+        leptonic-progress-bar-background {
+            display: block;
+
+            leptonic-progress-bar-fill {
+                display: block;
+                animation: animate-move 1.3s cubic-bezier(0.29, 0.63, 0.81, 0.07) infinite;
+
+                @keyframes animate-move {
+                    100% {
+                        left: 100%;
+                    }
+                }
+
+                leptonic-progress-bar-fill-overlay {
+                    display: block;
+                    background: none;
+                    animation: none;
+                }
+            }
+        }
+    }
+
+    leptonic-progress-bar-background {
+        display: inline-flex;
+        position: relative;
+        overflow: hidden;
+        justify-content: center;
+        align-items: center;
+        background-color: var(--progress-bar-background-color);
+        color: var(--progress-bar-color);
+        width: 100%;
+        height: 100%;
+        border-radius: var(--progress-bar-border-radius);
+        box-shadow: var(--progress-bar-background-box-shadow);
+
+        leptonic-progress-bar-fill {
+            display: inline-flex;
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            border-radius: var(--progress-bar-border-radius);
+            background-color: var(--progress-bar-fill-background-color);
+            transition: var(--progress-bar-fill-transition);
+
+            leptonic-progress-bar-fill-overlay {
+                display: inline-flex;
+                width: 100%;
+                background-image: -webkit-linear-gradient(-45deg,
+                        transparent 33%,
+                        rgba(0, 0, 0, 0.1) 33%,
+                        rgba(0, 0, 0, 0.1) 66%,
+                        transparent 66%);
+                height: 100%;
+                border-radius: var(--progress-bar-border-radius);
+                background-size: calc(var(--progress-bar-height) * 2), 1em, 100% 100%, 100% 100%;
+                animation: animate-background-position 1s linear infinite;
+
+                @keyframes animate-background-position {
+                    100% {
+                        background-position: -40px 0px;
+                    }
+                }
+            }
+        }
+
+        leptonic-progress-info {
+            font-size: 0.9em;
+            display: inline-flex;
+            z-index: 1;
+            background-color: var(--progress-bar-background-color-transparent);
+            line-height: 1em;
+            border-radius: var(--progress-bar-border-radius);
+            padding: 0.1em;
+            height: fit-content;
+        }
+    }
+}
