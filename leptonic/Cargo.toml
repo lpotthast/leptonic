@@ -12,6 +12,11 @@ The Leptos component library.
 """
 categories = ["gui"]
 keywords = ["leptos", "components", "component-library"]
+build = "build.rs"
+
+[build-dependencies]
+leptonic-theme = { path = "../leptonic-theme" }
+leptos-tiptap-build = "0.2.4"
 
 [dependencies]
 indexmap = "2.1.0"

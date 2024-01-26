@@ -6,10 +6,6 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
-[build-dependencies]
-leptonic-theme = { path = "../../leptonic-theme" }
-leptos-tiptap-build = "0.2.4"
-
 [dependencies]
 axum = { version = "0.6.4", optional = true }
 cfg-if = "1"
