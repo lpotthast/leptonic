@@ -36,11 +36,14 @@ pub fn main() {
 // Credits @ssrlive (source: https://github.com/rust-lang/cargo/issues/9661)
 fn get_cargo_target_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
+    log(format!("out_dir is: {out_dir:?}"));
     let profile = std::env::var("PROFILE")?;
+    log(format!("profile is: {profile:?}"));
     let mut target_dir = None;
     let mut sub_path = out_dir.as_path();
     while let Some(parent) = sub_path.parent() {
-        if parent.ends_with(&profile) {
+        // NOTE: A lot of `cargo leptos` examples define a custom `wasm-release` profile, so we also check for this case.
+        if parent.ends_with(&profile) || parent.ends_with(&format!("wasm-{profile}")) {
             target_dir = Some(parent);
             break;
         }
