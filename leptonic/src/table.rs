@@ -75,6 +75,7 @@ pub fn Th(#[prop(optional)] min_width: Option<bool>, children: Children) -> impl
         <th class:min-width=min_width.unwrap_or(false)>{children()}</th>
     }
 }
+
 #[component]
 pub fn Td(children: Children) -> impl IntoView {
     view! {

@@ -79,11 +79,13 @@ where
     let confirmed = Signal::derive(move || input.get() == required);
     let disabled: OptionalMaybeSignal<bool> = Signal::derive(move || !confirmed.get()).into();
 
+    let reqrequired = Callback::new(move |()| requires_confirmation_of.clone());
+
     view! {
         <Modal show_when=show_when>
             <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
             <ModalBody>
-                "Please enter \""{requires_confirmation_of}"\" to confirm."
+                "Please enter \""{reqrequired.call(())}"\" to confirm."
                 <TextInput get=input set=set_input/>
             </ModalBody>
             <ModalFooter>

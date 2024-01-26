@@ -242,8 +242,6 @@ pub mod prelude {
     pub use super::link::LinkExtTarget;
     pub use super::modal::Modal;
     pub use super::modal::ModalBody;
-    pub use super::modal::ModalData;
-    pub use super::modal::ModalFn;
     pub use super::modal::ModalFooter;
     pub use super::modal::ModalHeader;
     pub use super::modal::ModalRoot;
