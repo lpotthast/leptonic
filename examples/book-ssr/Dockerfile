@@ -26,6 +26,8 @@ RUN <<EOF
 EOF
 
 COPY . /build
+COPY {{LEPTONIC_DEV_CERT_PEM_FILE}} /build/certs/www.leptonic.dev-cert.pem
+COPY {{LEPTONIC_DEV_KEY_PEM_FILE}} /build/certs/www.leptonic.dev-key.pem
 
 RUN cargo leptos build --release
 
@@ -39,8 +41,8 @@ WORKDIR /app
 
 COPY --from=builder /build/target/release/book-ssr .
 COPY --from=builder /build/target/site ./site
-COPY {{LEPTONIC_DEV_CERT_PEM_FILE}} /certs/www.leptonic.dev-cert.pem
-COPY {{LEPTONIC_DEV_KEY_PEM_FILE}} /certs/www.leptonic.dev-key.pem
+COPY --from=builder /build/certs/www.leptonic.dev-cert.pem ./certs/www.leptonic.dev-cert.pem
+COPY --from=builder /build/certs/www.leptonic.dev-key.pem ./certs/www.leptonic.dev-cert.pem
 
 ENV TLS_CERT_PATH="certs/www.leptonic.dev-cert.pem"
 ENV TLS_KEY_PATH="certs/www.leptonic.dev-key.pem"
