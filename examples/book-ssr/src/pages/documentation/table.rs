@@ -13,23 +13,40 @@ pub fn PageTable() -> impl IntoView {
             {indoc!(r##"
                 <TableContainer>
                     <Table bordered=true hoverable=true>
-                        <Thead>
-                            <Tr>
-                                <Th min_width=true>"#"</Th>
-                                <Th>"Name"</Th>
-                                <Th>"Appearance"</Th>
-                                <Th>"Num. eyes"</Th>
-                            </Tr>
-                        </Thead>
-                        <Tbody>
-                            <Tr>
-                                <Td>"1"</Td>
-                                <Td>"Kevin"</Td>
-                                <Td>"Tall"</Td>
-                                <Td>"2"</Td>
-                            </Tr>
-                            // ...
-                        </Tbody>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHeaderCell min_width=true>"#"</TableHeaderCell>
+                                <TableHeaderCell>"Name"</TableHeaderCell>
+                                <TableHeaderCell>"Appearance"</TableHeaderCell>
+                                <TableHeaderCell>"Num. eyes"</TableHeaderCell>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            <TableRow>
+                                <TableCell>"1"</TableCell>
+                                <TableCell>"Kevin"</TableCell>
+                                <TableCell>"Tall"</TableCell>
+                                <TableCell>"2"</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>"2"</TableCell>
+                                <TableCell>"Bob"</TableCell>
+                                <TableCell>"Short"</TableCell>
+                                <TableCell>"2"</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>"3"</TableCell>
+                                <TableCell>"Stuart"</TableCell>
+                                <TableCell>"Medium"</TableCell>
+                                <TableCell>"1"</TableCell>
+                            </TableRow>
+                            <TableRow>
+                                <TableCell>"4"</TableCell>
+                                <TableCell>"Otto"</TableCell>
+                                <TableCell>"Round"</TableCell>
+                                <TableCell>"2"</TableCell>
+                            </TableRow>
+                        </TableBody>
                     </Table>
                 </TableContainer>
             "##)}
@@ -37,40 +54,40 @@ pub fn PageTable() -> impl IntoView {
 
         <TableContainer>
             <Table bordered=true hoverable=true>
-                <Thead>
-                    <Tr>
-                        <Th min_width=true>"#"</Th>
-                        <Th>"Name"</Th>
-                        <Th>"Appearance"</Th>
-                        <Th>"Num. eyes"</Th>
-                    </Tr>
-                </Thead>
-                <Tbody>
-                    <Tr>
-                        <Td>"1"</Td>
-                        <Td>"Kevin"</Td>
-                        <Td>"Tall"</Td>
-                        <Td>"2"</Td>
-                    </Tr>
-                    <Tr>
-                        <Td>"2"</Td>
-                        <Td>"Bob"</Td>
-                        <Td>"Short"</Td>
-                        <Td>"2"</Td>
-                    </Tr>
-                    <Tr>
-                        <Td>"3"</Td>
-                        <Td>"Stuart"</Td>
-                        <Td>"Medium"</Td>
-                        <Td>"1"</Td>
-                    </Tr>
-                    <Tr>
-                        <Td>"4"</Td>
-                        <Td>"Otto"</Td>
-                        <Td>"Round"</Td>
-                        <Td>"2"</Td>
-                    </Tr>
-                </Tbody>
+                <TableHeader>
+                    <TableRow>
+                        <TableHeaderCell min_width=true>"#"</TableHeaderCell>
+                        <TableHeaderCell>"Name"</TableHeaderCell>
+                        <TableHeaderCell>"Appearance"</TableHeaderCell>
+                        <TableHeaderCell>"Num. eyes"</TableHeaderCell>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    <TableRow>
+                        <TableCell>"1"</TableCell>
+                        <TableCell>"Kevin"</TableCell>
+                        <TableCell>"Tall"</TableCell>
+                        <TableCell>"2"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"2"</TableCell>
+                        <TableCell>"Bob"</TableCell>
+                        <TableCell>"Short"</TableCell>
+                        <TableCell>"2"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"3"</TableCell>
+                        <TableCell>"Stuart"</TableCell>
+                        <TableCell>"Medium"</TableCell>
+                        <TableCell>"1"</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell>"4"</TableCell>
+                        <TableCell>"Otto"</TableCell>
+                        <TableCell>"Round"</TableCell>
+                        <TableCell>"2"</TableCell>
+                    </TableRow>
+                </TableBody>
             </Table>
         </TableContainer>
 
