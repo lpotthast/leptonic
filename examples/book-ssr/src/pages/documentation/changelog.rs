@@ -15,7 +15,7 @@ pub fn PageChangelog() -> impl IntoView {
         <ul>
             <li>"Modals are now SSR compatible. The `ModalFn` component was dropped. If you used it, just rename all occurrences to `Modal`. If you previously used `Modal`, you might see some 'requires Fn but is FnOnce error's. Storing values moved into `Modal`s children through `store_value` should be a quick fix."</li>
             <li>"Tabs are now SSR compatible. Rendering order changed to make this possible. This should not affect anyone."</li>
-            <li>"Toggles are now SSR compatible. Rendering of the (optional) icons changed. This should only affect you if scustom styling is in play."</li>
+            <li>"Toggles are now SSR compatible. Rendering of the (optional) icons changed. This should only affect you if custom styling is in play."</li>
             <li>"Tables are now SSR compatible. Components were renamed to `TableHeader`, `TableBody`, `TableRow`, `TableHeaderCell` and `TableCell`."</li>
             <li>"The `build.rs` script, which previously had to be create by the consumer is now longer required. It was moved into leptonic itself and will automatically take care of copying files required for a build."</li>
             <li>"Getting started instructions are updated."</li>
@@ -23,6 +23,12 @@ pub fn PageChangelog() -> impl IntoView {
             <li>"A `SelectOption` no longer requires to be `Eq`."</li>
             <li>"The `uuid` dependency was bumped to version 1.6."</li>
             <li>"A `RwSignal` can act as an `Out` type"</li>
+            <li>"Modals now support the `on_escape` prop, letting you handle escape key presses."</li>
+        </ul>
+
+        <H3>"Fixed:"</H3>
+        <ul>
+            <li>"Fixed a bug which led to buttons not getting disabled properly."</li>
         </ul>
 
         <H2>"0.3.0"</H2>
