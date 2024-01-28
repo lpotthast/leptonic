@@ -82,10 +82,8 @@ book-build-and-package:
     - tag="${CI_COMMIT_SHA}"
     - docker pull "${image}:latest" || true
     - echo "Finalizing Dockerfile"
-    - cat "${LEPTONIC_DEV_CERT_PEM_FILE}" > "ssl_cert.pem"
-    - cat "${LEPTONIC_DEV_KEY_PEM_FILE}" > "ssl_key.pem"
-    - sed -i "s|{{LEPTONIC_DEV_CERT_PEM_FILE}}|ssl_cert.pem|g" "Dockerfile"
-    - sed -i "s|{{LEPTONIC_DEV_KEY_PEM_FILE}}|ssl_key.pem|g" "Dockerfile"
+    - cat "${LEPTONIC_DEV_CERT_PEM_FILE}" > "certs/ssl_cert.pem"
+    - cat "${LEPTONIC_DEV_KEY_PEM_FILE}" > "certs/ssl_key.pem"
     - echo "Building docker image '${image}:${tag}'"
     - >
       docker build
