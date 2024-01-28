@@ -1,14 +1,11 @@
 use std::{io::Write, path::PathBuf};
 
-const ENABLE_LOGGING: bool = false;
+const ENABLE_LOGGING: bool = true;
 
 #[allow(clippy::unwrap_used)]
 pub fn main() {
-    println!("cargo:rerun-if-changed=build.rs");
-    println!("cargo:rerun-if-changed=Cargo.lock");
-
     let target_dir = get_cargo_target_dir().unwrap();
-    let root = search_parent_dir_containing_cargo_toml(target_dir).unwrap();
+    let root = target_dir.parent().unwrap().to_owned();
     log(format!("root is: {root:?}"));
 
     let generated_dir = root.join("generated");
@@ -37,35 +34,18 @@ pub fn main() {
 fn get_cargo_target_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
     log(format!("out_dir is: {out_dir:?}"));
-    let profile = std::env::var("PROFILE")?;
-    log(format!("profile is: {profile:?}"));
     let mut target_dir = None;
     let mut sub_path = out_dir.as_path();
     while let Some(parent) = sub_path.parent() {
-        // NOTE: A lot of `cargo leptos` examples define a custom `wasm-release` profile, so we also check for this case.
-        if parent.ends_with(&profile) || parent.ends_with(&format!("wasm-{profile}")) {
+        if parent.ends_with("target") {
             target_dir = Some(parent);
             break;
         }
         sub_path = parent;
     }
-    let target_dir = target_dir.ok_or("not found")?;
+    let target_dir =
+        target_dir.ok_or_else(|| format!("Could not find `target` dir in parents of {out_dir:?}"))?;
     Ok(target_dir.to_path_buf())
-}
-
-fn search_parent_dir_containing_cargo_toml(
-    mut start: PathBuf,
-) -> Result<PathBuf, Box<dyn std::error::Error>> {
-    loop {
-        let mut cargo_toml = start.clone();
-        cargo_toml.push("Cargo.toml");
-
-        if cargo_toml.try_exists()? {
-            return Ok(start);
-        }
-
-        start = start.parent().ok_or_else(|| "No more parents")?.to_owned();
-    }
 }
 
 fn log(msg: impl AsRef<str>) {
