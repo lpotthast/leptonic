@@ -38,7 +38,6 @@ use crate::pages::documentation::themes::PageThemes;
 use crate::pages::documentation::tiptap_editor::PageTiptapEditor;
 use crate::pages::documentation::toast::PageToast;
 use crate::pages::documentation::toggle::PageToggle;
-use crate::pages::documentation::transition::PageTransition;
 use crate::pages::documentation::typography::PageTypography;
 use crate::pages::documentation::usage::PageUsage;
 use crate::app::APP_BAR_HEIGHT;
