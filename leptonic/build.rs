@@ -1,6 +1,6 @@
 use std::{io::Write, path::PathBuf};
 
-const ENABLE_LOGGING: bool = true;
+const ENABLE_LOGGING: bool = false;
 
 #[allow(clippy::unwrap_used)]
 pub fn main() {
