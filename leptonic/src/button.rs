@@ -153,7 +153,10 @@ pub fn Button(
             data-color=move || color.get().as_str()
             data-size=move || size.get().as_str()
             style=style
-            aria-disabled=move || disabled.get()
+            aria-disabled=move || match disabled.get() {
+                true => "true",
+                false => "false",
+            }
             on:click=move |e| {
                 if !disabled.get_untracked() {
                     e.stop_propagation();
@@ -230,7 +233,10 @@ where
             data-variant=move || variant.get().as_str()
             data-color=move || color.get().as_str()
             data-size=move || size.get().as_str()
-            aria-disabled=move || disabled.get()
+            aria-disabled=move || match disabled.get() {
+                true => "true",
+                false => "false",
+            }
             style=style
         >
             <A href=href exact=exact state=state.unwrap_or_default() replace=replace>
