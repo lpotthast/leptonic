@@ -47,6 +47,6 @@ ENV TLS_KEY_PATH="certs/www.leptonic.dev-key.pem"
 ENV LEPTOS_OUTPUT_NAME="book-ssr"
 ENV LEPTOS_SITE_ROOT="site"
 ENV LEPTOS_SITE_PKG_DIR="pkg"
-ENV LEPTOS_SITE_ADDR="0.0.0.0:80"
+ENV LEPTOS_SITE_ADDR="0.0.0.0:443"
 
 CMD ["/app/book-ssr"]

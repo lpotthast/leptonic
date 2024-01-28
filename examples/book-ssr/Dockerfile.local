@@ -39,8 +39,8 @@ WORKDIR /app
 
 COPY --from=builder /build/target/release/book-ssr .
 COPY --from=builder /build/target/site ./site
-COPY --from=builder cert/servercert_chain.pem ./certs/www.leptonic.dev-cert.pem
-COPY --from=builder cert/serverkey.pem ./certs/www.leptonic.dev-key.pem
+COPY --from=builder /build/cert/servercert_chain.pem ./certs/www.leptonic.dev-cert.pem
+COPY --from=builder /build/cert/serverkey.pem ./certs/www.leptonic.dev-key.pem
 
 ENV LEPTOS_OUTPUT_NAME="book-ssr"
 ENV LEPTOS_SITE_ROOT="site"
