@@ -39,14 +39,15 @@ WORKDIR /app
 
 COPY --from=builder /build/target/release/book-ssr .
 COPY --from=builder /build/target/site ./site
-COPY {{LEPTONIC_DEV_CERT_PEM_FILE}} /certs/www.leptonic.dev-cert.pem
-COPY {{LEPTONIC_DEV_KEY_PEM_FILE}} /certs/www.leptonic.dev-key.pem
+COPY --from=builder cert/servercert_chain.pem ./certs/www.leptonic.dev-cert.pem
+COPY --from=builder cert/serverkey.pem ./certs/www.leptonic.dev-key.pem
 
-ENV TLS_CERT_PATH="certs/www.leptonic.dev-cert.pem"
-ENV TLS_KEY_PATH="certs/www.leptonic.dev-key.pem"
 ENV LEPTOS_OUTPUT_NAME="book-ssr"
 ENV LEPTOS_SITE_ROOT="site"
 ENV LEPTOS_SITE_PKG_DIR="pkg"
-ENV LEPTOS_SITE_ADDR="0.0.0.0:80"
+ENV LEPTOS_SITE_ADDR="0.0.0.0:3000"
+
+ENV TLS_CERT_PATH="certs/www.leptonic.dev-cert.pem"
+ENV TLS_KEY_PATH="certs/www.leptonic.dev-key.pem"
 
 CMD ["/app/book-ssr"]
