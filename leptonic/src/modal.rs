@@ -1,8 +1,8 @@
-use std::rc::Rc;
 use leptos::*;
+use std::rc::Rc;
 use uuid::Uuid;
 
-use crate::OptionalMaybeSignal;
+use crate::{prelude::{GlobalKeyboardEvent, Producer}, OptionalMaybeSignal};
 
 #[derive(Copy, Clone)]
 pub(crate) struct ModalRootContext {
@@ -14,13 +14,11 @@ pub(crate) struct ModalRootContext {
 pub fn ModalRoot(children: Children) -> impl IntoView {
     let host: NodeRef<html::Custom> = create_node_ref();
     let modals = create_rw_signal(Vec::new());
-    provide_context::<ModalRootContext>(ModalRootContext {
-        host,
-        modals,
-    });
+    provide_context::<ModalRootContext>(ModalRootContext { host, modals });
 
-    let has_modals = create_memo(move |_| {
-        match modals.with(|it| it.is_empty()) { true => "false", false => "true" }
+    let has_modals = create_memo(move |_| match modals.with(|it| it.is_empty()) {
+        true => "false",
+        false => "true",
     });
 
     let children = children();
@@ -40,21 +38,32 @@ pub fn Modal(
     #[prop(into)] show_when: MaybeSignal<bool>,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] class: Option<String>,
+    #[prop(into, optional)] on_escape: Option<Producer<()>>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let internal_id = Uuid::new_v4();
 
     let ctx = expect_context::<ModalRootContext>();
 
-    create_isomorphic_effect(move |_| {
-        match show_when.get() {
-            true => ctx.modals.update(|m| { m.push(internal_id)}),
-            false => ctx.modals.update(|m| {
-                if let Some(ctx) = m.iter().position(|id| *id == internal_id) {
-                    m.remove(ctx);
+    if let Some(on_escape) = on_escape {
+        let g_keyboard_event = expect_context::<GlobalKeyboardEvent>();
+        create_effect(move |_| {
+            if let Some(e) = g_keyboard_event.read_signal.get() {
+                tracing::info!(e = e.key().as_str());
+                if show_when.get_untracked() && e.key().as_str() == "Escape" {
+                    on_escape.call(());
                 }
-            }),
-        }
+            }
+        });
+    }
+
+    create_isomorphic_effect(move |_| match show_when.get() {
+        true => ctx.modals.update(|m| m.push(internal_id)),
+        false => ctx.modals.update(|m| {
+            if let Some(ctx) = m.iter().position(|id| *id == internal_id) {
+                m.remove(ctx);
+            }
+        }),
     });
 
     let this = Rc::new(move || {

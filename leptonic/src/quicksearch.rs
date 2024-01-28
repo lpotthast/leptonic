@@ -66,7 +66,7 @@ fn QuicksearchModal(
     });
 
     view! {
-        <Modal show_when=show_when class="quicksearch-modal">
+        <Modal show_when=show_when on_escape=move || on_cancel.get_value().call(()) class="quicksearch-modal">
             <ModalHeader>
                 <TextInput
                     get=input
