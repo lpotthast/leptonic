@@ -136,7 +136,7 @@ pub fn PageInput() -> impl IntoView {
                 --input-padding
                 --input-color
                 --input-background-color
-                --input-border:
+                --input-border
                 --input-border-bottom
                 --input-border-radius
                 --input-min-height
