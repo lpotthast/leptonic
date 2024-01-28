@@ -1,5 +1,4 @@
 stages:
-  - build
   - test
   - package
   - deploy
