@@ -1,9 +1,5 @@
 use leptos::*;
 
-// TODO: Implement
-
-// struct TableCtx {}
-
 #[component]
 pub fn TableContainer(
     #[prop(into, optional)] id: Option<AttributeValue>,
@@ -28,7 +24,6 @@ pub fn Table(
     children: Children,
 ) -> impl IntoView {
     view! {
-        //<table class="crud-table crud-table-bordered crud-table-hoverable">
         <leptonic-table
             id=id
             class=class
@@ -42,43 +37,56 @@ pub fn Table(
 }
 
 #[component]
-pub fn Thead(children: Children) -> impl IntoView {
+pub fn TableHeader(children: Children) -> impl IntoView {
     view! {
-        <thead>{children()}</thead>
+        <leptonic-table-header>{children()}</leptonic-table-header>
     }
 }
 
 #[component]
-pub fn Tbody(children: Children) -> impl IntoView {
+pub fn TableBody(children: Children) -> impl IntoView {
     view! {
-        <tbody>{children()}</tbody>
+        <leptonic-table-body>
+            {children()}
+        </leptonic-table-body>
     }
 }
 
 #[component]
-pub fn Tfoot(children: Children) -> impl IntoView {
+pub fn TableFooter(children: Children) -> impl IntoView {
     view! {
-        <tfoot>{children()}</tfoot>
+        <leptonic-table-footer>
+            {children()}
+        </leptonic-table-footer>
     }
 }
 
 #[component]
-pub fn Tr(children: Children) -> impl IntoView {
+pub fn TableRow(children: Children) -> impl IntoView {
     view! {
-        <tr>{children()}</tr>
+        <leptonic-table-row>
+            {children()}
+        </leptonic-table-row>
     }
 }
 
 #[component]
-pub fn Th(#[prop(optional)] min_width: Option<bool>, children: Children) -> impl IntoView {
+pub fn TableHeaderCell(
+    #[prop(optional)] min_width: Option<bool>,
+    children: Children,
+) -> impl IntoView {
     view! {
-        <th class:min-width=min_width.unwrap_or(false)>{children()}</th>
+        <leptonic-table-header-cell class:min-width=min_width.unwrap_or(false)>
+            {children()}
+        </leptonic-table-header-cell>
     }
 }
 
 #[component]
-pub fn Td(children: Children) -> impl IntoView {
+pub fn TableCell(children: Children) -> impl IntoView {
     view! {
-        <td>{children()}</td>
+        <leptonic-table-cell>
+            {children()}
+        </leptonic-table-cell>
     }
 }
