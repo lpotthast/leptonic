@@ -7,6 +7,24 @@ pub fn PageChangelog() -> impl IntoView {
     view! {
         <H1>"Changelog"</H1>
 
+        <H2>"0.4.0 (main branch)"</H2>
+
+        <P>"Leptonic now supports server-side-rendering (SSR). This book is now deployed with SSR enabled."</P>
+
+        <H3>"Changed:"</H3>
+        <ul>
+            <li>"Modals are now SSR compatible. The `ModalFn` component was dropped. If you used it, just rename all occurrences to `Modal`. If you previously used `Modal`, you might see some 'requires Fn but is FnOnce error's. Storing values moved into `Modal`s children through `store_value` should be a quick fix."</li>
+            <li>"Tabs are now SSR compatible. Rendering order changed to make this possible. This should not affect anyone."</li>
+            <li>"Toggles are now SSR compatible. Rendering of the (optional) icons changed. This should only affect you if scustom styling is in play."</li>
+            <li>"Tables are now SSR compatible. Components were renamed to `TableHeader`, `TableBody`, `TableRow`, `TableHeaderCell` and `TableCell`."</li>
+            <li>"The `build.rs` script, which previously had to be create by the consumer is now longer required. It was moved into leptonic itself and will automatically take care of copying files required for a build."</li>
+            <li>"Getting started instructions are updated."</li>
+            <li>"The `Code` block component now has a `Copy to clipboard` button (thanks to https://github.com/wt)."</li>
+            <li>"A `SelectOption` no longer requires to be `Eq`."</li>
+            <li>"The `uuid` dependency was bumped to version 1.6."</li>
+            <li>"A `RwSignal` can act as an `Out` type"</li>
+        </ul>
+
         <H2>"0.3.0"</H2>
 
         <H3>"Added:"</H3>
