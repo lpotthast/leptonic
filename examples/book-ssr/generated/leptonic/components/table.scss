@@ -16,15 +16,20 @@ leptonic-table {
   color: var(--table-color);
   background-color: var(--table-background-color);
 
-  thead {
+  leptonic-table-header {
+    display: table-header-group;
     background-color: var(--table-header-background-color);
 
-    th.min-width {
-      width: 1%;
+
+    leptonic-table-header-cell {
+      &.min-width {
+        width: 1%;
+      }
     }
   }
 
-  tr {
+  leptonic-table-row {
+    display: table-row;
     transition: background-color 0.25s;
 
     &.recently-updated {
@@ -33,14 +38,16 @@ leptonic-table {
     }
   }
 
-  th,
-  td {
+  leptonic-table-header-cell,
+  leptonic-table-cell {
+    display: table-cell;
+
     &.leptonic-column-ordered {
       background-color: var(--table-column-background-if-ordered);
     }
   }
 
-  th {
+  leptonic-table-header-cell {
     padding: var(--table-header-cell-padding);
 
     &.leptonic-column-header {
@@ -62,7 +69,7 @@ leptonic-table {
     }
   }
 
-  td {
+  leptonic-table-cell {
     padding: var(--table-body-cell-padding);
     text-align: start;
     vertical-align: top;
@@ -85,19 +92,21 @@ leptonic-table {
     }
   }
 
-  tbody {
-    tr {
+  leptonic-table-body {
+    display: table-row-group;
+
+    leptonic-table-row {
       border-bottom: 1px solid var(--table-row-border-bottom-color); // 1px instead of 0.005em so that all lines are equally thick.
 
       &.interactable {
         cursor: pointer;
       }
     }
-    tr:last-of-type {
+    leptonic-table-row:last-of-type {
       border-bottom: none;
     }
 
-    td.no-data {
+    leptonic-table-cell.no-data {
       text-align: center;
     }
   }
@@ -105,25 +114,25 @@ leptonic-table {
   &.leptonic-table-bordered {
     border-collapse: collapse;
 
-    td,
-    th {
+    leptonic-table-cell,
+    leptonic-table-header-cell {
       //border: 0.05em solid;
       border-color: var(--table-border-color);
     }
 
-    th {
+    leptonic-table-header-cell {
       border-bottom: 0.15em solid;
     }
   }
 
   &.leptonic-table-striped {
-    tr:nth-child(2n) {
+    leptonic-table-row:nth-child(2n) {
       background-color: var(--table-background-color-of-striped-rows);
     }
   }
 
   &.leptonic-table-hoverable {
-    tbody tr:hover {
+    leptonic-table-body leptonic-table-row:hover {
       background-color: var(--table-background-color-on-hover);
     }
   }
