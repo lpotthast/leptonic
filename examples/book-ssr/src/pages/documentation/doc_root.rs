@@ -90,7 +90,7 @@ pub enum DocRoutes {
     Callback,
 
     // Animation
-    Transition,
+    //Transition,
 
     // Technical
     NotFound,
@@ -138,7 +138,7 @@ impl DocRoutes {
             Self::Anchor => "anchor",
             Self::Callback => "callback",
 
-            Self::Transition => "transition",
+            //Self::Transition => "transition",
             Self::NotFound => "not-found", // Leptos requires this to be be named "*"!
         }
     }
@@ -204,7 +204,7 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::Anchor view=|| view! { <PageAnchor/> }/>
             <Route path=DocRoutes::Callback view=|| view! { <PageCallback/> }/>
 
-            <Route path=DocRoutes::Transition view=|| view! { <PageTransition/> }/>
+            //<Route path=DocRoutes::Transition view=|| view! { <PageTransition/> }/>
 
             <Route path=DocRoutes::NotFound view=|| view! { <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
         </Route>
@@ -251,10 +251,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=DocRoutes::AppBar class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
                 <Link href=DocRoutes::Drawer class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
                 <Link href=DocRoutes::Tab class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
-                <div class="item">
-                    <Link href=DocRoutes::Table on:click=move |_| close_doc_drawer_on_mobile()>"Table"</Link>
-                    <New/>
-                </div>
+                <Link href=DocRoutes::Table class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Table"</Link>
                 <Link href=DocRoutes::Collapsible class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
             </Stack>
         </DrawerSection>
@@ -270,10 +267,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
                 <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
                 <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
-                <div class="item">
-                    <Link href=DocRoutes::ColorPicker on:click=move |_| close_doc_drawer_on_mobile()>"Color Picker"</Link>
-                    <New/>
-                </div>
+                <Link href=DocRoutes::ColorPicker class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Color Picker"</Link>
             </Stack>
         </DrawerSection>
 
@@ -287,10 +281,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
                 <Link href=DocRoutes::Popover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
                 <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
-                <div class="item">
-                    <Link href=DocRoutes::Kbd on:click=move |_| close_doc_drawer_on_mobile()>"Kbd"</Link>
-                    <New/>
-                </div>
+                <Link href=DocRoutes::Kbd class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Kbd"</Link>
             </Stack>
         </DrawerSection>
 
@@ -306,13 +297,13 @@ pub fn DocLayout() -> impl IntoView {
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move || view! {
-            <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
-        }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                <Link href=DocRoutes::Transition class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Transitions"</Link>
-            </Stack>
-        </DrawerSection>
+        //<DrawerSection header=move || view! {
+        //    <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
+        //}>
+        //    <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+        //        <Link href=DocRoutes::Transition class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Transitions"</Link>
+        //    </Stack>
+        //</DrawerSection>
     };
 
     view! {
@@ -354,6 +345,7 @@ where
 }
 
 #[component]
+#[allow(dead_code)]
 pub fn New() -> impl IntoView {
     view! {
         <Chip style="color: var(--primary-color); background-color: transparent; margin: 0; padding: 0;">
