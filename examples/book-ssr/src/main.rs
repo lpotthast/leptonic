@@ -61,11 +61,11 @@ async fn main() {
     let working_dir = std::env::current_dir().expect("Could not determine working directory.");
 
     let mut cert_path = working_dir.clone();
-    cert_path.push(std::env::var("TLS_CERT_PATH").unwrap_or(String::from("cert/servercert_chain.pem")));
+    cert_path.push(std::env::var("TLS_CERT_PATH").unwrap_or(String::from("certs/ssl_cert.pem")));
     tracing::info!("Using crt path: {cert_path:?}");
 
     let mut key_path = working_dir.clone();
-    key_path.push(std::env::var("TLS_KEY_PATH").unwrap_or(String::from("cert/serverkey.pem")));
+    key_path.push(std::env::var("TLS_KEY_PATH").unwrap_or(String::from("certs/ssl_key.pem")));
     tracing::info!("Using key path: {key_path:?}");
 
     let config = axum_server::tls_rustls::RustlsConfig::from_pem_file(cert_path, key_path)
