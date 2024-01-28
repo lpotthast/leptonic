@@ -71,7 +71,6 @@ book-build-and-package:
   services:
     - docker:dind
   needs:
-    - book-build
     - book-test
   artifacts:
     paths:
@@ -109,7 +108,7 @@ book-validate-deployment:
   stage: deploy
   extends: .book
   needs:
-    - book-package
+    - book-build-and-package
   script:
     - cd examples/book-ssr/deployment
     - nomad job validate leptonic-book.jobspec.final.hcl
@@ -119,7 +118,7 @@ book-plan-deployment:
   stage: deploy
   extends: .book
   needs:
-    - book-package
+    - book-build-and-package
     - book-validate-deployment
   script:
     - cd examples/book-ssr/deployment
@@ -136,7 +135,7 @@ book-run-deployment:
   stage: deploy
   extends: .book
   needs:
-    - book-package
+    - book-build-and-package
     - book-plan-deployment
   script:
     - cd examples/book-ssr/deployment
