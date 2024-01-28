@@ -6,8 +6,9 @@ job "leptonic-book" {
     count = 1
 
     network {
-      port "http" {}
-      port "https" {}
+      port "https" {
+        to = "443"
+      }
     }
 
     restart {
@@ -23,7 +24,6 @@ job "leptonic-book" {
       env {
         DOMAIN = "leptonic.dev"
         CONSUL_HTTP_ADDR = "172.17.0.1:8500"
-        HTTP_PORT = "${NOMAD_PORT_http}"
         HTTPS_PORT = "${NOMAD_PORT_https}"
         URL_PREFIX = "/"
       }
@@ -34,7 +34,7 @@ job "leptonic-book" {
           username = "{{REGISTRY_USERNAME}}"
           password = "{{REGISTRY_TOKEN}}"
         }
-        ports = ["http", "https"]
+        ports = ["https"]
       }
 
       resources {
