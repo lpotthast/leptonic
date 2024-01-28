@@ -1,4 +1,4 @@
-use crate::error_template::{AppError, ErrorTemplate};
+use crate::{error_template::{AppError, ErrorTemplate}, pages::editor::ThemeEditor};
 
 use std::fmt::Display;
 
@@ -16,6 +16,7 @@ use crate::pages::{documentation::doc_root::DocRoutes, err404::PageErr404, welco
 pub enum AppRoutes {
     Welcome,
     Doc,
+    ThemeEditor,
     NotFound,
 }
 
@@ -24,6 +25,7 @@ impl AppRoutes {
         match self {
             Self::Welcome => "",
             Self::Doc => "doc",
+            Self::ThemeEditor => "theme-editor",
             Self::NotFound => "not-found", // Leptos requires this to be be named "*"!
         }
     }
@@ -109,6 +111,7 @@ pub fn App() -> impl IntoView {
                     <Route path="" view=|| view! { <Layout/> }>
                         <Route path=AppRoutes::Welcome view=|| view! { <PageWelcome/> }/>
                         <DocRoutes path=AppRoutes::Doc/>
+                        <Route path=AppRoutes::ThemeEditor view=|| view! { <ThemeEditor/> }/>
                         <Route path=AppRoutes::NotFound view=|| view! { <PageErr404 /> }/>
                     </Route>
                 </Routes>
@@ -225,7 +228,7 @@ pub fn Layout() -> impl IntoView {
         create_search_option(DocRoutes::Link, "Link"),
         create_search_option(DocRoutes::Anchor, "Anchor"),
         create_search_option(DocRoutes::Callback, "Callback"),
-        create_search_option(DocRoutes::Transition, "Transition"),
+        //create_search_option(DocRoutes::Transition, "Transition"),
     ];
 
     let logo = move || {
@@ -253,6 +256,11 @@ pub fn Layout() -> impl IntoView {
                                     "Docs"
                                 </H3>
                             </Link>
+                            //<Link href=AppRoutes::ThemeEditor>
+                            //    <H3 style="margin: 0 0 0 0.5em">
+                            //        "Theme Editor"
+                            //    </H3>
+                            //</Link>
                         }.into_view(),
                     } }
                 </Stack>
