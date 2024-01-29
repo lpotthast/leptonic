@@ -44,6 +44,7 @@ pub mod table;
 pub mod tabs;
 pub mod theme;
 pub mod tile;
+#[cfg(feature = "tiptap")]
 pub mod tiptap_editor;
 pub mod toast;
 pub mod toggle;
@@ -179,6 +180,7 @@ impl<T: Clone + 'static> MaybeSignalExt<T> for MaybeSignal<T> {
 }
 
 pub mod prelude {
+    #[cfg(feature = "tiptap")]
     pub use leptos_tiptap::*;
 
     pub use super::alert::Alert;
@@ -285,6 +287,7 @@ pub mod prelude {
     pub use super::theme::ThemeProvider;
     pub use super::theme::ThemeToggle;
     pub use super::tile::Tile;
+    #[cfg(feature = "tiptap")]
     pub use super::tiptap_editor::TiptapEditor;
     pub use super::toast::Toast;
     pub use super::toast::ToastRoot;

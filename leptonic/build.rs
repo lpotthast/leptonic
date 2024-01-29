@@ -1,4 +1,4 @@
-use std::{io::Write, path::PathBuf};
+use std::path::PathBuf;
 
 const ENABLE_LOGGING: bool = false;
 
@@ -16,6 +16,14 @@ pub fn main() {
 
     std::fs::create_dir_all(js_dir.clone()).unwrap();
     log("js dir created");
+
+    #[cfg(feature = "tiptap")]
+    copy_tiptap_files(&js_dir);
+}
+
+#[cfg(feature = "tiptap")]
+fn copy_tiptap_files(js_dir: &PathBuf) {
+    use std::io::Write;
 
     std::fs::File::create(js_dir.join("tiptap-bundle.min.js"))
         .unwrap()
@@ -43,8 +51,8 @@ fn get_cargo_target_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
         }
         sub_path = parent;
     }
-    let target_dir =
-        target_dir.ok_or_else(|| format!("Could not find `target` dir in parents of {out_dir:?}"))?;
+    let target_dir = target_dir
+        .ok_or_else(|| format!("Could not find `target` dir in parents of {out_dir:?}"))?;
     Ok(target_dir.to_path_buf())
 }
 

@@ -16,7 +16,7 @@ build = "build.rs"
 
 [build-dependencies]
 leptonic-theme = { version = "0.3", path = "../leptonic-theme" }
-leptos-tiptap-build = "0.2.4"
+leptos-tiptap-build = { version = "0.2.4", optional = true }
 
 [dependencies]
 indexmap = "2.1.0"
@@ -24,7 +24,7 @@ indoc = "2.0.4"
 itertools = "0.12.0"
 js-sys = "0.3.66"
 leptos = "0.5.4"
-leptos-tiptap = { git = "https://github.com/lpotthast/leptos-tiptap", branch = "main" } # "0.4.0"
+leptos-tiptap = { git = "https://github.com/lpotthast/leptos-tiptap", branch = "main", optional = true } # "0.4.0"
 leptos-use = { version = "0.9.0", features = [
     "math",
 ] }
@@ -88,7 +88,14 @@ web-sys = "0.3.66"
 csr = ["leptos/csr"]
 ssr = ["leptos/ssr", "leptos-use/ssr"]
 hydrate = ["leptos/hydrate"]
+
+# Enables clipboard support. Requires `[build] rustflags = ["--cfg=web_sys_unstable_apis"]` in your cargo.toml.
 clipboard = []
+
+# Enables tiptap editor support. Tiptap related JS files will be copied to your proect directory when running a build.
+tiptap = ["dep:leptos-tiptap", "dep:leptos-tiptap-build"]
+
+full = ["clipboard", "tiptap"]
 
 [lints]
 workspace = true
