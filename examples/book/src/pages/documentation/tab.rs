@@ -96,6 +96,14 @@ pub fn PageTab() -> impl IntoView {
                         "This tab is nested as well."
                     </Tab>
                 </Tabs>
+                <Tabs>
+                    <Tab name="inner-3" label="Inner 3".into_view()>
+                        "This is a nested tab."
+                    </Tab>
+                    <Tab name="inner-4" label="Inner 4".into_view()>
+                        "This tab is nested as well."
+                    </Tab>
+                </Tabs>
             </Tab>
             <Tab name="outer-2" label="Outer 2".into_view()></Tab>
         </Tabs>
