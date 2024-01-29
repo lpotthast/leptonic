@@ -8,3 +8,6 @@ pkg
 # Build output from leptonic
 /generated/**
 !/generated/.gitkeep
+/public/js/tiptap.js
+/public/js/tiptap_min.js
+!/public/.gitkeep
