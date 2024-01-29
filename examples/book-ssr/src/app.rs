@@ -3,8 +3,6 @@ use crate::{
     pages::editor::ThemeEditor,
 };
 
-use std::fmt::Display;
-
 use leptos::*;
 use leptos_icons::BsIcon;
 use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, Stylesheet, Title};
@@ -35,7 +33,7 @@ impl AppRoutes {
 }
 
 /// Required so that `Routes` variants can be used in `<Route path=Routes::Foo ...>` definitions.
-impl Display for AppRoutes {
+impl std::fmt::Display for AppRoutes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.route())
     }
