@@ -70,7 +70,9 @@ pub fn App() -> impl IntoView {
                 let mut outside_errors = Errors::default();
                 outside_errors.insert_with_default_key(AppError::NotFound);
                 view! {
-                    <ErrorTemplate outside_errors/>
+                    <Layout>
+                        <ErrorTemplate outside_errors/>
+                    </Layout>
                 }
                 .into_view()
             }>
@@ -127,10 +129,16 @@ impl AppLayoutContext {
 
 #[component]
 #[allow(clippy::too_many_lines)]
-pub fn Layout() -> impl IntoView {
+pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     let is_small = use_media_query("(max-width: 800px)");
-    let router_context = use_router();
-    let is_doc = create_memo(move |_| router_context.pathname().get().starts_with("/doc"));
+
+    let router_context = use_context::<RouterContext>();
+    let is_doc = create_memo(move |_| {
+        router_context
+            .as_ref()
+            .map(|router| router.pathname().get().starts_with("/doc"))
+            .unwrap_or(false)
+    });
 
     // The main drawer is only used on mobile / small screens!.
     let (main_drawer_closed, set_main_drawer_closed) = create_signal(true);
@@ -276,8 +284,18 @@ pub fn Layout() -> impl IntoView {
         </AppBar>
 
         <Box id="content" style=format!("height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT}); max-height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT});")>
-            // <Outlet/> will show nested child routes.
-            <Outlet/>
+            {
+                match children {
+                    Some(children) => {
+                        let children = children();
+                        view! {{children}}.into_view()
+                    },
+                    None => view! {
+                        // <Outlet/> will show nested child routes.
+                        <Outlet/>
+                    }.into_view(),
+                }
+            }
 
             <Drawer id="main-drawer" shown=Signal::derive(move || !main_drawer_closed.get()) side=DrawerSide::Right style=format!("top: {APP_BAR_HEIGHT}")>
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) class="menu">

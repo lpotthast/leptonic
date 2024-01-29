@@ -169,13 +169,10 @@ where
             .unwrap_or(false)
     });
 
-    // Adding this context also serves the check at the start of this component!
     provide_context(Leptonic {
         is_mobile_device,
         is_desktop_device: Signal::derive(move || !is_mobile_device.get()),
     });
-
-    // NOTE: --leptonic-vh can be used like this in CSS code: height: var(--leptonic-vh, 100vh);
 
     view! {
         <Script type_="module" src="/js/tiptap-bundle.min.js"/>
@@ -184,9 +181,7 @@ where
         <ThemeProvider theme=create_signal_ls("theme", default_theme)>
             <ToastRoot>
                 <ModalRoot>
-                    <Box style="min-height: 100%; min-width: 100%; display: flex; flex-direction: column;">
-                        { children() }
-                    </Box>
+                    { children() }
                 </ModalRoot>
             </ToastRoot>
         </ThemeProvider>
