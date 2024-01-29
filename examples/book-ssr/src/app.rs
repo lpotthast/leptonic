@@ -1,10 +1,13 @@
-use crate::{error_template::{AppError, ErrorTemplate}, pages::editor::ThemeEditor};
+use crate::{
+    error_template::{AppError, ErrorTemplate},
+    pages::editor::ThemeEditor,
+};
 
 use std::fmt::Display;
 
 use leptos::*;
 use leptos_icons::BsIcon;
-use leptos_meta::{provide_meta_context, Meta, Stylesheet, Link as MetaLink, Script, Title};
+use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, Stylesheet, Title};
 use leptos_router::*;
 use leptos_use::use_media_query;
 
@@ -45,37 +48,6 @@ impl ToHref for AppRoutes {
     }
 }
 
-/*
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-	<meta charset="UTF-8" />
-
-	<meta name="description" content="Leptonic" />
-	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-	<meta name="theme-color" content="#e66956" />
-
-	<title>Leptonic</title>
-
-    <script type="module" src="/js/tiptap-bundle.min.js"></script>
-    <script type="module" src="/js/tiptap.js"></script>
-
-    <link rel="icon" href="/res/icon/leptonic_x64.png" />
-    <link rel="apple-touch-icon" href="/res/icon/maskable_icon_x192.png" />
-
-	<link data-trunk rel="rust" data-wasm-opt="z" />
-	<link data-trunk rel="scss" href="scss/style.scss" />
-    <link data-trunk rel="copy-file" href="robots.txt" />
-    <link data-trunk rel="copy-dir" href="res/" />
-    <link data-trunk rel="copy-dir" href="generated/js/" />
-	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto&display=swap">
-</head>
-
-<body></body>
-
-</html>
-*/
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
@@ -92,9 +64,6 @@ pub fn App() -> impl IntoView {
 
         <MetaLink rel="icon" href="/res/icon/leptonic_x64.png"/>
         <MetaLink rel="apple-touch-icon" href="/res/icon/maskable_icon_x192.png"/>
-
-        <Script type_="module" src="/js/tiptap-bundle.min.js"/>
-        <Script type_="module" src="/js/tiptap.js"/>
 
         <Title text="Leptonic"/>
 
