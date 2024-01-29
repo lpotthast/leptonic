@@ -8,7 +8,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 axum = { version = "0.6.4", optional = true }
-axum-server = { version = "0.5", features = ["tls-rustls"], optional = true  }
+axum-server = { version = "0.5", features = ["tls-rustls"], optional = true }
 cfg-if = "1"
 console_error_panic_hook = "0.1"
 http = "0.2"

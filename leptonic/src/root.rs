@@ -1,7 +1,6 @@
 use std::rc::Rc;
 
 use leptos::*;
-use leptos_meta::Script;
 use leptos_use::{use_document, use_event_listener, use_window};
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{Event, KeyboardEvent, MouseEvent};
@@ -174,9 +173,18 @@ where
         is_desktop_device: Signal::derive(move || !is_mobile_device.get()),
     });
 
+    cfg_if::cfg_if! { if #[cfg(feature="tiptap")] {
+        use leptos_meta::Script;
+        let tiptap_js_module_includes = view! {
+            <Script type_="module" src="/js/tiptap-bundle.min.js"/>
+            <Script type_="module" src="/js/tiptap.js"/>
+        };
+    } else {
+        let tiptap_js_module_includes = view! {};
+    }}
+
     view! {
-        <Script type_="module" src="/js/tiptap-bundle.min.js"/>
-        <Script type_="module" src="/js/tiptap.js"/>
+        { tiptap_js_module_includes }
 
         <ThemeProvider theme=create_signal_ls("theme", default_theme)>
             <ToastRoot>

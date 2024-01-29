@@ -3,12 +3,20 @@ name = "leptonic-template-ssr"
 version = "0.1.0"
 edition = "2021"
 
+[profile.dev]
+# Potential to opt-in on higher optimization for our code. This may increase incremental compilation times, but will reduce binaty size.
+opt-level = 0
+[profile.dev.package."*"]
+# High optimization for our dependencies. This should increase performance drastically whithout hitting our incremental compilation times.
+# This will lead to obscure error messages from third party libraries. Comment this out when experiencing a tricky bug.
+opt-level = 3
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 axum = { version = "0.6.4", optional = true }
-axum-server = { version = "0.5", features = ["tls-rustls"], optional = true  }
+axum-server = { version = "0.5", features = ["tls-rustls"], optional = true }
 cfg-if = "1"
 console_error_panic_hook = "0.1"
 http = "0.2"
