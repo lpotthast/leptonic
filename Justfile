@@ -60,13 +60,17 @@ check-port port:
 sort:
   cargo sort ./leptonic -w -g
   cargo sort ./leptonic-theme -w -g
-  cargo sort ./examples/book -w -g
+  cargo sort ./examples/book-ssr -w -g
+  cargo sort ./examples/template-csr -w -g
+  cargo sort ./examples/template-ssr -w -g
 
 # Run `cargo fmt` for every crate.
 fmt:
   cargo fmt --all --manifest-path ./leptonic/Cargo.toml
   cargo fmt --all --manifest-path ./leptonic-theme/Cargo.toml
-  cargo fmt --all --manifest-path ./examples/book/Cargo.toml
+  cargo fmt --all --manifest-path ./examples/book-ssr/Cargo.toml
+  cargo fmt --all --manifest-path ./examples/template-csr/Cargo.toml
+  cargo fmt --all --manifest-path ./examples/template-ssr/Cargo.toml
 
 leptosfmt:
   cargo install leptosfmt
@@ -77,28 +81,38 @@ leptosfmt:
 update:
   cargo update --manifest-path ./leptonic/Cargo.toml
   cargo update --manifest-path ./leptonic-theme/Cargo.toml
-  cargo update --manifest-path ./examples/book/Cargo.toml
+  cargo update --manifest-path ./examples/book-ssr/Cargo.toml
+  cargo update --manifest-path ./examples/template-csr/Cargo.toml
+  cargo update --manifest-path ./examples/template-ssr/Cargo.toml
 
 # Run `cargo test` for every crate.
 test:
   cargo test --manifest-path ./leptonic/Cargo.toml
   cargo test --manifest-path ./leptonic-theme/Cargo.toml
-  cargo test --manifest-path ./examples/book/Cargo.toml
+  cargo test --manifest-path ./examples/book-ssr/Cargo.toml
+  cargo test --manifest-path ./examples/template-csr/Cargo.toml
+  cargo test --manifest-path ./examples/template-ssr/Cargo.toml
 
 # Run `cargo upgrades` for every crate, checking if new crate versions including potentially breaking changes are available.
 upgrades: # "-" prefixes allow for non-zero status codes!
   -cargo upgrades --manifest-path ./leptonic/Cargo.toml
   -cargo upgrades --manifest-path ./leptonic-theme/Cargo.toml
-  -cargo upgrades --manifest-path ./examples/book/Cargo.toml
+  -cargo upgrades --manifest-path ./examples/book-ssr/Cargo.toml
+  -cargo upgrades --manifest-path ./examples/template-csr/Cargo.toml
+  -cargo upgrades --manifest-path ./examples/template-ssr/Cargo.toml
 
 # Run `cargo upgrade` for every crate, automatically bumping all dependencies to their latest versions
 upgrade: # "-" prefixes allow for non-zero status codes!
   -cargo upgrade --manifest-path ./leptonic/Cargo.toml
   -cargo upgrade --manifest-path ./leptonic-theme/Cargo.toml
-  -cargo upgrade --manifest-path ./examples/book/Cargo.toml
+  -cargo upgrade --manifest-path ./examples/book-ssr/Cargo.toml
+  -cargo upgrade --manifest-path ./examples/template-csr/Cargo.toml
+  -cargo upgrade --manifest-path ./examples/template-ssr/Cargo.toml
 
 # Run `cargo clippy --tests -- -Dclippy::all -Dclippy::pedantic` for every crate.
 clippy: # "-" prefixes allow for non-zero status codes!
   -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
   -cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
-  -cargo clippy --tests --manifest-path ./examples/book/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
+  -cargo clippy --tests --manifest-path ./examples/book-ssr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
+  -cargo clippy --tests --manifest-path ./examples/template-csr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
+  -cargo clippy --tests --manifest-path ./examples/template-ssr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
