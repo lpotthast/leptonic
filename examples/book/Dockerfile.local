@@ -1,4 +1,0 @@
-FROM caddy:latest
-
-COPY Caddyfile.local /etc/caddy/Caddyfile
-COPY dist/ /srv

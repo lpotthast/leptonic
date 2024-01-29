@@ -1,0 +1,163 @@
+[package]
+name = "book"
+version = "0.1.0"
+edition = "2021"
+
+[profile.dev]
+# Slightly higher optimization for our code. This should increase incremental compilation times.
+opt-level = 1
+#debug = false
+[profile.dev.package."*"]
+# High optimization for our dependencies. This should increase performance drastically whithout hitting our incremental compilation times.
+# This will lead to obscure error messages from third party libraries. Comment this out when experiencing a tricky bug.
+opt-level = 3
+
+[profile.release]
+opt-level = "z"
+lto = "fat"
+debug = 0
+strip = true
+codegen-units = 1
+
+[dependencies]
+console_error_panic_hook = "0.1.7"
+indoc = "2.0.4"
+thiserror = "1"
+leptonic = { path = "../../leptonic", features = ["csr", "clipboard"] }
+leptos = { version = "0.5.4", features = ["csr"] }
+leptos-use = "0.9.0"
+leptos_icons = { version = "0.1.0", features = [
+    "BsGithub",
+    "BsSearch",
+    "BsList",
+    "BsThreeDots",
+    "BsFolder",
+    "BsFolderFill",
+    "BsBook",
+    "BsColumnsGap",
+    "BsToggles",
+    "BsChatSquare",
+    "BsCircleSquare",
+    "BsArrowsMove",
+    "BsVolumeDownFill",
+    "BsVolumeUpFill",
+    "BsBell",
+    "BsPower",
+] }
+leptos_meta = { version = "0.5.4", features = ["csr"] }
+leptos_router = { version = "0.5.4", features = ["csr"] }
+ordered-float = "4.2.0"
+serde = "1.0.193"
+serde-wasm-bindgen = "0.6.3"
+serde_json = "1.0.108"
+strum = { version = "0.25.0", features = ["derive"] }
+time = { version = "0.3.31", features = ["wasm-bindgen"] }
+tracing = "0.1.40"
+tracing-subscriber = "0.3.18"
+tracing-wasm = "0.2.1"
+uuid = { version = "1.6.1", features = ["js", "v4", "serde"] }
+wasm-bindgen = "0.2.89"
+
+[lints.rust]
+missing_copy_implementations = "warn"
+missing_debug_implementations = "warn"
+unused_qualifications = "warn"
+variant_size_differences = "warn"
+keyword_idents = "warn"
+anonymous_parameters = "deny"
+illegal_floating_point_literal_pattern = "deny"
+late_bound_lifetime_arguments = "deny"
+patterns_in_fns_without_body = "deny"
+rust_2018_idioms = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
+#unreachable_pub = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+unused_extern_crates = "deny"
+# overrides
+unreachable_pub = { level = "allow", priority = 1 }
+
+[lints.clippy]
+pedantic = "warn"
+nursery = "warn"
+cargo = "warn"
+await_holding_lock = "warn"
+char_lit_as_u8 = "warn"
+checked_conversions = "warn"
+dbg_macro = "warn"
+decimal_literal_representation = "warn"
+debug_assert_with_mut_call = "warn"
+doc_markdown = "warn"
+empty_enum = "warn"
+enum_glob_use = "warn"
+exit = "warn"
+expl_impl_clone_on_copy = "warn"
+explicit_deref_methods = "warn"
+explicit_into_iter_loop = "warn"
+fallible_impl_from = "warn"
+filter_map_next = "warn"
+flat_map_option = "warn"
+float_cmp_const = "warn"
+fn_params_excessive_bools = "warn"
+from_iter_instead_of_collect = "warn"
+get_unwrap = "warn"
+if_let_mutex = "warn"
+implicit_clone = "warn"
+imprecise_flops = "warn"
+inefficient_to_string = "warn"
+inline_always = "allow"
+invalid_upcast_comparisons = "warn"
+large_digit_groups = "warn"
+large_stack_arrays = "warn"
+large_types_passed_by_value = "warn"
+let_unit_value = "warn"
+linkedlist = "warn"
+lossy_float_literal = "warn"
+macro_use_imports = "warn"
+manual_ok_or = "warn"
+map_err_ignore = "warn"
+map_flatten = "warn"
+map_unwrap_or = "allow"
+match_bool = "allow"
+match_on_vec_items = "warn"
+match_same_arms = "warn"
+match_wild_err_arm = "warn"
+match_wildcard_for_single_variants = "warn"
+mem_forget = "warn"
+mismatched_target_os = "warn"
+missing_enforced_import_renames = "warn"
+missing_safety_doc = "deny"
+mut_mut = "warn"
+mutex_integer = "warn"
+needless_borrow = "warn"
+needless_continue = "warn"
+needless_for_each = "warn"
+option_option = "warn"
+path_buf_push_overwrite = "warn"
+ptr_as_ptr = "warn"
+redundant_pub_crate = { level = "allow", priority = 1 }
+rc_mutex = "warn"
+ref_option_ref = "warn"
+rest_pat_in_fully_bound_structs = "warn"
+same_functions_in_if_condition = "warn"
+semicolon_if_nothing_returned = "warn"
+single_match_else = { level = "allow", priority = 1 }
+string_add_assign = "warn"
+string_add = "warn"
+string_lit_as_bytes = "warn"
+string_to_string = "warn"
+todo = "warn"
+trait_duplication_in_bounds = "warn"
+undocumented_unsafe_blocks = "deny"
+unimplemented = "warn"
+unnested_or_patterns = "warn"
+unused_self = "warn"
+unwrap_used = "warn"
+use_debug = "warn"
+useless_transmute = "warn"
+verbose_file_reads = "warn"
+# overrides
+option_if_let_else = { level = "allow", priority = 1 }
+module_name_repetitions = { level = "allow", priority = 1 }
+must_use_candidate = { level = "allow", priority = 1 }
+wildcard_imports = { level = "allow", priority = 1 }

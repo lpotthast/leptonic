@@ -1,6 +1,7 @@
 use std::rc::Rc;
 
 use leptos::*;
+use leptos_meta::Script;
 use leptos_use::{use_document, use_event_listener, use_window};
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{Event, KeyboardEvent, MouseEvent};
@@ -177,6 +178,9 @@ where
     // NOTE: --leptonic-vh can be used like this in CSS code: height: var(--leptonic-vh, 100vh);
 
     view! {
+        <Script type_="module" src="/js/tiptap-bundle.min.js"/>
+        <Script type_="module" src="/js/tiptap.js"/>
+
         <ThemeProvider theme=create_signal_ls("theme", default_theme)>
             <ToastRoot>
                 <ModalRoot>

@@ -1,5 +1,0 @@
-/target
-/generated/**
-!/generated/.gitkeep
-/dist
-/Cargo.lock

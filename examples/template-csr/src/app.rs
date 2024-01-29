@@ -1,14 +1,13 @@
-use crate::error_template::{AppError, ErrorTemplate};
-
 use std::fmt::Display;
 
+use thiserror::Error;
 use leptos::*;
 use leptos_meta::{provide_meta_context, Meta, Stylesheet, Title};
 use leptos_router::*;
 
 use leptonic::prelude::*;
 
-use crate::pages::welcome::Welcome;
+use crate::{error_template::ErrorTemplate, pages::welcome::Welcome};
 
 #[derive(Debug, Copy, Clone)]
 pub enum AppRoutes {
@@ -37,6 +36,12 @@ impl ToHref for AppRoutes {
     }
 }
 
+#[derive(Clone, Debug, Error)]
+pub enum AppError {
+    #[error("Not Found")]
+    NotFound,
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
@@ -51,7 +56,7 @@ pub fn App() -> impl IntoView {
         <Stylesheet id="leptos" href="/pkg/leptonic-template-ssr.css"/>
         <Stylesheet href="https://fonts.googleapis.com/css?family=Roboto&display=swap"/>
 
-        <Title text="Leptonic"/>
+        <Title text="Leptonic CSR"/>
 
         <Root default_theme=LeptonicTheme::default()>
             <Router fallback=|| {
