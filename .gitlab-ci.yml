@@ -1,5 +1,4 @@
 stages:
-  - build
   - test
   - package
   - deploy
@@ -49,25 +48,11 @@ variables:
     key:
       files:
         - Cargo.lock
-        - examples/book/Cargo.lock
+        - examples/book-ssr/Cargo.lock
     paths:
       - cargo/
       - target/
-      - examples/book/target/
-
-book-build:
-  stage: build
-  extends: .book-with-cache
-  image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:latest
-  needs: []
-  artifacts:
-    paths:
-      - examples/book/dist/
-  script:
-    - cd examples/book
-    # This is only required to run the build.rs file once before calling `trunk-ng build`.
-    - cargo check
-    - trunk-ng build --release --public-url "/"
+      - examples/book-ssr/target/
 
 book-test:
   stage: test
@@ -75,33 +60,30 @@ book-test:
   image: registry.gitlab.com/lukaspotthast/docker-images/rust-wasm-builder:latest
   needs: []
   script:
-    - cd examples/book
+    - cd examples/book-ssr
     - cargo test --target x86_64-unknown-linux-gnu
 
-book-package:
+book-build-and-package:
   stage: package
   extends: .book
   image: docker:latest
   services:
     - docker:dind
   needs:
-    - book-build
     - book-test
   artifacts:
     paths:
-      - examples/book/deployment/leptonic-book.jobspec.final.hcl
+      - examples/book-ssr/deployment/leptonic-book.jobspec.final.hcl
   before_script:
     - echo -n "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
   script:
-    - cd examples/book
+    - cd examples/book-ssr
     - image="${CI_REGISTRY_IMAGE}/leptonic-book"
     - tag="${CI_COMMIT_SHA}"
     - docker pull "${image}:latest" || true
     - echo "Finalizing Dockerfile"
-    - cat "${LEPTONIC_DEV_CERT_PEM_FILE}" > "ssl_cert.pem"
-    - cat "${LEPTONIC_DEV_KEY_PEM_FILE}" > "ssl_key.pem"
-    - sed -i "s|{{LEPTONIC_DEV_CERT_PEM_FILE}}|ssl_cert.pem|g" "Dockerfile"
-    - sed -i "s|{{LEPTONIC_DEV_KEY_PEM_FILE}}|ssl_key.pem|g" "Dockerfile"
+    - cat "${LEPTONIC_DEV_CERT_PEM_FILE}" > "certs/ssl_cert.pem"
+    - cat "${LEPTONIC_DEV_KEY_PEM_FILE}" > "certs/ssl_key.pem"
     - echo "Building docker image '${image}:${tag}'"
     - >
       docker build
@@ -123,9 +105,9 @@ book-validate-deployment:
   stage: deploy
   extends: .book
   needs:
-    - book-package
+    - book-build-and-package
   script:
-    - cd examples/book/deployment
+    - cd examples/book-ssr/deployment
     - nomad job validate leptonic-book.jobspec.final.hcl
 
 book-plan-deployment:
@@ -133,10 +115,10 @@ book-plan-deployment:
   stage: deploy
   extends: .book
   needs:
-    - book-package
+    - book-build-and-package
     - book-validate-deployment
   script:
-    - cd examples/book/deployment
+    - cd examples/book-ssr/deployment
     # Plan will return one of the following exit codes:
     #   0: No allocations created or destroyed.
     #   1: Allocations created or destroyed.
@@ -150,8 +132,8 @@ book-run-deployment:
   stage: deploy
   extends: .book
   needs:
-    - book-package
+    - book-build-and-package
     - book-plan-deployment
   script:
-    - cd examples/book/deployment
+    - cd examples/book-ssr/deployment
     - nomad job run leptonic-book.jobspec.final.hcl

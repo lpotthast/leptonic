@@ -78,6 +78,7 @@ pub fn Select<O>(
     #[prop(into)] set_selected: Out<O>,
     #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
+    #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -107,19 +108,21 @@ where
 
     let (search, set_search) = create_signal(String::new());
 
+    let search_filter_provider = search_filter_provider
+        .unwrap_or(Callback::new(move |(s, o) : (String, Vec<O>)| {
+            let lowercased_search = s.to_lowercase();
+            o.into_iter()
+                .filter(|it| {
+                    search_text_provider
+                        .call(it.clone())
+                        .to_lowercase()
+                        .contains(lowercased_search.as_str())
+                })
+                .collect::<Vec<O>>()
+        }));
+
     let filtered_options = create_memo(move |_| {
-        let lowercased_search = search.get().to_lowercase();
-        stored_options
-            .get_value()
-            .get()
-            .into_iter()
-            .filter(|it| {
-                search_text_provider
-                    .call(it.clone())
-                    .to_lowercase()
-                    .contains(lowercased_search.as_str())
-            })
-            .collect::<Vec<O>>()
+        search_filter_provider.call((search.get(), stored_options.get_value().get()))
     });
 
     let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));
@@ -313,6 +316,7 @@ pub fn OptionalSelect<O>(
     #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
+    #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -342,19 +346,21 @@ where
 
     let (search, set_search) = create_signal(String::new());
 
+    let search_filter_provider = search_filter_provider
+        .unwrap_or(Callback::new(move |(s, o) : (String, Vec<O>)| {
+            let lowercased_search = s.to_lowercase();
+            o.into_iter()
+                .filter(|it| {
+                    search_text_provider
+                        .call(it.clone())
+                        .to_lowercase()
+                        .contains(lowercased_search.as_str())
+                })
+                .collect::<Vec<O>>()
+        }));
+
     let filtered_options = create_memo(move |_| {
-        let lowercased_search = search.get().to_lowercase();
-        stored_options
-            .get_value()
-            .get()
-            .into_iter()
-            .filter(|it| {
-                search_text_provider
-                    .call(it.clone())
-                    .to_lowercase()
-                    .contains(lowercased_search.as_str())
-            })
-            .collect::<Vec<_>>()
+        search_filter_provider.call((search.get(), stored_options.get_value().get()))
     });
 
     let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));
@@ -571,6 +577,7 @@ pub fn Multiselect<O>(
     #[prop(into)] set_selected: Out<Vec<O>>,
     #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
+    #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -600,19 +607,21 @@ where
 
     let (search, set_search) = create_signal(String::new());
 
+    let search_filter_provider = search_filter_provider
+        .unwrap_or(Callback::new(move |(s, o) : (String, Vec<O>)| {
+            let lowercased_search = s.to_lowercase();
+            o.into_iter()
+                .filter(|it| {
+                    search_text_provider
+                        .call(it.clone())
+                        .to_lowercase()
+                        .contains(lowercased_search.as_str())
+                })
+                .collect::<Vec<O>>()
+        }));
+
     let filtered_options = create_memo(move |_| {
-        let lowercased_search = search.get().to_lowercase();
-        stored_options
-            .get_value()
-            .get()
-            .into_iter()
-            .filter(|it| {
-                search_text_provider
-                    .call(it.clone())
-                    .to_lowercase()
-                    .contains(lowercased_search.as_str())
-            })
-            .collect::<Vec<_>>()
+        search_filter_provider.call((search.get(), stored_options.get_value().get()))
     });
 
     let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));

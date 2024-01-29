@@ -1,0 +1,76 @@
+leptonic-chip {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    font-size: var(--chip-font-size);
+    margin: var(--chip-margin);
+    padding: var(--chip-padding);
+    border: var(--chip-border);
+    border-radius: var(--chip-border-radius);
+
+    &[data-color="primary"] {
+        color: var(--chip-primary-text-color);
+        background-color: var(--chip-primary-background-color);
+
+        &:hover {
+            color: var(--chip-primary-text-color-hover);
+            background-color: var(--chip-primary-background-color-hover);
+        }
+    }
+
+    &[data-color="secondary"] {
+        color: var(--chip-secondary-text-color);
+        background-color: var(--chip-secondary-background-color);
+
+        &:hover {
+            color: var(--chip-secondary-text-color-hover);
+            background-color: var(--chip-secondary-background-color-hover);
+        }
+    }
+
+    &[data-color="success"] {
+        color: var(--chip-success-text-color);
+        background-color: var(--chip-success-background-color);
+
+        &:hover {
+            color: var(--chip-success-text-color-hover);
+            background-color: var(--chip-success-background-color-hover);
+        }
+    }
+
+    &[data-color="info"] {
+        color: var(--chip-info-text-color);
+        background-color: var(--chip-info-background-color);
+
+        &:hover {
+            color: var(--chip-info-text-color-hover);
+            background-color: var(--chip-info-background-color-hover);
+        }
+    }
+
+    &[data-color="warn"] {
+        color: var(--chip-warn-text-color);
+        background-color: var(--chip-warn-background-color);
+
+        &:hover {
+            color: var(--chip-warn-text-color-hover);
+            background-color: var(--chip-warn-background-color-hover);
+        }
+    }
+
+    &[data-color="danger"] {
+        color: var(--chip-danger-text-color);
+        background-color: var(--chip-danger-background-color);
+
+        &:hover {
+            color: var(--chip-danger-text-color-hover);
+            background-color: var(--chip-danger-background-color-hover);
+        }
+    }
+
+    leptonic-icon.dismiss {
+        margin-left: 0.4em;
+        font-size: 1.1em;
+        cursor: pointer;
+    }
+}

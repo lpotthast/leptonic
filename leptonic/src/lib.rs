@@ -242,8 +242,6 @@ pub mod prelude {
     pub use super::link::LinkExtTarget;
     pub use super::modal::Modal;
     pub use super::modal::ModalBody;
-    pub use super::modal::ModalData;
-    pub use super::modal::ModalFn;
     pub use super::modal::ModalFooter;
     pub use super::modal::ModalHeader;
     pub use super::modal::ModalRoot;
@@ -273,13 +271,13 @@ pub mod prelude {
     pub use super::stack::StackOrientation;
     pub use super::tab::Tab;
     pub use super::table::Table;
+    pub use super::table::TableBody;
+    pub use super::table::TableCell;
     pub use super::table::TableContainer;
-    pub use super::table::Tbody;
-    pub use super::table::Td;
-    pub use super::table::Tfoot;
-    pub use super::table::Th;
-    pub use super::table::Thead;
-    pub use super::table::Tr;
+    pub use super::table::TableFooter;
+    pub use super::table::TableHeader;
+    pub use super::table::TableHeaderCell;
+    pub use super::table::TableRow;
     pub use super::tabs::Tabs;
     pub use super::theme::LeptonicTheme;
     pub use super::theme::Theme;

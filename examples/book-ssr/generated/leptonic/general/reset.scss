@@ -1,0 +1,83 @@
+*,
+::after,
+::before {
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+}
+
+label {
+    display: inline-flex;
+    margin: 0;
+}
+
+i {
+    display: inline-flex;
+}
+
+a {
+    &:hover {
+        color: #548eca;
+        text-decoration: none;
+        cursor: pointer;
+    }
+}
+
+button,
+input {
+    overflow: visible;
+}
+
+button,
+input,
+select,
+textarea {
+    line-height: inherit;
+}
+
+button,
+input,
+optgroup,
+select,
+textarea {
+    font-family: sans-serif;
+    font-size: 100%;
+    line-height: inherit;
+    margin: 0;
+}
+
+button,
+select {
+    text-transform: none;
+}
+
+button,
+input {
+    overflow: visible;
+}
+
+a,
+area,
+button,
+input,
+label,
+select,
+summary,
+textarea {
+    -ms-touch-action: manipulation;
+    touch-action: manipulation;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus {
+    outline: none;
+}
+
+table {
+    line-height: inherit;
+}
+
+p {
+    hyphens: auto;
+}

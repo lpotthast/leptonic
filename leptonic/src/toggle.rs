@@ -83,9 +83,14 @@ pub fn Toggle(
                             let on_icon = icons.on;
                             view! {
                                 <span class="icon-positioner">
-                                    <Show when=move || state.get() fallback=move || view! { <Icon icon=off_icon/> }>
-                                        <Icon icon=on_icon/>
-                                    </Show>
+                                    <Icon icon=off_icon style=move || match state.get() {
+                                        true => "display: none",
+                                        false => "display: inherit",
+                                    } />
+                                    <Icon icon=on_icon style=move || match state.get() {
+                                        true => "display: inherit",
+                                        false => "display: none",
+                                    } />
                                 </span>
                             }
                         })

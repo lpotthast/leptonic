@@ -3,11 +3,11 @@ use std::rc::Rc;
 use leptos::*;
 use uuid::Uuid;
 
-use crate::tabs::TabsContext;
+use crate::tabs::use_tabs;
 use crate::Mount;
 
 #[derive(Debug, Clone)]
-pub struct TabLabel {
+pub struct TabData {
     pub id: Uuid,
     pub name: Oco<'static, str>,
     pub label: Rc<View>,
@@ -23,30 +23,31 @@ pub fn Tab(
     name: Oco<'static, str>,
     #[prop(into)] label: View,
     #[prop(optional)] mount: Option<Mount>,
+
     #[prop(optional)] children: Option<ChildrenFn>,
+
+    /// Called whenever the tab comes into view.
     #[prop(into, optional)] on_show: Option<Callback<()>>,
+
+    /// Called whenever the tab gets hidden.
     #[prop(into, optional)] on_hide: Option<Callback<()>>,
 ) -> impl IntoView {
     let id = id.unwrap_or_else(Uuid::new_v4);
-    let tabs = expect_context::<TabsContext>();
+    let tabs = use_tabs();
 
-    let mount = mount.or(tabs.mount).unwrap_or(Mount::Once);
+    let mount = mount.or(tabs.default_mount_type).unwrap_or(Mount::Once);
 
     let name = store_value(name);
 
-    tabs.set_tab_labels.update(|labels| {
-        labels.push(TabLabel {
-            id,
-            name: name.get_value(),
-            label: Rc::new(label.into_view()),
-        });
+    tabs.register(TabData {
+        id,
+        name: name.get_value(),
+        label: Rc::new(label.into_view()),
     });
 
-    if tabs.history.get_untracked().get_active().is_none() {
-        tabs.set_history.update(|history| {
-            history.push(name.get_value());
-        });
-    }
+    on_cleanup(move || {
+        tabs.deregister(id);
+    });
 
     if let Some(on_show) = on_show {
         create_effect(move |_| {

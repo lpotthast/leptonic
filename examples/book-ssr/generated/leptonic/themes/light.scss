@@ -1,0 +1,470 @@
+[data-theme="light"] {
+    // Color basics
+    --brand-color: #e66956;
+    --primary-color: var(--brand-color);
+    --secondary-color: #9d9b9b;
+    --info-color: #2181d4;
+    --success-color: #4bb24b;
+    --warn-color: #f29826;
+    --danger-color: #d9534f;
+
+    --grey-0: #f8f8f8;
+    --grey-1: #ececeb;
+    --grey-2: #dbdbda;
+    --grey-3: #8d9ca3;
+    --grey-4: #5d6e77;
+    --grey-5: #2e2f33;
+    --grey-6: #212121;
+    --std-text-bright: #f0f0f0;
+    --std-text-dark: #1d1d1d;
+    --default-color: #e2e2e2;
+
+    // Brightness modifiers
+    --brighter-3: 10%;
+    --brighter-2: 7%;
+    --brighter-1: 5%;
+    --darker-1: 5%;
+    --darker-2: 7%;
+    --darker-3: 10%;
+
+    // Font
+    // Safari for OS X and iOS (San Francisco) (-apple-system), Chrome >= 56 for OS X (San Francisco), Windows, Linux and Android (system-ui), Chrome < 56 for OS X (San Francisco) (BlinkMacSystemFont), Windows ("Segoe UI"), Android (Roboto), Basic web fallback (Helvetica Neue, ...)
+    --font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+
+    // Alert
+    --alert-margin: 0.5em 0 0 0;
+    --alert-padding: 0.8em;
+    --alert-primary-background-color: var(--primary-color);
+    --alert-primary-color: white;
+    --alert-info-background-color: var(--info-color);
+    --alert-info-color: white;
+    --alert-success-background-color: var(--success-color);
+    --alert-success-color: white;
+    --alert-warn-background-color: var(--warn-color);
+    --alert-warn-color: white;
+    --alert-danger-background-color: var(--danger-color);
+    --alert-danger-color: white;
+
+    // App bar
+    --app-bar-height: 2.75em;
+    --app-bar-color: var(--std-text-dark);
+    --app-bar-background-color: #f9f7f6;
+    --app-bar-border-bottom: none;
+    --app-bar-box-shadow: 6px 0px 30px -15px #c09575;
+
+    // Box
+    --box-background-color: #efebe8;
+    --box-color: var(--std-text-dark);
+
+    // Button
+    --button-border-size: 0.125em;
+    --button-border-radius: 0.25em;
+    --button-box-shadow-opacity: 0.3;
+
+    --button-flat-primary-text-color: var(--std-text-dark);
+    --button-flat-primary-text-color-hover: var(--std-text-dark);
+    --button-flat-primary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--primary-color));
+
+    --button-outlined-primary-text-color: var(--std-text-dark);
+    --button-outlined-primary-text-color-hover: var(--std-text-dark);
+    --button-outlined-primary-border-color: var(--primary-color);
+    --button-outlined-primary-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--primary-color));
+    --button-outlined-primary-box-shadow-color: var(--primary-color);
+
+    --button-filled-primary-text-color: var(--std-text-bright);
+    --button-filled-primary-text-color-hover: var(--std-text-bright);
+    --button-filled-primary-background-color: var(--primary-color);
+    --button-filled-primary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--primary-color));
+    --button-filled-primary-border-color: var(--primary-color);
+    --button-filled-primary-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--primary-color));
+    --button-filled-primary-box-shadow-color: var(--primary-color);
+
+    --button-flat-secondary-text-color: var(--std-text-dark);
+    --button-flat-secondary-text-color-hover: var(--std-text-dark);
+    --button-flat-secondary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--default-color));
+
+    --button-outlined-secondary-text-color: var(--std-text-dark);
+    --button-outlined-secondary-text-color-hover: var(--std-text-dark);
+    --button-outlined-secondary-border-color: var(--default-color);
+    --button-outlined-secondary-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--default-color));
+    --button-outlined-secondary-box-shadow-color: var(--default-color);
+
+    --button-filled-secondary-text-color: var(--std-text-dark);
+    --button-filled-secondary-text-color-hover: var(--std-text-dark);
+    --button-filled-secondary-background-color: var(--default-color);
+    --button-filled-secondary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--default-color));
+    --button-filled-secondary-border-color: var(--default-color);
+    --button-filled-secondary-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--default-color));
+    --button-filled-secondary-box-shadow-color: var(--default-color);
+
+    --button-flat-success-text-color: var(--std-text-dark);
+    --button-flat-success-text-color-hover: var(--std-text-dark);
+    --button-flat-success-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--success-color));
+
+    --button-outlined-success-text-color: var(--std-text-bright);
+    --button-outlined-success-text-color-hover: var(--std-text-bright);
+    --button-outlined-success-border-color: var(--success-color);
+    --button-outlined-success-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--success-color));
+    --button-outlined-success-box-shadow-color: var(--success-color);
+
+    --button-filled-success-text-color: var(--std-text-bright);
+    --button-filled-success-text-color-hover: var(--std-text-bright);
+    --button-filled-success-background-color: var(--success-color);
+    --button-filled-success-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--success-color));
+    --button-filled-success-border-color: var(--success-color);
+    --button-filled-success-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--success-color));
+    --button-filled-success-box-shadow-color: var(--success-color);
+
+    --button-flat-info-text-color: var(--std-text-dark);
+    --button-flat-info-text-color-hover: var(--std-text-dark);
+    --button-flat-info-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--info-color));
+
+    --button-outlined-info-text-color: var(--std-text-bright);
+    --button-outlined-info-text-color-hover: var(--std-text-bright);
+    --button-outlined-info-border-color: var(--info-color);
+    --button-outlined-info-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--info-color));
+    --button-outlined-info-box-shadow-color: var(--info-color);
+
+    --button-filled-info-text-color: var(--std-text-bright);
+    --button-filled-info-text-color-hover: var(--std-text-bright);
+    --button-filled-info-background-color: var(--info-color);
+    --button-filled-info-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--info-color));
+    --button-filled-info-border-color: var(--info-color);
+    --button-filled-info-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--info-color));
+    --button-filled-info-box-shadow-color: var(--info-color);
+
+    --button-flat-warning-text-color: var(--std-text-dark);
+    --button-flat-warning-text-color-hover: var(--std-text-dark);
+    --button-flat-warning-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--warn-color));
+
+    --button-outlined-warning-text-color: var(--std-text-bright);
+    --button-outlined-warning-text-color-hover: var(--std-text-bright);
+    --button-outlined-warning-border-color: var(--warn-color);
+    --button-outlined-warning-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--warn-color));
+    --button-outlined-warning-box-shadow-color: var(--warn-color);
+
+    --button-filled-warning-text-color: var(--std-text-bright);
+    --button-filled-warning-text-color-hover: var(--std-text-bright);
+    --button-filled-warning-background-color: var(--warn-color);
+    --button-filled-warning-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--warn-color));
+    --button-filled-warning-border-color: var(--warn-color);
+    --button-filled-warning-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--warn-color));
+    --button-filled-warning-box-shadow-color: var(--warn-color);
+
+    --button-flat-danger-text-color: var(--std-text-dark);
+    --button-flat-danger-text-color-hover: var(--std-text-dark);
+    --button-flat-danger-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--danger-color));
+
+    --button-outlined-danger-text-color: var(--std-text-bright);
+    --button-outlined-danger-text-color-hover: var(--std-text-bright);
+    --button-outlined-danger-border-color: var(--danger-color);
+    --button-outlined-danger-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--danger-color));
+    --button-outlined-danger-box-shadow-color: var(--danger-color);
+
+    --button-filled-danger-text-color: var(--std-text-bright);
+    --button-filled-danger-text-color-hover: var(--std-text-bright);
+    --button-filled-danger-background-color: var(--danger-color);
+    --button-filled-danger-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--danger-color));
+    --button-filled-danger-border-color: var(--danger-color);
+    --button-filled-danger-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--danger-color));
+    --button-filled-danger-box-shadow-color: var(--danger-color);
+
+    // Card
+    --card-background-color: white;
+    --card-box-shadow-color: #666666;
+
+    // Chip
+    --chip-font-size: 0.9em;
+    --chip-margin: 0 0.3em 0.3em 0;
+    --chip-padding: 0.4em 0.7em;
+    --chip-border: none;
+    --chip-border-radius: 1em;
+    --chip-primary-text-color: var(--std-text-bright);
+    --chip-primary-text-color-hover: var(--std-text-bright);
+    --chip-primary-background-color: var(--primary-color);
+    --chip-primary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--primary-color));
+    --chip-secondary-text-color: var(--std-text-bright);
+    --chip-secondary-text-color-hover: var(--std-text-bright);
+    --chip-secondary-background-color: var(--secondary-color);
+    --chip-secondary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--secondary-color));
+    --chip-success-text-color: var(--std-text-bright);
+    --chip-success-text-color-hover: var(--std-text-bright);
+    --chip-success-background-color: var(--success-color);
+    --chip-success-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--success-color));
+    --chip-info-text-color: var(--std-text-bright);
+    --chip-info-text-color-hover: var(--std-text-bright);
+    --chip-info-background-color: var(--info-color);
+    --chip-info-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--info-color));
+    --chip-warn-text-color: var(--std-text-bright);
+    --chip-warn-text-color-hover: var(--std-text-bright);
+    --chip-warn-background-color: var(--warn-color);
+    --chip-warn-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--warn-color));
+    --chip-danger-text-color: var(--std-text-bright);
+    --chip-danger-text-color-hover: var(--std-text-bright);
+    --chip-danger-background-color: var(--danger-color);
+    --chip-danger-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--danger-color));
+
+    // Collapsibles
+    --collapsible-header-color: var(--std-text-dark);
+    --collapsible-header-background-color: #c3c3c3;
+    --collapsible-header-padding: 0.75em;
+    --collapsible-body-color: var(--std-text-dark);
+    --collapsible-body-background-color: #f3f3f3;
+    --collapsible-body-padding: 0.75em;
+
+    // Color
+    --color-palette-knob-size: 1.5em;
+    --color-palette-knob-border-width: 0.25em;
+    --color-palette-knob-border-color: white;
+    --color-palette-knob-border-style: solid;
+    --color-palette-knob-background-color: var(--brand-color);
+    --color-palette-knob-halo-size: 2.8em;
+    --color-palette-knob-halo-size-while-dragged: 3.6em;
+    --color-palette-knob-halo-opacity: .2;
+    --color-palette-knob-halo-background-color: var(--brand-color);
+    --color-palette-knob-transition-speed: .1s;
+    --color-palette-knob-box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px;
+
+    // Datetime
+    --datetime-font-size: 1em;
+    --datetime-weekday-name-color: var(--primary-color);
+    --datetime-action-text-color: var(--std-text-dark);
+    --datetime-action-disabled-text-color: var(--grey-2);
+    --datetime-action-hover-background-color: var(--grey-2);
+    --datetime-staging-year-background-color: var(--primary-color);
+    --datetime-staging-year-text-color: var(--std-text-bright);
+    --datetime-current-year-border-color: var(--grey-5);
+    --datetime-staging-month-background-color: var(--primary-color);
+    --datetime-staging-month-text-color: var(--std-text-bright);
+    --datetime-current-month-border-color: var(--grey-5);
+    --datetime-day-text-color: var(--std-text-dark);
+    --datetime-day-from-different-month-text-color: var(--grey-3);
+    --datetime-day-hover-text-color: var(--std-text-bright);
+    --datetime-day-hover-background-color: var(--primary-color);
+    --datetime-current-day-background-color: var(--primary-color);
+    --datetime-current-day-border-color: var(--grey-5);
+    --datetime-current-day-text-color: var(--std-text-dark);
+    --datetime-staging-day-text-color: var(--std-text-bright);
+    --datetime-staging-day-background-color: var(--primary-color);
+    --datetime-disabled-day-text-color: var(--grey-3);
+    --datetime-disabled-day-hover-background-color: var(--grey-3);
+
+    // Drawer
+    --drawer-background-color: #f9f7f6;
+    --drawer-box-shadow: 0px 30px 30px -15px #c09575;
+
+    // Field label
+    --field-label-color: #767676;
+
+    // Input
+    --input-padding: 0.75em 2em 0.75em 0.75em;
+    --input-color: var(--std-text-dark);
+    --input-background-color: white;
+    --input-border: none;
+    --input-border-bottom: 0.125em solid rgba(0, 0, 0, 0.15);
+    --input-border-radius: 0.25em;
+    --input-min-height: 2.75em;
+    --input-focused-border-color: var(--brand-color);
+
+    // Kbd
+    --leptonic-kbd-key-color: var(--std-text-dark);
+    --leptonic-kbd-key-background-color: #cecece;
+    --leptonic-kbd-key-margin: 0em;
+    --leptonic-kbd-key-padding: 0.3em 0.5em;
+    --leptonic-kbd-key-border-radius: 0.4em;
+    --leptonic-kbd-key-border-color: #a2a2a2;
+    --leptonic-kbd-concatenate-color: var(--std-text-dark);
+    --leptonic-kbd-concatenate-background-color: transparent;
+    --leptonic-kbd-concatenate-margin: 0 0.1em;
+    --leptonic-kbd-concatenate-padding: 0.3em;
+    --leptonic-kbd-concatenate-border-radius: 0;
+
+    // Link
+    --link-color: var(--brand-color);
+
+    // Modal
+    --modal-color: var(--std-text-dark);
+    --modal-background-color: white;
+    --modal-padding: 1.5em;
+    --modal-font-size: 1em;
+    --modal-header-padding: 1em;
+    --modal-body-padding: 1.5em 1em;
+    --modal-footer-padding: 0.75em 1em;
+    --modal-border-radius: 0.4em;
+    --modal-box-shadow: 10px 10px 22px -10px rgba(0, 0, 0, 0.55);
+
+    // Popover
+    --popover-content-background-color: rgba(187, 187, 187, 0.51);
+
+    // Progress bar
+    --progress-bar-height: 1.25em;
+    --progress-bar-border-radius: 0.15em;
+    --progress-bar-background-color: #d9d9d9;
+    --progress-bar-background-color-transparent: #d9d9d96e;
+    --progress-bar-background-box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15) inset;
+    --progress-bar-fill-background-color: var(--brand-color);
+    --progress-bar-fill-transition: width 0.1s linear;
+    --progress-bar-color: var(--std-text-dark);
+
+    // Select
+    --select-padding: var(--input-padding);
+    --select-min-height: var(--input-min-height);
+    --select-selected-color: var(--input-color);
+    --select-selected-background-color: var(--input-background-color);
+    --select-selected-border: var(--input-border);
+    --select-selected-border-bottom: var(--input-border-bottom);
+    --select-selected-border-radius: var(--input-border-radius);
+    --select-selected-badge-color: var(--std-text-bright);
+    --select-selected-badge-background-color: #12d4e7;
+    --select-selected-placeholder-color: var(--grey-4);
+    --select-focused-border-color: var(--brand-color);
+    --select-dropdown-background-color: var(--input-background-color);
+    --select-dropdown-shadow: 2px 3px 18px -3px var(--input-background-color);
+    --select-search-color: var(--std-text-dark);
+    --select-search-background-color: color-mix(in srgb, black 20%, var(--input-background-color));
+    --select-no-items-color: white;
+    --select-no-items-background-color: color-mix(in srgb, white 20%, var(--danger-color));
+    --select-item-color: var(--std-text-dark);
+    --select-item-background-color: var(--input-background-color);
+    --select-item-padding: var(--input-padding);
+    --select-item-disabled-background-color: #b8b8b8;
+    --select-item-disabled-color: var(--std-text-dark);
+    --select-item-preselected-background-color: rgb(56, 121, 192);
+    --select-item-hover-background-color: color-mix(in srgb, black 15%, var(--input-background-color));
+    --select-item-selected-background-color: color-mix(in srgb, black 30%, var(--input-background-color));
+
+    // Skeleton
+    --skeleton-background-color: #cbcbcb;
+    --skeleton-animation-highlight-color: #dadada;
+    --skeleton-border-radius: 0.2em;
+    --skeleton-padding: 0.2em;
+    --skeleton-cursor: progress;
+
+    // Slider
+    --slider-margin: 2em 0em 2em 0em;
+    --slider-bar-height: 0.35em;
+    --slider-bar-background-color: #e0b9b9;
+    --slider-bar-background-image: none;
+    --slider-range-height: 0.5em;
+    --slider-range-background-color: var(--brand-color);
+    --slider-range-background-image: none;
+    --slider-knob-size: 1.5em;
+    --slider-knob-border-width: 0em;
+    --slider-knob-border-color: transparent;
+    --slider-knob-border-style: solid;
+    --slider-knob-background-color: var(--brand-color);
+    --slider-knob-halo-size: 2.8em;
+    --slider-knob-halo-size-while-dragged: 3.6em;
+    --slider-knob-halo-opacity: .2;
+    --slider-knob-halo-background-color: var(--brand-color);
+    --slider-knob-transition-speed: .1s;
+    --slider-knob-box-shadow: rgba(0, 0, 0, 0.2) 0px 3px 1px -2px, rgba(0, 0, 0, 0.14) 0px 2px 2px 0px, rgba(0, 0, 0, 0.12) 0px 1px 5px 0px;
+    --slider-mark-size: 2px;
+    --slider-mark-color: #c78585;
+    --slider-mark-color-in-range: #ececec;
+    --slider-mark-title-color: #a5a5a5;
+    --slider-mark-title-color-in-range: var(--std-text-dark);
+
+    // Tab selector
+    --tab-selector-background-color: #d3d3d3;
+    --tab-selector-text-color: black;
+    --tab-selector-active-background-color: white;
+    --tab-selector-active-border-color: #e3e3e3;
+    --tab-selector-active-box-shadow-color: #4a4a4a;
+
+    // Tab
+    --tab-background-color: white;
+    --tab-box-shadow-color: #666666;
+
+    // Table wrapper
+    --table-wrapper-box-shadow-color: #666666;
+
+    // Table
+    --table-color: var(--std-text-dark);
+    --table-background-color: white;
+    --table-background-color-on-hover: color-mix(in srgb, white 80%, var(--std-text-dark));
+    --table-background-color-of-striped-rows: #ffffeb;
+    --table-header-background-color: #fafafa;
+    --table-border-color: color-mix(in srgb, white 80%, var(--std-text-dark));
+    --table-cell-box-shadow-on-hover: 2px 2px 10px -3px rgb(50, 50, 50);
+    --table-column-background-if-ordered: #dddddd;
+    --table-header-cell-padding: 0.75em 1em;
+    --table-body-cell-padding: 0.75em 1em;
+
+    // Table row
+    --table-row-border-bottom-color: lightgrey;
+
+    // Tiptap editor
+    --tiptap-editor-btn-color: var(--std-text-dark);
+    --tiptap-editor-btn-background-color: #d3d3d3;
+    --tiptap-editor-active-btn-color: white;
+    --tiptap-editor-active-btn-background-color: var(--grey-5);
+    --tiptap-editor-instance-color: var(--std-text-dark);
+    --tiptap-editor-instance-disabled-color: var(--std-text-dark);
+    --tiptap-editor-instance-background-color: transparent;
+    --tiptap-editor-border-color: #c9c9c9;
+
+    // Toast
+    --toast-border-radius: 0.25em;
+    --toast-header-border-bottom: 0.125em solid #e4e4e4;
+    --toast-header-padding: 0.75em;
+    --toast-message-padding: 0.75em;
+    --toast-info-header-background-color: var(--info-color);
+    --toast-info-header-color: var(--std-text-bright);
+    --toast-info-message-background-color: var(--info-color);
+    --toast-info-message-color: var(--std-text-bright);
+    --toast-success-header-background-color: var(--success-color);
+    --toast-success-header-color: var(--std-text-bright);
+    --toast-success-message-background-color: var(--success-color);
+    --toast-success-message-color: var(--std-text-bright);
+    --toast-warn-header-background-color: var(--warn-color);
+    --toast-warn-header-color: var(--std-text-bright);
+    --toast-warn-message-background-color: var(--warn-color);
+    --toast-warn-message-color: var(--std-text-bright);
+    --toast-error-header-background-color: var(--danger-color);
+    --toast-error-header-color: var(--std-text-bright);
+    --toast-error-message-background-color: var(--danger-color);
+    --toast-error-message-color: var(--std-text-bright);
+
+    // Toggle
+    --toggle-slider-off-background-color: #ccc;
+    --toggle-slider-on-background-color: var(--brand-color);
+    --toggle-knob-background-color: white;
+    --toggle-icon-color: #303030;
+
+    // Typography
+    --typography-font-family: var(--font-family);
+    --typography-h1-margin: 0.67em 0 0.67em 0;
+    --typography-h1-font-size: 2em;
+    --typography-h1-font-weight: bold;
+    --typography-h2-margin: 0.83em 0 0.83em 0;
+    --typography-h2-font-size: 1.5em;
+    --typography-h2-font-weight: bold;
+    --typography-h3-margin: 1em 0 1em 0;
+    --typography-h3-font-size: 1.17em;
+    --typography-h3-font-weight: bold;
+    --typography-h4-margin: 1.33em 0 1.33em 0;
+    --typography-h4-font-size: 1em;
+    --typography-h4-font-weight: bold;
+    --typography-h5-margin: 1.67em 0 1.67em 00;
+    --typography-h5-font-size: 0.83em;
+    --typography-h5-font-weight: bold;
+    --typography-h6-margin: 2.33em 0 2.33em 0;
+    --typography-h6-font-size: 0.67em;
+    --typography-h6-font-weight: bold;
+    --typography-p-margin: 1em 0 1em 0;
+    --typography-p-font-size: 1em;
+    --typography-p-font-weight: normal;
+    --typography-p-line-height: 1.6em; // This specific value results in <Code inline=true> elements not pushing lines of a <P> further apart as they would normally be!
+    --typography-code-margin: 1.1111em 0;
+    --typography-code-padding: 1em;
+    --typography-code-font-size: 0.9em;
+    --typography-code-font-weight: normal;
+    --typography-code-line-height: normal;
+    --typography-code-border-radius: 0.25em;
+    --typography-code-background-color: #d3d3d3;
+    --typography-code-color: #3a3732;
+    --typography-inline-code-margin: 0;
+    --typography-inline-code-padding: 0.28em;
+    --typography-inline-code-line-height: 1em;
+}
