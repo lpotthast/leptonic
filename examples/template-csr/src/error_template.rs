@@ -42,9 +42,7 @@ pub fn ErrorTemplate(
                 children=move |(_index, error)| {
                     match error {
                         AppError::NotFound => view! {
-                            <Box style="">
-                                <P>"404 - Not Found"</P>
-                            </Box>
+                            <P>"404 - Not Found"</P>
                         },
                     }
                 }

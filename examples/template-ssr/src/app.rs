@@ -1,13 +1,9 @@
-use crate::error_template::{AppError, ErrorTemplate};
-
-use std::fmt::Display;
-
+use leptonic::prelude::*;
 use leptos::*;
 use leptos_meta::{provide_meta_context, Meta, Stylesheet, Title};
 use leptos_router::*;
 
-use leptonic::prelude::*;
-
+use crate::error_template::{AppError, ErrorTemplate};
 use crate::pages::welcome::Welcome;
 
 #[derive(Debug, Copy, Clone)]
@@ -24,7 +20,7 @@ impl AppRoutes {
 }
 
 /// Required so that `Routes` variants can be used in `<Route path=Routes::Foo ...>` definitions.
-impl Display for AppRoutes {
+impl std::fmt::Display for AppRoutes {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.route())
     }
@@ -42,8 +38,6 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        // injects a stylesheet into the document <head>
-        // id=leptos means cargo-leptos will hot-reload this stylesheet
         <Meta name="description" content="Leptonic"/>
         <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <Meta name="theme-color" content="#e66956"/>
