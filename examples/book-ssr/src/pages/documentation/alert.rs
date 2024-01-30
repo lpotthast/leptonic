@@ -105,6 +105,8 @@ pub fn PageAlert() -> impl IntoView {
             {indoc!(r"
                 --alert-margin
                 --alert-padding
+                --alert-border
+                --alert-border-radius
                 --alert-primary-background-color
                 --alert-primary-color
                 --alert-info-background-color
