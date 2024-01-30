@@ -1,0 +1,63 @@
+leptonic-tiptap-editor {
+    display: flex;
+    flex-direction: column;
+
+    leptonic-tiptap-menu {
+        display: flex;
+        flex-direction: row;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+        border: 1px solid var(--tiptap-editor-border-color);
+        border-bottom: none;
+        gap: 0.3em;
+        padding: 1em;
+
+        .leptonic-btn[variant="filled"].leptonic-tiptap-btn {
+            display: flex;
+            justify-content: flex-start;
+            align-items: center;
+            font-weight: 300;
+            color: var(--tiptap-editor-btn-color);
+            background-color: var(--tiptap-editor-btn-background-color);
+            border-color: transparent;
+            border-radius: 0.25em;
+            padding: 0.25em;
+            user-select: none;
+            cursor: pointer;
+
+            &.active,
+            &:hover {
+                color: var(--tiptap-editor-active-btn-color);
+                background-color: var(--tiptap-editor-active-btn-background-color);
+                border-color: transparent;
+            }
+        }
+    }
+
+    leptos-tiptap-instance {
+
+        // Reset
+        .ProseMirror:focus {
+            outline: none;
+        }
+
+        border: 1px solid var(--tiptap-editor-border-color);
+        color: var(--tiptap-editor-instance-color);
+        background-color: var(--tiptap-editor-instance-background-color);
+        padding: 0 1em;
+
+        img {
+            width: auto;
+            height: auto;
+            max-height: 20em;
+            max-width: min(100%, 100em);
+            // Image can be moved!
+            cursor: grab;
+        }
+
+        &[aria-disabled] {
+            cursor: not-allowed;
+            color: var(--tiptap-editor-instance-disabled-color);
+        }
+    }
+}

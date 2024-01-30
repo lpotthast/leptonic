@@ -1,0 +1,95 @@
+*,
+::after,
+::before {
+  font-family: var(--typography-font-family);
+}
+
+h1 {
+  margin: var(--typography-h1-margin);
+  font-size: var(--typography-h1-font-size);
+  font-weight: var(--typography-h1-font-weight);
+}
+
+h2 {
+  margin: var(--typography-h2-margin);
+  font-size: var(--typography-h2-font-size);
+  font-weight: var(--typography-h2-font-weight);
+}
+
+h3 {
+  margin: var(--typography-h3-margin);
+  font-size: var(--typography-h3-font-size);
+  font-weight: var(--typography-h3-font-weight);
+}
+
+h4 {
+  margin: var(--typography-h4-margin);
+  font-size: var(--typography-h4-font-size);
+  font-weight: var(--typography-h4-font-weight);
+}
+
+h5 {
+  margin: var(--typography-h5-margin);
+  font-size: var(--typography-h5-font-size);
+  font-weight: var(--typography-h5-font-weight);
+}
+
+h6 {
+  margin: var(--typography-h6-margin);
+  font-size: var(--typography-h6-font-size);
+  font-weight: var(--typography-h6-font-weight);
+}
+
+p {
+  margin: var(--typography-p-margin);
+  font-size: var(--typography-p-font-size);
+  font-weight: var(--typography-p-font-weight);
+  line-height: var(--typography-p-line-height);
+}
+
+leptonic-code {
+  display: block;
+  position: relative;
+  font-family: monospace;
+  font-size: var(--typography-code-font-size);
+  font-weight: var(--typography-code-font-weight);
+  line-height: var(--typography-line-height);
+  margin: var(--typography-code-margin);
+  padding: var(--typography-code-padding);
+  border: none;
+  border-radius: var(--typography-code-border-radius);
+  background-color: var(--typography-code-background-color);
+  color: var(--typography-code-color);
+  text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+
+  &[inline="true"] {
+    display: inline;
+    margin: var(--typography-inline-code-margin);
+    padding: var(--typography-inline-code-padding);
+    line-height: var(--typography-inline-code-line-height);
+  }
+}
+
+leptonic-code-text {
+  display: block;
+  font-family: monospace;
+  white-space: pre;
+  overflow: auto;
+
+  &[inline="true"] {
+    display: inline;
+  }
+}
+
+Button.leptonic-code-copy-button {
+  position: absolute;
+  top: calc(0.5 * var(--typography-code-padding));
+  right: calc(0.5 * var(--typography-code-padding));
+
+  &[inline="true"] {
+    top: var(--typography-inline-code-padding);
+    right: var(--typography-inline-code-padding);
+  }
+
+}
