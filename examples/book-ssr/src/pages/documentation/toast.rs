@@ -62,7 +62,8 @@ pub fn PageToast() -> impl IntoView {
                             header: header.get_untracked().into_view(),
                             body: body.get_untracked().into_view(),
                             timeout: timeout.get_untracked(),
-                        }) }>
+                        }
+                    )}>
                         "Create Toast"
                     </Button>
                 }
