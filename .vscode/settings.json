@@ -29,6 +29,8 @@
     "rust-analyzer.linkedProjects": [
         "./leptonic/Cargo.toml",
         "./leptonic-theme/Cargo.toml",
-        "./examples/book/Cargo.toml"
+        "./examples/book-ssr/Cargo.toml",
+        "./examples/template-csr/Cargo.toml",
+        "./examples/template-ssr/Cargo.toml"
     ]
 }
