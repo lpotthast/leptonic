@@ -83,10 +83,10 @@ codegen-units = 1
 panic = "abort"
 
 [package.metadata.leptonic]
-# Leptonic's build-script will copy the Leptonic themes to this directory.
+# REQUIRED: Leptonic's build-script will copy the Leptonic themes to this directory.
 style-dir = "style"
 
-# Leptonic's build-script will copy static JS dependencies to this directory.
+# REQUIRED: Leptonic's build-script will copy static JS dependencies to this directory.
 js-dir = "public/js"
 
 [package.metadata.leptos]
