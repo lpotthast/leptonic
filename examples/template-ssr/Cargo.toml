@@ -20,37 +20,13 @@ axum-server = { version = "0.5", features = ["tls-rustls"], optional = true }
 cfg-if = "1"
 console_error_panic_hook = "0.1"
 http = "0.2"
-indoc = "2"
-leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["clipboard"] }
-#leptonic = { path = "../../leptonic", features = ["clipboard"] }
+leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = [] }
 leptos = { version = "0.5", features = [] }
-leptos-use = "0.9.0"
 leptos_axum = { version = "0.5", optional = true }
-leptos_icons = { version = "0.1.0", features = [
-    "BsGithub",
-    "BsSearch",
-    "BsList",
-    "BsThreeDots",
-    "BsFolder",
-    "BsFolderFill",
-    "BsBook",
-    "BsColumnsGap",
-    "BsToggles",
-    "BsChatSquare",
-    "BsCircleSquare",
-    "BsArrowsMove",
-    "BsVolumeDownFill",
-    "BsVolumeUpFill",
-    "BsBell",
-    "BsPower",
-] }
 leptos_meta = { version = "0.5", features = [] }
 leptos_router = { version = "0.5", features = [] }
-ordered-float = "4.2.0"
 serde = "1.0.193"
-serde-wasm-bindgen = "0.6.3"
 serde_json = "1.0.108"
-strum = { version = "0.25.0", features = ["derive"] }
 thiserror = "1.0.38"
 time = { version = "0.3.31", features = ["wasm-bindgen"] }
 tokio = { version = "1.25.0", optional = true }
@@ -89,10 +65,10 @@ codegen-units = 1
 panic = "abort"
 
 [package.metadata.leptonic]
-# Leptonic's build-script will copy the Leptonic themes to this directory.
+# REQUIRED: Leptonic's build-script will copy the Leptonic themes to this directory.
 style-dir = "style"
 
-# Leptonic's build-script will copy static JS dependencies to this directory.
+# REQUIRED: Leptonic's build-script will copy static JS dependencies to this directory.
 js-dir = "public/js"
 
 [package.metadata.leptos]
