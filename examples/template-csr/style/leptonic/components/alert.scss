@@ -1,6 +1,6 @@
 leptonic-alert {
-  display: flex;
-  flex-direction: row;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   line-height: inherit;
   margin: var(--alert-margin);
@@ -28,59 +28,46 @@ leptonic-alert {
     background-color: var(--alert-danger-background-color);
   }
 
-  // TODO: Alerts are not dismissible. Toasts are!
-  &.dismissible {
-    .close {
-      float: right;
-      padding: 0;
-      font-size: 1.5em;
-      font-weight: 700;
-      line-height: 0.9;
-      color: inherit;
-      text-shadow: 0 0.125em 0 #fff;
-      opacity: 0.5;
-      background: 0 0;
-      border: 0;
-      appearance: none;
-
-      &:hover {
-        color: black;
-        opacity: 0.75;
-      }
-    }
-
-    &::after {
-      content: "";
-      clear: both;
-      display: block;
-    }
-  }
-
-  .prepend {
+  leptonic-alert-prepend {
     margin-right: 0.75em;
     display: flex;
     align-self: flex-start;
+    height: 100%;
 
     leptonic-icon {
       font-size: 1.5em;
     }
   }
 
-  .content {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
+  leptonic-alert-center {
+    height: 100%;
 
-    &.centered {
-      justify-content: center;
-      align-items: center;
-    }
-
-    .title {
+    leptonic-alert-title {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
       font-weight: bold;
       font-size: 1.1em;
       line-height: 1.1em;
-      margin-bottom: 0.2em;
+      margin-bottom: 0.35em;
+    }
+
+    leptonic-alert-content {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      line-height: 1em;
+    }
+  }
+
+  leptonic-alert-append {
+    margin-left: 0.75em;
+    display: flex;
+    align-self: flex-start;
+    height: 100%;
+
+    leptonic-icon {
+      font-size: 1.5em;
     }
   }
 }
