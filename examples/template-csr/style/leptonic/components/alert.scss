@@ -5,8 +5,8 @@ leptonic-alert {
   line-height: inherit;
   margin: var(--alert-margin);
   padding: var(--alert-padding);
-  border: none;
-  border-radius: 0.5em;
+  border: var(--alert-border);
+  border-radius: var(--alert-border-radius);
 
   &[data-variant="info"] {
     color: var(--alert-info-color);
