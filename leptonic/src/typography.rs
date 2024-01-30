@@ -101,6 +101,34 @@ pub fn P(
     }
 }
 
+#[derive(Clone)]
+#[slot]
+pub struct Li {
+    children: ChildrenFn,
+}
+
+#[component]
+pub fn Ul(
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(default=vec![])] li: Vec<Li>,
+) -> impl IntoView {
+    view! {
+        <ul id=id class=class style=style>
+            <For
+                each=move || { li.clone().into_iter().enumerate() }
+                key=move |(index, _e)| *index
+                children=move |(_index, e)| view!{ 
+                    <li>
+                        {e.children}
+                    </li>
+                }
+            />
+        </ul>
+    }
+}
+
 #[component]
 pub fn Code(
     #[prop(into, optional)] id: Option<AttributeValue>,

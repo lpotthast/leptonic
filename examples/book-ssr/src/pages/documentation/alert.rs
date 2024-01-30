@@ -4,24 +4,98 @@ use leptos::*;
 
 #[component]
 pub fn PageAlert() -> impl IntoView {
-    let (centered, set_centered) = create_signal(false);
     view! {
         <H1>"Alerts"</H1>
 
         <Code>
             {indoc!(r#"
-                <Alert variant=AlertVariant::Success title=|_| "Success".into_view()>"Action completed."</Alert>
+                <Alert variant=AlertVariant::Success>
+                    <AlertTitle slot>"Success"</AlertTitle>
+                    <AlertContent slot>"Action completed"</AlertContent>
+                </Alert>
             "#)}
         </Code>
 
-        <Alert variant=AlertVariant::Success title=|| "Success".into_view() centered=centered>"Action completed."</Alert>
-        <Alert variant=AlertVariant::Info title=|| "Info".into_view() centered=centered>"This concept is based on [...]"</Alert>
-        <Alert variant=AlertVariant::Warn title=|| "Warn".into_view() centered=centered>"This seems not plausible."</Alert>
-        <Alert variant=AlertVariant::Danger title=|| "Danger".into_view() centered=centered>"There was an error!"</Alert>
+        <Alert variant=AlertVariant::Success>
+            <AlertTitle slot>"Success"</AlertTitle>
+            <AlertContent slot>"Action completed."</AlertContent>
+        </Alert>
 
-        <P>"Alerts can be dynamically centered using a signal."</P>
+        <Alert variant=AlertVariant::Info>
+            <AlertTitle slot>"Info"</AlertTitle>
+            <AlertContent slot>"This concept is based on [...]"</AlertContent>
+        </Alert>
 
-        <Button on_click=move |_| set_centered.update(|it| *it = !*it)>"Center toggle"</Button>
+        <Alert variant=AlertVariant::Warn>
+            <AlertTitle slot>"Warn"</AlertTitle>
+            <AlertContent slot>"This is not plausible."</AlertContent>
+        </Alert>
+
+        <Alert variant=AlertVariant::Danger>
+            <AlertTitle slot>"Warn"</AlertTitle>
+            <AlertContent slot>"There was an error!"</AlertContent>
+        </Alert>
+
+        <H2>"Customization"</H2>
+
+        <Ul>
+            <Li slot>"The "<Code inline=true>"default_icon_slot"</Code> " can be specified to change the default position of the icon. Slot `None` will lead to no icon being rendered."</Li>
+            <Li slot>"Both " <Code inline=true>"AlertTitle"</Code> "and" <Code inline=true>"AlertContent"</Code> " can be omitted."</Li>
+            <Li slot>"The " <Code inline=true>"AlertPrepend"</Code> "and" <Code inline=true>"AlertAppend"</Code> " slot can be overridden."</Li>
+            <Li slot>"Custom ids, classes and styles can be applied to all slots."</Li>
+        </Ul>
+
+        <Code>
+            {indoc!(r##"
+                <Alert variant=AlertVariant::Success default_icon_slot=AlertIconSlot::None>
+                    <AlertPrepend slot style="align-items: center; font-size: 1.8em; margin: 0;">"🎉"</AlertPrepend>
+                    <AlertTitle slot style=r#"
+                        align-items: center;
+                        justify-content: center;
+                        height: 100%;
+                        text-transform: uppercase;
+                        font-size: 1.3em;
+                    "#>
+                        "Success"
+                    </AlertTitle>
+                    <AlertAppend slot style="align-items: center; font-size: 1.8em; margin: 0;">"🎉"</AlertAppend>
+                </Alert>
+            "##)}
+        </Code>
+
+        <Alert variant=AlertVariant::Success default_icon_slot=AlertIconSlot::None>
+            <AlertPrepend slot style="align-items: center; font-size: 1.8em; margin: 0;">"🎉"</AlertPrepend>
+            <AlertTitle slot style=r#"
+                align-items: center;
+                justify-content: center;
+                height: 100%;
+                text-transform: uppercase;
+                font-size: 1.3em;
+            "#>
+                "Success"
+            </AlertTitle>
+            <AlertAppend slot style="align-items: center; font-size: 1.8em; margin: 0;">"🎉"</AlertAppend>
+        </Alert>
+
+        <Code>
+            {indoc!(r#"
+                <Alert variant=AlertVariant::Warn default_icon_slot=AlertIconSlot::None>
+                    <AlertTitle slot style="text-transform: uppercase; font-size: 1.3em;">
+                        "Warning"
+                        <AlertIcon variant=AlertVariant::Warn style="margin-left: 0.5em;" />
+                    </AlertTitle>
+                    <AlertContent slot>"This is dangerous!"</AlertContent>
+                </Alert>
+            "#)}
+        </Code>
+
+        <Alert variant=AlertVariant::Warn default_icon_slot=AlertIconSlot::None>
+            <AlertTitle slot style="text-transform: uppercase; font-size: 1.3em;">
+                "Warning"
+                <AlertIcon variant=AlertVariant::Warn style="margin-left: 0.5em;" />
+            </AlertTitle>
+            <AlertContent slot>"This is dangerous!"</AlertContent>
+        </Alert>
 
         <H2>"Styling"</H2>
 

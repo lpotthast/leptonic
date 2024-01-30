@@ -184,6 +184,12 @@ pub mod prelude {
     pub use leptos_tiptap::*;
 
     pub use super::alert::Alert;
+    pub use super::alert::AlertAppend;
+    pub use super::alert::AlertContent;
+    pub use super::alert::AlertIconSlot;
+    pub use super::alert::AlertPrepend;
+    pub use super::alert::AlertTitle;
+    pub use super::alert::AlertIcon;
     pub use super::alert::AlertVariant;
     pub use super::anchor::Anchor;
     pub use super::app_bar::AppBar;
@@ -312,6 +318,8 @@ pub mod prelude {
     pub use super::typography::H5;
     pub use super::typography::H6;
     pub use super::typography::P;
+    pub use super::typography::Ul;
+    pub use super::typography::Li;
     pub use super::FontWeight;
     pub use super::Height;
     pub use super::Margin;
