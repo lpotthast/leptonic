@@ -1,7 +1,6 @@
 use leptos::*;
 use leptos_icons::BsIcon;
 use leptos_tiptap::*;
-use uuid::Uuid;
 
 use crate::prelude::*;
 
@@ -17,7 +16,7 @@ pub fn TiptapEditor(
 
     let (selection_state, set_selection_state) = create_signal(TiptapSelectionState::default());
 
-    let instance_id = Uuid::new_v4();
+    let instance_id = uuid::Uuid::now_v7();
 
     view! {
         <leptonic-tiptap-editor id=id class=class>
