@@ -15,7 +15,7 @@ opt-level = 3
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-axum = { version = "0.6.4", optional = true }
+axum = { version = "0.6.20", optional = true }
 axum-server = { version = "0.5", features = ["tls-rustls"], optional = true }
 cfg-if = "1"
 console_error_panic_hook = "0.1"
@@ -25,11 +25,11 @@ leptos = { version = "0.5", features = [] }
 leptos_axum = { version = "0.5", optional = true }
 leptos_meta = { version = "0.5", features = [] }
 leptos_router = { version = "0.5", features = [] }
-serde = "1.0.193"
-serde_json = "1.0.108"
-thiserror = "1.0.38"
+serde = "1.0.196"
+serde_json = "1.0.113"
+thiserror = "1.0.56"
 time = { version = "0.3.31", features = ["wasm-bindgen"] }
-tokio = { version = "1.25.0", optional = true }
+tokio = { version = "1.35.1", optional = true }
 tower = { version = "0.4.13", optional = true }
 tower-http = { version = "0.4", features = ["fs"], optional = true }
 tracing = "0.1.40"

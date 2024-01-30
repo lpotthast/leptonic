@@ -21,9 +21,9 @@ codegen-units = 1
 [dependencies]
 console_error_panic_hook = "0.1.7"
 leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["csr"] }
-leptos = { version = "0.5.4", features = ["csr"] }
-leptos_meta = { version = "0.5.4", features = ["csr"] }
-leptos_router = { version = "0.5.4", features = ["csr"] }
+leptos = { version = "0.5.7", features = ["csr"] }
+leptos_meta = { version = "0.5.7", features = ["csr"] }
+leptos_router = { version = "0.5.7", features = ["csr"] }
 thiserror = "1"
 tracing = "0.1.40"
 tracing-subscriber = "0.3.18"
