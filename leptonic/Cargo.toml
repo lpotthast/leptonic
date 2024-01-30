@@ -17,7 +17,7 @@ build = "build.rs"
 [build-dependencies]
 cargo_toml = "0.19.1"
 lazy_static = "1.4.0"
-leptonic-theme = { version = "0.3", path = "../leptonic-theme" }
+leptonic-theme = { version = "0.4", path = "../leptonic-theme" }
 leptos-tiptap-build = { version = "0.2.5", optional = true }
 
 [dependencies]
