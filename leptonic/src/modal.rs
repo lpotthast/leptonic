@@ -49,7 +49,6 @@ pub fn Modal(
         let g_keyboard_event = expect_context::<GlobalKeyboardEvent>();
         create_effect(move |_| {
             if let Some(e) = g_keyboard_event.read_signal.get() {
-                tracing::info!(e = e.key().as_str());
                 if show_when.get_untracked() && e.key().as_str() == "Escape" {
                     on_escape.call(());
                 }
