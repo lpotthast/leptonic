@@ -1,6 +1,6 @@
 # Leptonic
 
-![Build](https://gitlab.com/lukaspotthast/leptonic/badges/main/pipeline.svg)
+<!-- ![Build](https://gitlab.com/lukaspotthast/leptonic/badges/main/pipeline.svg) -->
 [![Crates.io](https://img.shields.io/crates/v/leptonic)](https://crates.io/crates/leptonic)
 [![Docs.rs](https://docs.rs/leptonic/badge.svg)](https://docs.rs/leptonic)
 
