@@ -6,7 +6,7 @@
 
 Component library for the [Leptos](https://github.com/leptos-rs/leptos) framework.
 
-Visit [leptonic.dev](https://leptonic.dev) for installation instructions, component-guides, theming instructions and more.
+Visit **[leptonic.dev](https://leptonic.dev)** for installation instructions, component-guides, theming instructions and more.
 
 Our website is the deployed `book-ssr` example and itself build with Leptonic.
 
