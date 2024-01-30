@@ -1,15 +1,18 @@
 # Leptonic
 
+![Build](https://gitlab.com/lukaspotthast/leptonic/badges/main/pipeline.svg)
+[![Crates.io](https://img.shields.io/crates/v/leptonic)](https://crates.io/crates/leptonic)
+[![Docs.rs](https://docs.rs/leptonic/badge.svg)](https://docs.rs/leptonic)
+
 Component library for the [Leptos](https://github.com/leptos-rs/leptos) framework.
 
-Visit [leptonic.dev](https://leptonic.dev) for installation instructions, component-guides, theming instructions and more. leptonic.dev is the deployed `book` example and itself build with leptonic.
+Visit [leptonic.dev](https://leptonic.dev) for installation instructions, component-guides, theming instructions and more.
 
-## Book
+Our website is the deployed `book-ssr` example and itself build with Leptonic.
 
-Leptonic's documentation, the Leptonic "book", is actually `/examples/book`.
+## Quickstart
 
-Serve it using
+To get started quickly either
 
-    just serve
-
-You might have to install `Just` using `cargo install just`.
+- Copy `/examples/template-ssr` and launch it with `cargo leptos watch` (uses server-side-rendering)
+- Copy `/examples/template-csr` and launch it with `trunk serve` (uses client-side-rendering only) or
