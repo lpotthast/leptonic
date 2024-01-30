@@ -6,7 +6,7 @@ lazy_static! {
     static ref ENABLE_LOGGING: bool = {
         option_env!("LEPTONIC_BUILD_ENABLE_LOGGING")
             .and_then(|v| str::parse::<bool>(v).ok())
-            .unwrap_or(true)
+            .unwrap_or(false)
     };
     static ref MIN_LOG_LEVEL: Level = {
         option_env!("LEPTONIC_BUILD_MIN_LOG_LEVEL")
@@ -18,11 +18,11 @@ lazy_static! {
 #[allow(clippy::unwrap_used)]
 pub fn main() {
     let target_dir = get_cargo_target_dir().unwrap();
-    let root = target_dir.parent().unwrap().to_owned();
-    log(Level::Debug, format!("root is: {root:?}"));
+    let root_dir = target_dir.parent().unwrap().to_owned();
+    log(Level::Debug, format!("root_dir is: {root_dir:?}"));
 
-    let cargo_lock_path = root.join("Cargo.lock");
-    let cargo_toml_path = root.join("Cargo.toml");
+    let cargo_lock_path = root_dir.join("Cargo.lock");
+    let cargo_toml_path = root_dir.join("Cargo.toml");
     assert!(
         cargo_toml_path.exists(),
         //.expect("Can't check existence of file Cargo.toml"),
@@ -83,9 +83,9 @@ pub fn main() {
         format!("relative_js_dir is: {relative_js_dir:?}"),
     );
 
-    let style_dir = root.join(relative_style_dir);
+    let style_dir = root_dir.join(relative_style_dir);
     #[allow(unused_variables)]
-    let js_dir = root.join(relative_js_dir);
+    let js_dir = root_dir.join(relative_js_dir);
 
     let theme_dir = style_dir.join("leptonic");
     leptonic_theme::generate(&theme_dir).unwrap();
