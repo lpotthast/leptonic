@@ -1,0 +1,146 @@
+leptonic-slider {
+    --slider-bar-wrapper-height: var(--slider-knob-size);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    user-select: none;
+    width: 100%;
+    margin: var(--slider-margin); // This can cover basic mark texts. A more advanced solution might be required which increase the slider height when marks with text are rendered...
+    touch-action: none;
+    cursor: pointer;
+
+    .bar-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        height: var(--slider-bar-wrapper-height);
+    }
+
+    .bar {
+        position: relative;
+        display: inline-flex;
+        width: calc(100% - var(--slider-knob-size));
+        height: var(--slider-bar-height);
+        background-color: var(--slider-bar-background-color);
+        background-image: var(--slider-bar-background-image);
+        transition: 0s;
+
+        &:focus {
+            box-shadow: 0 0 0.1em var(--brand-color);
+        }
+    }
+
+    .range {
+        position: absolute;
+        height: var(--slider-range-height);
+        border-radius: var(--slider-range-height);
+        background-color: var(--slider-range-background-color);
+        background-image: var(--slider-range-background-image);
+        top: calc(((var(--slider-range-height) - var(--slider-bar-height)) * -0.5));
+    }
+
+    .knob-wrapper {
+        display: flex;
+        align-items: center;
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        left: calc(var(--slider-knob-size) * -0.5);
+    }
+
+    .knob {
+        &:before {
+            --slider-knob-halo-displacement: calc((var(--slider-knob-halo-size) / 2.0 - (var(--slider-knob-size) - 2.0 * var(--slider-knob-border-width)) / 2.0) * -1.0);
+            content: "";
+            display: block;
+            position: absolute;
+            width: var(--slider-knob-halo-size);
+            height: var(--slider-knob-halo-size);
+            border-radius: var(--slider-knob-halo-size);
+            top: var(--slider-knob-halo-displacement);
+            left: var(--slider-knob-halo-displacement);
+            background-color: var(--slider-knob-halo-background-color);
+            opacity: 0;
+            transition: all var(--slider-knob-transition-speed);
+        }
+
+        &:hover,
+        &:active,
+        &:focus,
+        &.is-dragged {
+            &:before {
+                opacity: var(--slider-knob-halo-opacity);
+            }
+        }
+
+        &.is-dragged {
+            &:before {
+                --slider-knob-halo-displacement: calc((var(--slider-knob-halo-size-while-dragged) / 2.0 - (var(--slider-knob-size) - 2.0 * var(--slider-knob-border-width)) / 2.0) * -1.0);
+                width: var(--slider-knob-halo-size-while-dragged);
+                height: var(--slider-knob-halo-size-while-dragged);
+                border-radius: var(--slider-knob-halo-size-while-dragged);
+                top: var(--slider-knob-halo-displacement);
+                left: var(--slider-knob-halo-displacement);
+            }
+        }
+
+        content: "";
+        position: absolute;
+        z-index: 1;
+        height: var(--slider-knob-size);
+        width: var(--slider-knob-size);
+        border-width: var(--slider-knob-border-width);
+        border-style: var(--slider-knob-border-style);
+        border-color: var(--slider-knob-border-color);
+        background-color: var(--slider-knob-background-color);
+        box-shadow: var(--slider-knob-box-shadow);
+        transition: 0s;
+        // The knob position is determined by setting the "left" attribute programmatically with a percentage value.
+    }
+
+    &[data-variant="round"] {
+        .bar {
+            border-radius: calc(var(--slider-bar-height) * 0.5);
+        }
+
+        .knob {
+            border-radius: calc(var(--slider-knob-size) * 0.5);
+        }
+    }
+
+    .marks {
+        display: block;
+        position: relative;
+        width: calc(100% - var(--slider-knob-size));
+
+        .mark {
+            display: block;
+            position: absolute;
+            left: 0%;
+            border: var(--slider-mark-size) solid var(--slider-mark-color);
+            border-radius: var(--slider-mark-size);
+            margin-top: calc(var(--slider-bar-wrapper-height) * -0.5 - var(--slider-mark-size));
+            margin-left: calc(var(--slider-mark-size) * -1);
+            height: 0px;
+            width: 0px;
+
+            .title {
+                color: var(--slider-mark-title-color);
+                width: fit-content;
+                transform: translateX(-50%);
+                margin-top: calc(var(--slider-bar-wrapper-height) * 0.5);
+            }
+
+            &.in-range {
+                border-color: var(--slider-mark-color-in-range);
+
+                .title {
+                    color: var(--slider-mark-title-color-in-range);
+                }
+            }
+        }
+    }
+}

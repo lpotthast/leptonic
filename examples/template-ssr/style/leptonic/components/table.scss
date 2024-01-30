@@ -1,0 +1,197 @@
+leptonic-table-container {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  transition: height 0.5s ease;
+  border-radius: 0.5em;
+  box-shadow: -2px 3px 15px -6px var(--table-wrapper-box-shadow-color);
+}
+
+leptonic-table {
+  display: table;
+  margin: 0;
+  width: 100%;
+  font-size: 1em;
+  line-height: 1.35;
+  color: var(--table-color);
+  background-color: var(--table-background-color);
+
+  leptonic-table-header {
+    display: table-header-group;
+    background-color: var(--table-header-background-color);
+
+
+    leptonic-table-header-cell {
+      &.min-width {
+        width: 1%;
+      }
+    }
+  }
+
+  leptonic-table-row {
+    display: table-row;
+    transition: background-color 0.25s;
+
+    &.recently-updated {
+      transition: background-color 0.5s;
+      background-color: #4181aa;
+    }
+  }
+
+  leptonic-table-header-cell,
+  leptonic-table-cell {
+    display: table-cell;
+
+    &.leptonic-column-ordered {
+      background-color: var(--table-column-background-if-ordered);
+    }
+  }
+
+  leptonic-table-header-cell {
+    padding: var(--table-header-cell-padding);
+
+    &.leptonic-column-header {
+      vertical-align: top;
+      user-select: none;
+    }
+
+    &:hover {
+      .leptonic-order-by-sign {
+        visibility: visible;
+      }
+    }
+
+    &.select {
+      vertical-align: top;
+      padding-left: 1.25em;
+      padding-right: 0.25em;
+      padding-top: 1em;
+    }
+  }
+
+  leptonic-table-cell {
+    padding: var(--table-body-cell-padding);
+    text-align: start;
+    vertical-align: top;
+
+    &:hover {
+      //box-shadow: $-cell-box-shadow-on-hover;
+
+      .leptonic-table-cell {
+        .inline-edit-trigger {
+          visibility: visible;
+        }
+      }
+    }
+
+    &.select {
+      vertical-align: top;
+      padding-left: 1.25em;
+      padding-right: 0.25em;
+      padding-top: 0.9em;
+    }
+  }
+
+  leptonic-table-body {
+    display: table-row-group;
+
+    leptonic-table-row {
+      border-bottom: 1px solid var(--table-row-border-bottom-color); // 1px instead of 0.005em so that all lines are equally thick.
+
+      &.interactable {
+        cursor: pointer;
+      }
+    }
+    leptonic-table-row:last-of-type {
+      border-bottom: none;
+    }
+
+    leptonic-table-cell.no-data {
+      text-align: center;
+    }
+  }
+
+  &.leptonic-table-bordered {
+    border-collapse: collapse;
+
+    leptonic-table-cell,
+    leptonic-table-header-cell {
+      //border: 0.05em solid;
+      border-color: var(--table-border-color);
+    }
+
+    leptonic-table-header-cell {
+      border-bottom: 0.15em solid;
+    }
+  }
+
+  &.leptonic-table-striped {
+    leptonic-table-row:nth-child(2n) {
+      background-color: var(--table-background-color-of-striped-rows);
+    }
+  }
+
+  &.leptonic-table-hoverable {
+    leptonic-table-body leptonic-table-row:hover {
+      background-color: var(--table-background-color-on-hover);
+    }
+  }
+}
+
+.leptonic-order-by-trigger {
+  cursor: pointer;
+
+  &:hover {
+    background-color: var(--table-column-background-if-ordered);
+  }
+}
+
+.filter-trigger {
+  width: 1.3em;
+  height: 1.3em;
+  align-self: center;
+  margin-left: auto;
+  cursor: pointer;
+}
+
+.leptonic-order-by-sign {
+  font-size: 1em;
+  font-weight: 400;
+  margin-left: 0.25em;
+  visibility: hidden;
+
+  &.active {
+    visibility: visible;
+  }
+}
+
+.action-icons {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+.action-icon {
+  display: inline-flex;
+  font-size: 1.2em;
+  margin-right: 0.3em;
+  cursor: pointer;
+}
+
+.leptonic-table-cell {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+
+  .leptonic-field {
+    // width: fit-content;
+    width: 100%;
+  }
+
+  .inline-edit-trigger {
+    display: inline-flex;
+    visibility: hidden;
+    margin: 0.25em 0 0.25em 0.25em;
+    cursor: pointer;
+  }
+}

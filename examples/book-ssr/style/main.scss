@@ -15,7 +15,7 @@ body {
     flex-direction: column;
 }
 
-@import "../generated/leptonic/leptonic-themes";
+@import "./leptonic/leptonic-themes";
 
 [data-theme="light"] {
     --brand-color: #e66956;

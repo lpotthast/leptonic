@@ -24,7 +24,7 @@ pub fn PageChangelog() -> impl IntoView {
             <li>"The `uuid` dependency was bumped to version 1.6."</li>
             <li>"A `RwSignal` can act as an `Out` type"</li>
             <li>"Modals now support the `on_escape` prop, letting you handle escape key presses."</li>
-            <li>"The Tiptap-Editor is not gated through the `tiptap` feature. Enabling this feature will alter the build to automatically include required JS files."</li>
+            <li>"The Tiptap-Editor functionality is now gated through the new `tiptap` feature. Enabling it will alter the build to automatically include required JS files."</li>
         </ul>
 
         <H3>"Fixed:"</H3>

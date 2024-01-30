@@ -1,0 +1,18 @@
+leptonic-stack {
+    // Default gap, when not otherwise defined through the HTML markup.
+    --gap: 0.5em;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    gap: var(--gap);
+
+    &[data-orientation="vertical"] {
+        flex-direction: column;
+    }
+
+    &[data-orientation="horizontal"] {
+        flex-direction: row;
+    }
+}

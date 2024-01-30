@@ -1,0 +1,43 @@
+leptonic-tabs {
+    display: block;
+
+    leptonic-tab-selectors {
+        display: flex;
+        padding: 0 1em;
+
+        leptonic-tab-selector {
+            padding: 1em 1.2em;
+            margin-right: 0.5em;
+            background-color: var(--tab-selector-background-color);
+            color: var(--tab-selector-text-color);
+            font-weight: 400;
+            border-top-left-radius: 0.3em;
+            border-top-right-radius: 0.3em;
+            border-top: 1px solid transparent;
+            border-right: 1px solid transparent;
+            border-left: 1px solid transparent;
+            border-bottom: none;
+            user-select: none;
+            cursor: pointer;
+
+            &.active,
+            &:hover {
+                background-color: var(--tab-selector-active-background-color);
+                border-color: var(--tab-selector-active-border-color);
+                box-shadow: 0px -3px 16px -14px var(--tab-selector-active-box-shadow-color);
+            }
+        }
+    }
+
+    leptonic-tab {
+        display: block;
+        padding: 1.75em;
+        background-color: var(--tab-background-color);
+        box-shadow: -2px 3px 15px -6px var(--tab-box-shadow-color);
+        border-radius: 0.25em;
+
+        &[aria-hidden="true"] {
+            display: none;
+        }
+    }
+}

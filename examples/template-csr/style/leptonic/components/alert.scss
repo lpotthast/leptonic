@@ -1,0 +1,86 @@
+leptonic-alert {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  line-height: inherit;
+  margin: var(--alert-margin);
+  padding: var(--alert-padding);
+  border: none;
+  border-radius: 0.5em;
+
+  &[data-variant="info"] {
+    color: var(--alert-info-color);
+    background-color: var(--alert-info-background-color);
+  }
+
+  &[data-variant="success"] {
+    color: var(--alert-success-color);
+    background-color: var(--alert-success-background-color);
+  }
+
+  &[data-variant="warn"] {
+    color: var(--alert-warn-color);
+    background-color: var(--alert-warn-background-color);
+  }
+
+  &[data-variant="danger"] {
+    color: var(--alert-danger-color);
+    background-color: var(--alert-danger-background-color);
+  }
+
+  // TODO: Alerts are not dismissible. Toasts are!
+  &.dismissible {
+    .close {
+      float: right;
+      padding: 0;
+      font-size: 1.5em;
+      font-weight: 700;
+      line-height: 0.9;
+      color: inherit;
+      text-shadow: 0 0.125em 0 #fff;
+      opacity: 0.5;
+      background: 0 0;
+      border: 0;
+      appearance: none;
+
+      &:hover {
+        color: black;
+        opacity: 0.75;
+      }
+    }
+
+    &::after {
+      content: "";
+      clear: both;
+      display: block;
+    }
+  }
+
+  .prepend {
+    margin-right: 0.75em;
+    display: flex;
+    align-self: flex-start;
+
+    leptonic-icon {
+      font-size: 1.5em;
+    }
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+
+    &.centered {
+      justify-content: center;
+      align-items: center;
+    }
+
+    .title {
+      font-weight: bold;
+      font-size: 1.1em;
+      line-height: 1.1em;
+      margin-bottom: 0.2em;
+    }
+  }
+}
