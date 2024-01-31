@@ -30,7 +30,7 @@
         "./leptonic/Cargo.toml",
         "./leptonic-theme/Cargo.toml",
         "./examples/book-ssr/Cargo.toml",
-        "./examples/template-csr/Cargo.toml",
-        "./examples/template-ssr/Cargo.toml"
+        "./examples/leptonic-template-csr/Cargo.toml",
+        "./examples/leptonic-template-ssr/Cargo.toml"
     ]
 }
