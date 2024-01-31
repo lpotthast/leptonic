@@ -142,7 +142,7 @@ pub fn Code(
     let code_text = store_value(
         itertools::Itertools::intersperse(
             children().nodes.iter().map(|e| match e {
-                View::Text(t) => t.content.to_owned(),
+                View::Text(t) => t.content.clone(),
                 _ => panic!("non-text children are not allowed: {:?}", e.to_owned()),
             }),
             "\n".into(),
@@ -153,14 +153,14 @@ pub fn Code(
     let show_copy_button = show_copy_button.unwrap_or_else(|| !inline.unwrap_or(false));
     let on_success = move || {
         if let Some(on_copy) = on_copy {
-            on_copy.call(Ok(()))
+            on_copy.call(Ok(()));
         }
     };
     let on_err = move || {
         if let Some(on_copy) = on_copy {
-            on_copy.call(Err(()))
+            on_copy.call(Err(()));
         } else {
-            tracing::warn!("copy to clipboard failed")
+            tracing::warn!("copy to clipboard failed");
         }
     };
 
@@ -229,5 +229,5 @@ fn copy_to_clipboard<T: AsRef<str>, S: Fn() + 'static, E: Fn() + 'static>(
     _on_success: S,
     _on_err: E,
 ) {
-    tracing::warn!("Clipboard related functionality requires leptonic's 'Clipboard' feature as well as '--cfg=web_sys_unstable_apis'.")
+    tracing::warn!("Clipboard related functionality requires leptonic's 'Clipboard' feature as well as '--cfg=web_sys_unstable_apis'.");
 }

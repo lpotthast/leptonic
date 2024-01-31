@@ -46,7 +46,7 @@ pub fn Chip(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <leptonic-chip id=id class=class style=style data-color=move || color.0.as_ref().map_or_else(|| ChipColor::default(), SignalGet::get).as_str()>
+        <leptonic-chip id=id class=class style=style data-color=move || color.0.as_ref().map_or_else(ChipColor::default, SignalGet::get).as_str()>
             { children() }
             { match dismissible {
                 Some(callback) => view! {

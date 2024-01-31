@@ -38,7 +38,7 @@ pub fn main() {
     if cargo_toml.package.is_none() {
         log(
             Level::Debug,
-            format!("aborting. Root dir does not contain a package."),
+            "aborting. Root dir does not contain a package.",
         );
         return;
     }
@@ -52,7 +52,7 @@ pub fn main() {
     if meta.is_none() {
         log(
             Level::Debug,
-            format!("aborting. Root dir is a package without specifying leptonic metadata."),
+            "aborting. Root dir is a package without specifying leptonic metadata.",
         );
         return;
     }
@@ -89,7 +89,10 @@ pub fn main() {
 
     let theme_dir = style_dir.join("leptonic");
     leptonic_theme::generate(&theme_dir).unwrap();
-    log(Level::Info, format!("theme written to {}", theme_dir.display()));
+    log(
+        Level::Info,
+        format!("theme written to {}", theme_dir.display()),
+    );
 
     #[cfg(feature = "tiptap")]
     copy_tiptap_files(&js_dir);
@@ -140,10 +143,8 @@ fn get_cargo_target_dir() -> Result<PathBuf, Box<dyn std::error::Error>> {
 
 fn log(level: Level, msg: impl AsRef<str>) {
     let msg = msg.as_ref();
-    if *ENABLE_LOGGING {
-        if level >= *MIN_LOG_LEVEL {
-            println!("cargo:warning=[{level}] {msg}");
-        }
+    if *ENABLE_LOGGING && level >= *MIN_LOG_LEVEL {
+        println!("cargo:warning=[{level}] {msg}");
     }
 }
 
@@ -161,18 +162,10 @@ impl FromStr for Level {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
-            "debug" => Ok(Self::Debug),
-            "Debug" => Ok(Self::Debug),
-            "DEBUG" => Ok(Self::Debug),
-            "info" => Ok(Self::Info),
-            "Info" => Ok(Self::Info),
-            "INFO" => Ok(Self::Info),
-            "warn" => Ok(Self::Warn),
-            "Warn" => Ok(Self::Warn),
-            "WARN" => Ok(Self::Warn),
-            "error" => Ok(Self::Error),
-            "Error" => Ok(Self::Error),
-            "ERROR" => Ok(Self::Error),
+            "debug" | "Debug" | "DEBUG" => Ok(Self::Debug),
+            "info" | "Info" | "INFO" => Ok(Self::Info),
+            "warn" | "Warn" | "WARN" => Ok(Self::Warn),
+            "error" | "Error" | "ERROR" => Ok(Self::Error),
             _ => Err(format!("'{s}' is not a valid LogLevel.")),
         }
     }
