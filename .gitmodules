@@ -1,0 +1,3 @@
+[submodule "examples/leptonic-template-csr"]
+	path = examples/leptonic-template-csr
+	url = https://github.com/lpotthast/leptonic-template-csr.git
