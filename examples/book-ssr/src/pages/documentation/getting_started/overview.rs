@@ -1,45 +1,29 @@
-use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
 
 use crate::pages::documentation::doc_root::DocRoutes;
 
 #[component]
-pub fn PageUsage() -> impl IntoView {
+pub fn PageOverview() -> impl IntoView {
     view! {
-        <H1>"Usage"</H1>
-
-        <P>"Similar to Leptos, this crate comes with a prelude module."</P>
+        <H1>"Overview"</H1>
 
         <P>
-            "Just "
-            <Code inline=true>"use leptonic::prelude::*;"</Code>
-            " and you are almost ready to go."
+            "Leptonic is a rich component library for the "<LinkExt href="https://leptos.dev/" target=LinkExtTarget::Blank>"Leptos"</LinkExt>" web framework."
         </P>
 
         <P>
-            "Leptonic provides the "<Code inline=true>"<Root>"</Code>" component. "
-            "It is responsible for enabling the "<Link href=DocRoutes::Themes>"Theming"</Link>", "<Link href=DocRoutes::Modal>"Modal"</Link>" and "
-            <Link href=DocRoutes::Toast>"Toast"</Link>" functionality of Leptonic as well as providing global event-listening capabilities."
-            "You have to include it in your app once, and render all your content inside it. Many Leptonic components require the "<Code inline=true>"<Root>"</Code>" component to be present."
+            "It provides \"ready to be used\" components for capturing user input through buttons, inputs fields, select inputs, sliders, date & time inputs or even a rich text editor. "
+            "Well known mechanisms for providing user-feedback are also available, ranging from modal windows, toast messages and alerts to progress indicators. "
+            "Leptonic also includes components helping you lay out all these elements on your pages. These include stacks, a full grid system, tabs and collapsibles as well as components for app bars and side drawers. "
+            "Common tasks such as linking to other parts in or outside your site or including a plethora of icons are also made simple. "
         </P>
+
+        <P>"Explore the available components and other features using the side menu to get acquainted with what Leptonic has to offer."</P>
 
         <P>
-            "Using the component is as simple as this:"
+            "If you want to dive right in, follow our " <Link href=DocRoutes::Installation>"Installation"</Link> " instructions."
         </P>
-
-        <Code>
-            {indoc!(r#"
-                #[component]
-                pub fn App() -> impl IntoView {
-                    view! {
-                        <Root default_theme=LeptonicTheme::default()>
-                            "Content goes here :)"
-                        </Root>
-                    }
-                }
-            "#)}
-        </Code>
 
         <H2>"Need help?"</H2>
 

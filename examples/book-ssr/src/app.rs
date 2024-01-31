@@ -174,7 +174,6 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     let search_options = vec![
         create_search_option(DocRoutes::Overview, "Overview"),
         create_search_option(DocRoutes::Installation, "Installation"),
-        create_search_option(DocRoutes::Usage, "Usage"),
         create_search_option(DocRoutes::Themes, "Themes"),
         create_search_option(DocRoutes::Changelog, "Changelog"),
         create_search_option(DocRoutes::Stack, "Grid"),

@@ -5,49 +5,47 @@ use leptos::*;
 use leptos_icons::BsIcon;
 use leptos_router::*;
 
-use crate::app::{AppLayoutContext, AppRoutes};
-use crate::pages::documentation::alert::PageAlert;
-use crate::pages::documentation::anchor::PageAnchor;
-use crate::pages::documentation::app_bar::PageAppBar;
-use crate::pages::documentation::button::PageButton;
-use crate::pages::documentation::callback::PageCallback;
-use crate::pages::documentation::changelog::PageChangelog;
-use crate::pages::documentation::chip::PageChip;
-use crate::pages::documentation::collapsible::PageCollapsible;
-use crate::pages::documentation::color_picker::PageColorPicker;
-use crate::pages::documentation::date_time::PageDateTime;
-use crate::pages::documentation::drawer::PageDrawer;
-use crate::pages::documentation::grid::PageGrid;
-use crate::pages::documentation::icon::PageIcon;
-use crate::pages::documentation::input::PageInput;
-use crate::pages::documentation::installation::PageInstallation;
-use crate::pages::documentation::kbd::PageKbd;
-use crate::pages::documentation::link::PageLink;
-use crate::pages::documentation::modal::PageModal;
-use crate::pages::documentation::overview::PageOverview;
-use crate::pages::documentation::popover::PagePopover;
-use crate::pages::documentation::progress::PageProgress;
-use crate::pages::documentation::select::PageSelect;
-use crate::pages::documentation::separator::PageSeparator;
-use crate::pages::documentation::skeleton::PageSkeleton;
-use crate::pages::documentation::slider::PageSlider;
-use crate::pages::documentation::stack::PageStack;
-use crate::pages::documentation::tab::PageTab;
-use crate::pages::documentation::table::PageTable;
-use crate::pages::documentation::themes::PageThemes;
-use crate::pages::documentation::tiptap_editor::PageTiptapEditor;
-use crate::pages::documentation::toast::PageToast;
-use crate::pages::documentation::toggle::PageToggle;
-use crate::pages::documentation::typography::PageTypography;
-use crate::pages::documentation::usage::PageUsage;
 use crate::app::APP_BAR_HEIGHT;
+use crate::app::{AppLayoutContext, AppRoutes};
+use crate::pages::documentation::feedback::alert::PageAlert;
+use crate::pages::documentation::feedback::chip::PageChip;
+use crate::pages::documentation::feedback::modal::PageModal;
+use crate::pages::documentation::feedback::popover::PagePopover;
+use crate::pages::documentation::feedback::progress::PageProgress;
+use crate::pages::documentation::feedback::toast::PageToast;
+use crate::pages::documentation::general::anchor::PageAnchor;
+use crate::pages::documentation::general::callback::PageCallback;
+use crate::pages::documentation::general::icon::PageIcon;
+use crate::pages::documentation::general::kbd::PageKbd;
+use crate::pages::documentation::general::link::PageLink;
+use crate::pages::documentation::general::typography::PageTypography;
+use crate::pages::documentation::getting_started::changelog::PageChangelog;
+use crate::pages::documentation::getting_started::installation::PageInstallation;
+use crate::pages::documentation::getting_started::overview::PageOverview;
+use crate::pages::documentation::getting_started::themes::PageThemes;
+use crate::pages::documentation::input::button::PageButton;
+use crate::pages::documentation::input::color_picker::PageColorPicker;
+use crate::pages::documentation::input::date_time::PageDateTime;
+use crate::pages::documentation::input::input_field::PageInput;
+use crate::pages::documentation::input::select::PageSelect;
+use crate::pages::documentation::input::slider::PageSlider;
+use crate::pages::documentation::input::tiptap_editor::PageTiptapEditor;
+use crate::pages::documentation::input::toggle::PageToggle;
+use crate::pages::documentation::layout::app_bar::PageAppBar;
+use crate::pages::documentation::layout::collapsible::PageCollapsible;
+use crate::pages::documentation::layout::drawer::PageDrawer;
+use crate::pages::documentation::layout::grid::PageGrid;
+use crate::pages::documentation::layout::separator::PageSeparator;
+use crate::pages::documentation::layout::skeleton::PageSkeleton;
+use crate::pages::documentation::layout::stack::PageStack;
+use crate::pages::documentation::layout::tab::PageTab;
+use crate::pages::documentation::layout::table::PageTable;
 
 #[derive(Debug, Copy, Clone)]
 pub enum DocRoutes {
     // Getting started
     Overview,
     Installation,
-    Usage,
     Themes,
     Changelog,
 
@@ -100,7 +98,6 @@ impl DocRoutes {
         match self {
             Self::Overview => "overview",
             Self::Installation => "installation",
-            Self::Usage => "usage",
             Self::Themes => "themes",
             Self::Changelog => "changelog",
 
@@ -166,7 +163,6 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path="" view=|| view! { <Redirect path=DocRoutes::Overview/> }/>
             <Route path=DocRoutes::Overview view=|| view! { <PageOverview/> }/>
             <Route path=DocRoutes::Installation view=|| view! { <PageInstallation/> }/>
-            <Route path=DocRoutes::Usage view=|| view! { <PageUsage/> }/>
             <Route path=DocRoutes::Themes view=|| view! { <PageThemes/> }/>
             <Route path=DocRoutes::Changelog view=|| view! { <PageChangelog/> }/>
 
@@ -202,7 +198,7 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::Link view=|| view! { <PageLink/> }/>
             <Route path=DocRoutes::Anchor view=|| view! { <PageAnchor/> }/>
             <Route path=DocRoutes::Callback view=|| view! { <PageCallback/> }/>
-
+            
             //<Route path=DocRoutes::Transition view=|| view! { <PageTransition/> }/>
 
             <Route path=DocRoutes::NotFound view=|| view! { <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
@@ -233,7 +229,6 @@ pub fn DocLayout() -> impl IntoView {
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::Overview class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
                 <Link href=DocRoutes::Installation class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
-                <Link href=DocRoutes::Usage class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Usage"</Link>
                 <Link href=DocRoutes::Themes class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
                 <Link href=DocRoutes::Changelog class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
             </Stack>

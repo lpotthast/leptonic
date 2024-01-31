@@ -22,11 +22,11 @@ pub fn PageThemes() -> impl IntoView {
         </P>
 
         <P>
-            "The "<Code inline=true>"<Root>"</Code>" component already discussed in the "<Link href=DocRoutes::Usage>"Usage"</Link>" section provides everything required (namely rendering the "<Code inline=true>"<ThemeProvider>"</Code>" component) to active a theme."
+            "The "<Code inline=true>"<Root>"</Code>" component already discussed in the "<Link href=DocRoutes::Installation>"Installation"</Link>" section provides everything required (namely rendering the "<Code inline=true>"<ThemeProvider>"</Code>" component) to active a theme."
         </P>
 
         <P>
-            "A simple theme-switching component, realized using a "<Link href=DocRoutes::Usage>"Toggle"</Link>", is provided, which can be used simply like this anywhere you want:"
+            "A simple " <Code inline=true>"ThemeToggle"</Code>" component is provided, which you can embed like this:"
         </P>
 
         <Code>
