@@ -16,3 +16,9 @@ To get started quickly either
 
 - Copy `/examples/template-ssr` and launch it with `cargo leptos watch` (uses server-side-rendering) or
 - Copy `/examples/template-csr` and launch it with `trunk serve` (uses client-side-rendering only)
+
+## Development
+
+This repository uses submodules. Perform checkout using:
+
+    git checkout https://github.com/lpotthast/leptonic.git --recurse-submodules
