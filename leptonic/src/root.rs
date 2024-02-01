@@ -26,10 +26,19 @@ pub struct Leptonic {
     pub is_desktop_device: Signal<bool>,
 }
 
-// Note(lukas): We accept the generic, as applications will typically only use this component once and will never suffer from monomorphization code bloat.
 #[component]
 #[allow(clippy::too_many_lines)]
-pub fn Root<T>(default_theme: T, children: Children) -> impl IntoView
+pub fn Root<T>(
+    /// Root directory of JS files used for dynamic script imports. Defaults to "js", as this is commonly used.
+    /// Change this if you chose a non-standard location for `[package.metadata.leptonic] > js-dir`.
+    #[allow(unused_variables)]
+    #[prop(into, default = Oco::Borrowed("js"))]
+    runtime_js_dir: Oco<'static, str>,
+
+    default_theme: T,
+    
+    children: Children,
+) -> impl IntoView
 where
     T: Theme + 'static,
 {
@@ -176,8 +185,8 @@ where
     cfg_if::cfg_if! { if #[cfg(feature="tiptap")] {
         use leptos_meta::Script;
         let tiptap_js_module_includes = view! {
-            <Script type_="module" src="/js/tiptap-bundle.min.js"/>
-            <Script type_="module" src="/js/tiptap.js"/>
+            <Script type_="module" src=format!("/{}/tiptap-bundle.min.js", runtime_js_dir)/>
+            <Script type_="module" src=format!("/{}/tiptap.js", runtime_js_dir)/>
         };
     } else {
         let tiptap_js_module_includes = view! {};
