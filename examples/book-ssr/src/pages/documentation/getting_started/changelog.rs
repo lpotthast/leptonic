@@ -7,7 +7,11 @@ pub fn PageChangelog() -> impl IntoView {
     view! {
         <H1>"Changelog"</H1>
 
-        <H2>"0.4.0 (main branch)"</H2>
+        <H2>"0.5.0 (main branch)"</H2>
+
+        <P>"Leptonic now supports Leptos in version 0.6!"</P>
+        
+        <H2>"0.4.0"</H2>
 
         <P>"Leptonic now supports server-side-rendering (SSR). This book is now deployed with SSR enabled."</P>
 
