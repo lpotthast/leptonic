@@ -2,7 +2,6 @@ use std::fmt::Display;
 
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::BsIcon;
 use leptos_router::*;
 
 use crate::app::APP_BAR_HEIGHT;
@@ -224,7 +223,7 @@ pub fn DocLayout() -> impl IntoView {
 
     let drawer_content = view! {
         <DrawerSection header=move || view! {
-            <Icon icon=BsIcon::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
+            <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::Overview class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
@@ -235,7 +234,7 @@ pub fn DocLayout() -> impl IntoView {
         </DrawerSection>
 
         <DrawerSection header=move || view! {
-            <Icon icon=BsIcon::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
+            <Icon icon=icondata::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::Stack class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
@@ -251,7 +250,7 @@ pub fn DocLayout() -> impl IntoView {
         </DrawerSection>
 
         <DrawerSection header=move || view! {
-            <Icon icon=BsIcon::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
+            <Icon icon=icondata::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::Button class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
@@ -266,7 +265,7 @@ pub fn DocLayout() -> impl IntoView {
         </DrawerSection>
 
         <DrawerSection header=move || view! {
-            <Icon icon=BsIcon::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
+            <Icon icon=icondata::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::Alert class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
@@ -280,7 +279,7 @@ pub fn DocLayout() -> impl IntoView {
         </DrawerSection>
 
         <DrawerSection header=move || view! {
-            <Icon icon=BsIcon::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
+            <Icon icon=icondata::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
@@ -292,7 +291,7 @@ pub fn DocLayout() -> impl IntoView {
         </DrawerSection>
 
         //<DrawerSection header=move || view! {
-        //    <Icon icon=BsIcon::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
+        //    <Icon icon=icondata::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
         //}>
         //    <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
         //        <Link href=DocRoutes::Transition class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Transitions"</Link>

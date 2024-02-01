@@ -1,7 +1,6 @@
 use std::sync::{Arc, RwLock};
 
 use leptos::*;
-use leptos_icons::BsIcon;
 use tracing::warn;
 use uuid::Uuid;
 
@@ -160,8 +159,8 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
             </leptonic-collapsible-header>
 
             { move ||  match ctx2.collapsible_ctx.show.get() {
-                true => view! { <Icon icon=BsIcon::BsCaretUpFill/>}.into_view(),
-                false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}.into_view()
+                true => view! { <Icon icon=icondata::BsCaretUpFill/>}.into_view(),
+                false => view! { <Icon icon=icondata::BsCaretDownFill/>}.into_view()
             } }
         </leptonic-collapsible-header-wrapper>
     }

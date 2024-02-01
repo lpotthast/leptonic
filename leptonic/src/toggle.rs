@@ -33,8 +33,8 @@ impl Default for ToggleSize {
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ToggleIcons {
-    pub off: leptos_icons::Icon,
-    pub on: leptos_icons::Icon,
+    pub off: icondata::Icon,
+    pub on: icondata::Icon,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

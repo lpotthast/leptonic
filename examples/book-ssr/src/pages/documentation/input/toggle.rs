@@ -1,7 +1,6 @@
 use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::BsIcon;
 
 #[component]
 pub fn PageToggle() -> impl IntoView {
@@ -34,16 +33,16 @@ pub fn PageToggle() -> impl IntoView {
 
                 view! {
                     <Toggle state=state set_state=set_state icons=ToggleIcons {
-                        on: BsIcon::BsFolderFill.into(),
-                        off: BsIcon::BsFolder.into(),
+                        on: icondata::BsFolderFill,
+                        off: icondata::BsFolder,
                     }/>
                 }
             ")}
         </Code>
 
         <Toggle state=state set_state=set_state icons=ToggleIcons {
-            on: BsIcon::BsFolderFill.into(),
-            off: BsIcon::BsFolder.into(),
+            on: icondata::BsFolderFill,
+            off: icondata::BsFolder,
         }/>
 
         <H2>"Variations"</H2>
@@ -52,8 +51,8 @@ pub fn PageToggle() -> impl IntoView {
         <P>"Stationary toggles are not animated and only consist of a single circle."</P>
 
         <Toggle state=state set_state=set_state variant=ToggleVariant::Stationary icons=ToggleIcons {
-            on: BsIcon::BsFolderFill.into(),
-            off: BsIcon::BsFolder.into(),
+            on: icondata::BsFolderFill,
+            off: icondata::BsFolder,
         }/>
     }
 }

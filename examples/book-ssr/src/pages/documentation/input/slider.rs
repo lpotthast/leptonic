@@ -1,7 +1,6 @@
 use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::BsIcon;
 
 #[component]
 #[allow(clippy::too_many_lines)]
@@ -57,22 +56,22 @@ pub fn PageSlider() -> impl IntoView {
                 let (value, set_value) = create_signal(0.5);
                 view! {
                     <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
-                        <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
+                        <Icon icon=icondata::BsVolumeDownFill style="font-size: 2.5em;"/>
                         <Slider min=0.0 max=1.0
                             value=value set_value=set_value
                             value_display=move |v| format!("{:.0}%", v * 100.0)
                             style="width: 10em"/>
-                        <Icon icon=BsIcon::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
+                        <Icon icon=icondata::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
                     </Stack>
                 }
             "#)}
         </Code>
 
         <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
-            <Icon icon=BsIcon::BsVolumeDownFill style="font-size: 2.5em;"/>
+            <Icon icon=icondata::BsVolumeDownFill style="font-size: 2.5em;"/>
             <Slider min=0.0 max=1.0 value=value5 set_value=set_value5 style="width: 10em"
                 value_display=move |v| format!("{:.0}%", v * 100.0)/>
-            <Icon icon=BsIcon::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
+            <Icon icon=icondata::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
         </Stack>
 
         <H2>"Marks"</H2>

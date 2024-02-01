@@ -1,15 +1,10 @@
 use std::fmt::{Display, Formatter};
 
 use leptos::{ev::MouseEvent, *};
-use leptos_icons::BsIcon;
 use leptos_router::{State, ToHref, A};
 use leptos_use::on_click_outside;
 
-use crate::{
-    icon::Icon,
-    prelude::Consumer,
-    OptionalMaybeSignal,
-};
+use crate::{icon::Icon, prelude::Consumer, OptionalMaybeSignal};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -123,8 +118,8 @@ pub fn Button(
                     }>
                         { move || {
                             let icon = match dropdown_open.get() {
-                                true => BsIcon::BsCaretUp,
-                                false => BsIcon::BsCaretDown,
+                                true => icondata::BsCaretUp,
+                                false => icondata::BsCaretDown,
                             };
                             view! {
                                 <Icon icon=icon/>

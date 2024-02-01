@@ -1,7 +1,6 @@
 use leptos::*;
-use leptos_icons::{Icon, VsIcon};
 
-use crate::prelude::{Button, ButtonVariant};
+use crate::{icon::Icon, prelude::{Button, ButtonVariant}};
 
 #[component]
 pub fn H1(
@@ -174,7 +173,7 @@ pub fn Code(
                     on_success,
                     on_err
                 )>
-                <Icon icon=Icon::from(VsIcon::VsCopy)/>
+                <Icon icon=icondata::VsCopy/>
             </Button>
         )
     });

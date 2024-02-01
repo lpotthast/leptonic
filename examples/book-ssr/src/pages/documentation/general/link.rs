@@ -1,7 +1,6 @@
 use indoc::{formatdoc, indoc};
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::BsIcon;
 use leptos_router::ToHref;
 
 use crate::pages::documentation::doc_root::DocRoutes;
@@ -34,13 +33,13 @@ pub fn PageLink() -> impl IntoView {
         <Code>
             {indoc!(r#"
                 <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
-                    <Icon id="github-icon" icon=BsIcon::BsGithub style="font-size: 3em;"/>
+                    <Icon id="github-icon" icon=icondata::BsGithub style="font-size: 3em;"/>
                 </LinkExt>
             "#)}
         </Code>
 
         <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
-            <Icon id="github-icon" icon=BsIcon::BsGithub style="font-size: 3em;"/>
+            <Icon id="github-icon" icon=icondata::BsGithub style="font-size: 3em;"/>
         </LinkExt>
 
         <H2>"Link Buttons"</H2>

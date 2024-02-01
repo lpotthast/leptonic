@@ -1,7 +1,6 @@
 use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::BsIcon;
 
 #[component]
 pub fn PageAppBar() -> impl IntoView {
@@ -16,8 +15,8 @@ pub fn PageAppBar() -> impl IntoView {
             <AppBar height=app_bar_height style="z-index: 1; background: var(--brand-color); color: white;">
                 <H3 style="margin-left: 1em; color: white;">"Leptonic"</H3>
                 <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
-                    <Icon icon=BsIcon::BsBell></Icon>
-                    <Icon icon=BsIcon::BsPower></Icon>
+                    <Icon icon=icondata::BsBell></Icon>
+                    <Icon icon=icondata::BsPower></Icon>
                 </Stack>
             </AppBar>
 
@@ -35,8 +34,8 @@ pub fn PageAppBar() -> impl IntoView {
                     <AppBar height=app_bar_height style="z-index: 1; background: var(--brand-color); color: white;">
                         <H3 style="margin-left: 1em; color: white;">"Leptonic"</H3>
                         <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
-                            <Icon icon=BsIcon::BsGithub></Icon>
-                            <Icon icon=BsIcon::BsPower></Icon>
+                            <Icon icon=icondata::BsGithub></Icon>
+                            <Icon icon=icondata::BsPower></Icon>
                         </Stack>
                     </AppBar>
 

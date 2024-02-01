@@ -1,7 +1,6 @@
 use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_icons::BsIcon;
 
 #[component]
 pub fn PageIcon() -> impl IntoView {
@@ -26,13 +25,13 @@ pub fn PageIcon() -> impl IntoView {
 
         <Code>
             {indoc!(r"
-                <Icon icon=BsIcon::BsFolderFill/>
-                <Icon icon=BsIcon::BsFolder/>
+                <Icon icon=icondata::BsFolderFill/>
+                <Icon icon=icondata::BsFolder/>
             ")}
         </Code>
 
-        <Icon icon=BsIcon::BsFolderFill style="font-size: 6em;"/>
-        <Icon icon=BsIcon::BsFolder style="font-size: 6em;"/>
+        <Icon icon=icondata::BsFolderFill style="font-size: 6em;"/>
+        <Icon icon=icondata::BsFolder style="font-size: 6em;"/>
 
         <H2>"Styling"</H2>
 

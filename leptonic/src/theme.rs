@@ -1,5 +1,4 @@
 use leptos::*;
-use leptos_icons::BsIcon;
 
 use crate::{prelude::*, toggle::ToggleProps, toggle::ToggleSize};
 
@@ -19,10 +18,10 @@ impl Theme for LeptonicTheme {
         }
     }
 
-    fn icon(&self) -> leptos_icons::Icon {
+    fn icon(&self) -> icondata::Icon {
         match self {
-            Self::Light => BsIcon::BsSun.into(),
-            Self::Dark => BsIcon::BsMoon.into(),
+            Self::Light => icondata::BsSun,
+            Self::Dark => icondata::BsMoon,
         }
     }
 }
@@ -31,7 +30,7 @@ pub trait Theme:
     Default + PartialEq + Clone + Copy + serde::Serialize + serde::de::DeserializeOwned
 {
     fn name(&self) -> &'static str;
-    fn icon(&self) -> leptos_icons::Icon;
+    fn icon(&self) -> icondata::Icon;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -84,7 +83,8 @@ where
                     true => *current = on,
                     false => *current = off,
                 });
-            }).into(),
+            })
+            .into(),
         ),
         active: OptionalMaybeSignal(None),
         disabled: OptionalMaybeSignal(None),

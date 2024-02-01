@@ -4,6 +4,7 @@ pub mod app;
 pub mod pages;
 
 pub mod error_template;
+#[cfg(feature = "ssr")]
 pub mod fileserv;
 
 cfg_if! { if #[cfg(feature = "hydrate")] {

@@ -183,6 +183,9 @@ pub mod prelude {
     #[cfg(feature = "tiptap")]
     pub use leptos_tiptap::*;
 
+    // Reexport
+    pub use icondata;
+
     pub use super::alert::Alert;
     pub use super::alert::AlertAppend;
     pub use super::alert::AlertContent;

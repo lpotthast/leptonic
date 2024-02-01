@@ -18,48 +18,25 @@ build = "build.rs"
 anyhow = "1.0.79"
 cargo_toml = "0.19.1"
 lazy_static = "1.4.0"
-leptonic-theme = { version = "0.4", path = "../leptonic-theme" }
-leptos-tiptap-build = { version = "0.2.5", optional = true }
+leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
+leptos-tiptap-build = { version = "0.2.6", optional = true }
 
 [dependencies]
 cfg-if = "1.0.0"
-indexmap = "2.1.0"
+indexmap = "2.2.2"
 indoc = "2.0.4"
-itertools = "0.12.0"
-js-sys = "0.3.66"
-leptos = "0.5.4"
-leptos-tiptap = { version = "0.6.0", optional = true }
-leptos-use = { version = "0.9.0", features = ["math"] }
-leptos_icons = { version = "0.1.0", features = [
-    "BsSun",
-    "BsMoon",
-    "BsCheckCircleFill",
-    "BsInfoCircleFill",
-    "BsExclamationCircleFill",
-    "BsExclamationTriangleFill",
-    "BsCaretUp",
-    "BsCaretUpFill",
-    "BsCaretDown",
-    "BsCaretDownFill",
-    "BsParagraph",
-    "BsTypeBold",
-    "BsTypeItalic",
-    "BsTypeStrikethrough",
-    "BsBlockquoteLeft",
-    "BsBrightnessAltHigh",
-    "BsTextLeft",
-    "BsTextCenter",
-    "BsTextRight",
-    "BsJustify",
-    "BsXCircleFill",
-    "VsCopy",
-] }
-leptos_meta = { version = "0.5", features = [] }
-leptos_router = "0.5.4"
-serde = "1.0.193"
+itertools = "0.12.1"
+js-sys = "0.3.67"
+leptos = "0.6.5"
+leptos-tiptap = { version = "0.7.0", optional = true }
+leptos-use = { version = "0.10.1", features = ["math"] }
+icondata = { version = "0.3.0" }
+leptos_meta = { version = "0.6.5", features = [] }
+leptos_router = "0.6.5"
+serde = "1.0.196"
 serde-wasm-bindgen = "0.6.3"
-serde_json = "1.0.108"
-strum = { version = "0.25.0", features = ["derive"] }
+serde_json = "1.0.113"
+strum = { version = "0.26.1", features = ["derive"] }
 time = { version = "=0.3.31", features = [
     "wasm-bindgen",
     "macros",
@@ -67,11 +44,11 @@ time = { version = "=0.3.31", features = [
     "serde-well-known",
 ] }
 tracing = "0.1.40"
-uuid = { version = "1.6.1", features = ["v4", "v7", "js", "serde"] }
-wasm-bindgen = "0.2.89"
-wasm-bindgen-futures = "0.4.39"
+uuid = { version = "1.7.0", features = ["v4", "v7", "js", "serde"] }
+wasm-bindgen = "0.2.90"
+wasm-bindgen-futures = "0.4.40"
 # TODO: What of all below is really required?
-web-sys = { version = "0.3.66", features = [
+web-sys = { version = "0.3.67", features = [
     "Clipboard",
     "DomRect",
     "Event",
@@ -82,9 +59,9 @@ web-sys = { version = "0.3.66", features = [
 ] }
 
 [dev-dependencies]
-wasm-bindgen = "0.2.89"
-wasm-bindgen-test = "0.3.39"
-web-sys = "0.3.66"
+wasm-bindgen = "0.2.90"
+wasm-bindgen-test = "0.3.40"
+web-sys = "0.3.67"
 
 [features]
 csr = ["leptos/csr"]

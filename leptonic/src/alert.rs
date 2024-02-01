@@ -1,5 +1,4 @@
 use leptos::*;
-use leptos_icons::BsIcon;
 
 use crate::prelude::*;
 
@@ -164,13 +163,13 @@ pub fn AlertIcon(
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
     match variant {
-        AlertVariant::Success => view! { <Icon id=id class style icon=BsIcon::BsCheckCircleFill /> },
-        AlertVariant::Info => view! { <Icon id class style icon=BsIcon::BsInfoCircleFill /> },
+        AlertVariant::Success => view! { <Icon id=id class style icon=icondata::BsCheckCircleFill /> },
+        AlertVariant::Info => view! { <Icon id class style icon=icondata::BsInfoCircleFill /> },
         AlertVariant::Warn => {
-            view! { <Icon id class style icon=BsIcon::BsExclamationCircleFill /> }
+            view! { <Icon id class style icon=icondata::BsExclamationCircleFill /> }
         }
         AlertVariant::Danger => {
-            view! { <Icon id class style icon=BsIcon::BsExclamationTriangleFill /> }
+            view! { <Icon id class style icon=icondata::BsExclamationTriangleFill /> }
         }
     }
 }

@@ -1,7 +1,6 @@
 use std::fmt::Debug;
 
 use leptos::*;
-use leptos_icons::BsIcon;
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
 use crate::prelude::*;
@@ -237,8 +236,8 @@ where
 
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! { <Icon icon=BsIcon::BsCaretUpFill/>},
-                            false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}
+                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
+                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
@@ -491,15 +490,15 @@ where
                                 e.stop_propagation();
                                 deselect();
                             }>
-                                <Icon icon=BsIcon::BsXCircleFill/>
+                                <Icon icon=icondata::BsXCircleFill/>
                             </leptonic-select-deselect-trigger>
                         }.into_view(),
                     }}
 
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! { <Icon icon=BsIcon::BsCaretUpFill/>},
-                            false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}
+                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
+                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
@@ -773,8 +772,8 @@ where
 
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! { <Icon icon=BsIcon::BsCaretUpFill/>},
-                            false => view! { <Icon icon=BsIcon::BsCaretDownFill/>}
+                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
+                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>

@@ -1,7 +1,6 @@
 use std::fmt::{Display, Formatter};
 
 use leptos::*;
-use leptos_icons::BsIcon;
 use web_sys::MouseEvent;
 
 use crate::{icon::Icon, OptionalMaybeSignal};
@@ -50,7 +49,7 @@ pub fn Chip(
             { children() }
             { match dismissible {
                 Some(callback) => view! {
-                    <Icon class="dismiss" icon=BsIcon::BsXCircleFill on:click=move |e| callback.call(e) />
+                    <Icon class="dismiss" icon=icondata::BsXCircleFill on:click=move |e| callback.call(e) />
                 }.into_view(),
                 None => ().into_view(),
             } }

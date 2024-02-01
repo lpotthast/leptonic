@@ -8,6 +8,7 @@
         "focusin",
         "focusout",
         "formatdoc",
+        "icondata",
         "indoc",
         "itertools",
         "keydown",

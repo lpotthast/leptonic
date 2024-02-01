@@ -4,7 +4,6 @@ use crate::{
 };
 
 use leptos::*;
-use leptos_icons::BsIcon;
 use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, Stylesheet, Title};
 use leptos_router::*;
 use leptos_use::use_media_query;
@@ -218,7 +217,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                     { move || match (is_doc.get(), is_small.get()) {
                         (false, true) => logo().into_view(),
                         (true, true) => view! {
-                            <Icon id="mobile-menu-trigger" icon=BsIcon::BsList on:click=move |_| ctx.toggle_doc_drawer()/>
+                            <Icon id="mobile-menu-trigger" icon=icondata::BsList on:click=move |_| ctx.toggle_doc_drawer()/>
                             { logo }
                         }.into_view(),
                         (_, false) => view! {
@@ -243,7 +242,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                         trigger=move |set_quicksearch| view! {
                             <QuicksearchTrigger id="quicksearch-trigger" set_quicksearch=set_quicksearch>
                                 { move || match is_small.get() {
-                                    true => view! { <Icon icon=BsIcon::BsSearch />}.into_view(),
+                                    true => view! { <Icon icon=icondata::BsSearch />}.into_view(),
                                     false => view! { "Search"}.into_view(),
                                 } }
                             </QuicksearchTrigger>
@@ -264,13 +263,13 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                 <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     { move || match is_small.get() {
                         true => view! {
-                            <Icon id="mobile-menu-trigger" icon=BsIcon::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
+                            <Icon id="mobile-menu-trigger" icon=icondata::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
                         }.into_view(),
                         false => view! {
-                            <Link href=DocRoutes::Changelog>"v0.4.0 (main)"</Link>
+                            <Link href=DocRoutes::Changelog>"v0.5.0 (main)"</Link>
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
-                                <Icon id="github-icon" icon=BsIcon::BsGithub aria_label="GitHub icon"/>
+                                <Icon id="github-icon" icon=icondata::BsGithub aria_label="GitHub icon"/>
                             </LinkExt>
 
                             <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
@@ -298,12 +297,12 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) class="menu">
 
                     <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank style="font-size: 3em;">
-                        <Icon id="github-icon" icon=BsIcon::BsGithub/>
+                        <Icon id="github-icon" icon=icondata::BsGithub/>
                     </LinkExt>
 
                     <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
 
-                    "Currently - v0.4.0 (main)"
+                    "Currently - v0.5.0 (main)"
                 </Stack>
             </Drawer>
         </Box>

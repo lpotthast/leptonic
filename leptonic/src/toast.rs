@@ -1,5 +1,4 @@
 use leptos::*;
-use leptos_icons::BsIcon;
 use uuid::Uuid;
 
 use crate::icon::Icon;
@@ -186,7 +185,7 @@ pub fn Toast(toast: Toast) -> impl IntoView {
                         <div>
                             <Icon
                                 class="dismiss"
-                                icon=BsIcon::BsXCircleFill
+                                icon=icondata::BsXCircleFill
                                 on:click=move |_e| { expect_context::<Toasts>().try_remove(toast.id); }
                             />
                         </div>
