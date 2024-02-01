@@ -15,8 +15,8 @@ pub fn PageInstallation() -> impl IntoView {
 
         <P>
             "The easies way to get started is by cloning either " 
-            <LinkExt href="asd" target=LinkExtTarget::Blank>"template-ssr"</LinkExt> " or " 
-            <LinkExt href="asd" target=LinkExtTarget::Blank>"template-csr"</LinkExt> "."
+            <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkExtTarget::Blank>"template-ssr"</LinkExt> " or " 
+            <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkExtTarget::Blank>"template-csr"</LinkExt> "."
         </P>
 
         <Code>
