@@ -175,6 +175,24 @@
     --card-background-color: white;
     --card-box-shadow-color: #666666;
 
+    // Checkbox
+    --checkbox-size: 1.5em;
+    --checkbox-padding: 0;
+    --checkbox-border-radius: 0.2em;
+    --checkbox-border: 0.1em solid;
+    --checkbox-border-color: var(--grey-2);
+    --checkbox-color: white;
+    --checkbox-background-color: white;
+    --checkbox-hover-border-color: var(--brand-color);
+    --checkbox-hover-color: white;
+    --checkbox-hover-background-color: white;
+    --checkbox-checked-border-color: var(--brand-color);
+    --checkbox-checked-color: white;
+    --checkbox-checked-background-color: var(--brand-color);
+    --checkbox-checked-hover-border-color: var(--brand-color);
+    --checkbox-checked-hover-color: white;
+    --checkbox-checked-hover-background-color: var(--brand-color);
+
     // Chip
     --chip-font-size: 0.9em;
     --chip-margin: 0 0.3em 0.3em 0;

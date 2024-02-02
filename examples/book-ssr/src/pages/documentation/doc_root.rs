@@ -23,6 +23,7 @@ use crate::pages::documentation::getting_started::installation::PageInstallation
 use crate::pages::documentation::getting_started::overview::PageOverview;
 use crate::pages::documentation::getting_started::themes::PageThemes;
 use crate::pages::documentation::input::button::PageButton;
+use crate::pages::documentation::input::checkbox::PageCheckbox;
 use crate::pages::documentation::input::color_picker::PageColorPicker;
 use crate::pages::documentation::input::date_time::PageDateTime;
 use crate::pages::documentation::input::input_field::PageInput;
@@ -66,6 +67,7 @@ pub enum DocRoutes {
     DateTime,
     Slider,
     Select,
+    Checkbox,
     Toggle,
     ColorPicker,
 
@@ -116,6 +118,7 @@ impl DocRoutes {
             Self::DateTime => "date-time",
             Self::Slider => "slider",
             Self::Select => "select",
+            Self::Checkbox => "checkbox",
             Self::Toggle => "toggle",
             Self::ColorPicker => "color-picker",
 
@@ -181,6 +184,7 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::DateTime view=|| view! { <PageDateTime/> }/>
             <Route path=DocRoutes::Slider view=|| view! { <PageSlider/> }/>
             <Route path=DocRoutes::Select view=|| view! { <PageSelect/> }/>
+            <Route path=DocRoutes::Checkbox view=|| view! { <PageCheckbox/> }/>
             <Route path=DocRoutes::Toggle view=|| view! { <PageToggle/> }/>
             <Route path=DocRoutes::ColorPicker view=|| view! { <PageColorPicker/> }/>
 
@@ -259,6 +263,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=DocRoutes::DateTime class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Date & Time"</Link>
                 <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
                 <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
+                <Link href=DocRoutes::Checkbox class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Checkbox"</Link>
                 <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
                 <Link href=DocRoutes::ColorPicker class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Color Picker"</Link>
             </Stack>
