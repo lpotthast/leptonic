@@ -7,31 +7,32 @@ pub fn PageIcon() -> impl IntoView {
     view! {
         <H1>"Icons"</H1>
 
-        <P>"Icons are supported through the "<LinkExt target=LinkExtTarget::Blank href="https://github.com/Carlosted/leptos-icons">"https://github.com/Carlosted/leptos-icons"</LinkExt> " crate."</P>
-        <P>"Feel free to check out the associated icon index site at "<LinkExt target=LinkExtTarget::Blank href="https://carlosted.github.io/icondata/">"https://carlosted.github.io/icondata/"</LinkExt> "."</P>
+        <P>
+            "Icons are supported through the "<LinkExt target=LinkExtTarget::Blank href="https://crates.io/crates/icondata">"https://crates.io/crates/icondata"</LinkExt> " crate. "
+            "The crates readme show the available icon packages and their current versions."
+        </P>
 
-        <P>"With the dependency set up, adding our required icons as features."</P>
+        <P style="font-weight: bold;">"Browse through available icons at "<LinkExt target=LinkExtTarget::Blank href="https://carlosted.github.io/icondata/">"https://carlosted.github.io/icondata/"</LinkExt> "!"</P>
+
+        <P>"Leptonic provides a re-export of the "<Code inline=true>"icondata"</Code>" crate when using the prelude module."</P>
+
+        <P>"You can simply include an icon using the "<Code inline=true>"<Icon>"</Code>" component."</P>
 
         <Code>
             {indoc!(r#"
-                leptos_icons = { version = "0.0.15", features = [
-                    "BsFolderFill",
-                    "BsFolder",
-                ] }
+                use leptonic::prelude::*;
+
+                view! {
+                    <Icon icon=icondata::BsFolderFill style="font-size: 6em;"/>
+                    <Icon icon=icondata::BsFolder style="font-size: 6em;"/>
+                }
             "#)}
-        </Code>
-
-        <P>"We can simply include these icons like this, using the "<Code inline=true>"<Icon>"</Code> " component provided by this library."</P>
-
-        <Code>
-            {indoc!(r"
-                <Icon icon=icondata::BsFolderFill/>
-                <Icon icon=icondata::BsFolder/>
-            ")}
         </Code>
 
         <Icon icon=icondata::BsFolderFill style="font-size: 6em;"/>
         <Icon icon=icondata::BsFolder style="font-size: 6em;"/>
+
+        <P>"SVG data of all the icons used in your application is embedded into your binary."</P>
 
         <H2>"Styling"</H2>
 
