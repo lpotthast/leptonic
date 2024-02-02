@@ -22,7 +22,7 @@ pub fn PageChangelog() -> impl IntoView {
         <H3>"Changed:"</H3>
         <ul>
             <li>"Leptos dependencies were update to v0.6."</li>
-            <li>"The `Icon' component no longer wrap an Icon from `leptos-icons`. It now expects v0.3 `icondata` icons. Documentation of the component was updated."</li>
+            <li>"The `Icon' component no longer wraps an Icon from `leptos-icons`. It now expects v0.3 `icondata` icons. Documentation of the component was updated."</li>
         </ul>
 
         <H3>"Added:"</H3>
@@ -30,7 +30,7 @@ pub fn PageChangelog() -> impl IntoView {
             <li>"Dependency on the `icondata` crate. Leptonic provides a re-export through `use leptonic::prelude::*;`. You do not have to depend on this yourself."</li>
         </ul>
 
-        <H3>"Remove:"</H3>
+        <H3>"Removed:"</H3>
         <ul>
             <li>"Dependency on the `leptos-icons` crate. You can remove the dependency from you Cargo.toml as well if you have not used it outside ot the Leptonic context."</li>
             <li>"Lepton"</li>
@@ -39,15 +39,23 @@ pub fn PageChangelog() -> impl IntoView {
         <H2>"0.4.0"</H2>
 
         <P>"Leptonic now supports server-side-rendering (SSR). This book is now deployed with SSR enabled."</P>
+        <P>
+            "The "
+            <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkExtTarget::Blank>"leptonic-template-ssr"</LinkExt>
+            " and "
+            <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkExtTarget::Blank>"leptonic-template-csr"</LinkExt>
+            " templates were created. Use the to get started quickly."
+        </P>
 
         <H3>"Changed:"</H3>
         <ul>
+            <li>"Getting started instructions were consolidated."</li>
+            <li>"Installation instructions are now much more straight-forward."</li>
             <li>"Modals are now SSR compatible. The `ModalFn` component was dropped. If you used it, just rename all occurrences to `Modal`. If you previously used `Modal`, you might see some 'requires Fn but is FnOnce error's. Storing values moved into `Modal`s children through `store_value` should be a quick fix."</li>
             <li>"Tabs are now SSR compatible. Rendering order changed to make this possible. This should not affect anyone."</li>
             <li>"Toggles are now SSR compatible. Rendering of the (optional) icons changed. This should only affect you if custom styling is in play."</li>
             <li>"Tables are now SSR compatible. Components were renamed to `TableHeader`, `TableBody`, `TableRow`, `TableHeaderCell` and `TableCell`."</li>
             <li>"The `build.rs` script, which previously had to be create by the consumer is now longer required. It was moved into leptonic itself and will automatically take care of copying files required for a build."</li>
-            <li>"Getting started instructions are updated."</li>
             <li>"The `Code` block component now has a `Copy to clipboard` button (thanks to https://github.com/wt)."</li>
             <li>"A `SelectOption` no longer requires to be `Eq`."</li>
             <li>"The `uuid` dependency was bumped to version 1.6."</li>
