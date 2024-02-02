@@ -7,9 +7,34 @@ pub fn PageChangelog() -> impl IntoView {
     view! {
         <H1>"Changelog"</H1>
 
-        <H2>"0.5.0 (main branch)"</H2>
+        <H2>"0.6.0 (main branch)"</H2>
+
+        <H3>"Added:"</H3>
+        <ul>
+            <li>"`Checkbox` component, styling and documentation."</li>
+            <li>"`Radio` and `RadioGroup` components, styling and documentation."</li>
+        </ul>
+        
+        <H2>"0.5.0"</H2>
 
         <P>"Leptonic now supports Leptos in version 0.6!"</P>
+
+        <H3>"Changed:"</H3>
+        <ul>
+            <li>"Leptos dependencies were update to v0.6."</li>
+            <li>"The `Icon' component no longer wrap an Icon from `leptos-icons`. It now expects v0.3 `icondata` icons. Documentation of the component was updated."</li>
+        </ul>
+
+        <H3>"Added:"</H3>
+        <ul>
+            <li>"Dependency on the `icondata` crate. Leptonic provides a re-export through `use leptonic::prelude::*;`. You do not have to depend on this yourself."</li>
+        </ul>
+
+        <H3>"Remove:"</H3>
+        <ul>
+            <li>"Dependency on the `leptos-icons` crate. You can remove the dependency from you Cargo.toml as well if you have not used it outside ot the Leptonic context."</li>
+            <li>"Lepton"</li>
+        </ul>
         
         <H2>"0.4.0"</H2>
 
