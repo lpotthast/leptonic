@@ -23,6 +23,7 @@
         "onmouseup",
         "onresize",
         "onscroll",
+        "radiogroup",
         "Stylesheet",
         "tabindex",
         "tiptap",

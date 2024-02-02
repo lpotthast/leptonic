@@ -32,6 +32,7 @@ pub mod modal;
 pub mod popover;
 pub mod progress_bar;
 pub mod quicksearch;
+pub mod radio;
 pub mod root;
 pub mod safe_html;
 pub mod select;
@@ -263,6 +264,8 @@ pub mod prelude {
     pub use super::quicksearch::QuicksearchOption;
     pub use super::quicksearch::QuicksearchTrigger;
     pub use super::r#box::Box;
+    pub use super::radio::Radio;
+    pub use super::radio::RadioGroup;
     pub use super::root::Leptonic;
     pub use super::root::Root;
     pub use super::safe_html::SafeHtml;

@@ -176,7 +176,7 @@
     --card-box-shadow-color: #666666;
 
     // Checkbox
-    --checkbox-size: 1.5em;
+    --checkbox-size: 1.625em;
     --checkbox-padding: 0;
     --checkbox-border-radius: 0.2em;
     --checkbox-border: 0.1em solid;
@@ -325,6 +325,18 @@
     --progress-bar-fill-background-color: var(--brand-color);
     --progress-bar-fill-transition: width 0.1s linear;
     --progress-bar-color: var(--std-text-dark);
+
+    // Radio
+    --radio-size: 1.625em;
+    --radio-fill-size: 60%;
+    --radio-border: 0.1em solid;
+    --radio-border-radius: 2em;
+    --radio-border-color: var(--grey-2);
+    --radio-hover-border-color: var(--brand-color);
+    --radio-checked-border-color: var(--grey-2);
+    --radio-background-color: white;
+    --radio-checked-fill-background-color: var(--brand-color);
+    --radio-disabled-filter: brightness(73%);
 
     // Select
     --select-padding: var(--input-padding);
