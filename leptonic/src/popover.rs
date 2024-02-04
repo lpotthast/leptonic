@@ -1,23 +1,38 @@
+use std::rc::Rc;
+
 use leptos::*;
 use leptos_use::{use_element_bounding, use_element_hover};
 
 use crate::{Size, UseElementBoundingReturnReadOnly};
 
-#[derive(Copy, Clone)]
-pub(crate) struct PopoverRootContext {
-    pub(crate) host: NodeRef<html::Custom>,
+#[derive(Clone)]
+struct PopoverData {
+    key: uuid::Uuid,
+    children: ChildrenFn,
+}
+
+#[derive(Clone)]
+struct PopoverRootContext {
+    popovers: RwSignal<Vec<PopoverData>>,
 }
 
 #[component]
 pub(crate) fn PopoverRoot(children: Children) -> impl IntoView {
-    let host: NodeRef<html::Custom> = create_node_ref();
-    provide_context::<PopoverRootContext>(PopoverRootContext { host });
+    let popovers = create_rw_signal(Vec::new());
+    let ctx = PopoverRootContext { popovers };
+    provide_context::<PopoverRootContext>(ctx.clone());
 
     let children = children();
     view! {
         { children }
 
-        <leptonic-popover-host ref=host />
+        <leptonic-popover-host>
+            <For
+                each=move || ctx.popovers.get()
+                key=|it| it.key
+                children=|it| it.children
+            />
+        </leptonic-popover-host>
     }
 }
 
@@ -126,29 +141,24 @@ pub fn Popover(
 
     let pop_style = move || format!("left: {}; top: {};", left(), top());
 
+    ctx.popovers.update(move |popovers| {
+        popovers.push(PopoverData {
+            key: uuid::Uuid::now_v7(),
+            children: Rc::new(move || {
+                view! {
+                    <leptonic-popover ref=pop_el style=pop_style data-active=move || match show.get() { true => "true", false => "false" }> // id=id class=class style=style
+                        { (popover_content.children)() }
+                    </leptonic-popover>
+                }
+                .into_view()
+                .into()
+            }),
+        })
+    });
+
     view! {
         <leptonic-has-popover ref=el id=id class=class style=style on:click=move |_| set_clicked.set(!clicked.get_untracked())>
             { children() }
         </leptonic-has-popover>
-
-        {
-            move || match ctx.host.get() {
-                Some(host) => {
-                    use std::ops::Deref;
-                    let mount: HtmlElement<html::AnyElement> = host.into_any();
-                    let mount: &web_sys::Element = mount.deref();
-                    let mount: web_sys::Element = mount.clone();
-                    let popover_content = popover_content.clone();
-                    view! {
-                        <Portal mount=mount>
-                            <leptonic-popover ref=pop_el style=pop_style data-active=move || match show.get() { true => "true", false => "false" }> // id=id class=class style=style
-                                { (popover_content.children)() }
-                            </leptonic-popover>
-                        </Portal>
-                    }
-                }
-                None => ().into_view(),
-            }
-        }
     }
 }
