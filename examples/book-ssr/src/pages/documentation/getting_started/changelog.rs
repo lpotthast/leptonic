@@ -15,6 +15,11 @@ pub fn PageChangelog() -> impl IntoView {
             <li>"`Radio` and `RadioGroup` components, styling and documentation."</li>
         </ul>
         
+        <H3>"Changed:"</H3>
+        <ul>
+            <li>"Reworked the `Popover` component. It now uses Leptos's `Portal` component and allows for much greater flexibility. Documentation was updated."</li>
+        </ul>
+        
         <H2>"0.5.0"</H2>
 
         <P>"Leptonic now supports Leptos in version 0.6!"</P>

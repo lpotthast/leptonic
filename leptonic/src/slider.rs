@@ -1,11 +1,12 @@
 use std::borrow::Cow;
 
 use leptos::*;
-use leptos_use::use_element_hover;
+use leptos_use::{use_element_bounding, use_element_hover};
 
 use crate::{
-    contexts::global_mouseup_event::GlobalMouseupEvent, math::project_into_range, prelude::Popover,
-    Out, RelativeMousePosition, TrackedElementClientBoundingRect,
+    contexts::global_mouseup_event::GlobalMouseupEvent, math::project_into_range,
+    popover::PopoverContent, prelude::Popover, Out, RelativeMousePosition, Size,
+    TrackedElementClientBoundingRect, UseElementBoundingReturnReadOnly,
 };
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -113,23 +114,29 @@ fn create_marks(
         SliderMarks::Custom { marks } => Signal::derive(move || {
             marks
                 .iter()
-                .filter(|mark| {
-                    match mark.value {
-                        SliderMarkValue::Value(value) => {
-                            if value < min || value > max {
-                                tracing::warn!(?mark, min, max, "value of custom slider mark is outside slider range");
-                                false
-                            } else {
-                                true
-                            }
-                        },
-                        SliderMarkValue::Percentage(percentage) => {
-                            if (0.0..=1.0).contains(&percentage) {
-                                true
-                            } else {
-                                tracing::warn!(?mark, "percentage of custom slider mark is outside 0..1 range");
-                                false
-                            }
+                .filter(|mark| match mark.value {
+                    SliderMarkValue::Value(value) => {
+                        if value < min || value > max {
+                            tracing::warn!(
+                                ?mark,
+                                min,
+                                max,
+                                "value of custom slider mark is outside slider range"
+                            );
+                            false
+                        } else {
+                            true
+                        }
+                    }
+                    SliderMarkValue::Percentage(percentage) => {
+                        if (0.0..=1.0).contains(&percentage) {
+                            true
+                        } else {
+                            tracing::warn!(
+                                ?mark,
+                                "percentage of custom slider mark is outside 0..1 range"
+                            );
+                            false
                         }
                     }
                 })
@@ -246,6 +253,7 @@ pub fn Slider(
     let bar = TrackedElementClientBoundingRect::new(bar_el);
     let cursor = RelativeMousePosition::new(bar);
     let knob_el: NodeRef<html::Div> = create_node_ref();
+    let bar_bounds = use_element_bounding(bar_el);
     let knob = KnobControl::new(min, max, step, value);
     let show_popover = popover.to_maybe_signal(knob_el, &knob);
 
@@ -292,6 +300,15 @@ pub fn Slider(
         value_display,
     );
 
+    let pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+        format!(
+            "calc({}px + {}px - {}px)",
+            bar_bounds.x.get(),
+            (knob.clipped_value_percent.get() * bar_bounds.width.get()),
+            (pop_bounds.width.get() / 2.0)
+        )
+    });
+
     view! {
         <leptonic-slider
             id=id
@@ -321,20 +338,22 @@ pub fn Slider(
             <div class="bar-wrapper">
                 <div node_ref=bar_el class="bar">
                     <div class="range" style=move || range_style.get()></div>
+
                     <div class="knob-wrapper">
-                        <div class="knob" node_ref=knob_el class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get()>
-                            <Popover show=show_popover>
-                                {
-                                    move || {
-                                        let value = value.get();
-                                        match &value_display {
-                                            Some(callback) => callback.call(value),
-                                            None => format!("{value}"),
-                                        }
+
+                        <Popover show=show_popover position_x=pos_x margin=Size::Em(1.2)>
+                            <PopoverContent slot>
+                                {move || {
+                                    let value = value.get();
+                                    match &value_display {
+                                        Some(callback) => callback.call(value),
+                                        None => format!("{value}"),
                                     }
-                                }
-                            </Popover>
-                        </div>
+                                }}
+                            </PopoverContent>
+
+                            <div class="knob" class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get() />
+                        </Popover>
                     </div>
                 </div>
             </div>
@@ -370,6 +389,7 @@ pub fn RangeSlider(
 
     let bar_el: NodeRef<html::Div> = create_node_ref();
     let bar = TrackedElementClientBoundingRect::new(bar_el);
+    let bar_bounds = use_element_bounding(bar_el);
     let cursor = RelativeMousePosition::new(bar);
     let knob_a_el: NodeRef<html::Div> = create_node_ref();
     let knob_b_el: NodeRef<html::Div> = create_node_ref();
@@ -382,7 +402,10 @@ pub fn RangeSlider(
         format!(
             "left: {}%; width: {}%;",
             knob_a.clipped_value_percent.get() * 100.0,
-            knob_b.clipped_value_percent.get().mul_add(100.0, -knob_a.clipped_value_percent.get() * 100.0)
+            knob_b
+                .clipped_value_percent
+                .get()
+                .mul_add(100.0, -knob_a.clipped_value_percent.get() * 100.0)
         )
     });
 
@@ -449,6 +472,23 @@ pub fn RangeSlider(
     let value_display_a = value_display;
     let value_display_b = value_display;
 
+    let knob_a_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+        format!(
+            "calc({}px + {}px - {}px)",
+            bar_bounds.x.get(),
+            (knob_a.clipped_value_percent.get() * bar_bounds.width.get()),
+            (pop_bounds.width.get() / 2.0)
+        )
+    });
+    let knob_b_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+        format!(
+            "calc({}px + {}px - {}px)",
+            bar_bounds.x.get(),
+            (knob_b.clipped_value_percent.get() * bar_bounds.width.get()),
+            (pop_bounds.width.get() / 2.0)
+        )
+    });
+
     view! {
         <leptonic-slider
             id=id
@@ -502,35 +542,35 @@ pub fn RangeSlider(
             <div class="bar-wrapper">
                 <div node_ref=bar_el class="bar">
                     <div class="knob-wrapper">
-                        <div class="knob" node_ref=knob_a_el class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get()>
-                            <Popover show=show_a_popover>
-                                {
-                                    move || {
-                                        let value = value_a.get();
-                                        match &value_display_a {
-                                            Some(callback) => callback.call(value),
-                                            None => format!("{value}"),
-                                        }
+                        <Popover show=show_a_popover position_x=knob_a_pos_x margin=Size::Em(1.2)>
+                            <PopoverContent slot>
+                                {move || {
+                                    let value = value_a.get();
+                                    match &value_display_a {
+                                        Some(callback) => callback.call(value),
+                                        None => format!("{value}"),
                                     }
-                                }
-                            </Popover>
-                        </div>
+                                }}
+                            </PopoverContent>
+
+                            <div class="knob" class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get() />
+                        </Popover>
                     </div>
                     <div class="range" style=move || range_style.get()></div>
                     <div class="knob-wrapper">
-                        <div class="knob" node_ref=knob_b_el class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get()>
-                            <Popover show=show_b_popover>
-                                {
-                                    move || {
-                                        let value = value_b.get();
-                                        match &value_display_b {
-                                            Some(callback) => callback.call(value),
-                                            None => format!("{value}"),
-                                        }
+                        <Popover show=show_b_popover position_x=knob_b_pos_x margin=Size::Em(1.2)>
+                            <PopoverContent slot>
+                                {move || {
+                                    let value = value_b.get();
+                                    match &value_display_b {
+                                        Some(callback) => callback.call(value),
+                                        None => format!("{value}"),
                                     }
-                                }
-                            </Popover>
-                        </div>
+                                }}
+                            </PopoverContent>
+
+                            <div class="knob" class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get() />
+                        </Popover>
                     </div>
                 </div>
             </div>

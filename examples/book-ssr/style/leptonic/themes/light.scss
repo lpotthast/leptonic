@@ -314,7 +314,10 @@
     --modal-box-shadow: 10px 10px 22px -10px rgba(0, 0, 0, 0.55);
 
     // Popover
-    --popover-content-background-color: rgba(187, 187, 187, 0.51);
+    --popover-padding: 0.3em 0.5em;
+    --popover-border-radius: 0.25em;
+    --popover-color: var(--std-text-dark);
+    --popover-background-color: rgba(187, 187, 187, 0.51);
 
     // Progress bar
     --progress-bar-height: 1.25em;

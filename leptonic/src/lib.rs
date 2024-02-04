@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use leptos::*;
-use leptos_use::use_window;
+use leptos_use::{use_window, UseElementBoundingReturn};
 use prelude::Consumer;
 
 pub mod alert;
@@ -259,6 +259,9 @@ pub mod prelude {
     pub use super::modal::ModalRoot;
     pub use super::modal::ModalTitle;
     pub use super::popover::Popover;
+    pub use super::popover::PopoverContent;
+    pub use super::popover::PopoverAlignX;
+    pub use super::popover::PopoverAlignY;
     pub use super::progress_bar::ProgressBar;
     pub use super::quicksearch::Quicksearch;
     pub use super::quicksearch::QuicksearchOption;
@@ -667,6 +670,34 @@ impl RelativeMousePosition {
                 let py = (y / client_bounding_rect.height.get()).clamp(0.0, 1.0);
                 (px, py)
             }),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+/// A read-only, non-generic, copyable form of leptos-use's `UseElementBoundingReturn` type.
+pub struct UseElementBoundingReturnReadOnly {
+    pub height: Signal<f64>,
+    pub width: Signal<f64>,
+    pub left: Signal<f64>,
+    pub right: Signal<f64>,
+    pub top: Signal<f64>,
+    pub bottom: Signal<f64>,
+    pub x: Signal<f64>,
+    pub y: Signal<f64>,
+}
+
+impl<F: Fn() + Clone> From<UseElementBoundingReturn<F>> for UseElementBoundingReturnReadOnly {
+    fn from(value: UseElementBoundingReturn<F>) -> Self {
+        UseElementBoundingReturnReadOnly {
+            height: value.height,
+            width: value.width,
+            left: value.left,
+            right: value.right,
+            top: value.top,
+            bottom: value.bottom,
+            x: value.x,
+            y: value.y,
         }
     }
 }

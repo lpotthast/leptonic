@@ -1,24 +1,30 @@
+leptonic-has-popover {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+
 leptonic-popover {
     display: none;
     justify-content: center;
     align-items: flex-start;
     align-self: flex-start;
+
     position: absolute;
-    z-index: 10;
-    width: 100%;
+    z-index: 999;
+    width: fit-content;
+    top: 0;
+    left: 0;
+  
+    padding: 0.3em 0.5em;
+    border-radius: 0.25em;
 
-    &.show {
-        display: flex;
-    }
+    padding: var(--popover-padding);
+    border-radius: var(--popover-border-radius);
+    color: var(--popover-color);
+    background-color: var(--popover-background-color);
 
-    leptonic-popover-content {
+    &[data-active="true"] {
         display: flex;
-        justify-content: center;
-        align-items: center;
-        position: absolute;
-        background-color: var(--popover-content-background-color);
-        padding: 0.3em 0.5em;
-        border-radius: 0.25em;
-        top: -2.5em;
     }
 }

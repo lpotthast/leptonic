@@ -11,6 +11,7 @@ use crate::{
         global_mouseup_event::GlobalMouseupEvent, global_resize_event::GlobalResizeEvent,
         global_scroll_event::GlobalScrollEvent,
     },
+    popover::PopoverRoot,
     prelude::*,
 };
 
@@ -36,7 +37,7 @@ pub fn Root<T>(
     runtime_js_dir: Oco<'static, str>,
 
     default_theme: T,
-    
+
     children: Children,
 ) -> impl IntoView
 where
@@ -196,11 +197,13 @@ where
         { tiptap_js_module_includes }
 
         <ThemeProvider theme=create_signal_ls("theme", default_theme)>
-            <ToastRoot>
-                <ModalRoot>
-                    { children() }
-                </ModalRoot>
-            </ToastRoot>
+            <PopoverRoot>
+                <ToastRoot>
+                    <ModalRoot>
+                        { children() }
+                    </ModalRoot>
+                </ToastRoot>
+            </PopoverRoot>
         </ThemeProvider>
     }
 }

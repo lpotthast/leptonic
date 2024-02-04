@@ -1,13 +1,9 @@
 use indoc::indoc;
 use leptonic::prelude::*;
 use leptos::*;
-use leptos_use::use_element_hover;
 
 #[component]
 pub fn PagePopover() -> impl IntoView {
-    let el: NodeRef<leptos::html::Div> = create_node_ref();
-    let is_hovered = use_element_hover(el);
-
     view! {
         <H1>"Popover"</H1>
 
@@ -17,27 +13,30 @@ pub fn PagePopover() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                let el = create_node_ref();
-                let is_hovered = use_element_hover(el);
-
                 view! {
-                    <Skeleton node_ref=el animated=false width=Size::Em(10.0)>
-                        <Popover show=is_hovered>
+                    <Popover>
+                        <PopoverContent slot>
                             "1"
-                        </Popover>
-                        "Hover me!"
-                    </Skeleton>
+                        </PopoverContent>
+                        
+                        <Skeleton animated=false width=Size::Em(10.0)>
+                            "Hover me!"
+                        </Skeleton>
+                    </Popover>
                 }
             "#)}
         </Code>
 
-        <div node_ref=el style="margin-top: 3em; margin-bottom: 1em;">
-            <Skeleton animated=false width=Size::Em(10.0)>
-                <Popover show=is_hovered>
+        <div style="margin-top: 3em; margin-bottom: 1em;">
+            <Popover>
+                <PopoverContent slot>
                     "1"
-                </Popover>
-                "Hover me!"
-            </Skeleton>
+                </PopoverContent>
+
+                <Skeleton animated=false width=Size::Em(10.0)>
+                    "Hover me!"
+                </Skeleton>
+            </Popover>
         </div>
 
         <H2>"Styling"</H2>

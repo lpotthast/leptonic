@@ -266,7 +266,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                             <Icon id="mobile-menu-trigger" icon=icondata::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
                         }.into_view(),
                         false => view! {
-                            <Link href=DocRoutes::Changelog>"v0.5.0 (main)"</Link>
+                            <Link href=DocRoutes::Changelog>"v0.6.0 (main)"</Link>
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
                                 <Icon id="github-icon" icon=icondata::BsGithub aria_label="GitHub icon"/>
@@ -302,7 +302,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
 
                     <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
 
-                    "Currently - v0.5.0 (main)"
+                    "Currently - v0.6.0 (main)"
                 </Stack>
             </Drawer>
         </Box>
