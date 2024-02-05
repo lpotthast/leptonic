@@ -2,33 +2,76 @@ use leptos::*;
 use std::rc::Rc;
 use uuid::Uuid;
 
-use crate::{prelude::{GlobalKeyboardEvent, Producer}, OptionalMaybeSignal};
+use crate::{
+    prelude::{GlobalKeyboardEvent, Producer},
+    OptionalMaybeSignal,
+};
+
+#[derive(Clone)]
+struct ShownModalData {
+    key: Uuid,
+    children: ChildrenFn,
+}
 
 #[derive(Copy, Clone)]
-pub(crate) struct ModalRootContext {
-    pub(crate) host: NodeRef<html::Custom>,
-    pub(crate) modals: RwSignal<Vec<Uuid>>,
+struct ModalRootContext {
+    modals: RwSignal<Vec<Uuid>>,
+
+    shown_modals: RwSignal<Vec<ShownModalData>>,
+}
+
+impl ModalRootContext {
+    fn push(&self, data: Uuid) {
+        self.modals.update(move |m| m.push(data));
+    }
+
+    fn remove(&self, key: Uuid) {
+        self.modals.update(move |m| {
+            if let Some(idx) = m.iter().position(|it| *it == key) {
+                m.remove(idx);
+            }
+        });
+    }
+
+    fn push_shown(&self, data: ShownModalData) {
+        self.shown_modals.update(move |m| m.push(data));
+    }
+
+    fn remove_shown(&self, key: Uuid) {
+        self.shown_modals.update(move |m| {
+            if let Some(idx) = m.iter().position(|it| it.key == key) {
+                m.remove(idx);
+            }
+        });
+    }
 }
 
 #[component]
 pub fn ModalRoot(children: Children) -> impl IntoView {
-    let host: NodeRef<html::Custom> = create_node_ref();
     let modals = create_rw_signal(Vec::new());
-    provide_context::<ModalRootContext>(ModalRootContext { host, modals });
+    let shown_modals = create_rw_signal(Vec::new());
+    let ctx = ModalRootContext { modals, shown_modals };
+    provide_context::<ModalRootContext>(ctx.clone());
 
-    let has_modals = create_memo(move |_| match modals.with(|it| it.is_empty()) {
-        true => "false",
-        false => "true",
+    let has_modals = create_memo(move |_| {
+        shown_modals.with(|modals| {
+            !modals.is_empty()
+        })
     });
 
-    let children = children();
     view! {
-        { children }
+        { children() }
 
-        <leptonic-modal-host data-has-modals=has_modals>
+        <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
             <leptonic-modal-backdrop />
 
-            <leptonic-modals ref=host />
+            <leptonic-modals>
+                <For
+                    each=move || ctx.shown_modals.get()
+                    key=|it| it.key
+                    children=|it| view! { {(it.children)()} }
+                />
+            </leptonic-modals>
         </leptonic-modal-host>
     }
 }
@@ -41,8 +84,6 @@ pub fn Modal(
     #[prop(into, optional)] on_escape: Option<Producer<()>>,
     children: ChildrenFn,
 ) -> impl IntoView {
-    let internal_id = Uuid::new_v4();
-
     let ctx = expect_context::<ModalRootContext>();
 
     if let Some(on_escape) = on_escape {
@@ -56,21 +97,15 @@ pub fn Modal(
         });
     }
 
-    create_isomorphic_effect(move |_| match show_when.get() {
-        true => ctx.modals.update(|m| m.push(internal_id)),
-        false => ctx.modals.update(|m| {
-            if let Some(ctx) = m.iter().position(|id| *id == internal_id) {
-                m.remove(ctx);
-            }
-        }),
-    });
+    let key = Uuid::now_v7();
+    let shown = create_memo(move |_| show_when.get());
 
-    let this = Rc::new(move || {
-        let id = id.clone();
-        let class = class.clone();
-        let children = children.clone();
+    let id = store_value(id.unwrap_or_else(|| key.to_string()));
+    let class = store_value(class);
+
+    let modal = Rc::new(move || {
         view! {
-            <leptonic-modal id=id.unwrap_or_else(|| internal_id.to_string()) class=class>
+            <leptonic-modal id=id.get_value() class=class.get_value()> 
                 { children() }
             </leptonic-modal>
         }
@@ -78,24 +113,24 @@ pub fn Modal(
         .into()
     });
 
-    let portaled_modal = Callback::new(move |()| {
-        use std::ops::Deref;
-        let mount = ctx.host.get_untracked().unwrap().into_any();
-        let mount: &web_sys::Element = mount.deref();
-        let mount: web_sys::Element = mount.clone();
-
-        let this = this.clone();
-        view! {
-            <Portal mount children=this />
+    create_isomorphic_effect(move |_| {
+        match shown.get() {
+            true => {
+                ctx.push_shown(ShownModalData { key, children: modal.clone() })
+            },
+            false => {
+                ctx.remove_shown(key);
+            },
         }
-        .into_view()
     });
 
-    view! {
-        <Show when=move || show_when.get()>
-            { move || portaled_modal.call(()) }
-        </Show>
-    }
+    ctx.push(key);
+
+    on_cleanup(move || {
+        ctx.remove(key);
+    });
+
+    view! {}
 }
 
 #[component]
