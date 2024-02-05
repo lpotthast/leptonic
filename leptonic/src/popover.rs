@@ -2,18 +2,33 @@ use std::rc::Rc;
 
 use leptos::*;
 use leptos_use::{use_element_bounding, use_element_hover};
+use uuid::Uuid;
 
 use crate::{Size, UseElementBoundingReturnReadOnly};
 
 #[derive(Clone)]
 struct PopoverData {
-    key: uuid::Uuid,
+    key: Uuid,
     children: ChildrenFn,
 }
 
 #[derive(Clone)]
 struct PopoverRootContext {
     popovers: RwSignal<Vec<PopoverData>>,
+}
+
+impl PopoverRootContext {
+    fn push(&self, data: PopoverData) {
+        self.popovers.update(move |p| p.push(data));
+    }
+
+    fn remove(&self, key: Uuid) {
+        self.popovers.update(move |p| {
+            if let Some(idx) = p.iter().position(|it| it.key == key) {
+                p.remove(idx);
+            }
+        });
+    }
 }
 
 #[component]
@@ -30,7 +45,7 @@ pub(crate) fn PopoverRoot(children: Children) -> impl IntoView {
             <For
                 each=move || ctx.popovers.get()
                 key=|it| it.key
-                children=|it| it.children
+                children=|it| view! { {(it.children)()} }
             />
         </leptonic-popover-host>
     }
@@ -101,59 +116,70 @@ pub fn Popover(
         }
     };
 
-    let x = move || match align_x {
-        PopoverAlignX::Left => el_bounds.x.get(),
-        PopoverAlignX::Center => {
-            el_bounds.x.get() + (el_bounds.width.get() / 2.0) - (pop_bounds.width.get() / 2.0)
-        }
-        PopoverAlignX::Right => el_bounds.x.get(),
-    };
-
-    let y = move || match align_y {
-        PopoverAlignY::Top => el_bounds.y.get() - pop_bounds.height.get(),
-        PopoverAlignY::Center => el_bounds.y.get(),
-        PopoverAlignY::Bottom => el_bounds.y.get(),
-    };
-
-    let left = move || match align_x {
-        PopoverAlignX::Left => format!("calc({}px - {})", x(), margin),
-        PopoverAlignX::Center => format!("{}px", x()),
-        PopoverAlignX::Right => format!("calc({}px + {})", x(), margin),
-    };
-
-    let top = move || match align_y {
-        PopoverAlignY::Top => format!("calc({}px - {})", y(), margin),
-        PopoverAlignY::Center => format!("{}px", y()),
-        PopoverAlignY::Bottom => format!("calc({}px + {})", y(), margin),
-    };
-
     let pop_bounds_read_only: UseElementBoundingReturnReadOnly = pop_bounds.into();
 
-    let left = move || match position_x {
-        Some(pos_x) => pos_x.call(pop_bounds_read_only),
-        None => left(),
-    };
+    let pop_style: Signal<String> = Signal::derive(move || {
+        match show.get() {
+            true => {
+                let left = match position_x {
+                    Some(pos_x) => pos_x.call(pop_bounds_read_only),
+                    None => {
+                        let x = match align_x {
+                            PopoverAlignX::Left => el_bounds.x.get(),
+                            PopoverAlignX::Center => {
+                                el_bounds.x.get() + (el_bounds.width.get() / 2.0) - (pop_bounds_read_only.width.get() / 2.0)
+                            }
+                            PopoverAlignX::Right => el_bounds.x.get(),
+                        };
+            
+                        match align_x {
+                            PopoverAlignX::Left => format!("calc({}px - {})", x, margin),
+                            PopoverAlignX::Center => format!("{}px", x),
+                            PopoverAlignX::Right => format!("calc({}px + {})", x, margin),
+                        }
+                    },
+                };
+            
+                let top = match position_y {
+                    Some(pos_y) => pos_y.call(pop_bounds_read_only),
+                    None => {
+                        let y = match align_y {
+                            PopoverAlignY::Top => el_bounds.y.get() - pop_bounds_read_only.height.get(),
+                            PopoverAlignY::Center => el_bounds.y.get(),
+                            PopoverAlignY::Bottom => el_bounds.y.get(),
+                        };
+                    
+                        match align_y {
+                            PopoverAlignY::Top => format!("calc({}px - {})", y, margin),
+                            PopoverAlignY::Center => format!("{}px", y),
+                            PopoverAlignY::Bottom => format!("calc({}px + {})", y, margin),
+                        }
+                    },
+                };
+            
+                format!("left: {}; top: {};", left, top)
+            },
+            false => String::new(),
+        }
+    });
 
-    let top = move || match position_y {
-        Some(pos_y) => pos_y.call(pop_bounds_read_only),
-        None => top(),
-    };
+    let key = Uuid::now_v7();
 
-    let pop_style = move || format!("left: {}; top: {};", left(), top());
+    ctx.push(PopoverData {
+        key,
+        children: Rc::new(move || {
+            view! {
+                <leptonic-popover ref=pop_el id=key.to_string() style=pop_style data-active=move || match show.get() { true => "true", false => "false" }> // id=id class=class style=style
+                    { (popover_content.children)() }
+                </leptonic-popover>
+            }
+            .into_view()
+            .into()
+        }),
+    });
 
-    ctx.popovers.update(move |popovers| {
-        popovers.push(PopoverData {
-            key: uuid::Uuid::now_v7(),
-            children: Rc::new(move || {
-                view! {
-                    <leptonic-popover ref=pop_el style=pop_style data-active=move || match show.get() { true => "true", false => "false" }> // id=id class=class style=style
-                        { (popover_content.children)() }
-                    </leptonic-popover>
-                }
-                .into_view()
-                .into()
-            }),
-        })
+    on_cleanup(move || {
+        ctx.remove(key);
     });
 
     view! {
