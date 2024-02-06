@@ -14,7 +14,7 @@ pub fn PageChangelog() -> impl IntoView {
             <li>"`Checkbox` component, styling and documentation."</li>
             <li>"`Radio` and `RadioGroup` components, styling and documentation."</li>
         </ul>
-        
+
         <H3>"Changed:"</H3>
         <ul>
             <li>"Reworked the `Popover` component. It now allows for much greater flexibility. Documentation was updated."</li>
@@ -42,10 +42,10 @@ pub fn PageChangelog() -> impl IntoView {
 
         <H3>"Removed:"</H3>
         <ul>
-            <li>"Dependency on the `leptos-icons` crate. You can remove the dependency from you Cargo.toml as well if you have not used it outside ot the Leptonic context."</li>
+            <li>"Dependency on the `leptos-icons` crate. You can remove the dependency from you Cargo.toml as well if you have not used it outside of the Leptonic context."</li>
             <li>"Lepton"</li>
         </ul>
-        
+
         <H2>"0.4.0"</H2>
 
         <P>"Leptonic now supports server-side-rendering (SSR). This book is now deployed with SSR enabled."</P>

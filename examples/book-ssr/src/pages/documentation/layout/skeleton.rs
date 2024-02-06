@@ -21,7 +21,7 @@ pub fn PageSkeleton() -> impl IntoView {
 
         <P>
             "An explicit "<Code inline=true>"width"</Code>" property of "<Code inline=true>"Size::Percent(100.0)"</Code>" can be omitting as this is the default width of any skeleton."<br />
-            "The "<Code inline=true>"height"</Code>" property defaults to "<Code inline=true>"Size::Auto"</Code>", so setting an explicit height is alway advised when not embedding children in the skeleton."
+            "The "<Code inline=true>"height"</Code>" property defaults to "<Code inline=true>"Size::Auto"</Code>", so setting an explicit height is always advised when not embedding children in the skeleton."
         </P>
 
         <P>"The skeleton will render as:"</P>

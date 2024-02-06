@@ -69,7 +69,7 @@ panic = "abort"
 style-dir = "style"
 
 # REQUIRED: Leptonic's build-script will copy static JS dependencies to this directory. Relative to your project root.
-# Leptonic's `<Root>` component expects JS files to be available at a "js" directory at runtime (for dynamic script includes). Specify a different prop value if you choose a non-stadard location here. 
+# Leptonic's `<Root>` component expects JS files to be available at a "js" directory at runtime (for dynamic script includes). Specify a different prop value if you choose a non-standard location here. 
 js-dir = "public/js"
 
 [package.metadata.leptos]
