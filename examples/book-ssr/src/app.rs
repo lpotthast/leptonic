@@ -12,6 +12,8 @@ use leptonic::prelude::*;
 
 use crate::pages::{documentation::doc_root::DocRoutes, err404::PageErr404, welcome::PageWelcome};
 
+pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
+
 #[derive(Debug, Copy, Clone)]
 pub enum AppRoutes {
     Welcome,
@@ -54,7 +56,7 @@ pub fn App() -> impl IntoView {
         <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
         <Meta name="theme-color" content="#e66956"/>
 
-        <Stylesheet id="leptos" href="/pkg/book-ssr.css"/>
+        <Stylesheet id="leptos" href=format!("/pkg/{LEPTOS_OUTPUT_NAME}.css")/>
         <Stylesheet href="https://fonts.googleapis.com/css?family=Roboto&display=swap"/>
 
         <MetaLink rel="icon" href="/res/icon/leptonic_x64.png"/>

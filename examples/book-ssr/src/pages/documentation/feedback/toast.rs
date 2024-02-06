@@ -37,7 +37,7 @@ pub fn PageToast() -> impl IntoView {
             style="margin-bottom: 1em;"
         />
 
-        <Button on_click=move |_| { toasts.push(
+        <Button on_press=move |_| { toasts.push(
             Toast {
                 id: Uuid::new_v4(),
                 created_at: time::OffsetDateTime::now_utc(),
@@ -54,7 +54,7 @@ pub fn PageToast() -> impl IntoView {
                 let toasts = expect_context::<Toasts>();
 
                 view! {
-                    <Button on_click=move |_| { toasts.push(
+                    <Button on_press=move |_| { toasts.push(
                         Toast {
                             id: Uuid::new_v4(),
                             created_at: time::OffsetDateTime::now_utc(),

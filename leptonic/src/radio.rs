@@ -1,6 +1,9 @@
 use leptos::*;
 
-use crate::{OptionalMaybeSignal, Out};
+use crate::{
+    form_control::{FormControlContext, FormInput},
+    OptionalMaybeSignal, Out,
+};
 
 #[derive(Clone)]
 struct RadioGroupContext {
@@ -79,6 +82,25 @@ pub fn RadioGroup(children: Children) -> impl IntoView {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct RadioContext {
+    checked: Signal<bool>,
+    set_checked: Out<bool>,
+}
+
+impl RadioContext {
+    fn toggle(&self) {
+        self.set_checked.set(!self.checked.get_untracked());
+    }
+}
+
+impl FormInput for RadioContext {
+    fn on_label_click(&self) {
+        tracing::info!("toggke");
+        self.toggle();
+    }
+}
+
 #[component]
 pub fn Radio(
     #[prop(into)] checked: Signal<bool>,
@@ -88,10 +110,21 @@ pub fn Radio(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let opt_ctx = use_context::<RadioGroupContext>();
+    let ctx: RadioContext = RadioContext {
+        checked,
+        set_checked,
+    };
+
+    let form_ctrl_ctx = use_context::<FormControlContext>();
+
+    if let Some(form_ctrl_ctx) = form_ctrl_ctx {
+        form_ctrl_ctx.input.set(Some(Box::new(ctx)));
+    }
+
+    let group_ctx = use_context::<RadioGroupContext>();
     let mut opt_uuid = None;
 
-    if let Some(mut ctx) = opt_ctx.clone() {
+    if let Some(mut ctx) = group_ctx.clone() {
         let uuid = uuid::Uuid::now_v7();
         ctx.register(uuid, checked, set_checked);
         opt_uuid = Some(uuid);
@@ -115,9 +148,9 @@ pub fn Radio(
             tabindex="0"
             on:click=move |_e| {
                 if !disabled() {
-                    match &opt_ctx {
-                        Some(ctx) => ctx.toggle(opt_uuid.expect("to be present"), !checked.get_untracked()),
-                        None => set_checked.set(!checked.get_untracked()),
+                    match &group_ctx {
+                        Some(group_ctx) => group_ctx.toggle(opt_uuid.expect("to be present"), !checked.get_untracked()),
+                        None => ctx.toggle(),
                     }
                 }
             }

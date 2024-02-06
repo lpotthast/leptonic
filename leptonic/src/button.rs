@@ -1,10 +1,18 @@
 use std::fmt::{Display, Formatter};
 
-use leptos::{ev::MouseEvent, *};
+use leptos::*;
 use leptos_router::{State, ToHref, A};
-use leptos_use::on_click_outside;
 
-use crate::{icon::Icon, prelude::Consumer, OptionalMaybeSignal};
+use crate::{
+    hooks::{
+        button::{use_button, InitialButtonProps},
+        focus::{use_focus, UseFocusOptions},
+        press::{use_press, PressEvent, UsePressOptions},
+    },
+    prelude::Consumer,
+    utils::aria::{AriaExpanded, AriaHasPopup},
+    OptionalMaybeSignal,
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -86,84 +94,70 @@ impl Display for ButtonSize {
 
 #[component]
 pub fn Button(
-    #[prop(into)] on_click: Consumer<MouseEvent>,
+    #[prop(into)] on_press: Consumer<PressEvent>,
     #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
     #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
-    #[prop(into, optional)] variations: OptionalMaybeSignal<View>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: OptionalMaybeSignal<String>,
     #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] aria_haspopup: OptionalMaybeSignal<AriaHasPopup>,
+    #[prop(into, optional)] aria_expanded: OptionalMaybeSignal<AriaExpanded>,
     children: Children,
 ) -> impl IntoView {
-    let has_variations = variations.0.as_ref().is_some();
+    let el: NodeRef<html::Button> = create_node_ref();
 
-    let variations = move || {
-        if has_variations {
-            let (dropdown_open, set_dropdown_open): (ReadSignal<bool>, WriteSignal<bool>) =
-                create_signal(false);
-            let dropdown_trigger = create_node_ref::<html::Div>();
-            let _ = on_click_outside(dropdown_trigger, move |_| {
-                set_dropdown_open.set(false);
-            });
-            Some(
-                view! {
-                    <div class="dropdown-trigger" node_ref=dropdown_trigger on:click=move |e| {
-                        if !disabled.get_untracked() {
-                            set_dropdown_open.update(|it| *it = !*it);
-                            e.stop_propagation();
-                        }
-                    }>
-                        { move || {
-                            let icon = match dropdown_open.get() {
-                                true => icondata::BsCaretUp,
-                                false => icondata::BsCaretDown,
-                            };
-                            view! {
-                                <Icon icon=icon/>
-                            }
-                        }}
-                    </div>
+    let btn = use_button(InitialButtonProps {
+        node_ref: el,
+        disabled: disabled.or(false),
+        aria_haspopup: aria_haspopup.or_default(),
+        aria_expanded: aria_expanded.or_default(),
+    });
 
-                    <div class="dropdown" class:active=move || dropdown_open.get() && !disabled.get()>
-                        { variations.get() }
-                    </div>
-                }
-                .into_view(),
-            )
-        } else {
-            None
-        }
-    };
+    let focus = use_focus(UseFocusOptions {
+        disabled: disabled.or(false),
+        on_focus: None,
+        on_blur: None,
+        on_focus_change: None,
+    });
+
+    let press = use_press(UsePressOptions {
+        on_press: Callback::new(move |e| {
+            if !disabled.get_untracked() {
+                //e.stop_propagation();
+                on_press.consume(e);
+            }
+        }),
+        on_press_up: None,
+        on_press_start: None,
+        on_press_end: None,
+    });
 
     view! {
         <button
+            {..btn.props}
+            {..press.props.attrs}
+            node_ref=el
             id=id
             class=move || class.0.as_ref().map(|it| format!("{} leptonic-btn", it.get())).unwrap_or_else(|| "leptonic-btn".to_string())
-            class:has-variations=has_variations
             class:active=move || active.get()
+            style=style
             data-variant=move || variant.get().as_str()
             data-color=move || color.get().as_str()
             data-size=move || size.get().as_str()
-            style=style
-            aria-disabled=move || match disabled.get() {
-                true => "true",
-                false => "false",
-            }
-            on:click=move |e| {
-                if !disabled.get_untracked() {
-                    e.stop_propagation();
-                    on_click.consume(e);
-                }
-            }
+            on:keydown=press.props.on_key_down
+            on:click=press.props.on_click
+            on:touchstart=press.props.on_touch_start
+            on:touchmove=press.props.on_touch_move
+            on:touchend=press.props.on_touch_end
+            on:focus=focus.on_focus
+            on:blur=focus.on_blur
         >
             <div class="name">
                 { children() }
             </div>
-
-            { variations }
         </button>
     }
 }

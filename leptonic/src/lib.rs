@@ -4,6 +4,10 @@ use leptos::*;
 use leptos_use::{use_window, UseElementBoundingReturn};
 use prelude::Consumer;
 
+pub mod utils;
+
+pub mod hooks;
+
 pub mod alert;
 pub mod anchor;
 pub mod app_bar;
@@ -18,14 +22,15 @@ pub mod color;
 pub mod color_picker;
 pub mod contexts;
 pub mod date_selector;
-pub mod datetime;
 pub mod datetime_input;
 pub mod drawer;
 pub mod field;
+pub mod form_control;
 pub mod grid;
 pub mod icon;
 pub mod input;
 pub mod kbd;
+pub mod label;
 pub mod link;
 pub mod math;
 pub mod modal;
@@ -236,6 +241,7 @@ pub mod prelude {
     pub use super::drawer::DrawerSide;
     pub use super::field::Field;
     pub use super::field::FieldLabel;
+    pub use super::form_control::FormControl;
     pub use super::grid::Col;
     pub use super::grid::ColAlign;
     pub use super::grid::Grid;
@@ -249,6 +255,7 @@ pub mod prelude {
     pub use super::kbd::KbdShortcut;
     pub use super::kbd::KbdShortcutRoot;
     pub use super::kbd::Key;
+    pub use super::label::Label;
     pub use super::link::Link;
     pub use super::link::LinkExt;
     pub use super::link::LinkExtTarget;
@@ -259,9 +266,9 @@ pub mod prelude {
     pub use super::modal::ModalRoot;
     pub use super::modal::ModalTitle;
     pub use super::popover::Popover;
-    pub use super::popover::PopoverContent;
     pub use super::popover::PopoverAlignX;
     pub use super::popover::PopoverAlignY;
+    pub use super::popover::PopoverContent;
     pub use super::progress_bar::ProgressBar;
     pub use super::quicksearch::Quicksearch;
     pub use super::quicksearch::QuicksearchOption;
@@ -329,6 +336,8 @@ pub mod prelude {
     pub use super::typography::H5;
     pub use super::typography::H6;
     pub use super::typography::P;
+    pub use super::utils::aria::AriaExpanded;
+    pub use super::utils::aria::AriaHasPopup;
     pub use super::FontWeight;
     pub use super::Height;
     pub use super::Margin;

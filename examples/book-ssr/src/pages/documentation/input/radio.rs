@@ -43,6 +43,26 @@ pub fn PageRadio() -> impl IntoView {
             <Radio checked=checked3 set_checked=set_checked3 />
         </RadioGroup>
 
+        <H2>"Labeled"</H2>
+
+        <P>"Wrap an input and a label to link them together."</P>
+        
+        <Code>
+            {indoc!(r#"
+                <FormControl>
+                    <Radio checked=checked set_checked=set_checked />
+                    <Label>"Label"</Label>
+                </FormControl>
+            "#)}
+        </Code>
+
+        <FormControl>
+            <Radio checked=checked set_checked=set_checked />
+            <Label>
+                "Label"
+            </Label>
+        </FormControl>
+
         <H2>"Disabled"</H2>
 
         <P>"Radio buttons support the " <Code inline=true>"disabled"</Code> " property, making them unmodifiable if set true."</P>
@@ -54,7 +74,7 @@ pub fn PageRadio() -> impl IntoView {
         </Code>
 
         <Radio disabled=true checked=checked_disabled set_checked=set_checked_disabled />
-        <Button variant=ButtonVariant::Flat color=ButtonColor::Secondary size=ButtonSize::Small on_click=move |_| set_checked_disabled.set(!checked_disabled.get_untracked())>"TOGGLE"</Button>
+        <Button variant=ButtonVariant::Flat color=ButtonColor::Secondary size=ButtonSize::Small on_press=move |_| set_checked_disabled.set(!checked_disabled.get_untracked())>"TOGGLE"</Button>
 
         <H2>"Styling"</H2>
 

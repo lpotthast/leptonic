@@ -97,7 +97,7 @@
     --button-filled-secondary-background-color-hover: color-mix(in srgb, black var(--darker-2), var(--default-color));
     --button-filled-secondary-border-color: var(--default-color);
     --button-filled-secondary-border-color-hover: color-mix(in srgb, black var(--darker-2), var(--default-color));
-    --button-filled-secondary-box-shadow-color: var(--default-color);
+    --button-filled-secondary-box-shadow-color: color-mix(in srgb, black var(--darker-3), var(--default-color));
 
     --button-flat-success-text-color: var(--std-text-dark);
     --button-flat-success-text-color-hover: var(--std-text-dark);

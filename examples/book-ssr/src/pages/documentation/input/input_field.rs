@@ -16,6 +16,7 @@ pub fn PageInput() -> impl IntoView {
         <H1>"Inputs"</H1>
 
         <P>"Creating an input is as simple as doing the following"</P>
+
         <Code>
             {indoc!(r#"
                 let (text, set_text) = create_signal("text".to_owned());
@@ -27,6 +28,28 @@ pub fn PageInput() -> impl IntoView {
 
         <TextInput get=text set=set_text/>
         <P style="color: gray; margin-top: 0; font-style: italic;">"Text is: " {move || text.get()}</P>
+
+        <H2>"Labeled"</H2>
+
+        <P>"Wrap an input and a label to link them together."</P>
+        
+        <Code>
+            {indoc!(r#"
+                <FormControl>
+                    <Label>
+                        "Label"
+                    </Label>
+                    <TextInput get=text set=set_text/>
+                </FormControl>
+            "#)}
+        </Code>
+
+        <FormControl>
+            <Label>
+                "Label"
+            </Label>
+            <TextInput get=text set=set_text/>
+        </FormControl>
 
         <H2>"Types"</H2>
 
@@ -117,7 +140,7 @@ pub fn PageInput() -> impl IntoView {
                     <Button
                         variant=ButtonVariant::Flat
                         size=ButtonSize::Small
-                        on_click=move |_| set_text.set(String::new())>
+                        on_press=move |_| set_text.set(String::new())>
                         "Clear input"
                     </Button>
                 }
@@ -125,7 +148,7 @@ pub fn PageInput() -> impl IntoView {
         </Code>
 
         <TextInput get=placeholder_input set=set_placeholder_input placeholder="This is a placeholder"/>
-        <Button variant=ButtonVariant::Flat size=ButtonSize::Small on_click=move |_| set_placeholder_input.set(String::new())>"Clear input"</Button>
+        <Button variant=ButtonVariant::Flat size=ButtonSize::Small on_press=move |_| set_placeholder_input.set(String::new())>"Clear input"</Button>
 
         <H2>"Styling"</H2>
 

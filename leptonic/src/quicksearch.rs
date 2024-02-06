@@ -91,7 +91,7 @@ fn QuicksearchModal(
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| on_cancel.get_value().call(()) color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| on_cancel.get_value().call(()) color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>

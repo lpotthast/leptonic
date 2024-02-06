@@ -4,8 +4,8 @@ use web_sys::KeyboardEvent;
 
 use crate::{
     date_selector::DateSelectorProps,
-    datetime::{GuideMode, Type},
     prelude::DateSelector,
+    utils::time::{GuideMode, Type},
     Margin, OptionalMaybeSignal, Out,
 };
 

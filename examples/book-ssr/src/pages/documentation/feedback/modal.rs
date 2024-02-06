@@ -27,13 +27,13 @@ pub fn PageModal() -> impl IntoView {
                 let (show_simple_modal, set_show_simple_modal) = create_signal(false);
 
                 view! {
-                    <P><Button on_click=move |_| set_show_simple_modal.set(true)>"Show simple modal"</Button></P>
+                    <P><Button on_press=move |_| set_show_simple_modal.set(true)>"Show simple modal"</Button></P>
                     <Modal show_when=show_simple_modal>
                         <ModalHeader><ModalTitle>"Hello"</ModalTitle></ModalHeader>
                         <ModalBody>"This ia a simple modal."</ModalBody>
                         <ModalFooter>
                             <ButtonWrapper>
-                                <Button on_click=move |_| set_show_simple_modal.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
+                                <Button on_press=move |_| set_show_simple_modal.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
                             </ButtonWrapper>
                         </ModalFooter>
                     </Modal>
@@ -41,14 +41,14 @@ pub fn PageModal() -> impl IntoView {
             "#)}
         </Code>
 
-        <P><Button on_click=move |_| set_show_simple_modal.set(true)>"Show simple modal"</Button></P>
+        <P><Button on_press=move |_| set_show_simple_modal.set(true)>"Show simple modal"</Button></P>
 
         <Modal show_when=show_simple_modal on_escape=move || set_show_simple_modal.set(false)>
             <ModalHeader><ModalTitle>"Hello"</ModalTitle></ModalHeader>
             <ModalBody>"This ia a simple modal."</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| set_show_simple_modal.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| set_show_simple_modal.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
@@ -63,15 +63,15 @@ pub fn PageModal() -> impl IntoView {
                 let (show_staged_modal2, set_show_staged_modal2) = create_signal(false);
 
                 view! {
-                    <P><Button on_click=move |_| set_show_staged_modal1.set(true)>"Show staged modal"</Button></P>
+                    <P><Button on_press=move |_| set_show_staged_modal1.set(true)>"Show staged modal"</Button></P>
 
                     <Modal show_when=show_staged_modal1>
                         <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
                         <ModalBody>"This ia a test modal."</ModalBody>
                         <ModalFooter>
                             <ButtonWrapper>
-                                <Button on_click=move |_| set_show_staged_modal2.set(true) color=ButtonColor::Info>"Next"</Button>
-                                <Button on_click=move |_| set_show_staged_modal1.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
+                                <Button on_press=move |_| set_show_staged_modal2.set(true) color=ButtonColor::Info>"Next"</Button>
+                                <Button on_press=move |_| set_show_staged_modal1.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
                             </ButtonWrapper>
                         </ModalFooter>
                     </Modal>
@@ -81,7 +81,7 @@ pub fn PageModal() -> impl IntoView {
                         <ModalBody>"This overlays..."</ModalBody>
                         <ModalFooter>
                             <ButtonWrapper>
-                                <Button on_click=move |_| set_show_staged_modal2.set(false) color=ButtonColor::Secondary>"Back"</Button>
+                                <Button on_press=move |_| set_show_staged_modal2.set(false) color=ButtonColor::Secondary>"Back"</Button>
                             </ButtonWrapper>
                         </ModalFooter>
                     </Modal>            
@@ -89,15 +89,15 @@ pub fn PageModal() -> impl IntoView {
             "#)}
         </Code>
 
-        <P><Button on_click=move |_| set_show_staged_modal1.set(true)>"Show staged modal"</Button></P>
+        <P><Button on_press=move |_| set_show_staged_modal1.set(true)>"Show staged modal"</Button></P>
 
         <Modal show_when=show_staged_modal1 on_escape=escape_staged_modal1>
             <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
             <ModalBody>"This ia a test modal."</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| set_show_staged_modal2.set(true) color=ButtonColor::Info>"Next"</Button>
-                    <Button on_click=move |_| set_show_staged_modal1.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| set_show_staged_modal2.set(true) color=ButtonColor::Info>"Next"</Button>
+                    <Button on_press=move |_| set_show_staged_modal1.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
@@ -107,7 +107,7 @@ pub fn PageModal() -> impl IntoView {
             <ModalBody>"This overlays..."</ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| set_show_staged_modal2.set(false) color=ButtonColor::Secondary>"Back"</Button>
+                    <Button on_press=move |_| set_show_staged_modal2.set(false) color=ButtonColor::Secondary>"Back"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
@@ -121,7 +121,7 @@ pub fn PageModal() -> impl IntoView {
                 let (show_confirm_modal, set_show_confirm_modal) = create_signal(false);
 
                 view! {
-                    <P><Button on_click=move |_| set_show_confirm_modal.set(true)>"Show confirmation modal"</Button></P>
+                    <P><Button on_press=move |_| set_show_confirm_modal.set(true)>"Show confirmation modal"</Button></P>
             
                     <ConfirmModal
                         show_when=show_confirm_modal
@@ -173,8 +173,8 @@ pub fn PageModal() -> impl IntoView {
                             </ModalBody>
                             <ModalFooter>
                                 <ButtonWrapper>
-                                    <Button on_click=move |_| (on_accept)() disabled=disabled color=ButtonColor::Danger>"Confirm"</Button>
-                                    <Button on_click=move |_| (on_cancel)() color=ButtonColor::Secondary>"Cancel"</Button>
+                                    <Button on_press=move |_| (on_accept)() disabled=disabled color=ButtonColor::Danger>"Confirm"</Button>
+                                    <Button on_press=move |_| (on_cancel)() color=ButtonColor::Secondary>"Cancel"</Button>
                                 </ButtonWrapper>
                             </ModalFooter>
                         </Modal>
@@ -183,7 +183,7 @@ pub fn PageModal() -> impl IntoView {
             "#)}
         </Code>
 
-        <P><Button on_click=move |_| set_show_confirm_modal.set(true)>"Show confirmation modal"</Button></P>
+        <P><Button on_press=move |_| set_show_confirm_modal.set(true)>"Show confirmation modal"</Button></P>
 
         <ConfirmModal
             show_when=show_confirm_modal
@@ -220,7 +220,7 @@ pub fn PageModal() -> impl IntoView {
                     <ModalBody>"This ia a simple modal."</ModalBody>
                     <ModalFooter>
                         <ButtonWrapper>
-                            <Button on_click=move |_| set_show_simple_modal.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
+                            <Button on_press=move |_| set_show_simple_modal.set(false) color=ButtonColor::Secondary>"Cancel"</Button>
                         </ButtonWrapper>
                     </ModalFooter>
                 </Modal>
@@ -283,8 +283,8 @@ where
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_click=move |_| (on_accept)() disabled=disabled color=ButtonColor::Danger>"Confirm"</Button>
-                    <Button on_click=move |_| (on_cancel)() color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| (on_accept)() disabled=disabled color=ButtonColor::Danger>"Confirm"</Button>
+                    <Button on_press=move |_| (on_cancel)() color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>

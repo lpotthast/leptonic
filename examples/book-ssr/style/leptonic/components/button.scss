@@ -428,40 +428,6 @@
     padding: 0.5em 0.75em;
     line-height: 1em;
   }
-
-  .dropdown-trigger {
-    position: absolute;
-    right: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding-left: 0.25em;
-    padding-right: 0.25em;
-    border-left: 0.075em solid;
-    height: calc(100% + var(--button-border-size)*2);
-    cursor: pointer;
-
-    leptonic-icon {
-      margin: 0;
-    }
-  }
-
-  .dropdown {
-    display: none;
-    position: absolute;
-    top: 2.3em;
-    z-index: 999;
-    background-color: #6565653d;
-    padding: 0.25em;
-    left: 0em;
-    border-radius: 0.3em;
-
-    &.active {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25em;
-    }
-  }
 }
 
 leptonic-btn-wrapper {

@@ -2,6 +2,7 @@ pub mod button;
 pub mod checkbox;
 pub mod color_picker;
 pub mod date_time;
+pub mod form_control;
 pub mod input_field;
 pub mod radio;
 pub mod select;

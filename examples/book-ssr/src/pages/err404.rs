@@ -13,7 +13,7 @@ pub(crate) fn PageErr404() -> impl IntoView {
                     <H2 id="whoops">"Whoops, this page doesn't exist :-("</H2>
 
                     <Link href=AppRoutes::Welcome>
-                        <Button id="back-btn" on_click=move |_| {} variant=ButtonVariant::Filled>
+                        <Button id="back-btn" on_press=move |_| {} variant=ButtonVariant::Filled>
                             "Back"
                         </Button>
                     </Link>

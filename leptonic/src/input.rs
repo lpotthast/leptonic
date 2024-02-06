@@ -3,7 +3,10 @@ use std::ops::Deref;
 use leptos::{html::ElementDescriptor, *};
 use web_sys::HtmlInputElement;
 
-use crate::{OptionalMaybeSignal, Out};
+use crate::{
+    form_control::{FormControlContext, FormInput},
+    OptionalMaybeSignal, Out,
+};
 
 fn prepare_autofocus<T: ElementDescriptor + Clone + Deref<Target = HtmlInputElement> + 'static>(
     node_ref: NodeRef<T>,
@@ -35,6 +38,38 @@ fn use_focus<T: ElementDescriptor + Clone + Deref<Target = HtmlInputElement> + '
     });
 }
 
+#[derive(Clone, Copy)]
+pub struct TextInputContext {
+    el: NodeRef<html::Input>,
+}
+
+impl TextInputContext {
+    fn focus(&self) {
+        if let Some(el) = self.el.get_untracked() {
+            match el.focus() {
+                Ok(()) => {}
+                Err(err) => {
+                    tracing::warn!(?err, "Could not focus TextInput element");
+                }
+            }
+        }
+    }
+}
+
+impl std::fmt::Debug for TextInputContext {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TextInputContext")
+            .field("el", &"NodeRef<html::Input>")
+            .finish()
+    }
+}
+
+impl FormInput for TextInputContext {
+    fn on_label_click(&self) {
+        self.focus();
+    }
+}
+
 #[component]
 pub fn TextInput(
     #[prop(into)] get: MaybeSignal<String>,
@@ -50,6 +85,14 @@ pub fn TextInput(
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
     let node_ref: NodeRef<html::Input> = create_node_ref();
+
+    let ctx = TextInputContext { el: node_ref };
+
+    let form_ctrl_ctx = use_context::<FormControlContext>();
+
+    if let Some(fc_ctx) = form_ctrl_ctx {
+        fc_ctx.input.set(Some(Box::new(ctx)));
+    }
 
     if autofocus {
         prepare_autofocus(node_ref);

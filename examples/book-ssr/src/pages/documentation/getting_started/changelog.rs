@@ -19,6 +19,11 @@ pub fn PageChangelog() -> impl IntoView {
         <ul>
             <li>"Reworked the `Popover` component. It now allows for much greater flexibility. Documentation was updated."</li>
         </ul>
+
+        <H3>"Removed:"</H3>
+        <ul>
+            <li>"Buttons no longer support `variations`. They resulted in non compliant code."</li>
+        </ul>
         
         <H2>"0.5.0"</H2>
 

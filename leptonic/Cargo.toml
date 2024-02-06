@@ -57,6 +57,7 @@ web-sys = { version = "0.3.67", features = [
     "HtmlInputElement",
     "Storage",
 ] }
+educe = "0.5.11"
 
 [dev-dependencies]
 wasm-bindgen = "0.2.90"

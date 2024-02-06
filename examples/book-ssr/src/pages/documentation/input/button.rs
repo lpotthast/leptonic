@@ -6,8 +6,6 @@ use leptos::*;
 #[allow(clippy::too_many_lines)]
 pub fn PageButton() -> impl IntoView {
     let (disabled, set_disabled) = create_signal(false);
-    let (num_main_action_activated, set_num_main_action_activated) = create_signal(0);
-    let (num_secondary_action_activated, set_num_secondary_action_activated) = create_signal(0);
     view! {
         <H1>"Buttons"</H1>
 
@@ -16,17 +14,39 @@ pub fn PageButton() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Button on_click=move |_| {}>
+                <Button on_press=move |_| {}>
                     "My Button"
                 </Button>
             "#)}
         </Code>
 
         <div>
-            <Button on_click=move |_| {}>"My Button"</Button>
+            <Button on_press=move |_| {}>"My Button"</Button>
         </div>
 
-        <h2>"Variants"</h2>
+        <H2>"Colors"</H2>
+
+        <P>"Buttons come in different colors. You can overwrite these using theme variables."</P>
+
+        <Code>
+            {indoc!(r#"
+                <Button on_press=move |_| {} color=ButtonColor::Primary>"Primary"</Button>
+                <Button on_press=move |_| {} color=ButtonColor::Secondary>"Secondary"</Button>
+                <Button on_press=move |_| {} color=ButtonColor::Warn>"Warn"</Button>
+                <Button on_press=move |_| {} color=ButtonColor::Danger>"Danger"</Button>
+                <Button on_press=move |_| {} color=ButtonColor::Info>"Info"</Button>
+            "#)}
+        </Code>
+
+        <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) style="justify-content: flex-start;">
+            <Button on_press=move |_| {} color=ButtonColor::Primary>"Primary"</Button>
+            <Button on_press=move |_| {} color=ButtonColor::Secondary>"Secondary"</Button>
+            <Button on_press=move |_| {} color=ButtonColor::Warn>"Warn"</Button>
+            <Button on_press=move |_| {} color=ButtonColor::Danger>"Danger"</Button>
+            <Button on_press=move |_| {} color=ButtonColor::Info>"Info"</Button>
+        </Stack>
+
+        <H2>"Variants"</H2>
 
         <P>
             "Buttons come in three different " <Code inline=true>"ButtonVariant"</Code> "s."
@@ -37,36 +57,36 @@ pub fn PageButton() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Button on_click=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
-                <Button on_click=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
-                <Button on_click=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
+                <Button on_press=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
+                <Button on_press=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
+                <Button on_press=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
             "#)}
         </Code>
 
         <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) style="justify-content: flex-start;">
-            <Button on_click=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
-            <Button on_click=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
-            <Button on_click=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
+            <Button on_press=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
+            <Button on_press=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
+            <Button on_press=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
         </Stack>
 
-        <h2>"Button group"</h2>
+        <H2>"Button group"</H2>
 
         <P>"Buttons can be displayed in a group. This lets adjacent buttons snap to each other, creating a seamless row of buttons. It is recommended to only use the Filled button variant when putting buttons inside a group."</P>
 
         <Code>
             {indoc!(r#"
                 <ButtonGroup>
-                    <Button on_click=move |_| {}>"Button 1"</Button>
-                    <Button on_click=move |_| {}>"Button 2"</Button>
-                    <Button on_click=move |_| {}>"Button 3"</Button>
+                    <Button on_press=move |_| {}>"Button 1"</Button>
+                    <Button on_press=move |_| {}>"Button 2"</Button>
+                    <Button on_press=move |_| {}>"Button 3"</Button>
                 </ButtonGroup>
             "#)}
         </Code>
 
         <ButtonGroup>
-            <Button on_click=move |_| {}>"Button 1"</Button>
-            <Button on_click=move |_| {}>"Button 2"</Button>
-            <Button on_click=move |_| {}>"Button 3"</Button>
+            <Button on_press=move |_| {}>"Button 1"</Button>
+            <Button on_press=move |_| {}>"Button 2"</Button>
+            <Button on_press=move |_| {}>"Button 3"</Button>
         </ButtonGroup>
 
         <H2>"Disabled"</H2>
@@ -81,9 +101,9 @@ pub fn PageButton() -> impl IntoView {
 
         <Code>
             {indoc!(r#"
-                <Button on_click=move |_| {} disabled=true>"Always Disabled"</Button>
-                <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
-                <Button on_click=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
+                <Button on_press=move |_| {} disabled=true>"Always Disabled"</Button>
+                <Button on_press=move |_| {} disabled=disabled>"Disabled"</Button>
+                <Button on_press=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
             "#)}
         </Code>
 
@@ -92,31 +112,10 @@ pub fn PageButton() -> impl IntoView {
         </div>
 
         <ButtonWrapper>
-            <Button on_click=move |_| {} disabled=true>"Always Disabled"</Button>
-            <Button on_click=move |_| {} disabled=disabled>"Disabled"</Button>
-            <Button on_click=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
+            <Button on_press=move |_| {} disabled=true>"Always Disabled"</Button>
+            <Button on_press=move |_| {} disabled=disabled>"Disabled"</Button>
+            <Button on_press=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
         </ButtonWrapper>
-
-        <H2>"Variations"</H2>
-
-        <Code>
-            {indoc!(r#"
-                <Button on_click=move |_| {} variations=view! {
-                    <Button on_click=move |_| {}>"Secondary action"</Button>
-                }.into_view()>
-                    "MainAction"
-                </Button>
-            "#)}
-        </Code>
-
-        <Button on_click=move |_| {set_num_main_action_activated.update(|it| *it += 1)} variations=view! {
-                <Button on_click=move |_| {set_num_secondary_action_activated.update(|it| *it += 1)}>"Secondary action"</Button>
-        }.into_view()>
-            "MainAction"
-        </Button>
-
-        <div>"Main action activated: " { move || num_main_action_activated.get() }</div>
-        <div>"Secondary action activated: " { move || num_secondary_action_activated.get() }</div>
 
         <H2>"Styling"</H2>
 
