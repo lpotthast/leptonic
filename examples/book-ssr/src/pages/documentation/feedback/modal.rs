@@ -200,7 +200,7 @@ pub fn PageModal() -> impl IntoView {
             "Modals may be used as critical gate-keepers. The API of them should minimize error-potential as much as possible. "
             "The author of a modal should therefore have full control, preferably at a centralized point, over all ways a modals display state may change."
             "As the modal component does neither owns it's display state nor knows what to do when the modal is shown or hidden "
-            "(modals only know wether they should be rendered or not, reading their " <Code inline=true>"show_when"</Code> " prop) "
+            "(modals only know whether they should be rendered or not, reading their " <Code inline=true>"show_when"</Code> " prop) "
             "fully automated handling of escape keys is not possible."
         </P>
 
