@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::{icon::Icon, OptionalMaybeSignal, Out};
+use crate::{components::icon::Icon, OptionalMaybeSignal, Out};
 
 #[component]
 pub fn Checkbox(
@@ -23,7 +23,7 @@ pub fn Checkbox(
             aria-checked=move || match checked.get() { true => "true", false => "false" }
             aria-disabled=move || match disabled() { true => "true", false => "false" }
             tabindex="0"
-            on:click=move |_e| { 
+            on:click=move |_e| {
                 if !disabled() {
                     set_checked.set(!checked.get_untracked())
                 }

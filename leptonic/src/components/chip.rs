@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use leptos::*;
 use web_sys::MouseEvent;
 
-use crate::{icon::Icon, OptionalMaybeSignal};
+use crate::{components::icon::Icon, OptionalMaybeSignal};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ChipColor {

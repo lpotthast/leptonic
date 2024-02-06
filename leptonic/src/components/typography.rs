@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::{icon::Icon, prelude::{Button, ButtonVariant}};
+use crate::prelude::{Button, ButtonVariant, Icon};
 
 #[component]
 pub fn H1(
@@ -118,7 +118,7 @@ pub fn Ul(
             <For
                 each=move || { li.clone().into_iter().enumerate() }
                 key=move |(index, _e)| *index
-                children=move |(_index, e)| view!{ 
+                children=move |(_index, e)| view!{
                     <li>
                         {e.children}
                     </li>

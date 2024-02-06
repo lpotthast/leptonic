@@ -3,7 +3,7 @@ use std::rc::Rc;
 use leptos::*;
 use uuid::Uuid;
 
-use crate::tabs::use_tabs;
+use crate::components::tabs::use_tabs;
 use crate::Mount;
 
 #[derive(Debug, Clone)]
@@ -27,10 +27,12 @@ pub fn Tab(
     #[prop(optional)] children: Option<ChildrenFn>,
 
     /// Called whenever the tab comes into view.
-    #[prop(into, optional)] on_show: Option<Callback<()>>,
+    #[prop(into, optional)]
+    on_show: Option<Callback<()>>,
 
     /// Called whenever the tab gets hidden.
-    #[prop(into, optional)] on_hide: Option<Callback<()>>,
+    #[prop(into, optional)]
+    on_hide: Option<Callback<()>>,
 ) -> impl IntoView {
     let id = id.unwrap_or_else(Uuid::new_v4);
     let tabs = use_tabs();

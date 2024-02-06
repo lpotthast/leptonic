@@ -1,7 +1,7 @@
 use leptos::*;
 use uuid::Uuid;
 
-use crate::icon::Icon;
+use crate::prelude::Icon;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter)]
 pub enum ToastVariant {

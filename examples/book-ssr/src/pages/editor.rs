@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use leptonic::input::TextInput;
+use leptonic::components::input::TextInput;
 use leptos::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

@@ -1,6 +1,6 @@
 use crate::{
-    contexts::global_mouseup_event::GlobalMouseupEvent, math::project_into_range, prelude::*,
-    RelativeMousePosition, TrackedElementClientBoundingRect,
+    contexts::global_mouseup_event::GlobalMouseupEvent, prelude::*,
+    utils::math::project_into_range, RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 use indoc::formatdoc;
 use leptos::*;

@@ -4,8 +4,8 @@ use leptos::*;
 use leptos_use::{use_element_bounding, use_element_hover};
 
 use crate::{
-    contexts::global_mouseup_event::GlobalMouseupEvent, math::project_into_range,
-    popover::PopoverContent, prelude::Popover, Out, RelativeMousePosition, Size,
+    components::popover::PopoverContent, contexts::global_mouseup_event::GlobalMouseupEvent,
+    prelude::Popover, utils::math::project_into_range, Out, RelativeMousePosition, Size,
     TrackedElementClientBoundingRect, UseElementBoundingReturnReadOnly,
 };
 
@@ -89,7 +89,7 @@ fn create_marks(
                         break;
                     }
                     marks_at.push(Mark {
-                        percentage: crate::math::percentage_in_range(min, max, current),
+                        percentage: crate::utils::math::percentage_in_range(min, max, current),
                         in_range: in_range.call(current),
                         name: match create_names {
                             true => Some(Cow::Owned(match &value_display {
@@ -144,13 +144,13 @@ fn create_marks(
                     let value = match mark.value {
                         SliderMarkValue::Value(value) => value,
                         SliderMarkValue::Percentage(percentage) => {
-                            crate::math::value_in_range(min, max, percentage)
+                            crate::utils::math::value_in_range(min, max, percentage)
                         }
                     };
                     Mark {
                         percentage: match mark.value {
                             SliderMarkValue::Value(value) => {
-                                crate::math::percentage_in_range(min, max, value)
+                                crate::utils::math::percentage_in_range(min, max, value)
                             }
                             SliderMarkValue::Percentage(percentage) => percentage,
                         },

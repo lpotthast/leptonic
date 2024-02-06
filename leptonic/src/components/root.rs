@@ -11,7 +11,7 @@ use crate::{
         global_mouseup_event::GlobalMouseupEvent, global_resize_event::GlobalResizeEvent,
         global_scroll_event::GlobalScrollEvent,
     },
-    popover::PopoverRoot,
+    components::popover::PopoverRoot,
     prelude::*,
 };
 

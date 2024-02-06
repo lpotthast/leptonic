@@ -17,8 +17,8 @@ pub(crate) fn project_into_range(value: f64, range: f64, min: f64, step: Option<
 
 #[cfg(test)]
 mod tests {
-    use crate::math::percentage_in_range;
-    use crate::math::value_in_range;
+    use super::percentage_in_range;
+    use super::value_in_range;
 
     #[test]
     fn test_simple_range() {

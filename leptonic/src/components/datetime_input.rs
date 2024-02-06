@@ -3,7 +3,7 @@ use time::format_description::well_known::Rfc3339;
 use web_sys::KeyboardEvent;
 
 use crate::{
-    date_selector::DateSelectorProps,
+    components::date_selector::DateSelectorProps,
     prelude::DateSelector,
     utils::time::{GuideMode, Type},
     Margin, OptionalMaybeSignal, Out,

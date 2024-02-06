@@ -3,7 +3,7 @@ use std::rc::Rc;
 use leptos::*;
 use uuid::Uuid;
 
-use crate::{tab::TabData, Mount};
+use crate::{components::tab::TabData, Mount};
 
 #[derive(Debug, Clone)]
 pub struct TabHistory {
@@ -95,7 +95,7 @@ pub fn use_tabs() -> TabsContext {
 pub fn Tabs(#[prop(optional)] mount: Option<Mount>, children: Children) -> impl IntoView {
     let (history, set_history) = create_signal(TabHistory::new());
     let (tabs, set_tabs) = create_signal(Vec::new());
-    
+
     view! {
         <leptonic-tabs>
             <Provider value=TabsContext {
@@ -112,15 +112,15 @@ pub fn Tabs(#[prop(optional)] mount: Option<Mount>, children: Children) -> impl 
 }
 
 #[component]
-pub fn TabsContent(children: Children) -> impl IntoView {    
+pub fn TabsContent(children: Children) -> impl IntoView {
     let ctx = use_tabs();
 
     // Note: Rendering out the children first is important for reliable SSR.
     // Children are `Tab`s, which register themselves in the previously constructed `TabsContext`.
-    // Rendering the children inline in the `view!` macro would send down an empty `TabSelectors` 
+    // Rendering the children inline in the `view!` macro would send down an empty `TabSelectors`
     // which would then result in hydration errors!
     let children = children();
-    
+
     view! {
         <TabSelectors tabs=ctx.tabs history=ctx.history set_history=ctx.set_history/>
         { children }

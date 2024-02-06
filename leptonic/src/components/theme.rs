@@ -1,6 +1,9 @@
 use leptos::*;
 
-use crate::{prelude::*, toggle::ToggleProps, toggle::ToggleSize};
+use crate::{
+    components::toggle::{ToggleProps, ToggleSize},
+    prelude::*,
+};
 
 /// Leptonic's default themes. You may want to create your own theme-defining-type if you have additional or differently named themes.
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy, serde::Serialize, serde::Deserialize)]

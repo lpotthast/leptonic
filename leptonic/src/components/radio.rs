@@ -1,7 +1,7 @@
 use leptos::*;
 
 use crate::{
-    form_control::{FormControlContext, FormInput},
+    components::form_control::{FormControlContext, FormInput},
     OptionalMaybeSignal, Out,
 };
 

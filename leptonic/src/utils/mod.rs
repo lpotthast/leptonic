@@ -1,8 +1,7 @@
-
-
 pub mod aria;
-pub mod time;
+pub mod math;
 pub mod props;
+pub mod time;
 
 pub(crate) enum DomContainer {
     Node(web_sys::Node),

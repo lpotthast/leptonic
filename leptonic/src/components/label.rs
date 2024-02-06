@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::form_control::FormControlContext;
+use crate::components::form_control::FormControlContext;
 
 #[component]
 pub fn Label(children: Children) -> impl IntoView {

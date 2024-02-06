@@ -4,7 +4,7 @@ use leptos::{html::ElementDescriptor, *};
 use web_sys::HtmlInputElement;
 
 use crate::{
-    form_control::{FormControlContext, FormInput},
+    components::form_control::{FormControlContext, FormInput},
     OptionalMaybeSignal, Out,
 };
 
