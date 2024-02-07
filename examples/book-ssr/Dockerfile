@@ -9,10 +9,10 @@ WORKDIR /build
 RUN <<EOF
     apt update
     apt upgrade
-    apt install -y curl tar ca-certificates pkg-config libssl-dev git unzip gzip brotli zstd musl-tools clang llvm npm --no-install-recommends
+    apt install -y curl tar ca-certificates pkg-config libssl-dev git unzip gzip brotli zstd musl-tools musl-dev clang llvm npm --no-install-recommends
 
     rustup default stable
-    rustup target add x86_64-unknown-linux-gnu
+    rustup target add x86_64-unknown-linux-musl
     rustup target add wasm32-unknown-unknown
 
     curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
@@ -27,9 +27,9 @@ EOF
 
 COPY . /build
 
-RUN cargo leptos build --release
-
 RUN <<EOF
+    LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl" cargo leptos build --release
+
     /bin/bash ./precompress.sh "/build/target/site"
 EOF
 
@@ -37,11 +37,11 @@ EOF
 # Final
 # ------------------------------------------------------------------------------
 
-FROM rust:latest
+FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /build/target/release/book-ssr .
+COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/book-ssr .
 COPY --from=builder /build/target/site ./site
 COPY --from=builder /build/certs/ssl_cert.pem ./certs/www.leptonic.dev-cert.pem
 COPY --from=builder /build/certs/ssl_key.pem ./certs/www.leptonic.dev-key.pem
