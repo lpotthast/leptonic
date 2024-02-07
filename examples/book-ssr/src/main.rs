@@ -6,6 +6,7 @@ async fn main() {
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use book_ssr::app::*;
     use book_ssr::fileserv::file_and_error_handler;
+    use tower_http::compression::CompressionLayer;
 
     use tracing_subscriber::{
         prelude::__tracing_subscriber_SubscriberExt,
@@ -45,7 +46,16 @@ async fn main() {
     // build our application with a route
     let app = Router::new()
         .leptos_routes(&leptos_options, routes, App)
-        .fallback(file_and_error_handler)
+        .fallback(
+            file_and_error_handler
+        )
+        .layer(
+            CompressionLayer::new()
+                .gzip(true)
+                .br(true)
+                .deflate(true)
+                .quality(tower_http::CompressionLevel::Default),
+        )
         .with_state(leptos_options);
 
     tracing::info!("Loading certs...");
