@@ -15,6 +15,7 @@
         "keydown",
         "keyup",
         "leptos",
+        "listbox",
         "mousedown",
         "mouseenter",
         "mouseup",

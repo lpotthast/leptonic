@@ -5,10 +5,10 @@
   justify-content: center;
   align-items: center;
   margin: 0;
-  padding: 0;
+  padding: var(--button-padding);
   font-size: 1em;
   font-weight: 400;
-  line-height: 1.25;
+  line-height: 1em;
   border-radius: var(--button-border-radius);
   transition: all 0.1s ease-in-out;
   user-select: none;
@@ -36,14 +36,8 @@
     cursor: inherit;
   }
 
-  &.has-variations {
-    padding-right: 1.5em;
-  }
-
   &[data-size="small"] {
-    .name {
-      padding: 0.347em 0.625em;
-    }
+    padding: 0.347em 0.625em;
 
     font-size: 0.9em;
     border-radius: 0.2em;
@@ -57,9 +51,7 @@
     border: none;
     background-color: transparent;
 
-    .name {
-      text-transform: uppercase;
-    }
+    text-transform: uppercase;
 
     &[data-color="primary"] {
       color: var(--button-flat-primary-text-color);
@@ -418,15 +410,6 @@
   leptonic-icon {
     font-size: 0.9em;
     margin-right: 0.3em;
-  }
-
-  .name {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    padding: 0.5em 0.75em;
-    line-height: 1em;
   }
 }
 

@@ -155,9 +155,7 @@ pub fn Button(
             on:focus=focus.on_focus
             on:blur=focus.on_blur
         >
-            <div class="name">
-                { children() }
-            </div>
+            { children() }
         </button>
     }
 }
