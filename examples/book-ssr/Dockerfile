@@ -9,7 +9,7 @@ WORKDIR /build
 RUN <<EOF
     apt update
     apt upgrade
-    apt install -y curl tar ca-certificates pkg-config libssl-dev git unzip musl-tools clang llvm npm --no-install-recommends
+    apt install -y curl tar ca-certificates pkg-config libssl-dev git unzip gzip brotli zstd musl-tools clang llvm npm --no-install-recommends
 
     rustup default stable
     rustup target add x86_64-unknown-linux-gnu
@@ -28,6 +28,10 @@ EOF
 COPY . /build
 
 RUN cargo leptos build --release
+
+RUN <<EOF
+    /bin/bash ./precompress.sh "/build/target/site"
+EOF
 
 # ------------------------------------------------------------------------------
 # Final
