@@ -46,15 +46,15 @@ async fn main() {
     // build our application with a route
     let app = Router::new()
         .leptos_routes(&leptos_options, routes, App)
+        .fallback(
+            file_and_error_handler
+        )
         .layer(
             CompressionLayer::new()
                 .gzip(true)
                 .br(true)
                 .deflate(true)
                 .quality(tower_http::CompressionLevel::Default),
-        )
-        .fallback(
-            file_and_error_handler
         )
         .with_state(leptos_options);
 
