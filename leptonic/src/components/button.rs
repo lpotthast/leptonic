@@ -101,7 +101,7 @@ pub fn Button(
     #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: OptionalMaybeSignal<String>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] aria_haspopup: OptionalMaybeSignal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: OptionalMaybeSignal<AriaExpanded>,
@@ -141,7 +141,8 @@ pub fn Button(
             {..press.props.attrs}
             node_ref=el
             id=id
-            class=move || class.0.as_ref().map(|it| format!("{} leptonic-btn", it.get())).unwrap_or_else(|| "leptonic-btn".to_string())
+            class=class
+            class:leptonic-btn=true
             class:active=move || active.get()
             style=style
             data-variant=move || variant.get().as_str()
