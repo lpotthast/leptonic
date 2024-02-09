@@ -4,14 +4,7 @@ use leptos::*;
 use leptos_router::{State, ToHref, A};
 
 use crate::{
-    hooks::{
-        button::{use_button, InitialButtonProps},
-        focus::{use_focus, UseFocusOptions},
-        press::{use_press, PressEvent, UsePressOptions},
-    },
-    prelude::Consumer,
-    utils::aria::{AriaExpanded, AriaHasPopup},
-    OptionalMaybeSignal,
+    hooks::press::PressEvent, prelude::Consumer, utils::aria::{AriaExpanded, AriaHasPopup}, OptMaybeSignal
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -95,69 +88,32 @@ impl Display for ButtonSize {
 #[component]
 pub fn Button(
     #[prop(into)] on_press: Consumer<PressEvent>,
-    #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
-    #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
-    #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
-    #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] variant: OptMaybeSignal<ButtonVariant>,
+    #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
+    #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    #[prop(into, optional)] aria_haspopup: OptionalMaybeSignal<AriaHasPopup>,
-    #[prop(into, optional)] aria_expanded: OptionalMaybeSignal<AriaExpanded>,
+    #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
+    #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
     children: Children,
 ) -> impl IntoView {
-    let el: NodeRef<html::Button> = create_node_ref();
-
-    let btn = use_button(InitialButtonProps {
-        node_ref: el,
-        disabled: disabled.or(false),
-        aria_haspopup: aria_haspopup.or_default(),
-        aria_expanded: aria_expanded.or_default(),
-    });
-
-    let focus = use_focus(UseFocusOptions {
-        disabled: disabled.or(false),
-        on_focus: None,
-        on_blur: None,
-        on_focus_change: None,
-    });
-
-    let press = use_press(UsePressOptions {
-        on_press: Callback::new(move |e| {
-            if !disabled.get_untracked() {
-                //e.stop_propagation();
-                on_press.consume(e);
-            }
-        }),
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
-    });
-
     view! {
-        <button
-            {..btn.props}
-            {..press.props.attrs}
-            node_ref=el
+        <crate::atoms::button::Button
+            on_press=on_press
+            disabled=disabled
+            aria_haspopup=aria_haspopup
+            aria_expanded=aria_expanded
             id=id
             class=class
-            class:leptonic-btn=true
-            class:active=move || active.get()
             style=style
-            data-variant=move || variant.get().as_str()
-            data-color=move || color.get().as_str()
-            data-size=move || size.get().as_str()
-            on:keydown=press.props.on_key_down
-            on:click=press.props.on_click
-            on:touchstart=press.props.on_touch_start
-            on:touchmove=press.props.on_touch_move
-            on:touchend=press.props.on_touch_end
-            on:focus=focus.on_focus
-            on:blur=focus.on_blur
+            attr:data-variant=move || variant.get().as_str()
+            attr:data-color=move || color.get().as_str()
+            attr:data-size=move || size.get().as_str()
         >
             { children() }
-        </button>
+        </crate::atoms::button::Button>
     }
 }
 
@@ -183,13 +139,13 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
 pub fn LinkButton<H>(
     href: H,
-    #[prop(into, optional)] variant: OptionalMaybeSignal<ButtonVariant>,
-    #[prop(into, optional)] color: OptionalMaybeSignal<ButtonColor>,
-    #[prop(into, optional)] size: OptionalMaybeSignal<ButtonSize>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
-    #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] variant: OptMaybeSignal<ButtonVariant>,
+    #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
+    #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
+    #[prop(into, optional)] active: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: OptionalMaybeSignal<String>,
+    #[prop(into, optional)] class: OptMaybeSignal<String>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
     #[prop(into, optional)]

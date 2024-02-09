@@ -4,7 +4,7 @@ use leptos::*;
 use tracing::warn;
 use uuid::Uuid;
 
-use crate::prelude::*;
+use crate::components::icon::Icon;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum OnOpen {

@@ -5,7 +5,7 @@ use web_sys::HtmlInputElement;
 
 use crate::{
     components::form_control::{FormControlContext, FormInput},
-    OptionalMaybeSignal, Out,
+    OptMaybeSignal, Out,
 };
 
 fn prepare_autofocus<T: ElementDescriptor + Clone + Deref<Target = HtmlInputElement> + 'static>(
@@ -74,11 +74,11 @@ impl FormInput for TextInputContext {
 pub fn TextInput(
     #[prop(into)] get: MaybeSignal<String>,
     #[prop(into, optional)] set: Option<Out<String>>,
-    #[prop(optional, into)] placeholder: OptionalMaybeSignal<String>,
-    #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
+    #[prop(optional, into)] placeholder: OptMaybeSignal<String>,
+    #[prop(optional, into)] prepend: OptMaybeSignal<View>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] autofocus: bool,
@@ -136,11 +136,11 @@ pub fn TextInput(
 pub fn PasswordInput(
     #[prop(into)] get: MaybeSignal<String>,
     #[prop(into, optional)] set: Option<Out<String>>,
-    #[prop(optional, into)] placeholder: OptionalMaybeSignal<String>,
-    #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
+    #[prop(optional, into)] placeholder: OptMaybeSignal<String>,
+    #[prop(optional, into)] prepend: OptMaybeSignal<View>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] autofocus: bool,
@@ -193,11 +193,11 @@ pub fn NumberInput(
     #[prop(optional)] min: Option<f64>,
     #[prop(optional)] max: Option<f64>,
     #[prop(optional)] step: Option<f64>,
-    #[prop(optional, into)] placeholder: OptionalMaybeSignal<String>,
-    #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
+    #[prop(optional, into)] placeholder: OptMaybeSignal<String>,
+    #[prop(optional, into)] prepend: OptMaybeSignal<View>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
     #[prop(into, optional)] autofocus: bool,

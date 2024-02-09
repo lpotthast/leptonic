@@ -1,21 +1,24 @@
 use leptos::*;
 
-use crate::{components::icon::Icon, OptionalMaybeSignal, Out};
+use crate::{components::icon::Icon, OptMaybeSignal, Out};
 
 #[component]
 pub fn Checkbox(
     #[prop(into)] checked: Signal<bool>,
     #[prop(into)] set_checked: Out<bool>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(default = icondata::BsCheck2)] checked_icon: icondata::Icon,
+    /// Arbitrary additional attributes.
+    #[prop(attrs)] attributes: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView {
     let disabled = move || disabled.0.as_ref().map_or(false, SignalGet::get);
 
     view! {
         <leptonic-checkbox
+            {..attributes}
             id=id
             class=class
             style=style

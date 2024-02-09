@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::{
     prelude::{GlobalKeyboardEvent, Producer},
-    OptionalMaybeSignal,
+    OptMaybeSignal,
 };
 
 #[derive(Clone)]
@@ -154,7 +154,7 @@ pub fn ModalTitle(children: Children) -> impl IntoView {
 #[component]
 pub fn ModalBody(
     children: Children,
-    #[prop(into, optional)] style: OptionalMaybeSignal<String>,
+    #[prop(into, optional)] style: OptMaybeSignal<String>,
 ) -> impl IntoView {
     view! {
         <leptonic-modal-body style=move || style.0.as_ref().map(SignalGet::get)>

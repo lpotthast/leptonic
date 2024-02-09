@@ -1,8 +1,11 @@
 use leptos::*;
 
 use crate::{
-    components::toggle::{ToggleProps, ToggleSize},
-    prelude::*,
+    components::{
+        prelude::{Toggle, ToggleIcons},
+        toggle::{ToggleProps, ToggleSize, ToggleVariant},
+    },
+    OptMaybeSignal,
 };
 
 /// Leptonic's default themes. You may want to create your own theme-defining-type if you have additional or differently named themes.
@@ -89,8 +92,8 @@ where
             })
             .into(),
         ),
-        active: OptionalMaybeSignal(None),
-        disabled: OptionalMaybeSignal(None),
+        active: OptMaybeSignal(None),
+        disabled: OptMaybeSignal(None),
         id: None,
         class: None,
         style: None,

@@ -3,7 +3,16 @@ use std::fmt::Debug;
 use leptos::*;
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
-use crate::prelude::*;
+use crate::{
+    components::{
+        chip::{Chip, ChipColor},
+        icon::Icon,
+        input::TextInput,
+        prelude::Leptonic,
+    },
+    prelude::{GlobalClickEvent, GlobalKeyboardEvent, ViewCallback},
+    Out,
+};
 
 pub trait SearchTextProvider {
     fn get_searchable_content() -> String;
@@ -107,8 +116,8 @@ where
 
     let (search, set_search) = create_signal(String::new());
 
-    let search_filter_provider = search_filter_provider
-        .unwrap_or(Callback::new(move |(s, o) : (String, Vec<O>)| {
+    let search_filter_provider =
+        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
             let lowercased_search = s.to_lowercase();
             o.into_iter()
                 .filter(|it| {
@@ -140,11 +149,7 @@ where
 
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
-    create_click_away_listener(
-        id_selector_string,
-        show_options,
-        set_show_options.into(),
-    );
+    create_click_away_listener(id_selector_string, show_options, set_show_options.into());
 
     create_key_down_listener(move |e| {
         match (show_options.get_untracked(), focused.get_untracked()) {
@@ -345,8 +350,8 @@ where
 
     let (search, set_search) = create_signal(String::new());
 
-    let search_filter_provider = search_filter_provider
-        .unwrap_or(Callback::new(move |(s, o) : (String, Vec<O>)| {
+    let search_filter_provider =
+        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
             let lowercased_search = s.to_lowercase();
             o.into_iter()
                 .filter(|it| {
@@ -382,11 +387,7 @@ where
 
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
-    create_click_away_listener(
-        id_selector_string,
-        show_options,
-        set_show_options.into(),
-    );
+    create_click_away_listener(id_selector_string, show_options, set_show_options.into());
 
     create_key_down_listener(move |e| {
         match (show_options.get_untracked(), focused.get_untracked()) {
@@ -606,8 +607,8 @@ where
 
     let (search, set_search) = create_signal(String::new());
 
-    let search_filter_provider = search_filter_provider
-        .unwrap_or(Callback::new(move |(s, o) : (String, Vec<O>)| {
+    let search_filter_provider =
+        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
             let lowercased_search = s.to_lowercase();
             o.into_iter()
                 .filter(|it| {
@@ -659,11 +660,7 @@ where
 
     // We need to check for global mouse events.
     // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
-    create_click_away_listener(
-        id_selector_string,
-        show_options,
-        set_show_options.into(),
-    );
+    create_click_away_listener(id_selector_string, show_options, set_show_options.into());
 
     create_key_down_listener(move |e| {
         match (show_options.get_untracked(), focused.get_untracked()) {

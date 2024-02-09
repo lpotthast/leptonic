@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::prelude::*;
+use crate::{components::icon::Icon, prelude::*};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ToggleSize {
@@ -57,8 +57,8 @@ impl ToggleVariant {
 pub fn Toggle(
     #[prop(into)] state: MaybeSignal<bool>,
     #[prop(into, optional)] set_state: Option<Out<bool>>,
-    #[prop(into, optional)] active: OptionalMaybeSignal<bool>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] active: OptMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,

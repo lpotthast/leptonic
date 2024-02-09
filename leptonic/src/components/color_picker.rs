@@ -1,6 +1,17 @@
 use crate::{
-    contexts::global_mouseup_event::GlobalMouseupEvent, prelude::*,
-    utils::math::project_into_range, RelativeMousePosition, TrackedElementClientBoundingRect,
+    components::{
+        field::{Field, FieldLabel},
+        input::NumberInput,
+        prelude::{Slider, SliderMarks, SliderPopover},
+        typography::P,
+    },
+    contexts::global_mouseup_event::GlobalMouseupEvent,
+    prelude::*,
+    utils::{
+        color::{HSV, RGB8},
+        math::project_into_range,
+    },
+    RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 use indoc::formatdoc;
 use leptos::*;

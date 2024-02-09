@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::prelude::{Button, ButtonVariant, Icon};
+use crate::components::prelude::{Button, ButtonVariant, Icon};
 
 #[component]
 pub fn H1(

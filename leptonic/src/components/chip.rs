@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use leptos::*;
 use web_sys::MouseEvent;
 
-use crate::{components::icon::Icon, OptionalMaybeSignal};
+use crate::{components::icon::Icon, OptMaybeSignal};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ChipColor {
@@ -37,7 +37,7 @@ impl Display for ChipColor {
 
 #[component]
 pub fn Chip(
-    #[prop(into, optional)] color: OptionalMaybeSignal<ChipColor>,
+    #[prop(into, optional)] color: OptMaybeSignal<ChipColor>,
     #[prop(into, optional)] dismissible: Option<Callback<MouseEvent>>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,

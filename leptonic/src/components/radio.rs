@@ -2,7 +2,7 @@ use leptos::*;
 
 use crate::{
     components::form_control::{FormControlContext, FormInput},
-    OptionalMaybeSignal, Out,
+    OptMaybeSignal, Out,
 };
 
 #[derive(Clone)]
@@ -105,7 +105,7 @@ impl FormInput for RadioContext {
 pub fn Radio(
     #[prop(into)] checked: Signal<bool>,
     #[prop(into)] set_checked: Out<bool>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,

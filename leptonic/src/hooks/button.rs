@@ -8,7 +8,7 @@ use crate::{
 
 #[derive(Clone, Copy, Educe)]
 #[educe(Debug)]
-pub struct InitialButtonProps<E: ElementDescriptor + 'static> {
+pub struct UseButtonProps<E: ElementDescriptor + 'static> {
     #[educe(Debug(ignore))]
     pub node_ref: NodeRef<E>,
     pub disabled: MaybeSignal<bool>,
@@ -23,7 +23,7 @@ pub struct UseButtonReturn {
 }
 
 pub fn use_button<E: ElementDescriptor + 'static>(
-    initial_props: InitialButtonProps<E>,
+    initial_props: UseButtonProps<E>,
 ) -> UseButtonReturn {
     let mut props = Attributes::new();
     props.insert("role", Attribute::String(Oco::Borrowed("button")));

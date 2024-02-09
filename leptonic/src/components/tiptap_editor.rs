@@ -1,13 +1,19 @@
 use leptos::*;
 use leptos_tiptap::*;
 
-use crate::prelude::*;
+use crate::{
+    components::{
+        button::{Button, ButtonSize},
+        icon::Icon,
+    },
+    OptMaybeSignal, Out,
+};
 
 #[component]
 pub fn TiptapEditor(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into)] value: Signal<String>,
     #[prop(into, optional)] set_value: Option<Out<TiptapContent>>,
 ) -> impl IntoView {

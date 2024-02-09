@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use leptos::*;
 
-use crate::prelude::*;
+use crate::components::link::Link;
 
 #[component]
 #[allow(clippy::needless_pass_by_value)]

@@ -3,17 +3,19 @@ use std::rc::Rc;
 use leptos::*;
 use leptos_use::{use_document, use_event_listener, use_window};
 use wasm_bindgen::{prelude::Closure, JsCast};
-use web_sys::{Event, KeyboardEvent, MouseEvent};
+use web_sys::{Event, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
-    contexts::{
-        global_click_event::GlobalClickEvent, global_keyboard_event::GlobalKeyboardEvent,
-        global_mouseup_event::GlobalMouseupEvent, global_resize_event::GlobalResizeEvent,
-        global_scroll_event::GlobalScrollEvent,
+    components::{
+        modal::ModalRoot, popover::PopoverRoot, prelude::ToastRoot, theme::ThemeProvider,
     },
-    components::popover::PopoverRoot,
-    prelude::*,
+    contexts::{
+        global_click_event::GlobalClickEvent, global_keyboard_event::GlobalKeyboardEvent, global_mouseup_event::GlobalMouseupEvent, global_pointer_event::{GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent, GlobalPointerUpEvent}, global_resize_event::GlobalResizeEvent, global_scroll_event::GlobalScrollEvent
+    },
+    create_signal_ls,
 };
+
+use super::theme::Theme;
 
 /// Leptonic's root context. Always available in components under <Root>.
 #[derive(Debug, Clone, Copy)]
@@ -64,6 +66,66 @@ where
         onkeydown,
         g_keyboard_event,
         set_g_keyboard_event,
+    ));
+
+    // POINTER DOWN
+    let (g_pointer_down_event, set_g_pointer_down_event) = create_signal::<Option<PointerEvent>>(None);
+    let mut on_pointer_down = None;
+    if let Some(doc) = &*doc {
+        let boxed: Box<dyn FnMut(PointerEvent)> = Box::new(move |e| set_g_pointer_down_event.set(Some(e)));
+        let closure = Closure::wrap(boxed);
+        doc.set_onpointerdown(Some(closure.as_ref().unchecked_ref()));
+        on_pointer_down = Some(Rc::new(Box::new(closure)));
+    }
+    provide_context(GlobalPointerDownEvent::new(
+        on_pointer_down,
+        g_pointer_down_event,
+        set_g_pointer_down_event,
+    ));
+
+    // POINTER UP
+    let (g_pointer_up_event, set_g_pointer_up_event) = create_signal::<Option<PointerEvent>>(None);
+    let mut on_pointer_up = None;
+    if let Some(doc) = &*doc {
+        let boxed: Box<dyn FnMut(PointerEvent)> = Box::new(move |e| set_g_pointer_up_event.set(Some(e)));
+        let closure = Closure::wrap(boxed);
+        doc.set_onpointerup(Some(closure.as_ref().unchecked_ref()));
+        on_pointer_up = Some(Rc::new(Box::new(closure)));
+    }
+    provide_context(GlobalPointerUpEvent::new(
+        on_pointer_up,
+        g_pointer_up_event,
+        set_g_pointer_up_event,
+    ));
+
+    // POINTER CANCEL
+    let (g_pointer_cancel_event, set_g_pointer_cancel_event) = create_signal::<Option<PointerEvent>>(None);
+    let mut on_pointer_cancel = None;
+    if let Some(doc) = &*doc {
+        let boxed: Box<dyn FnMut(PointerEvent)> = Box::new(move |e| set_g_pointer_cancel_event.set(Some(e)));
+        let closure = Closure::wrap(boxed);
+        doc.set_onpointercancel(Some(closure.as_ref().unchecked_ref()));
+        on_pointer_cancel = Some(Rc::new(Box::new(closure)));
+    }
+    provide_context(GlobalPointerCancelEvent::new(
+        on_pointer_cancel,
+        g_pointer_cancel_event,
+        set_g_pointer_cancel_event,
+    ));
+
+    // POINTER MOVE
+    let (g_pointer_move_event, set_g_pointer_move_event) = create_signal::<Option<PointerEvent>>(None);
+    let mut on_pointer_move = None;
+    if let Some(doc) = &*doc {
+        let boxed: Box<dyn FnMut(PointerEvent)> = Box::new(move |e| set_g_pointer_move_event.set(Some(e)));
+        let closure = Closure::wrap(boxed);
+        doc.set_onpointermove(Some(closure.as_ref().unchecked_ref()));
+        on_pointer_move = Some(Rc::new(Box::new(closure)));
+    }
+    provide_context(GlobalPointerMoveEvent::new(
+        on_pointer_move,
+        g_pointer_move_event,
+        set_g_pointer_move_event,
     ));
 
     // CLICK

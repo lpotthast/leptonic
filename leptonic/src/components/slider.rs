@@ -4,9 +4,11 @@ use leptos::*;
 use leptos_use::{use_element_bounding, use_element_hover};
 
 use crate::{
-    components::popover::PopoverContent, contexts::global_mouseup_event::GlobalMouseupEvent,
-    prelude::Popover, utils::math::project_into_range, Out, RelativeMousePosition, Size,
-    TrackedElementClientBoundingRect, UseElementBoundingReturnReadOnly,
+    components::popover::{Popover, PopoverContent},
+    contexts::global_mouseup_event::GlobalMouseupEvent,
+    utils::math::project_into_range,
+    Out, RelativeMousePosition, Size, TrackedElementClientBoundingRect,
+    UseElementBoundingReturnReadOnly,
 };
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]

@@ -4,6 +4,7 @@ use leptos::*;
 use leptos_use::{use_window, UseElementBoundingReturn};
 use prelude::Consumer;
 
+pub mod atoms;
 pub mod components;
 pub mod contexts;
 pub mod hooks;
@@ -25,9 +26,9 @@ impl<T: 'static, I: Into<Signal<T>>> From<I> for OptionalSignal<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct OptionalMaybeSignal<T: 'static>(Option<MaybeSignal<T>>);
+pub struct OptMaybeSignal<T: 'static>(Option<MaybeSignal<T>>);
 
-impl<T: Clone> OptionalMaybeSignal<T> {
+impl<T: Clone> OptMaybeSignal<T> {
     pub fn or<D: Into<MaybeSignal<T>>>(self, default: D) -> MaybeSignal<T> {
         match self.0 {
             Some(maybe_signal) => maybe_signal,
@@ -45,7 +46,7 @@ impl<T: Clone> OptionalMaybeSignal<T> {
         }
     }
 
-    pub fn map<U: 'static, F: Fn(T) -> U + 'static>(self, map: F) -> OptionalMaybeSignal<U> {
+    pub fn map<U: 'static, F: Fn(T) -> U + 'static>(self, map: F) -> OptMaybeSignal<U> {
         match self.0 {
             Some(maybe_signal) => match maybe_signal {
                 MaybeSignal::Static(v) => MaybeSignal::Static(map(v)).into(),
@@ -53,26 +54,26 @@ impl<T: Clone> OptionalMaybeSignal<T> {
                     MaybeSignal::Dynamic(Signal::derive(move || map(sig.get()))).into()
                 }
             },
-            None => OptionalMaybeSignal(None),
+            None => OptMaybeSignal(None),
         }
     }
 }
 
-impl<T: Copy> Copy for OptionalMaybeSignal<T> {}
+impl<T: Copy> Copy for OptMaybeSignal<T> {}
 
-impl<T> Default for OptionalMaybeSignal<T> {
+impl<T> Default for OptMaybeSignal<T> {
     fn default() -> Self {
         Self(None)
     }
 }
 
-impl<T: 'static, I: Into<MaybeSignal<T>>> From<I> for OptionalMaybeSignal<T> {
+impl<T: 'static, I: Into<MaybeSignal<T>>> From<I> for OptMaybeSignal<T> {
     fn from(value: I) -> Self {
         Self(Some(value.into()))
     }
 }
 
-impl<T: Clone + Default> SignalGet for OptionalMaybeSignal<T> {
+impl<T: Clone + Default> SignalGet for OptMaybeSignal<T> {
     type Value = T;
 
     fn get(&self) -> T {
@@ -90,7 +91,7 @@ impl<T: Clone + Default> SignalGet for OptionalMaybeSignal<T> {
     }
 }
 
-impl<T: Clone + Default> SignalGetUntracked for OptionalMaybeSignal<T> {
+impl<T: Clone + Default> SignalGetUntracked for OptMaybeSignal<T> {
     type Value = T;
 
     fn get_untracked(&self) -> T {
@@ -108,7 +109,7 @@ impl<T: Clone + Default> SignalGetUntracked for OptionalMaybeSignal<T> {
     }
 }
 
-impl<T: IntoAttribute + Clone> IntoAttribute for OptionalMaybeSignal<T> {
+impl<T: IntoAttribute + Clone> IntoAttribute for OptMaybeSignal<T> {
     fn into_attribute(self) -> Attribute {
         match self.0 {
             Some(t) => t.into_attribute(), // Requires T to be Clone!
@@ -146,157 +147,25 @@ pub mod prelude {
 
     pub use super::utils::aria::AriaExpanded;
     pub use super::utils::aria::AriaHasPopup;
+    pub use super::utils::callback::consumer;
+    pub use super::utils::callback::producer;
+    pub use super::utils::callback::Consumer;
+    pub use super::utils::callback::Producer;
+    pub use super::utils::callback::ViewCallback;
+    pub use super::utils::callback::ViewProducer;
     pub use super::FontWeight;
     pub use super::Height;
     pub use super::Margin;
     pub use super::Mount;
     pub use super::OptionDeref;
-    pub use super::OptionalMaybeSignal;
+    pub use super::OptMaybeSignal;
     pub use super::OptionalSignal;
     pub use super::Out;
     pub use super::Size;
     pub use super::Width;
-    pub use crate::components::alert::Alert;
-    pub use crate::components::alert::AlertAppend;
-    pub use crate::components::alert::AlertContent;
-    pub use crate::components::alert::AlertIcon;
-    pub use crate::components::alert::AlertIconSlot;
-    pub use crate::components::alert::AlertPrepend;
-    pub use crate::components::alert::AlertTitle;
-    pub use crate::components::alert::AlertVariant;
-    pub use crate::components::anchor::Anchor;
-    pub use crate::components::app_bar::AppBar;
-    pub use crate::components::button::Button;
-    pub use crate::components::button::ButtonColor;
-    pub use crate::components::button::ButtonGroup;
-    pub use crate::components::button::ButtonSize;
-    pub use crate::components::button::ButtonVariant;
-    pub use crate::components::button::ButtonWrapper;
-    pub use crate::components::button::LinkButton;
-    pub use crate::components::callback::consumer;
-    pub use crate::components::callback::producer;
-    pub use crate::components::callback::Consumer;
-    pub use crate::components::callback::Producer;
-    pub use crate::components::callback::ViewCallback;
-    pub use crate::components::callback::ViewProducer;
-    pub use crate::components::card::Card;
-    pub use crate::components::checkbox::Checkbox;
-    pub use crate::components::chip::Chip;
-    pub use crate::components::chip::ChipColor;
-    pub use crate::components::collapsible::Collapsible;
-    pub use crate::components::collapsible::CollapsibleBody;
-    pub use crate::components::collapsible::CollapsibleHeader;
-    pub use crate::components::collapsible::Collapsibles;
-    pub use crate::components::collapsible::OnOpen;
-    pub use crate::components::color::ColorSpace;
-    pub use crate::components::color::HSV;
-    pub use crate::components::color::RGB8;
-    pub use crate::components::color::RGBA8;
-    pub use crate::components::color_picker::ColorPalette;
-    pub use crate::components::color_picker::ColorPicker;
-    pub use crate::components::color_picker::ColorPreview;
-    pub use crate::components::color_picker::HueSlider;
-    pub use crate::components::date_selector::DateSelector;
-    pub use crate::components::datetime_input::DateTimeInput;
-    pub use crate::components::drawer::Drawer;
-    pub use crate::components::drawer::DrawerSide;
-    pub use crate::components::field::Field;
-    pub use crate::components::field::FieldLabel;
-    pub use crate::components::form_control::FormControl;
-    pub use crate::components::grid::Col;
-    pub use crate::components::grid::ColAlign;
-    pub use crate::components::grid::Grid;
-    pub use crate::components::grid::Row;
-    pub use crate::components::icon::Icon;
-    pub use crate::components::input::NumberInput;
-    pub use crate::components::input::PasswordInput;
-    pub use crate::components::input::TextInput;
-    pub use crate::components::kbd::KbdConcatenate;
-    pub use crate::components::kbd::KbdKey;
-    pub use crate::components::kbd::KbdShortcut;
-    pub use crate::components::kbd::KbdShortcutRoot;
-    pub use crate::components::kbd::Key;
-    pub use crate::components::label::Label;
-    pub use crate::components::link::Link;
-    pub use crate::components::link::LinkExt;
-    pub use crate::components::link::LinkExtTarget;
-    pub use crate::components::modal::Modal;
-    pub use crate::components::modal::ModalBody;
-    pub use crate::components::modal::ModalFooter;
-    pub use crate::components::modal::ModalHeader;
-    pub use crate::components::modal::ModalRoot;
-    pub use crate::components::modal::ModalTitle;
-    pub use crate::components::popover::Popover;
-    pub use crate::components::popover::PopoverAlignX;
-    pub use crate::components::popover::PopoverAlignY;
-    pub use crate::components::popover::PopoverContent;
-    pub use crate::components::progress_bar::ProgressBar;
-    pub use crate::components::quicksearch::Quicksearch;
-    pub use crate::components::quicksearch::QuicksearchOption;
-    pub use crate::components::quicksearch::QuicksearchTrigger;
-    pub use crate::components::r#box::Box;
-    pub use crate::components::radio::Radio;
-    pub use crate::components::radio::RadioGroup;
-    pub use crate::components::root::Leptonic;
-    pub use crate::components::root::Root;
-    pub use crate::components::safe_html::SafeHtml;
-    pub use crate::components::select::Multiselect;
-    pub use crate::components::select::OptionalSelect;
-    pub use crate::components::select::Select;
-    pub use crate::components::separator::Separator;
-    pub use crate::components::skeleton::Skeleton;
-    pub use crate::components::slider::RangeSlider;
-    pub use crate::components::slider::Slider;
-    pub use crate::components::slider::SliderMark;
-    pub use crate::components::slider::SliderMarkValue;
-    pub use crate::components::slider::SliderMarks;
-    pub use crate::components::slider::SliderPopover;
-    pub use crate::components::slider::SliderVariant;
-    pub use crate::components::stack::Stack;
-    pub use crate::components::stack::StackOrientation;
-    pub use crate::components::tab::Tab;
-    pub use crate::components::table::Table;
-    pub use crate::components::table::TableBody;
-    pub use crate::components::table::TableCell;
-    pub use crate::components::table::TableContainer;
-    pub use crate::components::table::TableFooter;
-    pub use crate::components::table::TableHeader;
-    pub use crate::components::table::TableHeaderCell;
-    pub use crate::components::table::TableRow;
-    pub use crate::components::tabs::Tabs;
-    pub use crate::components::theme::LeptonicTheme;
-    pub use crate::components::theme::Theme;
-    pub use crate::components::theme::ThemeContext;
-    pub use crate::components::theme::ThemeProvider;
-    pub use crate::components::theme::ThemeToggle;
-    pub use crate::components::tile::Tile;
-    #[cfg(feature = "tiptap")]
-    pub use crate::components::tiptap_editor::TiptapEditor;
-    pub use crate::components::toast::Toast;
-    pub use crate::components::toast::ToastRoot;
-    pub use crate::components::toast::ToastTimeout;
-    pub use crate::components::toast::ToastVariant;
-    pub use crate::components::toast::Toasts;
-    pub use crate::components::toggle::Toggle;
-    pub use crate::components::toggle::ToggleIcons;
-    pub use crate::components::toggle::ToggleSize;
-    pub use crate::components::toggle::ToggleVariant;
-    pub use crate::components::transitions::collapse::Collapse;
-    pub use crate::components::transitions::collapse::CollapseAxis;
-    pub use crate::components::transitions::fade::Fade;
-    pub use crate::components::transitions::grow::Grow;
-    pub use crate::components::transitions::slide::Slide;
-    pub use crate::components::transitions::zoom::Zoom;
-    pub use crate::components::typography::Code;
-    pub use crate::components::typography::Li;
-    pub use crate::components::typography::Ul;
-    pub use crate::components::typography::H1;
-    pub use crate::components::typography::H2;
-    pub use crate::components::typography::H3;
-    pub use crate::components::typography::H4;
-    pub use crate::components::typography::H5;
-    pub use crate::components::typography::H6;
-    pub use crate::components::typography::P;
+    //pub use crate::atoms::prelude::*;
+    //pub use crate::components::prelude::*;
+    //pub use crate::hooks::prelude::*;
     pub use crate::contexts::global_click_event::GlobalClickEvent;
     pub use crate::contexts::global_keyboard_event::GlobalKeyboardEvent;
     pub use crate::create_signal_ls;

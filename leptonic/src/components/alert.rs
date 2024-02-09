@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::prelude::*;
+use super::icon::Icon;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AlertVariant {

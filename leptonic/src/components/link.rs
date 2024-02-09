@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_router::*;
 
-use crate::OptionalMaybeSignal;
+use crate::OptMaybeSignal;
 
 #[component]
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
@@ -69,7 +69,7 @@ pub fn LinkExt<H>(
     /// Used to calculate the link's `href` attribute.
     href: H,
     target: LinkExtTarget,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     // TODO: Impl this prop
     // /// If `true`, the link will not add to the browser's history (so, pressing `Back`
     // /// will skip this page.)

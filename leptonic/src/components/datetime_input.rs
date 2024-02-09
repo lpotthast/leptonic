@@ -3,21 +3,20 @@ use time::format_description::well_known::Rfc3339;
 use web_sys::KeyboardEvent;
 
 use crate::{
-    components::date_selector::DateSelectorProps,
-    prelude::DateSelector,
+    components::date_selector::{DateSelector, DateSelectorProps},
     utils::time::{GuideMode, Type},
-    Margin, OptionalMaybeSignal, Out,
+    Margin, OptMaybeSignal, Out,
 };
 
 #[component]
 pub fn DateTimeInput(
-    #[prop(optional, into)] label: OptionalMaybeSignal<String>,
+    #[prop(optional, into)] label: OptMaybeSignal<String>,
     #[prop(into)] get: MaybeSignal<Option<time::OffsetDateTime>>,
     #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
-    #[prop(optional, into)] prepend: OptionalMaybeSignal<View>,
+    #[prop(optional, into)] prepend: OptMaybeSignal<View>,
     #[prop(into, optional)] id: Option<Oco<'static, str>>,
     #[prop(into, optional)] class: Option<Oco<'static, str>>,
-    #[prop(into, optional)] disabled: OptionalMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(optional)] margin: Option<Margin>,
 
     #[prop(optional)] min: Option<time::OffsetDateTime>,

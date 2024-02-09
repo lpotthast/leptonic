@@ -1,10 +1,10 @@
 use educe::Educe;
-use leptos::{
+use leptos_reactive::{
     create_signal,
-    ev::{KeyboardEvent, MouseEvent, TouchEvent},
     Callable, Callback, Signal,
 };
 use wasm_bindgen::JsCast;
+use web_sys::{KeyboardEvent, MouseEvent, TouchEvent};
 
 use crate::utils::{current_target_contains_target, props::Attributes, EventTargetExt};
 
@@ -14,7 +14,7 @@ use crate::utils::{current_target_contains_target, props::Attributes, EventTarge
 pub struct PressEvent {}
 
 #[derive(Debug, Clone, Copy)]
-pub struct UsePressOptions {
+pub struct UsePressInput {
     pub on_press: Callback<PressEvent>,
     pub on_press_up: Option<Callback<PressEvent>>,
     pub on_press_start: Option<Callback<PressEvent>>,
@@ -46,10 +46,10 @@ pub struct UsePressReturn {
     pub is_pressed: Signal<bool>,
 }
 
-pub fn use_press(options: UsePressOptions) -> UsePressReturn {
+pub fn use_press(input: UsePressInput) -> UsePressReturn {
     let attrs = Attributes::new();
 
-    let (is_pressed, _set_is_pressed) = create_signal(false);
+    let (is_pressed, set_is_pressed) = create_signal(false);
 
     let on_key_down = Box::new(move |e: KeyboardEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
@@ -87,18 +87,28 @@ pub fn use_press(options: UsePressOptions) -> UsePressReturn {
         };
 
         if resembles_press {
-            options.on_press.call(PressEvent {});
+            input.on_press.call(PressEvent {});
         }
     });
 
     let on_click = Box::new(move |e: MouseEvent| {
         e.prevent_default();
-        options.on_press.call(PressEvent {});
+        input.on_press.call(PressEvent {});
+    });
+
+    let on_mouse_down = Box::new(move |e: MouseEvent| {
+        e.prevent_default();
+        input.on_press.call(PressEvent {});
+    });
+    
+    let on_mouse_up = Box::new(move |e: MouseEvent| {
+        e.prevent_default();
+        input.on_press.call(PressEvent {});
     });
 
     let on_touchstart = Box::new(move |e: TouchEvent| {
         e.prevent_default();
-        if let Some(on_press_start) = options.on_press_start {
+        if let Some(on_press_start) = input.on_press_start {
             on_press_start.call(PressEvent {});
         }
     });
@@ -107,7 +117,7 @@ pub fn use_press(options: UsePressOptions) -> UsePressReturn {
         e.prevent_default();
 
         // TODO: detect target leave / enter and submit enter/start.
-        if let Some(on_press_end) = options.on_press_end {
+        if let Some(on_press_end) = input.on_press_end {
             on_press_end.call(PressEvent {});
         }
     });
@@ -120,7 +130,7 @@ pub fn use_press(options: UsePressOptions) -> UsePressReturn {
             return;
         }
         e.stop_propagation();
-        options.on_press.call(PressEvent {});
+        input.on_press.call(PressEvent {});
     });
 
     UsePressReturn {
