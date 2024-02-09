@@ -1,6 +1,6 @@
 use std::fmt::Display;
 
-use leptonic::prelude::*;
+use leptonic::{components::prelude::*, prelude::*};
 use leptos::*;
 use leptos_router::*;
 
@@ -22,6 +22,8 @@ use crate::pages::documentation::getting_started::changelog::PageChangelog;
 use crate::pages::documentation::getting_started::installation::PageInstallation;
 use crate::pages::documentation::getting_started::overview::PageOverview;
 use crate::pages::documentation::getting_started::themes::PageThemes;
+use crate::pages::documentation::hooks::r#move::PageMove;
+use crate::pages::documentation::hooks::press::PagePress;
 use crate::pages::documentation::input::button::PageButton;
 use crate::pages::documentation::input::checkbox::PageCheckbox;
 use crate::pages::documentation::input::color_picker::PageColorPicker;
@@ -49,6 +51,10 @@ pub enum DocRoutes {
     Installation,
     Themes,
     Changelog,
+
+    // Hooks
+    UsePress,
+    UseMove,
 
     // Layout
     Stack,
@@ -103,6 +109,9 @@ impl DocRoutes {
             Self::Installation => "installation",
             Self::Themes => "themes",
             Self::Changelog => "changelog",
+
+            Self::UsePress => "use-press",
+            Self::UseMove => "use-move",
 
             Self::Stack => "stack",
             Self::Grid => "grid",
@@ -171,6 +180,9 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::Themes view=|| view! { <PageThemes/> }/>
             <Route path=DocRoutes::Changelog view=|| view! { <PageChangelog/> }/>
 
+            <Route path=DocRoutes::UsePress view=|| view! { <PagePress/> }/>
+            <Route path=DocRoutes::UseMove view=|| view! { <PageMove/> }/>
+
             <Route path=DocRoutes::Stack view=|| view! { <PageStack/> }/>
             <Route path=DocRoutes::Grid view=|| view! { <PageGrid/> }/>
             <Route path=DocRoutes::Separator view=|| view! { <PageSeparator/> }/>
@@ -238,6 +250,15 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=DocRoutes::Installation class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
                 <Link href=DocRoutes::Themes class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
                 <Link href=DocRoutes::Changelog class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
+            </Stack>
+        </DrawerSection>
+
+        <DrawerSection header=move || view! {
+            <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Hooks"
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                <Link href=DocRoutes::UsePress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
+                <Link href=DocRoutes::UseMove class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
             </Stack>
         </DrawerSection>
 

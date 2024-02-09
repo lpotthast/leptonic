@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::prelude::*;
+use leptonic::components::prelude::*;
 use leptos::*;
 use strum::IntoEnumIterator;
 use uuid::Uuid;

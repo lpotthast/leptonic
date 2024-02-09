@@ -1,4 +1,4 @@
-use leptonic::prelude::*;
+use leptonic::{components::prelude::*, prelude::*};
 use leptos::*;
 
 use crate::app::AppRoutes;

@@ -1,4 +1,4 @@
-use leptonic::prelude::*;
+use leptonic::components::prelude::*;
 use leptos::*;
 
 use crate::pages::documentation::doc_root::DocRoutes;

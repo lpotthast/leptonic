@@ -1,5 +1,6 @@
 use indoc::indoc;
-use leptonic::prelude::*;
+use leptonic::components::prelude::*;
+use leptonic::utils::color::HSV;
 use leptos::*;
 
 #[component]

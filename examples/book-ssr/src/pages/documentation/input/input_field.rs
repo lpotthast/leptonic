@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::prelude::*;
+use leptonic::components::prelude::*;
 use leptos::*;
 
 #[component]
@@ -32,7 +32,7 @@ pub fn PageInput() -> impl IntoView {
         <H2>"Labeled"</H2>
 
         <P>"Wrap an input and a label to link them together."</P>
-        
+
         <Code>
             {indoc!(r#"
                 <FormControl>

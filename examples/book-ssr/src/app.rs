@@ -1,16 +1,16 @@
-use crate::{
-    error_template::{AppError, ErrorTemplate},
-    pages::editor::ThemeEditor,
-};
-
+use leptonic::{components::prelude::*, prelude::*};
 use leptos::*;
 use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, Style, Stylesheet, Title};
 use leptos_router::*;
 use leptos_use::use_media_query;
 
-use leptonic::prelude::*;
-
-use crate::pages::{documentation::doc_root::DocRoutes, err404::PageErr404, welcome::PageWelcome};
+use crate::{
+    error_template::{AppError, ErrorTemplate},
+    pages::{
+        documentation::doc_root::DocRoutes, editor::ThemeEditor, err404::PageErr404,
+        welcome::PageWelcome,
+    },
+};
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
 

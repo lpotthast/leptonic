@@ -1,5 +1,6 @@
 use indoc::indoc;
-use leptonic::{utils::time::GuideMode, prelude::*};
+use leptonic::components::prelude::*;
+use leptonic::utils::time::GuideMode;
 use leptos::*;
 use time::OffsetDateTime;
 

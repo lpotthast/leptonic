@@ -1,4 +1,4 @@
-use leptonic::prelude::*;
+use leptonic::components::prelude::*;
 use leptos::*;
 
 #[component]
@@ -24,7 +24,7 @@ pub fn PageChangelog() -> impl IntoView {
         <ul>
             <li>"Buttons no longer support `variations`. They resulted in non compliant code."</li>
         </ul>
-        
+
         <H2>"0.5.0"</H2>
 
         <P>"Leptonic now supports Leptos in version 0.6!"</P>

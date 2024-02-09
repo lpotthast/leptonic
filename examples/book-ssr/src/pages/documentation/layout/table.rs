@@ -1,9 +1,44 @@
 use indoc::indoc;
-use leptonic::prelude::*;
+use leptonic::components::prelude::*;
 use leptos::*;
+
+#[derive(Clone)]
+pub struct Minion {
+    id: u32,
+    name: String,
+    appearance: String,
+    num_eyes: u32,
+}
 
 #[component]
 pub fn PageTable() -> impl IntoView {
+    let minions = create_rw_signal(vec![
+        Minion {
+            id: 1,
+            name: String::from("Kevin"),
+            appearance: String::from("Tall"),
+            num_eyes: 2,
+        },
+        Minion {
+            id: 2,
+            name: String::from("Bob"),
+            appearance: String::from("Short"),
+            num_eyes: 2,
+        },
+        Minion {
+            id: 3,
+            name: String::from("Stuart"),
+            appearance: String::from("Medium"),
+            num_eyes: 1,
+        },
+        Minion {
+            id: 4,
+            name: String::from("Otto"),
+            appearance: String::from("Round"),
+            num_eyes: 2,
+        }
+    ]);
+
     view! {
         <H1>"Table"</H1>
 
@@ -22,30 +57,18 @@ pub fn PageTable() -> impl IntoView {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            <TableRow>
-                                <TableCell>"1"</TableCell>
-                                <TableCell>"Kevin"</TableCell>
-                                <TableCell>"Tall"</TableCell>
-                                <TableCell>"2"</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>"2"</TableCell>
-                                <TableCell>"Bob"</TableCell>
-                                <TableCell>"Short"</TableCell>
-                                <TableCell>"2"</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>"3"</TableCell>
-                                <TableCell>"Stuart"</TableCell>
-                                <TableCell>"Medium"</TableCell>
-                                <TableCell>"1"</TableCell>
-                            </TableRow>
-                            <TableRow>
-                                <TableCell>"4"</TableCell>
-                                <TableCell>"Otto"</TableCell>
-                                <TableCell>"Round"</TableCell>
-                                <TableCell>"2"</TableCell>
-                            </TableRow>
+                            <For
+                                each=move || minions.get()
+                                key=move |minion| minion.id
+                                children=move |minion| view! {
+                                    <TableRow>
+                                        <TableCell>{minion.id}</TableCell>
+                                        <TableCell>{minion.name}</TableCell>
+                                        <TableCell>{minion.appearance}</TableCell>
+                                        <TableCell>{minion.num_eyes}</TableCell>
+                                    </TableRow>
+                                }
+                            />
                         </TableBody>
                     </Table>
                 </TableContainer>
@@ -63,30 +86,18 @@ pub fn PageTable() -> impl IntoView {
                     </TableRow>
                 </TableHeader>
                 <TableBody>
-                    <TableRow>
-                        <TableCell>"1"</TableCell>
-                        <TableCell>"Kevin"</TableCell>
-                        <TableCell>"Tall"</TableCell>
-                        <TableCell>"2"</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"2"</TableCell>
-                        <TableCell>"Bob"</TableCell>
-                        <TableCell>"Short"</TableCell>
-                        <TableCell>"2"</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"3"</TableCell>
-                        <TableCell>"Stuart"</TableCell>
-                        <TableCell>"Medium"</TableCell>
-                        <TableCell>"1"</TableCell>
-                    </TableRow>
-                    <TableRow>
-                        <TableCell>"4"</TableCell>
-                        <TableCell>"Otto"</TableCell>
-                        <TableCell>"Round"</TableCell>
-                        <TableCell>"2"</TableCell>
-                    </TableRow>
+                    <For
+                        each=move || minions.get()
+                        key=move |minion| minion.id
+                        children=move |minion| view! {
+                            <TableRow>
+                                <TableCell>{minion.id}</TableCell>
+                                <TableCell>{minion.name}</TableCell>
+                                <TableCell>{minion.appearance}</TableCell>
+                                <TableCell>{minion.num_eyes}</TableCell>
+                            </TableRow>
+                        }
+                    />
                 </TableBody>
             </Table>
         </TableContainer>
