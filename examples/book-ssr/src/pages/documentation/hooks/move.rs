@@ -50,6 +50,20 @@ pub fn PageMove() -> impl IntoView {
             });
         }),
         on_move_end: Callback::new(move |_e| {
+            set_left.update(move |l| {
+                *l = (*l).clamp(
+                    0,
+                    container_bounding.width.get_untracked() as i32
+                        - draggable_bounding.width.get_untracked() as i32,
+                )
+            });
+            set_top.update(move |t| {
+                *t = (*t).clamp(
+                    0,
+                    container_bounding.height.get_untracked() as i32
+                        - draggable_bounding.height.get_untracked() as i32,
+                )
+            });
             set_events.update(move |events| {
                 events.push_overwrite(Oco::Borrowed("MoveEnd"));
             });
