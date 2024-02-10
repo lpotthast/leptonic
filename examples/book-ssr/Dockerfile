@@ -1,3 +1,5 @@
+ARG DEFAULT_LEPTOS_OUTPUT_NAME="book-ssr-$(date +%s)"
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -28,7 +30,7 @@ EOF
 COPY . /build
 
 RUN <<EOF
-    LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl" LEPTOS_OUTPUT_NAME="book-ssr-$(date +%s)" cargo leptos build --release
+    LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl" LEPTOS_OUTPUT_NAME=$DEFAULT_LEPTOS_OUTPUT_NAME cargo leptos build --release
 
     /bin/bash ./precompress.sh "/build/target/site"
 EOF
@@ -48,7 +50,7 @@ COPY --from=builder /build/certs/ssl_key.pem ./certs/www.leptonic.dev-key.pem
 
 ENV TLS_CERT_PATH="certs/www.leptonic.dev-cert.pem"
 ENV TLS_KEY_PATH="certs/www.leptonic.dev-key.pem"
-ENV LEPTOS_OUTPUT_NAME="book-ssr"
+ENV LEPTOS_OUTPUT_NAME=$DEFAULT_LEPTOS_OUTPUT_NAME
 ENV LEPTOS_SITE_ROOT="site"
 ENV LEPTOS_SITE_PKG_DIR="pkg"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:443"
