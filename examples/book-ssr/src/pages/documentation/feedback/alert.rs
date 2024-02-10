@@ -32,7 +32,7 @@ pub fn PageAlert() -> impl IntoView {
         </Alert>
 
         <Alert variant=AlertVariant::Danger>
-            <AlertTitle slot>"Warn"</AlertTitle>
+            <AlertTitle slot>"Danger"</AlertTitle>
             <AlertContent slot>"There was an error!"</AlertContent>
         </Alert>
 
