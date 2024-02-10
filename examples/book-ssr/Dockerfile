@@ -28,7 +28,7 @@ EOF
 COPY . /build
 
 RUN <<EOF
-    LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl" cargo leptos build --release
+    LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl" LEPTOS_OUTPUT_NAME="book-ssr-$(date +%s)" cargo leptos build --release
 
     /bin/bash ./precompress.sh "/build/target/site"
 EOF
