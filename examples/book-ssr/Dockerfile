@@ -8,6 +8,8 @@ FROM --platform=linux/amd64 rust:1.75-slim-bookworm as builder
 
 WORKDIR /build
 
+ARG DEFAULT_LEPTOS_OUTPUT_NAME
+
 RUN <<EOF
     apt update
     apt upgrade
@@ -43,6 +45,8 @@ FROM alpine:latest
 
 WORKDIR /app
 
+ARG DEFAULT_LEPTOS_OUTPUT_NAME
+
 COPY --from=builder /build/target/x86_64-unknown-linux-musl/release/book-ssr .
 COPY --from=builder /build/target/site ./site
 COPY --from=builder /build/certs/ssl_cert.pem ./certs/www.leptonic.dev-cert.pem
@@ -50,7 +54,7 @@ COPY --from=builder /build/certs/ssl_key.pem ./certs/www.leptonic.dev-key.pem
 
 ENV TLS_CERT_PATH="certs/www.leptonic.dev-cert.pem"
 ENV TLS_KEY_PATH="certs/www.leptonic.dev-key.pem"
-ENV LEPTOS_OUTPUT_NAME=$DEFAULT_LEPTOS_OUTPUT_NAME
+ENV LEPTOS_OUTPUT_NAME="$DEFAULT_LEPTOS_OUTPUT_NAME"
 ENV LEPTOS_SITE_ROOT="site"
 ENV LEPTOS_SITE_PKG_DIR="pkg"
 ENV LEPTOS_SITE_ADDR="0.0.0.0:443"
