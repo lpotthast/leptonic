@@ -78,7 +78,9 @@ book-build-and-package:
     - echo -n "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
   script:
     - cd examples/book-ssr
-    - image="${CI_REGISTRY_IMAGE}/leptonic-book"
+    - timestamp=$(date +%s)
+    - app_name="leptonic-book-${timestamp}""
+    - image="${CI_REGISTRY_IMAGE}/{app_name}"
     - tag="${CI_COMMIT_SHA}"
     - docker pull "${image}:latest" || true
     - echo "Finalizing Dockerfile"
@@ -90,6 +92,7 @@ book-build-and-package:
       --pull
       --cache-from "${image}:${tag}"
       --tag "${image}:${tag}"
+      --build-arg DEFAULT_LEPTOS_OUTPUT_NAME="${app_name}"
       .
     - docker tag "${image}:${tag}" "${image}:latest"
     - docker push "${image}:${tag}"

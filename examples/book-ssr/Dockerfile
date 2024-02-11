@@ -1,4 +1,8 @@
-ARG DEFAULT_LEPTOS_OUTPUT_NAME=book-ssr-$(date +%s)
+# We must be able to control the name of the application build!
+# By letting it contain a random part, cache-busting is made possible.
+# Overwrite this using a `--build-arg`, like in:
+# `docker build --build-arg DEFAULT_LEPTOS_OUTPUT_NAME="book-ssr-$(date +%s)" -t image-name .`
+ARG DEFAULT_LEPTOS_OUTPUT_NAME="book-ssr"
 
 # ------------------------------------------------------------------------------
 # Build
@@ -31,8 +35,12 @@ EOF
 
 COPY . /build
 
+# Configuring ENV variables to alter the `cargo leptos build` command.
+ENV LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl"
+ENV LEPTOS_OUTPUT_NAME=${DEFAULT_LEPTOS_OUTPUT_NAME}
+
 RUN <<EOF
-    LEPTOS_BIN_TARGET_TRIPLE="x86_64-unknown-linux-musl" LEPTOS_OUTPUT_NAME=${DEFAULT_LEPTOS_OUTPUT_NAME} cargo leptos build --release
+    cargo leptos build --release
 
     /bin/bash ./precompress.sh "/build/target/site"
 EOF
