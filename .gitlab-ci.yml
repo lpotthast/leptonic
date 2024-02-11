@@ -79,8 +79,7 @@ book-build-and-package:
   script:
     - cd examples/book-ssr
     - timestamp=$(date +%s)
-    - app_name="leptonic-book-${timestamp}"
-    - image="${CI_REGISTRY_IMAGE}/${app_name}"
+    - image="${CI_REGISTRY_IMAGE}/leptonic-book"
     - tag="${CI_COMMIT_SHA}"
     - docker pull "${image}:latest" || true
     - echo "Finalizing Dockerfile"
@@ -92,7 +91,7 @@ book-build-and-package:
       --pull
       --cache-from "${image}:${tag}"
       --tag "${image}:${tag}"
-      --build-arg DEFAULT_LEPTOS_OUTPUT_NAME="${app_name}"
+      --build-arg DEFAULT_LEPTOS_OUTPUT_NAME="leptonic-book-${timestamp}"
       .
     - docker tag "${image}:${tag}" "${image}:latest"
     - docker push "${image}:${tag}"
