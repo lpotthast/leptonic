@@ -79,7 +79,7 @@ book-build-and-package:
   script:
     - cd examples/book-ssr
     - timestamp=$(date +%s)
-    - app_name="leptonic-book-${timestamp}""
+    - app_name="leptonic-book-${timestamp}"
     - image="${CI_REGISTRY_IMAGE}/{app_name}"
     - tag="${CI_COMMIT_SHA}"
     - docker pull "${image}:latest" || true
