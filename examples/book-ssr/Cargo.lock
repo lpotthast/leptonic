@@ -1380,6 +1380,7 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 [[package]]
 name = "leptonic"
 version = "0.5.0"
+source = "git+https://github.com/lpotthast/leptonic?branch=main#5ea9bd5058b762b8bff6cbed4425ab7d21c396ce"
 dependencies = [
  "anyhow",
  "cargo_toml",
@@ -1414,6 +1415,7 @@ dependencies = [
 [[package]]
 name = "leptonic-theme"
 version = "0.5.0"
+source = "git+https://github.com/lpotthast/leptonic?branch=main#5ea9bd5058b762b8bff6cbed4425ab7d21c396ce"
 dependencies = [
  "anyhow",
  "include_dir",
@@ -2500,6 +2502,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "signal-hook-registry"
+version = "1.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8229b473baa5980ac72ef434c4415e70c4b5e71b423043adb4ba059f89c99a1"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "slab"
 version = "0.4.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2697,6 +2708,7 @@ dependencies = [
  "mio",
  "num_cpus",
  "pin-project-lite",
+ "signal-hook-registry",
  "socket2",
  "tokio-macros",
  "windows-sys",

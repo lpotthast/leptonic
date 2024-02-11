@@ -33,53 +33,70 @@ async fn main() {
         .with(fmt_layer_filtered)
         .init();
 
-    // Setting get_configuration(None) means we'll be using cargo-leptos's env values
-    // For deployment these variables are:
-    // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
-    // Alternately a file can be specified such as Some("Cargo.toml")
-    // The file would need to be included with the executable when moved to deployment
-    let conf = get_configuration(None).await.unwrap();
-    let leptos_options = conf.leptos_options;
-    let addr = leptos_options.site_addr;
-    let routes = generate_route_list(App);
+    let (shutdown_send, mut shutdown_recv) = tokio::sync::mpsc::unbounded_channel::<()>();
 
-    // build our application with a route
-    let app = Router::new()
-        .leptos_routes(&leptos_options, routes, App)
-        .fallback(
-            file_and_error_handler
-        )
-        .layer(
-            CompressionLayer::new()
-                .gzip(true)
-                .br(true)
-                .deflate(true)
-                .quality(tower_http::CompressionLevel::Default),
-        )
-        .with_state(leptos_options);
+    let _app_jh = tokio::spawn(async move {
+        // Setting get_configuration(None) means we'll be using cargo-leptos's env values
+        // For deployment these variables are:
+        // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
+        // Alternately a file can be specified such as Some("Cargo.toml")
+        // The file would need to be included with the executable when moved to deployment
+        let conf = get_configuration(None).await.unwrap();
+        let leptos_options = conf.leptos_options;
+        let addr = leptos_options.site_addr;
+        let routes = generate_route_list(App);
 
-    tracing::info!("Loading certs...");
+        // build our application with a route
+        let app = Router::new()
+            .leptos_routes(&leptos_options, routes, App)
+            .fallback(
+                file_and_error_handler
+            )
+            .layer(
+                CompressionLayer::new()
+                    .gzip(true)
+                    .br(true)
+                    .deflate(true)
+                    .quality(tower_http::CompressionLevel::Default),
+            )
+            .with_state(leptos_options);
 
-    let working_dir = std::env::current_dir().expect("Could not determine working directory.");
+        tracing::info!("Loading certs...");
 
-    let mut cert_path = working_dir.clone();
-    cert_path.push(std::env::var("TLS_CERT_PATH").unwrap_or(String::from("certs/ssl_cert.pem")));
-    tracing::info!("Using crt path: {cert_path:?}");
+        let working_dir = std::env::current_dir().expect("Could not determine working directory.");
 
-    let mut key_path = working_dir.clone();
-    key_path.push(std::env::var("TLS_KEY_PATH").unwrap_or(String::from("certs/ssl_key.pem")));
-    tracing::info!("Using key path: {key_path:?}");
+        let mut cert_path = working_dir.clone();
+        cert_path.push(std::env::var("TLS_CERT_PATH").unwrap_or(String::from("certs/ssl_cert.pem")));
+        tracing::info!("Using crt path: {cert_path:?}");
 
-    let config = axum_server::tls_rustls::RustlsConfig::from_pem_file(cert_path, key_path)
-        .await
-        .expect("Could not load certificates");
+        let mut key_path = working_dir.clone();
+        key_path.push(std::env::var("TLS_KEY_PATH").unwrap_or(String::from("certs/ssl_key.pem")));
+        tracing::info!("Using key path: {key_path:?}");
 
-    tracing::info!("listening on https://{}", &addr);
+        let config = axum_server::tls_rustls::RustlsConfig::from_pem_file(cert_path, key_path)
+            .await
+            .expect("Could not load certificates");
 
-    axum_server::bind_rustls(addr, config)
-        .serve(app.into_make_service())
-        .await
-        .expect("Server to start successfully");
+        tracing::info!("listening on https://{}", &addr);
+
+        axum_server::bind_rustls(addr, config)
+            .serve(app.into_make_service())
+            .await
+            .expect("Server to start successfully");
+
+        tracing::info!("Exiting...");
+        shutdown_send.send(()).unwrap();
+    });
+
+    tracing::info!("Waiting for Ctrl-C...");
+    tokio::select! {
+        _ = tokio::signal::ctrl_c() => {
+            tracing::info!("Received Ctrl-C signal");
+        },
+        _ = shutdown_recv.recv() => {
+            tracing::info!("Received application shutdown signal");
+        },
+    }
 }
 
 #[cfg(not(feature = "ssr"))]
