@@ -26,11 +26,11 @@ cfg-if = "1.0.0"
 indexmap = "2.2.2"
 indoc = "2.0.4"
 itertools = "0.12.1"
-js-sys = "0.3.67"
+js-sys = "0.3.68"
 leptos = "0.6.5"
 leptos_reactive = "0.6.5"
 leptos-tiptap = { version = "0.7.0", optional = true }
-leptos-use = { version = "0.10.1", features = ["math"] }
+leptos-use = { version = "0.10.2", features = ["math"] }
 icondata = { version = "0.3.0" }
 leptos_meta = { version = "0.6.5", features = [] }
 leptos_router = "0.6.5"
@@ -46,10 +46,10 @@ time = { version = "0.3.34", features = [
 ] }
 tracing = "0.1.40"
 uuid = { version = "1.7.0", features = ["v4", "v7", "js", "serde"] }
-wasm-bindgen = "0.2.90"
-wasm-bindgen-futures = "0.4.40"
+wasm-bindgen = "0.2.91"
+wasm-bindgen-futures = "0.4.41"
 # TODO: What of all below is really required?
-web-sys = { version = "0.3.67", features = [
+web-sys = { version = "0.3.68", features = [
     "Clipboard",
     "DomRect",
     "Event",
@@ -61,9 +61,9 @@ web-sys = { version = "0.3.67", features = [
 educe = "0.5.11"
 
 [dev-dependencies]
-wasm-bindgen = "0.2.90"
-wasm-bindgen-test = "0.3.40"
-web-sys = "0.3.67"
+wasm-bindgen = "0.2.91"
+wasm-bindgen-test = "0.3.41"
+web-sys = "0.3.68"
 
 [features]
 default = ["hooks"]
