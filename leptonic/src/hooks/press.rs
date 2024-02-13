@@ -1,7 +1,6 @@
 use educe::Educe;
 use leptos_reactive::{
-    create_signal,
-    Callable, Callback, Signal,
+    create_signal, store_value, Callable, Callback, Signal
 };
 use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, TouchEvent};
@@ -46,10 +45,16 @@ pub struct UsePressReturn {
     pub is_pressed: Signal<bool>,
 }
 
+struct PressState {
+    in_press: bool,
+}
+
 pub fn use_press(input: UsePressInput) -> UsePressReturn {
     let attrs = Attributes::new();
 
     let (is_pressed, set_is_pressed) = create_signal(false);
+
+    let state = store_value(PressState { in_press: false });
 
     let on_key_down = Box::new(move |e: KeyboardEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
@@ -98,9 +103,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     let on_mouse_down = Box::new(move |e: MouseEvent| {
         e.prevent_default();
-        input.on_press.call(PressEvent {});
+        if let Some(on_press_start) = input.on_press_start {
+            on_press_start.call(PressEvent {});
+        }
     });
     
+    let on_mouse_move = Box::new(move |e: MouseEvent| {
+        // Cancel press when mouse pointer leaves our target.
+    });
+
     let on_mouse_up = Box::new(move |e: MouseEvent| {
         e.prevent_default();
         input.on_press.call(PressEvent {});
