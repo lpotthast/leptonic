@@ -119,7 +119,7 @@ fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMe
 
     let meta = match leptonic_metadata {
         Some(metadata) => {
-            // Found "leptonic" in either package or workspace metadata, proceed as necessary
+            // Found "leptonic" in either package or workspace metadata, proceed
             log(
                 Level::Info,
                 format!(
