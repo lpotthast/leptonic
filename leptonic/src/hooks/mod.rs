@@ -19,16 +19,16 @@ pub mod prelude {
 #[derive(Debug, Clone, Copy)]
 pub struct KeyModifiers {
     /// Whether the shift keyboard modifier was held during the event.
-    shift_key: bool,
+    pub shift_key: bool,
 
     /// Whether the ctrl keyboard modifier was held during the event.
-    ctrl_key: bool,
+    pub ctrl_key: bool,
 
     /// Whether the meta keyboard modifier was held during the event.
-    meta_key: bool,
+    pub meta_key: bool,
 
     /// Whether the alt keyboard modifier was held during the  event.
-    alt_key: bool,
+    pub alt_key: bool,
 }
 
 pub trait Modifiers {

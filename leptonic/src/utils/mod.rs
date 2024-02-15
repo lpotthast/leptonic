@@ -27,6 +27,8 @@ pub(crate) trait EventTargetExt {
     fn as_html_element(&self) -> Option<web_sys::HtmlElement>;
     fn as_node(&self) -> Option<web_sys::Node>;
     fn as_container(&self) -> Option<DomContainer>;
+    fn get_owner_document(&self) -> web_sys::Document;
+    fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool;
 }
 
 impl EventTargetExt for web_sys::EventTarget {
@@ -55,6 +57,29 @@ impl EventTargetExt for web_sys::EventTarget {
         }
         None
     }
+
+    fn get_owner_document(&self) -> web_sys::Document {
+        self.as_element()
+            .and_then(|el| el.owner_document())
+            .unwrap_or_else(|| leptos::document())
+    }
+
+    fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool {
+        let el_rect = element.get_bounding_client_rect().into();
+        let point_rect = e.get_client_interaction_rect();
+        overlapping(el_rect, point_rect)
+    }
+}
+
+fn overlapping(a: RectPrecise, b: RectPrecise) -> bool {
+    if a.left > b.right || b.left > a.right {
+        return false;
+    }
+    // NOTE: Coordinate system starts in upper-left corner!
+    if a.top > b.bottom || b.top > a.bottom {
+        return false;
+    }
+    true
 }
 
 pub(crate) fn current_target_contains_target(
@@ -87,8 +112,30 @@ pub(crate) fn current_target_contains_target(
     Some(current_target_container.contains(target_node))
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct RectPrecise {
+    top: f64,
+    right: f64,
+    bottom: f64,
+    left: f64,
+}
+
+impl From<web_sys::DomRect> for RectPrecise {
+    fn from(value: web_sys::DomRect) -> Self {
+        Self {
+            top: value.top(),
+            right: value.right(),
+            bottom: value.bottom(),
+            left: value.left(),
+        }
+    }
+}
+
+
 pub trait EventExt {
     fn current_target_contains_target(&self) -> bool;
+
+    fn get_client_interaction_rect(&self) -> RectPrecise;
 }
 
 impl EventExt for web_sys::PointerEvent {
@@ -96,4 +143,16 @@ impl EventExt for web_sys::PointerEvent {
         current_target_contains_target(self.current_target().as_ref(), self.target().as_ref())
             .unwrap_or(true)
     }
+
+    fn get_client_interaction_rect(&self) -> RectPrecise {
+        let offset_x = self.width() as f64 / 2.0;
+        let offset_y = self.height() as f64 / 2.0;
+        RectPrecise {
+            top: self.client_y() as f64 - offset_y,
+            right: self.client_x() as f64 + offset_x,
+            bottom: self.client_y() as f64 + offset_y,
+            left: self.client_x() as f64 - offset_x,
+        }
+    }
 }
+

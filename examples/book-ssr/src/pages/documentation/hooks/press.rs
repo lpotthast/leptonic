@@ -32,22 +32,22 @@ pub fn PagePress() -> impl IntoView {
         disabled: disabled.into(),
         on_press: Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("{e:?}")));
+                events.push_overwrite(Oco::Owned(format!("Press: {e:?}")));
             });
         }),
         on_press_up: Some(Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("{e:?}")));
+                events.push_overwrite(Oco::Owned(format!("PressUp: {e:?}")));
             });
         })),
         on_press_start: Some(Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("{e:?}")));
+                events.push_overwrite(Oco::Owned(format!("PressStart: {e:?}")));
             });
         })),
         on_press_end: Some(Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("{e:?}")));
+                events.push_overwrite(Oco::Owned(format!("PressEnd: {e:?}")));
             });
         })),
     });
@@ -68,9 +68,6 @@ pub fn PagePress() -> impl IntoView {
             on:keydown=press.props.on_key_down
             on:click=press.props.on_click
             on:pointerdown=press.props.on_pointer_down
-            on:pointerleave=press.props.on_pointer_leave
-            on:pointerenter=press.props.on_pointer_enter
-            on:pointerup=press.props.on_pointer_up
         >
             "Press me"
         </button>

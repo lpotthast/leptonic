@@ -66,9 +66,6 @@ pub fn Button(
             on:keydown=press.props.on_key_down
             on:click=press.props.on_click
             on:pointerdown=press.props.on_pointer_down
-            on:pointerleave=press.props.on_pointer_leave
-            on:pointerenter=press.props.on_pointer_enter
-            on:ppointerup=press.props.on_pointer_up
             on:focus=focus.on_focus
             on:blur=focus.on_blur
         >
