@@ -15,6 +15,10 @@ body {
     flex-direction: column;
 }
 
+[data-disable-user-select="true"] {
+    user-select: none;
+}
+
 @import "./leptonic/leptonic-themes";
 
 [data-theme="light"] {

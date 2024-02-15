@@ -15,26 +15,39 @@ pub enum Event {
 #[component]
 pub fn PagePress() -> impl IntoView {
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
+    let (disabled, set_disabled) = create_signal(false);
+
+    let string = create_memo(move |_| {
+        events.with(|events| {
+            let mut result = String::new();
+            for e in events.iter().rev() {
+                result.push_str(e.as_str());
+                result.push_str("\n");
+            }
+            result
+        })
+    });
 
     let press = use_press(UsePressInput {
-        on_press: Callback::new(move |_e| {
+        disabled: disabled.into(),
+        on_press: Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("Press"));
+                events.push_overwrite(Oco::Owned(format!("{e:?}")));
             });
         }),
-        on_press_up: Some(Callback::new(move |_e| {
+        on_press_up: Some(Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("PressUp"));
+                events.push_overwrite(Oco::Owned(format!("{e:?}")));
             });
         })),
-        on_press_start: Some(Callback::new(move |_e| {
+        on_press_start: Some(Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("PressStart"));
+                events.push_overwrite(Oco::Owned(format!("{e:?}")));
             });
         })),
-        on_press_end: Some(Callback::new(move |_e| {
+        on_press_end: Some(Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("PressEnd"));
+                events.push_overwrite(Oco::Owned(format!("{e:?}")));
             });
         })),
     });
@@ -54,9 +67,10 @@ pub fn PagePress() -> impl IntoView {
             {..press.props.attrs}
             on:keydown=press.props.on_key_down
             on:click=press.props.on_click
-            on:touchstart=press.props.on_touch_start
-            on:touchmove=press.props.on_touch_move
-            on:touchend=press.props.on_touch_end
+            on:pointerdown=press.props.on_pointer_down
+            on:pointerleave=press.props.on_pointer_leave
+            on:pointerenter=press.props.on_pointer_enter
+            on:pointerup=press.props.on_pointer_up
         >
             "Press me"
         </button>
@@ -66,7 +80,7 @@ pub fn PagePress() -> impl IntoView {
         <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
 
         <pre style="background-color: grey; width: 100%; height: 15em; border: 0.1em solid darkgrey; overflow: auto;">
-            { move || events.with(|events| events.iter().rev().map(|e| view! { <div>{e.clone()}</div> }).collect_view()) }
+            { move || string.get() }
         </pre>
     }
 }

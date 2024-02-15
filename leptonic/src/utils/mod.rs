@@ -86,3 +86,14 @@ pub(crate) fn current_target_contains_target(
 
     Some(current_target_container.contains(target_node))
 }
+
+pub trait EventExt {
+    fn current_target_contains_target(&self) -> bool;
+}
+
+impl EventExt for web_sys::PointerEvent {
+    fn current_target_contains_target(&self) -> bool {
+        current_target_contains_target(self.current_target().as_ref(), self.target().as_ref())
+            .unwrap_or(true)
+    }
+}
