@@ -14,6 +14,7 @@ pub enum Event {
 
 #[component]
 pub fn PagePress() -> impl IntoView {
+    let (count, set_count) = create_signal(0);
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = create_signal(false);
 
@@ -31,6 +32,7 @@ pub fn PagePress() -> impl IntoView {
     let press = use_press(UsePressInput {
         disabled: disabled.into(),
         on_press: Callback::new(move |e| {
+            set_count.update(|c| *c += 1);
             set_events.update(|events| {
                 events.push_overwrite(Oco::Owned(format!("Press: {e:?}")));
             });
@@ -72,7 +74,12 @@ pub fn PagePress() -> impl IntoView {
             "Press me"
         </button>
 
+        <P>"Is disabled: " { move || disabled.get() } <Checkbox checked=disabled set_checked=set_disabled /></P>
         <P>"Is pressed: " { move || press.is_pressed.get() }</P>
+        <P>"Was pressed: " { move || count.get() } { move || match count.get() {
+            1 => " time",
+            _ => " times",
+        } }</P>
 
         <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
 

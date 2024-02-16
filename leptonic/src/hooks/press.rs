@@ -2,7 +2,7 @@ use std::cell::RefCell;
 
 use educe::Educe;
 use leptos_reactive::{
-    create_signal, store_value, Callable, Callback, MaybeSignal, Signal, SignalGetUntracked,
+    create_signal, store_value, Callable, Callback, MaybeSignal, Signal, SignalGetUntracked, SignalSet
 };
 use leptos_use::use_event_listener;
 use wasm_bindgen::JsCast;
@@ -123,6 +123,98 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     let state = store_value::<Option<PressState>>(None);
 
+    let initialize_press_state =
+        move |e: &PointerEvent,
+              on_pointer_move: Box<dyn Fn(PointerEvent)>,
+              on_pointer_up: Box<dyn Fn(PointerEvent)>,
+              on_pointer_cancel: Box<dyn Fn(PointerEvent)>| {
+            if !input.disabled.get_untracked() {
+                debug_assert_eq!(state.with_value(|s| s.is_none()), true, "Implicit cleanup ist not supported. Forgot to call cleanup() before initializing a new PressState?");
+
+                state.set_value(Some(PressState {
+                    pointer_id: e.pointer_id(),
+                    pointer_type: PointerType::from(e.pointer_type()),
+                    target: e.target(),
+                    is_over_target: e
+                        .current_target()
+                        .unwrap()
+                        .is_over(e, e.target().as_ref().unwrap().as_element().unwrap()),
+                    global_on_pointer_move_cleanup: Box::new(use_event_listener(
+                        e.current_target().unwrap().get_owner_document(),
+                        leptos::ev::pointermove,
+                        on_pointer_move,
+                    )),
+                    global_on_pointer_up_cleanup: Box::new(use_event_listener(
+                        e.current_target().unwrap().get_owner_document(),
+                        leptos::ev::pointerup,
+                        on_pointer_up,
+                    )),
+                    global_on_pointer_cancel_cleanup: Box::new(use_event_listener(
+                        e.current_target().unwrap().get_owner_document(),
+                        leptos::ev::pointercancel,
+                        on_pointer_cancel,
+                    )),
+                }));
+            }
+        };
+
+    // Has no effect if press is already started. Calling this multiple times only executes the effect once.
+    let trigger_press_start = move |s: &PressState, e: &PointerEvent| {
+        if !is_pressed.get_untracked() {
+            if let Some(on_press_start) = input.on_press_start {
+                let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+                on_press_start.call(PressEvent {
+                    pointer_type: s.pointer_type.clone(),
+                    target: s.target.clone(),
+                    modifiers: e.modifiers(),
+                    continue_propagation,
+                });
+                if !continue_propagation_state.into_inner() {
+                    e.stop_propagation();
+                }
+            }
+            set_is_pressed.set(true);
+        }
+    };
+
+    // Has no effect if press is not yet started. Calling this multiple times only executes the effect once.
+    let trigger_press_end = move |s: &PressState, e: &PointerEvent| {
+        if is_pressed.get_untracked() {
+            if let Some(on_press_end) = input.on_press_end {
+                let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+                on_press_end.call(PressEvent {
+                    pointer_type: s.pointer_type.clone(),
+                    target: s.target.clone(),
+                    modifiers: e.modifiers(),
+                    continue_propagation,
+                });
+                if !continue_propagation_state.into_inner() {
+                    e.stop_propagation();
+                }
+            }
+            set_is_pressed.set(false);
+        }
+    };
+
+    let trigger_press = move |s: &PressState, e: &PointerEvent| {
+        debug_assert_eq!(
+            is_pressed.get_untracked(),
+            false,
+            "Only call trigger_press after triggering a trigger_press_end!"
+        );
+
+        let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+        input.on_press.call(PressEvent {
+            pointer_type: s.pointer_type.clone(),
+            target: s.target.clone(),
+            modifiers: e.modifiers(),
+            continue_propagation,
+        });
+        if !continue_propagation_state.into_inner() {
+            e.stop_propagation();
+        }
+    };
+
     let on_key_down = Box::new(move |e: KeyboardEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
@@ -159,11 +251,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         };
 
         if resembles_press {
-            let mut continue_propagation_state = RefCell::new(false);
-            let state_clone = continue_propagation_state.clone();
-            let continue_propagation = Box::new(move || {
-                state_clone.replace(false);
-            });
+            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
             input.on_press.call(PressEvent {
                 pointer_type: PointerType::Keyboard,
                 target: e.target(),
@@ -192,7 +280,6 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     // Reset press state.
     let on_pointer_move = Box::new(move |e: PointerEvent| {
-        tracing::info!("pointer move");
         // Re-emit a "start" event, when we have a state.
         // This means: The user already started an interaction but let the pointer leave the target and let it re-enter.
         state.update_value(|s| {
@@ -200,138 +287,73 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 if e.pointer_id() != s.pointer_id {
                     return;
                 }
-
                 let is_over_target = e
                     .current_target()
                     .unwrap()
                     .is_over(&e, s.target.as_ref().and_then(|t| t.as_element()).unwrap());
-
                 match (s.is_over_target, is_over_target) {
-                    (true, true) => {}
-                    (true, false) => {
-                        // Pointer left the target.
-                        if let Some(on_press_end) = input.on_press_end {
-                            let (continue_propagation_state, continue_propagation) =
-                                use_continue_propagation();
-                            on_press_end.call(PressEvent {
-                                pointer_type: s.pointer_type.clone(),
-                                target: s.target.clone(),
-                                modifiers: e.modifiers(),
-                                continue_propagation,
-                            });
-                            if !continue_propagation_state.into_inner() {
-                                e.stop_propagation();
-                            }
-                        }
-                        s.is_over_target = false;
-                    }
-                    (false, true) => {
-                        // Pointer entered the target.
-                        if let Some(on_press_start) = input.on_press_start {
-                            let (continue_propagation_state, continue_propagation) =
-                                use_continue_propagation();
-                            on_press_start.call(PressEvent {
-                                pointer_type: s.pointer_type.clone(),
-                                target: s.target.clone(),
-                                modifiers: e.modifiers(),
-                                continue_propagation,
-                            });
-                            if !continue_propagation_state.into_inner() {
-                                e.stop_propagation();
-                            }
-                        }
-                        s.is_over_target = true;
-                    }
-                    (false, false) => {}
+                    (true, false) => trigger_press_end(s, &e),
+                    (false, true) => trigger_press_start(s, &e),
+                    _ => {}
                 }
+                s.is_over_target = is_over_target;
             }
         });
     });
 
     // Finish a press.
     let on_pointer_up = Box::new(move |e: PointerEvent| {
-        tracing::info!("pointer up");
         if !e.current_target_contains_target() {
             return;
         }
-
         state.with_value(|s| {
             if let Some(s) = s.as_ref() {
-                if let Some(on_press_end) = input.on_press_end {
-                    let (continue_propagation_state, continue_propagation) =
-                        use_continue_propagation();
-                    on_press_end.call(PressEvent {
-                        pointer_type: s.pointer_type.clone(),
-                        target: s.target.clone(),
-                        modifiers: e.modifiers(),
-                        continue_propagation,
-                    });
-                    if !continue_propagation_state.into_inner() {
-                        e.stop_propagation();
-                    }
-                }
+                trigger_press_end(s, &e);
 
                 e.stop_propagation();
 
-                if s.is_over_target {
-                    let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-                    input.on_press.call(PressEvent {
-                        pointer_type: s.pointer_type.clone(),
-                        target: s.target.clone(),
-                        modifiers: e.modifiers(),
-                        continue_propagation,
-                    });
-                    if !continue_propagation_state.into_inner() {
-                        e.stop_propagation();
-                    }
-                }
+                let is_over_target = e
+                    .current_target()
+                    .unwrap()
+                    .is_over(&e, s.target.as_ref().and_then(|t| t.as_element()).unwrap());
 
+                if is_over_target {
+                    trigger_press(s, &e);
+                }
 
                 if let Some(target) = e.target() {
                     if let Some(target) = target.as_element() {
                         restore_text_selection(target);
                     }
                 }
-
                 (s.global_on_pointer_move_cleanup)();
                 (s.global_on_pointer_up_cleanup)();
                 (s.global_on_pointer_cancel_cleanup)();
             }
         });
-
         state.set_value(None);
     });
 
     // Cancel the ongoing press.
     let on_pointer_cancel = Box::new(move |e: PointerEvent| {
-        tracing::info!("pointer cancel");
         if !e.current_target_contains_target() {
             return;
         }
-        // Emit an "end" event, when we have a state.
-        // This means: The user already started an interaction but let the pointer leave the target.
-        state.with_value(|s| {
-            if let Some(s) = s.as_ref() {
-                if let Some(on_press_end) = input.on_press_end {
-                    let (continue_propagation_state, continue_propagation) =
-                        use_continue_propagation();
-                    on_press_end.call(PressEvent {
-                        pointer_type: s.pointer_type.clone(),
-                        target: s.target.clone(),
-                        modifiers: e.modifiers(),
-                        continue_propagation,
-                    });
-                    if !continue_propagation_state.into_inner() {
-                        e.stop_propagation();
-                    }
+        state.update_value(|s| {
+            if let Some(s) = s.as_mut() {
+                if is_pressed.get_untracked() {
+                    trigger_press_end(s, &e);
                 }
+                (s.global_on_pointer_move_cleanup)();
+                (s.global_on_pointer_up_cleanup)();
+                (s.global_on_pointer_cancel_cleanup)();
             }
         });
+        state.set_value(None);
     });
 
     // Start a press.
     let on_pointer_down = Box::new(move |e: PointerEvent| {
-        tracing::info!("pointer down");
         if e.button() != 0 {
             return;
         }
@@ -346,13 +368,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         // TODO: Maybe prevent default and handle element focus manually.
         //e.prevent_default();
 
-        let pointer_id = e.pointer_id();
-        let pointer_type = PointerType::from(e.pointer_type());
         let target = e.target();
-        let is_over_target = e
-            .current_target()
-            .unwrap()
-            .is_over(&e, target.as_ref().unwrap().as_element().unwrap());
 
         if let Some(target) = target.as_ref() {
             if let Some(target) = target.as_element() {
@@ -360,45 +376,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             }
         }
 
-        if let Some(on_press_start) = input.on_press_start {
-            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-            on_press_start.call(PressEvent {
-                pointer_type: pointer_type.clone(),
-                target: target.clone(),
-                modifiers: e.modifiers(),
-                continue_propagation,
-            });
-            if !continue_propagation_state.into_inner() {
-                e.stop_propagation();
-            }
-        }
-
-        let global_on_pointer_move_cleanup = use_event_listener(
-            e.current_target().unwrap().get_owner_document(),
-            leptos::ev::pointermove,
+        initialize_press_state(
+            &e,
             on_pointer_move.clone(),
-        );
-        let global_on_pointer_up_cleanup = use_event_listener(
-            e.current_target().unwrap().get_owner_document(),
-            leptos::ev::pointerup,
             on_pointer_up.clone(),
-        );
-        let global_on_pointer_cancel_cleanup = use_event_listener(
-            e.current_target().unwrap().get_owner_document(),
-            leptos::ev::pointercancel,
             on_pointer_cancel.clone(),
         );
 
-        let s = PressState {
-            pointer_id,
-            pointer_type,
-            target: e.target(),
-            is_over_target,
-            global_on_pointer_move_cleanup: Box::new(global_on_pointer_move_cleanup),
-            global_on_pointer_up_cleanup: Box::new(global_on_pointer_up_cleanup),
-            global_on_pointer_cancel_cleanup: Box::new(global_on_pointer_cancel_cleanup),
-        };
-        state.set_value(Some(s));
+        state.update_value(move |s| {
+            if let Some(s) = s {
+                trigger_press_start(s, &e);
+            }
+        });
     });
 
     UsePressReturn {
