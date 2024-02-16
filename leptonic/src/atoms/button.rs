@@ -1,5 +1,4 @@
 use leptos::*;
-use leptos_router::{State, ToHref, A};
 
 use crate::{
     hooks::{
@@ -42,6 +41,7 @@ pub fn Button(
     });
 
     let press = use_press(UsePressInput {
+        disabled: disabled.or(false),
         on_press: Callback::new(move |e| {
             if !disabled.get_untracked() {
                 //e.stop_propagation();
@@ -65,9 +65,7 @@ pub fn Button(
             style=style
             on:keydown=press.props.on_key_down
             on:click=press.props.on_click
-            on:touchstart=press.props.on_touch_start
-            on:touchmove=press.props.on_touch_move
-            on:touchend=press.props.on_touch_end
+            on:pointerdown=press.props.on_pointer_down
             on:focus=focus.on_focus
             on:blur=focus.on_blur
         >

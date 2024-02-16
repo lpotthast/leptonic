@@ -74,6 +74,17 @@ pub fn PageMove() -> impl IntoView {
         global_pointer_move: global_pointer_move.into(),
     });
 
+    let string = create_memo(move |_| {
+        events.with(|events| {
+            let mut result = String::new();
+            for e in events.iter().rev() {
+                result.push_str(e.as_str());
+                result.push_str("\n");
+            }
+            result
+        })
+    });
+
     view! {
         <H1>"useMove"</H1>
 
@@ -105,7 +116,7 @@ pub fn PageMove() -> impl IntoView {
         <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
 
         <pre style="background-color: grey; width: 100%; height: 15em; border: 0.1em solid darkgrey; overflow: auto;">
-            { move || events.with(|events| events.iter().rev().map(|e| view! { <div>{e.clone()}</div> }).collect_view()) }
+            { move || string.get() }
         </pre>
     }
 }
