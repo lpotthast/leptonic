@@ -16,62 +16,23 @@ pub mod prelude {
     pub use super::r#move::UseMoveReturn;
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct KeyModifiers {
-    /// Whether the shift keyboard modifier was held during the event.
-    pub shift_key: bool,
-
-    /// Whether the ctrl keyboard modifier was held during the event.
-    pub ctrl_key: bool,
-
-    /// Whether the meta keyboard modifier was held during the event.
-    pub meta_key: bool,
-
-    /// Whether the alt keyboard modifier was held during the  event.
-    pub alt_key: bool,
-}
-
-pub trait Modifiers {
-    fn modifiers(&self) -> KeyModifiers;
-}
-
-impl Modifiers for web_sys::MouseEvent {
-    fn modifiers(&self) -> KeyModifiers {
-        KeyModifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
-impl Modifiers for web_sys::TouchEvent {
-    fn modifiers(&self) -> KeyModifiers {
-        KeyModifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
-impl Modifiers for web_sys::KeyboardEvent {
-    fn modifiers(&self) -> KeyModifiers {
-        KeyModifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
 fn disable_text_selection(element: web_sys::Element) {
-    element.set_attribute("data-disable-user-select", "true");
+    match element.set_attribute("data-disable-user-select", "true") {
+        Ok(_ok) => {}
+        Err(err) => {
+            tracing::warn!(?err, "Could not set 'data-disable-user-select' attribute.");
+        }
+    }
 }
 
 fn restore_text_selection(element: web_sys::Element) {
-    element.remove_attribute("data-disable-user-select");
+    match element.remove_attribute("data-disable-user-select") {
+        Ok(_ok) => {}
+        Err(err) => {
+            tracing::warn!(
+                ?err,
+                "Could not remove 'data-disable-user-select' attribute."
+            );
+        }
+    }
 }
