@@ -6,6 +6,7 @@ use leptos_router::*;
 
 use crate::app::APP_BAR_HEIGHT;
 use crate::app::{AppLayoutContext, AppRoutes};
+use crate::pages::documentation::atoms::button::PageAtomButton;
 use crate::pages::documentation::feedback::alert::PageAlert;
 use crate::pages::documentation::feedback::chip::PageChip;
 use crate::pages::documentation::feedback::modal::PageModal;
@@ -22,6 +23,7 @@ use crate::pages::documentation::getting_started::changelog::PageChangelog;
 use crate::pages::documentation::getting_started::installation::PageInstallation;
 use crate::pages::documentation::getting_started::overview::PageOverview;
 use crate::pages::documentation::getting_started::themes::PageThemes;
+use crate::pages::documentation::hooks::button::PageUseButton;
 use crate::pages::documentation::hooks::hover::PageHover;
 use crate::pages::documentation::hooks::r#move::PageMove;
 use crate::pages::documentation::hooks::press::PagePress;
@@ -57,6 +59,10 @@ pub enum DocRoutes {
     UsePress,
     UseMove,
     UseHover,
+    UseButton,
+
+    // Atoms
+    AtomButton,
 
     // Layout
     Stack,
@@ -112,44 +118,47 @@ impl DocRoutes {
             Self::Themes => "themes",
             Self::Changelog => "changelog",
 
-            Self::UsePress => "use-press",
-            Self::UseMove => "use-move",
-            Self::UseHover => "use-hover",
+            Self::UsePress => "hooks/use-press",
+            Self::UseMove => "hooks/use-move",
+            Self::UseHover => "hooks/use-hover",
+            Self::UseButton => "hooks/use-button",
 
-            Self::Stack => "stack",
-            Self::Grid => "grid",
-            Self::Separator => "separator",
-            Self::Skeleton => "skeleton",
-            Self::AppBar => "app-bar",
-            Self::Drawer => "drawer",
-            Self::Tab => "tabs",
-            Self::Table => "table",
-            Self::Collapsible => "collapsible",
+            Self::AtomButton => "atoms/button",
 
-            Self::Button => "button",
-            Self::Input => "input",
-            Self::TiptapEditor => "tiptap-editor",
-            Self::DateTime => "date-time",
-            Self::Slider => "slider",
-            Self::Select => "select",
-            Self::Checkbox => "checkbox",
-            Self::Radio => "radio",
-            Self::Toggle => "toggle",
-            Self::ColorPicker => "color-picker",
+            Self::Stack => "components/stack",
+            Self::Grid => "components/grid",
+            Self::Separator => "components/separator",
+            Self::Skeleton => "components/skeleton",
+            Self::AppBar => "components/app-bar",
+            Self::Drawer => "components/drawer",
+            Self::Tab => "components/tabs",
+            Self::Table => "components/table",
+            Self::Collapsible => "components/collapsible",
 
-            Self::Alert => "alert",
-            Self::Toast => "toast",
-            Self::Modal => "modal",
-            Self::Progress => "progress",
-            Self::Popover => "popover",
-            Self::Chip => "chip",
-            Self::Kbd => "kbd",
+            Self::Button => "components/button",
+            Self::Input => "components/input",
+            Self::TiptapEditor => "components/tiptap-editor",
+            Self::DateTime => "components/date-time",
+            Self::Slider => "components/slider",
+            Self::Select => "components/select",
+            Self::Checkbox => "components/checkbox",
+            Self::Radio => "components/radio",
+            Self::Toggle => "components/toggle",
+            Self::ColorPicker => "components/color-picker",
 
-            Self::Typography => "typography",
-            Self::Icon => "icon",
-            Self::Link => "link",
-            Self::Anchor => "anchor",
-            Self::Callback => "callback",
+            Self::Alert => "components/alert",
+            Self::Toast => "components/toast",
+            Self::Modal => "components/modal",
+            Self::Progress => "components/progress",
+            Self::Popover => "components/popover",
+            Self::Chip => "components/chip",
+            Self::Kbd => "components/kbd",
+
+            Self::Typography => "components/typography",
+            Self::Icon => "components/icon",
+            Self::Link => "components/link",
+            Self::Anchor => "components/anchor",
+            Self::Callback => "components/callback",
 
             //Self::Transition => "transition",
             Self::NotFound => "not-found", // Leptos requires this to be be named "*"!
@@ -186,6 +195,9 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::UsePress view=|| view! { <PagePress/> }/>
             <Route path=DocRoutes::UseMove view=|| view! { <PageMove/> }/>
             <Route path=DocRoutes::UseHover view=|| view! { <PageHover/> }/>
+            <Route path=DocRoutes::UseButton view=|| view! { <PageUseButton/> }/>
+
+            <Route path=DocRoutes::AtomButton view=|| view! { <PageAtomButton/> }/>
 
             <Route path=DocRoutes::Stack view=|| view! { <PageStack/> }/>
             <Route path=DocRoutes::Grid view=|| view! { <PageGrid/> }/>
@@ -246,7 +258,7 @@ pub fn DocLayout() -> impl IntoView {
     };
 
     let drawer_content = view! {
-        <DrawerSection header=move || view! {
+        <DrawerSection level=1 header=move || view! {
             <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
@@ -257,76 +269,89 @@ pub fn DocLayout() -> impl IntoView {
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move || view! {
+        <DrawerSection level=1 header=move || view! {
             <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Hooks"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::UsePress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
                 <Link href=DocRoutes::UseMove class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
                 <Link href=DocRoutes::UseHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
+                <Link href=DocRoutes::UseButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move || view! {
-            <Icon icon=icondata::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
+        <DrawerSection level=1 header=move || view! {
+            <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Atoms"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                <Link href=DocRoutes::Stack class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
-                <Link href=DocRoutes::Grid class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
-                <Link href=DocRoutes::Separator class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
-                <Link href=DocRoutes::Skeleton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Skeleton"</Link>
-                <Link href=DocRoutes::AppBar class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
-                <Link href=DocRoutes::Drawer class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
-                <Link href=DocRoutes::Tab class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
-                <Link href=DocRoutes::Table class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Table"</Link>
-                <Link href=DocRoutes::Collapsible class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
+                <Link href=DocRoutes::AtomButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
             </Stack>
         </DrawerSection>
 
-        <DrawerSection header=move || view! {
-            <Icon icon=icondata::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
+        <DrawerSection level=1 header=move || view! {
+            <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Components"
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                <Link href=DocRoutes::Button class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
-                <Link href=DocRoutes::Input class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Input"</Link>
-                <Link href=DocRoutes::TiptapEditor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tiptap editor"</Link>
-                <Link href=DocRoutes::DateTime class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Date & Time"</Link>
-                <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
-                <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
-                <Link href=DocRoutes::Checkbox class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Checkbox"</Link>
-                <Link href=DocRoutes::Radio class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Radio"</Link>
-                <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
-                <Link href=DocRoutes::ColorPicker class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Color Picker"</Link>
-            </Stack>
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                    <Link href=DocRoutes::Stack class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
+                    <Link href=DocRoutes::Grid class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
+                    <Link href=DocRoutes::Separator class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
+                    <Link href=DocRoutes::Skeleton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Skeleton"</Link>
+                    <Link href=DocRoutes::AppBar class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
+                    <Link href=DocRoutes::Drawer class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
+                    <Link href=DocRoutes::Tab class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
+                    <Link href=DocRoutes::Table class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Table"</Link>
+                    <Link href=DocRoutes::Collapsible class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                    <Link href=DocRoutes::Button class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
+                    <Link href=DocRoutes::Input class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Input"</Link>
+                    <Link href=DocRoutes::TiptapEditor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tiptap editor"</Link>
+                    <Link href=DocRoutes::DateTime class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Date & Time"</Link>
+                    <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
+                    <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
+                    <Link href=DocRoutes::Checkbox class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Checkbox"</Link>
+                    <Link href=DocRoutes::Radio class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Radio"</Link>
+                    <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
+                    <Link href=DocRoutes::ColorPicker class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Color Picker"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                    <Link href=DocRoutes::Alert class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
+                    <Link href=DocRoutes::Toast class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
+                    <Link href=DocRoutes::Modal class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
+                    <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
+                    <Link href=DocRoutes::Popover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
+                    <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
+                    <Link href=DocRoutes::Kbd class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Kbd"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
+                    <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
+                    <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
+                    <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
+                    <Link href=DocRoutes::Anchor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Anchor"</Link>
+                    <Link href=DocRoutes::Callback class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Callback"</Link>
+                </Stack>
+            </DrawerSection>
         </DrawerSection>
 
-        <DrawerSection header=move || view! {
-            <Icon icon=icondata::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
-        }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                <Link href=DocRoutes::Alert class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
-                <Link href=DocRoutes::Toast class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
-                <Link href=DocRoutes::Modal class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
-                <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
-                <Link href=DocRoutes::Popover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
-                <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
-                <Link href=DocRoutes::Kbd class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Kbd"</Link>
-            </Stack>
-        </DrawerSection>
-
-        <DrawerSection header=move || view! {
-            <Icon icon=icondata::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
-        }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
-                <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
-                <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
-                <Link href=DocRoutes::Anchor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Anchor"</Link>
-                <Link href=DocRoutes::Callback class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Callback"</Link>
-            </Stack>
-        </DrawerSection>
-
-        //<DrawerSection header=move || view! {
+        //<DrawerSection level=2 header=move || view! {
         //    <Icon icon=icondata::BsArrowsMove margin=Margin::Right(Size::Em(1.0))></Icon> "Animation"
         //}>
         //    <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
@@ -358,13 +383,17 @@ pub fn DocLayout() -> impl IntoView {
 }
 
 #[component]
-pub fn DrawerSection<H, IV>(header: H, children: Children) -> impl IntoView
+pub fn DrawerSection<H, IV>(
+    level: u32,
+    header: H,
+    children: Children
+) -> impl IntoView
 where
     H: Fn() -> IV + 'static,
     IV: IntoView + 'static,
 {
     view! {
-        <div class="drawer-section">
+        <div class="drawer-section" data-level=level>
             <div class="section-header">
                 { header() }
             </div>

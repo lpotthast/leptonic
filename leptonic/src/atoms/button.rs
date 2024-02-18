@@ -2,9 +2,10 @@ use leptos::*;
 
 use crate::{
     hooks::{
-        button::{use_button, UseButtonProps},
-        focus::{use_focus, UseFocusOptions},
-        press::{use_press, PressEvent, UsePressInput},
+        button::{use_button, UseButtonInput},
+        focus::UseFocusInput,
+        prelude::UseButtonReturn,
+        press::{PressEvent, UsePressInput},
     },
     prelude::Consumer,
     utils::aria::{AriaExpanded, AriaHasPopup},
@@ -21,53 +22,50 @@ pub fn Button(
     #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
     /// Arbitrary additional attributes.
-    #[prop(attrs)] attributes: Vec<(&'static str, Attribute)>,
+    #[prop(attrs)]
+    attributes: Vec<(&'static str, Attribute)>,
     children: Children,
 ) -> impl IntoView {
     let el: NodeRef<html::Button> = create_node_ref();
 
-    let btn = use_button(UseButtonProps {
+    let UseButtonReturn { props } = use_button(UseButtonInput {
         node_ref: el,
         disabled: disabled.or(false),
         aria_haspopup: aria_haspopup.or_default(),
         aria_expanded: aria_expanded.or_default(),
-    });
 
-    let focus = use_focus(UseFocusOptions {
-        disabled: disabled.or(false),
-        on_focus: None,
-        on_blur: None,
-        on_focus_change: None,
-    });
+        use_focus_input: UseFocusInput {
+            disabled: disabled.or(false),
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
+        },
 
-    let press = use_press(UsePressInput {
-        disabled: disabled.or(false),
-        on_press: Callback::new(move |e| {
-            if !disabled.get_untracked() {
-                //e.stop_propagation();
+        use_press_input: UsePressInput {
+            disabled: disabled.or(false),
+            on_press: Callback::new(move |e| {
                 on_press.consume(e);
-            }
-        }),
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
+            }),
+            on_press_up: None,
+            on_press_start: None,
+            on_press_end: None,
+        },
     });
 
     view! {
         <button
-            {..btn.props}
-            {..press.props.attrs}
+            {..props.attrs}
             {..attributes}
             node_ref=el
             id=id
             class=class
             class:leptonic-btn=true
             style=style
-            on:keydown=press.props.on_key_down
-            on:click=press.props.on_click
-            on:pointerdown=press.props.on_pointer_down
-            on:focus=focus.on_focus
-            on:blur=focus.on_blur
+            on:keydown=props.on_key_down
+            on:click=props.on_click
+            on:pointerdown=props.on_pointer_down
+            on:focus=props.on_focus
+            on:blur=props.on_blur
         >
             { children() }
         </button>
