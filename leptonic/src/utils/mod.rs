@@ -2,6 +2,7 @@ pub mod aria;
 pub mod callback;
 pub mod color;
 pub mod math;
+pub mod pointer_type;
 pub mod props;
 pub mod time;
 

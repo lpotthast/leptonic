@@ -10,34 +10,12 @@ use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::{
-    current_target_contains_target, props::Attributes, ElementExt, EventExt, EventModifiers,
-    EventTargetExt, Modifiers,
+    current_target_contains_target, pointer_type::PointerType, props::Attributes, ElementExt, EventExt, EventModifiers, EventTargetExt, Modifiers
 };
 
 use super::{disable_text_selection, restore_text_selection};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
-
-#[derive(Debug, Clone)]
-pub enum PointerType {
-    Mouse,
-    Pen,
-    Touch,
-    Keyboard,
-    Virtual,
-    Other(String),
-}
-
-impl From<String> for PointerType {
-    fn from(value: String) -> Self {
-        match value.as_str() {
-            "mouse" => PointerType::Mouse,
-            "touch" => PointerType::Touch,
-            "pen" => PointerType::Pen,
-            _other => PointerType::Other(value),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub enum PressEvents {

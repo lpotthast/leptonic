@@ -1,5 +1,7 @@
 use educe::Educe;
-use leptos_reactive::{create_effect, store_value, Callable, Callback, Effect, Signal, SignalGet};
+use leptos_reactive::{
+    create_effect, on_cleanup, store_value, Callable, Callback, Signal, SignalDispose, SignalGet,
+};
 use web_sys::PointerEvent;
 
 use crate::utils::props::Attributes;
@@ -42,7 +44,6 @@ pub struct UseMoveProps {
 #[derive(Debug)]
 pub struct UseMoveReturn {
     pub props: UseMoveProps,
-    pub effects: Vec<Effect<()>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -53,9 +54,9 @@ struct MoveState {
 }
 
 pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
-    // Note: The may be multiple pointer. Every pointer event contains a unique identifier of the pointer used for the interaction.
-    // We track the last pointer id used by listening for on_pointer_down events.
-    // Only move events from the last pointer are tracked.
+    // Note: There may be multiple pointers. Every pointer event contains a unique identifier of the pointer used for the interaction.
+    // We start movement tracking by listening for on_pointer_down events.
+    // Only movements from the pointer which initiated the tracking is propagated.
 
     let state = store_value(Option::<MoveState>::None);
     let active = store_value(false);
@@ -154,11 +155,16 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         }
     });
 
+    on_cleanup(move || {
+        on_move.dispose();
+        on_up.dispose();
+        on_cancel.dispose();
+    });
+
     UseMoveReturn {
         props: UseMoveProps {
             attrs: Attributes::new(),
             on_pointer_down,
         },
-        effects: vec![on_move, on_up, on_cancel],
     }
 }

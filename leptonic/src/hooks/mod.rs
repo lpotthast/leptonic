@@ -1,6 +1,7 @@
 pub mod button;
 pub mod calendar;
 pub mod focus;
+pub mod hover;
 pub mod r#move;
 pub mod press;
 
@@ -11,6 +12,9 @@ pub mod prelude {
     pub use super::press::use_press;
     pub use super::press::UsePressInput;
     pub use super::press::UsePressReturn;
+    pub use super::hover::use_hover;
+    pub use super::hover::UseHoverInput;
+    pub use super::hover::UseHoverReturn;
     pub use super::r#move::use_move;
     pub use super::r#move::UseMoveInput;
     pub use super::r#move::UseMoveReturn;

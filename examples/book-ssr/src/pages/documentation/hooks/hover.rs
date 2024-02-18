@@ -13,8 +13,7 @@ pub enum Event {
 }
 
 #[component]
-pub fn PagePress() -> impl IntoView {
-    let (count, set_count) = create_signal(0);
+pub fn PageHover() -> impl IntoView {
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = create_signal(false);
 
@@ -29,35 +28,24 @@ pub fn PagePress() -> impl IntoView {
         })
     });
 
-    let press = use_press(UsePressInput {
+    let press = use_hover(UseHoverInput {
         disabled: disabled.into(),
-        on_press: Callback::new(move |e| {
-            set_count.update(|c| *c += 1);
+        on_hover_start: Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Press: {e:?}")));
+                events.push_overwrite(Oco::Owned(format!("HoverStart: {e:?}")));
             });
         }),
-        on_press_up: Some(Callback::new(move |e| {
+        on_hover_end: Callback::new(move |e| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressUp: {e:?}")));
+                events.push_overwrite(Oco::Owned(format!("HoverEnd: {e:?}")));
             });
-        })),
-        on_press_start: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressStart: {e:?}")));
-            });
-        })),
-        on_press_end: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressEnd: {e:?}")));
-            });
-        })),
+        }),
     });
 
     view! {
-        <H1>"use_press"</H1>
+        <H1>"use_hover"</H1>
 
-        <P>"Track element press."</P>
+        <P>"Track element hover."</P>
 
         <Code>
             {indoc!(r"
@@ -65,21 +53,19 @@ pub fn PagePress() -> impl IntoView {
             ")}
         </Code>
 
-        <button
+        <div
             {..press.props.attrs}
-            on:keydown=press.props.on_key_down
-            on:click=press.props.on_click
-            on:pointerdown=press.props.on_pointer_down
+            on:pointerenter=press.props.on_pointer_enter
+            on:pointerleave=press.props.on_pointer_leave
+            style="display: inline-flex;
+            border: 0.1em solid green;
+            padding: 0.5em 1em;"
         >
-            "Press me"
-        </button>
+            "Hover me"
+        </div>
 
         <P>"Is disabled: " { move || disabled.get() } <Checkbox checked=disabled set_checked=set_disabled /></P>
-        <P>"Is pressed: " { move || press.is_pressed.get() }</P>
-        <P>"Was pressed: " { move || count.get() } { move || match count.get() {
-            1 => " time",
-            _ => " times",
-        } }</P>
+        <P>"Is hovered: " { move || press.is_hovered.get() }</P>
 
         <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
 

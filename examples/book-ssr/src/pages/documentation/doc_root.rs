@@ -22,6 +22,7 @@ use crate::pages::documentation::getting_started::changelog::PageChangelog;
 use crate::pages::documentation::getting_started::installation::PageInstallation;
 use crate::pages::documentation::getting_started::overview::PageOverview;
 use crate::pages::documentation::getting_started::themes::PageThemes;
+use crate::pages::documentation::hooks::hover::PageHover;
 use crate::pages::documentation::hooks::r#move::PageMove;
 use crate::pages::documentation::hooks::press::PagePress;
 use crate::pages::documentation::input::button::PageButton;
@@ -55,6 +56,7 @@ pub enum DocRoutes {
     // Hooks
     UsePress,
     UseMove,
+    UseHover,
 
     // Layout
     Stack,
@@ -112,6 +114,7 @@ impl DocRoutes {
 
             Self::UsePress => "use-press",
             Self::UseMove => "use-move",
+            Self::UseHover => "use-hover",
 
             Self::Stack => "stack",
             Self::Grid => "grid",
@@ -182,6 +185,7 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
 
             <Route path=DocRoutes::UsePress view=|| view! { <PagePress/> }/>
             <Route path=DocRoutes::UseMove view=|| view! { <PageMove/> }/>
+            <Route path=DocRoutes::UseHover view=|| view! { <PageHover/> }/>
 
             <Route path=DocRoutes::Stack view=|| view! { <PageStack/> }/>
             <Route path=DocRoutes::Grid view=|| view! { <PageGrid/> }/>
@@ -259,6 +263,7 @@ pub fn DocLayout() -> impl IntoView {
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::UsePress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
                 <Link href=DocRoutes::UseMove class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
+                <Link href=DocRoutes::UseHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
             </Stack>
         </DrawerSection>
 

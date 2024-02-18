@@ -52,13 +52,13 @@ async fn main() {
             .fallback(
                 file_and_error_handler
             )
-            .layer(
+            /*.layer(
                 CompressionLayer::new()
                     .gzip(true)
                     .br(true)
                     .deflate(true)
                     .quality(tower_http::CompressionLevel::Default),
-            )
+            )*/
             .with_state(leptos_options);
 
         tracing::info!("Loading certs...");

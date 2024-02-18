@@ -86,7 +86,7 @@ pub fn PageMove() -> impl IntoView {
     });
 
     view! {
-        <H1>"useMove"</H1>
+        <H1>"use_move"</H1>
 
         <P>"Track movement."</P>
 
