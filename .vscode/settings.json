@@ -41,6 +41,7 @@
         "pointerleave",
         "pointermove",
         "pointerup",
+        "quicksearch",
         "radiogroup",
         "ringbuf",
         "rustls",
