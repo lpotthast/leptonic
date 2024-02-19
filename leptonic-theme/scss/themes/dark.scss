@@ -49,7 +49,7 @@
 
     // App bar
     --app-bar-height: 2.75em;
-    --app-bar-color: var(--std-text-light);
+    --app-bar-color: var(--std-text-bright);
     --app-bar-background-color: #323232;
     --app-bar-border-bottom: none;
     --app-bar-box-shadow: 1px 0px 15px 0px #1f1f1f;
@@ -288,13 +288,13 @@
     --input-focused-border-color: var(--brand-color);
 
     // Kbd
-    --leptonic-kbd-key-color: var(--std-text-light);
+    --leptonic-kbd-key-color: var(--std-text-bright);
     --leptonic-kbd-key-background-color: #5a5a5a;
     --leptonic-kbd-key-margin: 0em;
     --leptonic-kbd-key-padding: 0.3em 0.5em;
     --leptonic-kbd-key-border-radius: 0.4em;
     --leptonic-kbd-key-border-color: #333333;
-    --leptonic-kbd-concatenate-color: var(--std-text-light);
+    --leptonic-kbd-concatenate-color: var(--std-text-bright);
     --leptonic-kbd-concatenate-background-color: transparent;
     --leptonic-kbd-concatenate-margin: 0 0.1em;
     --leptonic-kbd-concatenate-padding: 0.3em;
