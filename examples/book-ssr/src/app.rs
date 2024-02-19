@@ -207,6 +207,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     let is_small = use_media_query("(max-width: 800px)");
 
     let router_context = use_context::<RouterContext>();
+    
     let is_doc = create_memo(move |_| {
         router_context
             .as_ref()
@@ -214,9 +215,17 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
             .unwrap_or(false)
     });
 
+
     // The main drawer is only used on mobile / small screens!.
     let (main_drawer_closed, set_main_drawer_closed) = create_signal(true);
     let (doc_drawer_closed, set_doc_drawer_closed) = create_signal(false);
+
+    // Make sure the doc_drawer is closed whenever we leave a documentation route.
+    create_effect(move |_| {
+        if !is_doc.get() {
+            set_doc_drawer_closed.set(true);
+        }
+    });
 
     // Always close the doc-drawer when the application is now small.
     // Always open the doc-drawer when the application is no longer small.
@@ -356,7 +365,11 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
             </div>
         </AppBar>
 
-        <Box id="content" style=format!("height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT}); max-height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT});")>
+        <Box 
+            id="content" 
+            attr:aria-hidden=move || { ((is_doc.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
+            style=format!("height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT}); max-height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT});")
+        >
             {
                 match children {
                     Some(children) => {

@@ -82,6 +82,27 @@ body {
     width: 100%;
     padding: 0;
     overflow-y: auto;
+
+    &::before {
+        content: "";
+        display: block;
+        z-index: 99;
+        pointer-events: none;
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+        opacity: 0;
+        transition: opacity 0.2s ease-in-out;
+        background-color: #0009;
+    }
+
+    &[aria-hidden="true"] {
+        &::before {
+            opacity: 1;
+        }
+    }
 }
 
 #main-drawer {
@@ -207,6 +228,10 @@ body {
     }
 }
 
+leptonic-quicksearch-result {
+    border-radius: 0.25em;
+}
+
 .search-link {
     width: 100%;
     height: 100%;
@@ -216,7 +241,7 @@ body {
         height: 100%;
         display: flex;
         justify-content: flex-start;
-        padding: 1em;
+        padding: .75em;
     }
 }
 
