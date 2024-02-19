@@ -139,7 +139,6 @@ pub fn App() -> impl IntoView {
 
         <Title text="Leptonic"/>
 
-        <div data-themed="true">
         <Root default_theme=LeptonicTheme::default()>
             <Router fallback=|| {
                 let mut outside_errors = Errors::default();
@@ -161,7 +160,6 @@ pub fn App() -> impl IntoView {
                 </Routes>
             </Router>
         </Root>
-        </div>
     }
 }
 
