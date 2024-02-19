@@ -54,7 +54,7 @@ pub fn PageChangelog() -> impl IntoView {
             <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkExtTarget::Blank>"leptonic-template-ssr"</LinkExt>
             " and "
             <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkExtTarget::Blank>"leptonic-template-csr"</LinkExt>
-            " templates were created. Use the to get started quickly."
+            " templates were created. Use them to get started quickly."
         </P>
 
         <H3>"Changed:"</H3>
