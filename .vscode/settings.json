@@ -15,6 +15,7 @@
         "hoverable",
         "icondata",
         "indoc",
+        "inplace",
         "itertools",
         "jobspec",
         "keydown",

@@ -18,8 +18,8 @@ impl Attributes {
         self.map.insert(k, v)
     }
 
-    pub fn merge(&mut self, mut other: Attributes) {
-        self.map.extend(other.map.drain())
+    pub fn merge(&mut self, iter: impl IntoIterator<Item = (&'static str, Attribute)>) {
+        self.map.extend(iter.into_iter())
     }
 }
 

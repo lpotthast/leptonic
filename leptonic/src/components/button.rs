@@ -1,10 +1,17 @@
-use std::fmt::{Display, Formatter};
+use std::{
+    fmt::{Display, Formatter},
+    rc::Rc,
+};
 
 use leptos::*;
-use leptos_router::{State, ToHref, A};
+use leptos_router::{State, ToHref};
 
 use crate::{
-    hooks::press::PressEvent, prelude::Consumer, utils::aria::{AriaExpanded, AriaHasPopup}, OptMaybeSignal
+    atoms,
+    hooks::press::PressEvent,
+    prelude::Consumer,
+    utils::aria::{AriaExpanded, AriaHasPopup},
+    OptMaybeSignal,
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -100,7 +107,7 @@ pub fn Button(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <crate::atoms::button::Button
+        <atoms::button::Button
             on_press=on_press
             disabled=disabled
             aria_haspopup=aria_haspopup
@@ -113,7 +120,7 @@ pub fn Button(
             attr:data-size=move || size.get().as_str()
         >
             { children() }
-        </crate::atoms::button::Button>
+        </atoms::button::Button>
     }
 }
 
@@ -143,10 +150,12 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
-    #[prop(into, optional)] active: OptMaybeSignal<bool>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: OptMaybeSignal<String>,
+    #[prop(into, optional)] active: OptMaybeSignal<bool>, // TODO: Use
+    #[prop(into, optional)] id: Option<Oco<'static, str>>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
+    #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
     #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
     #[prop(into, optional)]
     title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
@@ -161,33 +170,46 @@ pub fn LinkButton<H>(
     /// will skip this page.)
     #[prop(optional)]
     replace: bool,
+    /// Arbitrary additional attributes.
+    #[prop(attrs)]
+    mut attributes: Vec<(&'static str, Attribute)>,
     children: Children,
 ) -> impl IntoView
 where
     H: ToHref + 'static,
 {
-    view! {
-        <leptonic-link
-            id=id
-            class=move || {
-                let user = class.get();
-                let active = active.get().then_some("active").unwrap_or_default();
-                format!("leptonic-btn {user} {active}")
-            }
-            data-variant=move || variant.get().as_str()
-            data-color=move || color.get().as_str()
-            data-size=move || size.get().as_str()
-            aria-disabled=move || match disabled.get() {
-                true => "true",
-                false => "false",
-            }
-            style=style
-        >
-            <A href=href exact=exact state=state.unwrap_or_default() replace=replace>
-                <div class="name">
-                    { children() }
-                </div>
-            </A>
-        </leptonic-link>
-    }
+    attributes.push((
+        "data-variant",
+        Attribute::Fn(Rc::new(move || {
+            Attribute::String(Oco::Borrowed(variant.get().as_str()))
+        })),
+    ));
+    attributes.push((
+        "data-color",
+        Attribute::Fn(Rc::new(move || {
+            Attribute::String(Oco::Borrowed(color.get().as_str()))
+        })),
+    ));
+    attributes.push((
+        "data-size",
+        Attribute::Fn(Rc::new(move || {
+            Attribute::String(Oco::Borrowed(size.get().as_str()))
+        })),
+    ));
+
+    atoms::button::LinkButton(atoms::button::LinkButtonProps {
+        href,
+        disabled,
+        id,
+        class,
+        style,
+        aria_haspopup,
+        aria_expanded,
+        exact,
+        state,
+        replace,
+        attributes,
+        children,
+    })
+    .into_view()
 }
