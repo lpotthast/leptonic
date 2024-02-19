@@ -38,7 +38,7 @@ pub fn PageUseButton() -> impl IntoView {
     });
 
     view! {
-        <H1>"use_hover"</H1>
+        <H1>"use_button"</H1>
 
         <P>"Create standardized buttons from arbitrary elements."</P>
 
