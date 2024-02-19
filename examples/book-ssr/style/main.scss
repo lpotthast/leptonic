@@ -93,8 +93,6 @@ body {
     bottom: 0;
     left: 0;
 
-    width: 100%;
-
     background-color: var(--book-menu-background-color);
     padding: 1em 0;
 }
@@ -116,8 +114,6 @@ body {
         margin: 0;
 
         &.mobile {
-            width: 100%;
-            min-width: 100%;
             overflow: none;
             position: absolute;
             right: 0;
@@ -193,10 +189,6 @@ body {
         @media only screen and (max-width: 800px) {
             .menu {
                 display: block;
-                column-count: 2;
-                column-gap: 0;
-                column-fill: balance;
-
             }
 
             .drawer-section {
