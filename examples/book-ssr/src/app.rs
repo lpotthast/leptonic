@@ -367,7 +367,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
 
         <Box 
             id="content" 
-            attr:aria-hidden=move || { ((is_doc.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
+            attr:aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
             style=format!("height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT}); max-height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT});")
         >
             {
