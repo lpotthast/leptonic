@@ -60,7 +60,7 @@ where
     view! {
         <leptonic-theme-provider
             data-theme=move || theme.get().name()
-            style="height: 100%; width: auto; display: contents;"
+            style="display: contents;"
         >
             { children() }
         </leptonic-theme-provider>
