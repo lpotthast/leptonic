@@ -105,29 +105,35 @@ fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMe
             )
         })?;
 
-    if cargo_toml.package.is_none() {
-        log(
-            Level::Debug,
-            "Aborting. Root dir does not contain a package.",
-        );
-        return Ok(None);
-    }
+    log(
+        Level::Debug,
+        format!("Processing '{}'", cargo_toml_path.display()),
+    );
 
-    let meta = cargo_toml
-        .package()
-        .metadata
+    let leptonic_metadata = cargo_toml
+        .package
         .as_ref()
-        .and_then(|m| m.get("leptonic"));
+        .and_then(|pkg| pkg.metadata.as_ref())
+        .or_else(|| cargo_toml.workspace.as_ref()?.metadata.as_ref())
+        .and_then(|metadata| metadata.get("leptonic"));
 
-    if meta.is_none() {
-        log(
-            Level::Debug,
-            "Aborting. Root dir is a package without specifying leptonic metadata.",
-        );
-        return Ok(None);
-    }
-
-    let meta = meta.expect("present");
+    let meta = match leptonic_metadata {
+        Some(metadata) => {
+            // Found "leptonic" in either package or workspace metadata, proceed
+            log(
+                Level::Info,
+                format!(
+                    "Found 'leptonic' in metadata of package or workspace: {:?}",
+                    metadata
+                ),
+            );
+            metadata
+        }
+        None => {
+            log(Level::Debug, "Aborting. Cargo.toml in root dir does not contain a package or workspace or is missing the necessary metadata.");
+            return Ok(None);
+        }
+    };
 
     let table = meta
         .as_table()
