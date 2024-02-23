@@ -125,19 +125,6 @@ impl<T: IntoAttribute + Clone> IntoAttribute for OptMaybeSignal<T> {
     }
 }
 
-pub trait MaybeSignalExt<T: 'static> {
-    fn map<U: 'static, F: Fn(T) -> U + 'static>(self, mapper: F) -> MaybeSignal<U>;
-}
-
-impl<T: Clone + 'static> MaybeSignalExt<T> for MaybeSignal<T> {
-    fn map<U: 'static, F: Fn(T) -> U + 'static>(self, mapper: F) -> MaybeSignal<U> {
-        match self {
-            Self::Static(v) => MaybeSignal::Static(mapper(v)),
-            Self::Dynamic(sig) => MaybeSignal::Dynamic(Signal::derive(move || mapper(sig.get()))),
-        }
-    }
-}
-
 pub mod prelude {
     #[cfg(feature = "tiptap")]
     pub use leptos_tiptap::*;

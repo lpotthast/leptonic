@@ -26,6 +26,7 @@ use crate::pages::documentation::getting_started::themes::PageThemes;
 use crate::pages::documentation::hooks::button::PageUseButton;
 use crate::pages::documentation::hooks::hover::PageHover;
 use crate::pages::documentation::hooks::r#move::PageMove;
+use crate::pages::documentation::hooks::overlay::PageOverlayButton;
 use crate::pages::documentation::hooks::press::PagePress;
 use crate::pages::documentation::input::button::PageButton;
 use crate::pages::documentation::input::checkbox::PageCheckbox;
@@ -60,6 +61,7 @@ pub enum DocRoutes {
     UseMove,
     UseHover,
     UseButton,
+    UseOverlay,
 
     // Atoms
     AtomButton,
@@ -122,6 +124,7 @@ impl DocRoutes {
             Self::UseMove => "hooks/use-move",
             Self::UseHover => "hooks/use-hover",
             Self::UseButton => "hooks/use-button",
+            Self::UseOverlay => "hooks/use-overlay",
 
             Self::AtomButton => "atoms/button",
 
@@ -196,6 +199,7 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::UseMove view=|| view! { <PageMove/> }/>
             <Route path=DocRoutes::UseHover view=|| view! { <PageHover/> }/>
             <Route path=DocRoutes::UseButton view=|| view! { <PageUseButton/> }/>
+            <Route path=DocRoutes::UseOverlay view=|| view! { <PageOverlayButton/> }/>
 
             <Route path=DocRoutes::AtomButton view=|| view! { <PageAtomButton/> }/>
 
@@ -277,6 +281,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=DocRoutes::UseMove class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
                 <Link href=DocRoutes::UseHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
                 <Link href=DocRoutes::UseButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
+                <Link href=DocRoutes::UseOverlay class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
             </Stack>
         </DrawerSection>
 

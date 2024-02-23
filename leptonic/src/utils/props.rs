@@ -1,6 +1,16 @@
 use std::collections::HashMap;
 
-use leptos::Attribute;
+use leptos::{Attribute, IntoAttribute};
+
+pub trait IntoAttributeName {
+    fn to_attribute_name(&self) -> &'static str;
+}
+
+impl IntoAttributeName for &'static str {
+    fn to_attribute_name(&self) -> &'static str {
+        self
+    }
+}
 
 #[derive(Debug, Clone)]
 pub struct Attributes {
@@ -14,12 +24,30 @@ impl Attributes {
         }
     }
 
-    pub fn insert(&mut self, k: &'static str, v: Attribute) -> Option<Attribute> {
-        self.map.insert(k, v)
+    pub fn insert(
+        &mut self,
+        k: impl IntoAttributeName,
+        v: impl IntoAttribute,
+    ) -> Option<Attribute> {
+        self.map.insert(k.to_attribute_name(), v.into_attribute())
     }
 
-    pub fn merge(&mut self, iter: impl IntoIterator<Item = (&'static str, Attribute)>) {
-        self.map.extend(iter.into_iter())
+    pub fn insert_entry<IntoAttrName: IntoAttributeName, IntoAttr: IntoAttribute>(
+        &mut self,
+        entry: impl Into<(IntoAttrName, IntoAttr)>,
+    ) -> Option<Attribute> {
+        let (k, v) = entry.into();
+        self.map.insert(k.to_attribute_name(), v.into_attribute())
+    }
+
+    pub fn merge(
+        &mut self,
+        iter: impl IntoIterator<Item = (impl IntoAttributeName, impl IntoAttribute)>,
+    ) {
+        self.map.extend(
+            iter.into_iter()
+                .map(|(k, v)| (k.to_attribute_name(), v.into_attribute())),
+        )
     }
 }
 

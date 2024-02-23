@@ -1,11 +1,9 @@
 use educe::Educe;
-use leptos::{html::ElementDescriptor, Attribute, IntoAttribute, MaybeSignal, NodeRef, Oco};
+use leptos_reactive::{MaybeSignal, Oco};
+use leptos::{html::ElementDescriptor, Attribute, IntoAttribute, NodeRef};
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
-use crate::{
-    utils::{aria::*, props::Attributes},
-    MaybeSignalExt,
-};
+use crate::utils::{aria::*, props::Attributes, signals::MaybeSignalExt};
 
 use super::{
     focus::{use_focus, UseFocusInput},

@@ -1,9 +1,11 @@
 pub mod aria;
 pub mod callback;
 pub mod color;
+pub mod locale;
 pub mod math;
 pub mod pointer_type;
 pub mod props;
+pub mod signals;
 pub mod time;
 
 pub(crate) enum DomContainer {

@@ -33,31 +33,31 @@ pub struct UseFocusProps {
     pub on_blur: Box<dyn Fn(FocusEvent)>,
 }
 
-pub fn use_focus(options: UseFocusInput) -> UseFocusReturn {
+pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     let on_focus = Box::new(move |e: FocusEvent| {
         // Double check that document.activeElement actually matches e.target in case a previously chained
         // focus handler already moved focus somewhere else.
         if e.target() == e.current_target()
             && use_document().active_element() == e.target().and_then(|t| t.as_element())
-            && !options.disabled.get()
+            && !input.disabled.get()
         {
-            if let Some(on_focus) = options.on_focus {
+            if let Some(on_focus) = input.on_focus {
                 on_focus.call(e);
             }
 
-            if let Some(on_focus_change) = options.on_focus_change {
+            if let Some(on_focus_change) = input.on_focus_change {
                 on_focus_change.call(true);
             }
         }
     });
 
     let on_blur = Box::new(move |e: FocusEvent| {
-        if e.target() == e.current_target() && !options.disabled.get() {
-            if let Some(on_blur) = options.on_blur {
+        if e.target() == e.current_target() && !input.disabled.get() {
+            if let Some(on_blur) = input.on_blur {
                 on_blur.call(e);
             }
 
-            if let Some(on_focus_change) = options.on_focus_change {
+            if let Some(on_focus_change) = input.on_focus_change {
                 on_focus_change.call(true);
             }
         }
