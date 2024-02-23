@@ -6,7 +6,7 @@ use leptos::{
     ReadSignal, SignalGet, WriteSignal,
 };
 use leptos_reactive::{MaybeSignal, Signal};
-use leptos_use::{use_element_bounding, use_window};
+use leptos_use::{use_document, use_element_bounding};
 
 use crate::{
     prelude::{AriaExpanded, AriaHasPopup},
@@ -136,121 +136,60 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
 // ----------------------------
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum Placement {
-    Bottom,
-    BottomLeft,
-    BottomRight,
-    BottomStart,
-    BottomEnd,
-    Top,
-    TopLeft,
-    TopRight,
-    TopStart,
-    TopEnd,
-    Left,
-    LeftTop,
-    LeftBottom,
+pub enum PlacementX {
+    OuterLeft,
+    OuterStart,
     Start,
-    StartTop,
-    StartBottom,
-    Right,
-    RightTop,
-    RightBottom,
-    End,
-    EndTop,
-    EndBottom,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum PhysicalPlacement {
-    Bottom,
-    BottomLeft,
-    BottomRight,
-    Top,
-    TopLeft,
-    TopRight,
     Left,
-    LeftTop,
-    LeftBottom,
+    Center,
     Right,
-    RightTop,
-    RightBottom,
+    End,
+    OuterEnd,
+    OuterRight,
 }
 
-impl PhysicalPlacement {
-    fn flipped(self) -> Self {
-        match self {
-            Self::Bottom => Self::Top,
-            Self::BottomLeft => Self::TopLeft,
-            Self::BottomRight => Self::TopRight,
-            Self::Top => Self::Bottom,
-            Self::TopLeft => Self::BottomLeft,
-            Self::TopRight => Self::BottomRight,
-            Self::Left => Self::Right,
-            Self::LeftTop => Self::RightTop,
-            Self::LeftBottom => Self::RightBottom,
-            Self::Right => Self::Left,
-            Self::RightTop => Self::LeftTop,
-            Self::RightBottom => Self::LeftBottom,
-        }
-    }
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum PhysicalPlacementX {
+    OuterLeft,
+    Left,
+    Center,
+    Right,
+    OuterRight,
 }
 
-impl Placement {
-    fn direction_aware(self, direction: WritingDirection) -> PhysicalPlacement {
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum PlacementY {
+    Above,
+    Top,
+    Center,
+    Bottom,
+    Below,
+}
+
+impl PlacementX {
+    fn direction_aware(self, direction: WritingDirection) -> PhysicalPlacementX {
         match self {
-            Placement::BottomStart => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::BottomLeft,
-                WritingDirection::Rtl => PhysicalPlacement::BottomRight,
+            Self::OuterLeft => PhysicalPlacementX::OuterLeft,
+            Self::OuterStart => match direction {
+                WritingDirection::Ltr => PhysicalPlacementX::OuterLeft,
+                WritingDirection::Rtl => PhysicalPlacementX::OuterRight,
             },
-            Placement::BottomEnd => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::BottomRight,
-                WritingDirection::Rtl => PhysicalPlacement::BottomLeft,
+            Self::Start => match direction {
+                WritingDirection::Ltr => PhysicalPlacementX::Left,
+                WritingDirection::Rtl => PhysicalPlacementX::Right,
             },
-            Placement::TopStart => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::TopLeft,
-                WritingDirection::Rtl => PhysicalPlacement::TopRight,
+            Self::Left => PhysicalPlacementX::Left,
+            Self::Center => PhysicalPlacementX::Center,
+            Self::Right => PhysicalPlacementX::Right,
+            Self::End => match direction {
+                WritingDirection::Ltr => PhysicalPlacementX::Right,
+                WritingDirection::Rtl => PhysicalPlacementX::Left,
             },
-            Placement::TopEnd => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::TopRight,
-                WritingDirection::Rtl => PhysicalPlacement::TopLeft,
+            Self::OuterEnd => match direction {
+                WritingDirection::Ltr => PhysicalPlacementX::OuterRight,
+                WritingDirection::Rtl => PhysicalPlacementX::OuterLeft,
             },
-            Placement::Start => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::Left,
-                WritingDirection::Rtl => PhysicalPlacement::Right,
-            },
-            Placement::StartTop => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::LeftTop,
-                WritingDirection::Rtl => PhysicalPlacement::RightTop,
-            },
-            Placement::StartBottom => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::LeftBottom,
-                WritingDirection::Rtl => PhysicalPlacement::RightBottom,
-            },
-            Placement::End => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::Right,
-                WritingDirection::Rtl => PhysicalPlacement::Left,
-            },
-            Placement::EndTop => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::RightTop,
-                WritingDirection::Rtl => PhysicalPlacement::LeftTop,
-            },
-            Placement::EndBottom => match direction {
-                WritingDirection::Ltr => PhysicalPlacement::RightBottom,
-                WritingDirection::Rtl => PhysicalPlacement::LeftBottom,
-            },
-            Placement::Bottom => PhysicalPlacement::Bottom,
-            Placement::BottomLeft => PhysicalPlacement::BottomLeft,
-            Placement::BottomRight => PhysicalPlacement::BottomRight,
-            Placement::Top => PhysicalPlacement::Top,
-            Placement::TopLeft => PhysicalPlacement::TopLeft,
-            Placement::TopRight => PhysicalPlacement::TopRight,
-            Placement::Left => PhysicalPlacement::Left,
-            Placement::LeftTop => PhysicalPlacement::LeftTop,
-            Placement::LeftBottom => PhysicalPlacement::LeftBottom,
-            Placement::Right => PhysicalPlacement::Right,
-            Placement::RightTop => PhysicalPlacement::RightTop,
-            Placement::RightBottom => PhysicalPlacement::RightBottom,
+            Self::OuterRight => PhysicalPlacementX::OuterRight,
         }
     }
 }
@@ -270,7 +209,8 @@ where
     #[educe(Debug(ignore))]
     pub target_ref: NodeRef<TargetRef>,
 
-    pub placement: Placement,
+    pub placement_x: MaybeSignal<PlacementX>,
+    pub placement_y: MaybeSignal<PlacementY>,
 
     pub writing_direction: MaybeSignal<WritingDirection>,
 }
@@ -292,138 +232,96 @@ where
     OverlayRef: ElementDescriptor + Clone + 'static,
     TargetRef: ElementDescriptor + Clone + 'static,
 {
-    // let body_bounding = use_element_bounding(use_document().body().unwrap());
-
     let overlay_bounding = use_element_bounding(input.overlay_ref);
     let target_bounding = use_element_bounding(input.target_ref);
 
-    let container_width = create_memo(move |_| {
-        use_window()
-            .as_ref()
-            .map(|w| {
-                w.inner_width()
-                    .ok()
-                    .map(|js| js.as_f64().unwrap_or(0.0))
-                    .unwrap_or(0.0)
-            })
-            .unwrap_or(0.0)
-    });
+    let container_width = move || match use_document().as_ref() {
+        Some(document) => match document.body() {
+            Some(body) => body.client_width() as f64,
+            None => 0.0,
+        },
+        None => 0.0,
+    };
 
-    let container_height = create_memo(move |_| {
-        use_window()
-            .as_ref()
-            .map(|w| {
-                w.inner_height()
-                    .ok()
-                    .map(|js| js.as_f64().unwrap_or(0.0))
-                    .unwrap_or(0.0)
-            })
-            .unwrap_or(0.0)
-    });
+    let container_height = move || match use_document().as_ref() {
+        Some(document) => match document.body() {
+            Some(body) => body.client_height() as f64,
+            None => 0.0,
+        },
+        None => 0.0,
+    };
 
-    let placement = create_memo(move |_| {
-        let direction_aware_placement = input
-            .placement
-            .direction_aware(input.writing_direction.get());
-
-        let space_aware_placement = match direction_aware_placement {
-            original @ PhysicalPlacement::Bottom
-            | original @ PhysicalPlacement::BottomLeft
-            | original @ PhysicalPlacement::BottomRight => {
-                let space_bottom = container_height.get() - target_bounding.bottom.get();
-                match overlay_bounding.height.get() > space_bottom {
-                    true => original.flipped(),
-                    false => original,
-                }
-            }
-            original @ PhysicalPlacement::Top
-            | original @ PhysicalPlacement::TopLeft
-            | original @ PhysicalPlacement::TopRight => {
-                let space_top = target_bounding.top.get();
-                match overlay_bounding.height.get() > space_top {
-                    true => original.flipped(),
-                    false => original,
-                }
-            }
-            original @ PhysicalPlacement::Left
-            | original @ PhysicalPlacement::LeftTop
-            | original @ PhysicalPlacement::LeftBottom => {
+    let placement_x = create_memo(move |_| {
+        match input
+            .placement_x
+            .get()
+            .direction_aware(input.writing_direction.get())
+        {
+            original @ PhysicalPlacementX::OuterLeft => {
                 let space_left = target_bounding.left.get();
                 match overlay_bounding.width.get() > space_left {
-                    true => original.flipped(),
+                    true => PhysicalPlacementX::OuterRight,
                     false => original,
                 }
             }
-            original @ PhysicalPlacement::Right
-            | original @ PhysicalPlacement::RightTop
-            | original @ PhysicalPlacement::RightBottom => {
-                let space_right = container_width.get() - target_bounding.right.get();
+            original @ PhysicalPlacementX::OuterRight => {
+                let space_right = container_width() - target_bounding.right.get();
                 match overlay_bounding.width.get() > space_right {
-                    true => original.flipped(),
+                    true => PhysicalPlacementX::OuterLeft,
                     false => original,
                 }
             }
-        };
-
-        space_aware_placement
+            other => other,
+        }
     });
 
-    let position_memo = create_memo(move |_| {
-        let placement = placement.get();
+    let placement_y = create_memo(move |_| match input.placement_y.get() {
+        original @ PlacementY::Above => {
+            let space_top = target_bounding.top.get();
+            match overlay_bounding.height.get() > space_top {
+                true => PlacementY::Below,
+                false => original,
+            }
+        }
+        original @ PlacementY::Below => {
+            let space_bottom = container_height() - target_bounding.bottom.get();
+            match overlay_bounding.height.get() > space_bottom {
+                true => PlacementY::Above,
+                false => original,
+            }
+        }
+        other => other,
+    });
 
-        let top = match placement {
-            PhysicalPlacement::Bottom
-            | PhysicalPlacement::BottomLeft
-            | PhysicalPlacement::BottomRight => {
-                target_bounding.top.get() + target_bounding.height.get()
-            }
-            PhysicalPlacement::Top | PhysicalPlacement::TopLeft | PhysicalPlacement::TopRight => {
-                target_bounding.top.get() - overlay_bounding.height.get()
-            }
-            PhysicalPlacement::Left | PhysicalPlacement::Right => {
-                target_bounding.top.get() - (target_bounding.height.get() / 2.0)
-                    + (overlay_bounding.height.get() / 2.0)
-            }
-            PhysicalPlacement::LeftTop | PhysicalPlacement::RightTop => target_bounding.top.get(),
-            PhysicalPlacement::LeftBottom | PhysicalPlacement::RightBottom => {
-                target_bounding.bottom.get() - overlay_bounding.height.get()
-            }
-        };
+    let top = create_memo(move |_| match placement_y.get() {
+        PlacementY::Above => target_bounding.top.get() - overlay_bounding.height.get(),
+        PlacementY::Top => target_bounding.top.get(),
+        PlacementY::Center => {
+            target_bounding.top.get() + (target_bounding.height.get() / 2.0)
+                - (overlay_bounding.height.get() / 2.0)
+        }
+        PlacementY::Bottom => target_bounding.bottom.get() - overlay_bounding.height.get(),
+        PlacementY::Below => target_bounding.bottom.get(),
+    });
 
-        let left = match placement {
-            PhysicalPlacement::Top | PhysicalPlacement::Bottom => {
-                target_bounding.left.get() + (target_bounding.width.get() / 2.0)
-                    - (overlay_bounding.width.get() / 2.0)
-            }
-            PhysicalPlacement::TopLeft | PhysicalPlacement::BottomLeft => {
-                target_bounding.left.get()
-            }
-            PhysicalPlacement::TopRight | PhysicalPlacement::BottomRight => {
-                target_bounding.right.get() - overlay_bounding.width.get()
-            }
-            PhysicalPlacement::LeftTop
-            | PhysicalPlacement::Left
-            | PhysicalPlacement::LeftBottom => {
-                target_bounding.left.get() - overlay_bounding.width.get()
-            }
-            PhysicalPlacement::RightTop
-            | PhysicalPlacement::Right
-            | PhysicalPlacement::RightBottom => target_bounding.right.get(),
-        };
-
-        (top, left)
+    let left = create_memo(move |_| match placement_x.get() {
+        PhysicalPlacementX::OuterLeft => target_bounding.left.get() - overlay_bounding.width.get(),
+        PhysicalPlacementX::Left => target_bounding.left.get(),
+        PhysicalPlacementX::Center => {
+            target_bounding.left.get() + (target_bounding.width.get() / 2.0)
+                - (overlay_bounding.width.get() / 2.0)
+        }
+        PhysicalPlacementX::Right => target_bounding.right.get() - overlay_bounding.width.get(),
+        PhysicalPlacementX::OuterRight => target_bounding.right.get(),
     });
 
     let mut attrs = Attributes::new();
     attrs.insert(
         "style",
         Attribute::Fn(Rc::new(move || {
-            let (top, left) = position_memo.get();
-
-            tracing::info!(top, left);
-
-            let style =
-                format!("position: absolute; z-index: 100000; top: {top}px; left: {left}px");
+            let top = top.get();
+            let left = left.get();
+            let style = format!("position: fixed; z-index: 100000; top: {top}px; left: {left}px");
             Attribute::String(Oco::Owned(style))
         })),
     );

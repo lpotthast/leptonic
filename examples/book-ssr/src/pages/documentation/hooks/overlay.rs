@@ -1,6 +1,7 @@
 use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptonic::hooks::button::UseButtonInput;
+use leptonic::hooks::overlay::{PlacementX, PlacementY};
 use leptonic::hooks::prelude::*;
 use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};
 use leptonic::utils::locale::WritingDirection;
@@ -8,8 +9,13 @@ use leptos::*;
 
 #[component]
 pub fn PageOverlayButton() -> impl IntoView {
+    let (selected_placement_x, set_selected_placement_x) = create_signal(PlacementX::Right);
+    let (selected_placement_y, set_selected_placement_y) = create_signal(PlacementY::Above);
+    
     let trigger_el: NodeRef<html::Div> = create_node_ref();
     let overlay_el: NodeRef<html::Div> = create_node_ref();
+
+    let (overlay_content, set_overlay_content) = create_signal(String::from("overlay"));
 
     let UseOverlayReturn {
         props: overlay_props,
@@ -33,7 +39,8 @@ pub fn PageOverlayButton() -> impl IntoView {
     } = use_overlay_position(UseOverlayPositionInput {
         overlay_ref: overlay_el,
         target_ref: trigger_el,
-        placement: leptonic::hooks::overlay::Placement::TopRight,
+        placement_y: selected_placement_y.into(),
+        placement_x: selected_placement_x.into(),
         writing_direction: WritingDirection::Ltr.into(),
     });
 
@@ -71,27 +78,47 @@ pub fn PageOverlayButton() -> impl IntoView {
             "#)}
         </Code>
 
-        <div
-            {..trigger_props.attrs}
-            {..btn_props.attrs}
-            node_ref=trigger_el
-            on:keydown=btn_props.on_key_down
-            on:click=btn_props.on_click
-            on:pointerdown=btn_props.on_pointer_down
-            on:focus=btn_props.on_focus
-            on:blur=btn_props.on_blur
-            style="
-                display: inline-flex;
-                border: 0.1em solid green;
-                padding: 0.5em;
-                cursor: pointer;
-                width: 7em;
-                height: 7em;
-                justify-content: center;
-                align-items: center;
-            "
-        >
-            "Press me"
+        <Select
+            options=vec![PlacementX::OuterLeft, PlacementX::Left, PlacementX::Center, PlacementX::Right, PlacementX::OuterRight]
+            search_text_provider=move |o| format!("{o:?}")
+            render_option=move |o| format!("{o:?}")
+            selected=selected_placement_x
+            set_selected=move |v| set_selected_placement_x.set(v)
+        />
+
+        <Select
+            options=vec![PlacementY::Above, PlacementY::Top, PlacementY::Center, PlacementY::Bottom, PlacementY::Below]
+            search_text_provider=move |o| format!("{o:?}")
+            render_option=move |o| format!("{o:?}")
+            selected=selected_placement_y
+            set_selected=move |v| set_selected_placement_y.set(v)
+        />
+
+        <TextInput get=overlay_content set=set_overlay_content/>
+
+        <div style="display: flex; width: 100%; height: 20em; justify-content: center; align-items: center;">
+            <div
+                {..trigger_props.attrs}
+                {..btn_props.attrs}
+                node_ref=trigger_el
+                on:keydown=btn_props.on_key_down
+                on:click=btn_props.on_click
+                on:pointerdown=btn_props.on_pointer_down
+                on:focus=btn_props.on_focus
+                on:blur=btn_props.on_blur
+                style="
+                    display: inline-flex;
+                    border: 0.1em solid green;
+                    padding: 0.5em;
+                    cursor: pointer;
+                    width: 7em;
+                    height: 7em;
+                    justify-content: center;
+                    align-items: center;
+                "
+            >
+                "Press me"
+            </div>
         </div>
 
         <Portal>
@@ -114,7 +141,7 @@ pub fn PageOverlayButton() -> impl IntoView {
                             node_ref=overlay_el
                             class="my-overlay"
                         >
-                            "Overlay"
+                            { move || overlay_content.get() }
                         </div>
                     </Show>
                 }
