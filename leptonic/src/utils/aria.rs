@@ -63,6 +63,7 @@ impl<T: IntoAttribute + Clone + 'static, F: Fn() -> T + 'static> From<F> for Gen
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<T: IntoAttribute + Clone + 'static> From<Signal<T>> for GenericAttribute<T> {
     fn from(signal: Signal<T>) -> Self {
         Self::Fn(Rc::new(move || signal.get()))

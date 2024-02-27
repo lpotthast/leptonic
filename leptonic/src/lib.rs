@@ -144,8 +144,8 @@ pub mod prelude {
     pub use super::Height;
     pub use super::Margin;
     pub use super::Mount;
-    pub use super::OptionDeref;
     pub use super::OptMaybeSignal;
+    pub use super::OptionDeref;
     pub use super::OptionalSignal;
     pub use super::Out;
     pub use super::Size;
@@ -208,6 +208,7 @@ impl<O: 'static> From<Callback<O, ()>> for Out<O> {
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<O: 'static> From<WriteSignal<O>> for Out<O> {
     fn from(write_signal: WriteSignal<O>) -> Self {
         Self::WriteSignal(write_signal)
