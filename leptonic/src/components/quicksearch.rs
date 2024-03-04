@@ -3,14 +3,16 @@ use crate::{
         button::{Button, ButtonColor, ButtonWrapper},
         input::TextInput,
         modal::{Modal, ModalBody, ModalFooter, ModalHeader},
-    }, prelude::{GlobalKeyboardEvent, Producer, ViewProducer}, utils::callback::ViewCallback
+    },
+    prelude::{Consumer, GlobalKeyboardEvent, Producer, ViewProducer},
+    utils::callback::ViewCallback,
 };
 use leptos::*;
 
 #[component]
 pub fn Quicksearch(
     #[prop(into)] trigger: ViewCallback<WriteSignal<bool>>,
-    #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
+    #[prop(into)] query: Consumer<String, Vec<QuicksearchOption>>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -18,7 +20,7 @@ pub fn Quicksearch(
     let (show_modal, set_show_modal) = create_signal(false);
     view! {
         <leptonic-quicksearch id=id class=class style=style>
-            { trigger.call(set_show_modal) }
+            { trigger.render(set_show_modal) }
             <QuicksearchModal
                 show_when=show_modal
                 query=query
@@ -53,26 +55,24 @@ pub struct QuicksearchOption {
 #[component]
 fn QuicksearchModal(
     #[prop(into)] show_when: Signal<bool>,
-    #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
+    #[prop(into)] query: Consumer<String, Vec<QuicksearchOption>>,
     #[prop(into)] on_cancel: Producer<()>,
 ) -> impl IntoView {
-    let on_cancel = StoredValue::new(on_cancel);
-
     let (input, set_input) = create_signal(String::new());
 
-    let options = move || query.call(input.get());
+    let options = move || query.consume(input.get());
 
     let g_keyboard_event: GlobalKeyboardEvent = expect_context::<GlobalKeyboardEvent>();
     create_effect(move |_old| {
         if let Some(e) = g_keyboard_event.read_signal.get() {
             if show_when.get_untracked() && e.key().as_str() == "Escape" {
-                on_cancel.get_value().call(());
+                on_cancel.produce();
             }
         }
     });
 
     view! {
-        <Modal show_when=show_when on_escape=move || on_cancel.get_value().call(()) class="quicksearch-modal">
+        <Modal show_when=show_when on_escape=move || on_cancel.produce() class="quicksearch-modal">
             <ModalHeader>
                 <TextInput
                     get=input
@@ -87,17 +87,17 @@ fn QuicksearchModal(
                 <leptonic-quicksearch-results>
                     { move || options().into_iter().map(|option| view! {
                         <leptonic-quicksearch-result on:click=move |_| {
-                                option.on_select.call(());
-                                on_cancel.get_value().call(());
+                                option.on_select.produce();
+                                on_cancel.produce();
                             }>
-                            { option.view.call(()) }
+                            { option.view.produce() }
                         </leptonic-quicksearch-result>
                     }).collect_view() }
                 </leptonic-quicksearch-results>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_press=move |_| on_cancel.get_value().call(()) color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| on_cancel.produce() color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>

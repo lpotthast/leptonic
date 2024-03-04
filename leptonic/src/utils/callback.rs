@@ -3,51 +3,55 @@ use std::fmt::{Debug, Formatter};
 
 /// A callback which returns nothing.
 /// Use `Consumer<In>` when you would otherwise write `Callback<In, ()>`.
-pub struct Consumer<In: 'static = ()>(leptos::StoredValue<Box<dyn Fn(In)>>);
+pub struct Consumer<In: 'static = (), Out: 'static = ()>(
+    leptos::StoredValue<Box<dyn Fn(In) -> Out>>,
+);
 
-impl<In: 'static> Consumer<In> {
-    pub fn new<F: Fn(In) + 'static>(fun: F) -> Self {
+impl<In: 'static, Out: 'static> Consumer<In, Out> {
+    pub fn new<F: Fn(In) -> Out + 'static>(fun: F) -> Self {
         Self(leptos::store_value(Box::new(fun)))
     }
 
-    pub fn consume(&self, arg: In) {
-        self.0.with_value(|cb| cb(arg));
+    pub fn consume(&self, arg: In) -> Out {
+        self.0.with_value(|cb| cb(arg))
     }
 }
 
-impl<In: 'static> std::ops::Deref for Consumer<In> {
-    type Target = leptos::StoredValue<Box<dyn Fn(In)>>;
+impl<In: 'static, Out: 'static> std::ops::Deref for Consumer<In, Out> {
+    type Target = leptos::StoredValue<Box<dyn Fn(In) -> Out>>;
 
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl<In: 'static> Copy for Consumer<In> {}
+impl<In: 'static, Out: 'static> Copy for Consumer<In, Out> {}
 
-impl<In: 'static> Clone for Consumer<In> {
+impl<In: 'static, Out: 'static> Clone for Consumer<In, Out> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<In: 'static> leptos::Callable<In, ()> for Consumer<In> {
-    fn call(&self, arg: In) {
-        self.consume(arg);
+impl<In: 'static, Out: 'static> leptos::Callable<In, Out> for Consumer<In, Out> {
+    fn call(&self, arg: In) -> Out {
+        self.consume(arg)
     }
 }
 
-impl<In: 'static> Debug for Consumer<In> {
+impl<In: 'static, Out: 'static> Debug for Consumer<In, Out> {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple("Consumer").finish()
     }
 }
 
-pub fn consumer<In: 'static, F: Fn(In) + 'static>(fun: F) -> Consumer<In> {
+pub fn consumer<In: 'static, Out: 'static, F: Fn(In) -> Out + 'static>(
+    fun: F,
+) -> Consumer<In, Out> {
     Consumer::new(fun)
 }
 
-impl<In: 'static, F: Fn(In) + 'static> From<F> for Consumer<In> {
+impl<In: 'static, Out: 'static, F: Fn(In) -> Out + 'static> From<F> for Consumer<In, Out> {
     fn from(fun: F) -> Self {
         Self::new(fun)
     }
@@ -158,6 +162,10 @@ impl<In: 'static> ViewCallback<In> {
     pub fn new<F: Fn(In) -> View + 'static>(fun: F) -> Self {
         Self(leptos::store_value(Box::new(fun)))
     }
+
+    pub fn render(&self, arg: In) -> View {
+        self.0.with_value(|cb| cb(arg))
+    }
 }
 
 impl<In: 'static> std::ops::Deref for ViewCallback<In> {
@@ -178,7 +186,7 @@ impl<In: 'static> Clone for ViewCallback<In> {
 
 impl<In: 'static> leptos::Callable<In, View> for ViewCallback<In> {
     fn call(&self, arg: In) -> View {
-        self.0.with_value(|cb| cb(arg))
+        self.render(arg)
     }
 }
 

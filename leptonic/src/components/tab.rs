@@ -4,6 +4,7 @@ use leptos::*;
 use uuid::Uuid;
 
 use crate::components::tabs::use_tabs;
+use crate::prelude::Consumer;
 use crate::Mount;
 
 #[derive(Debug, Clone)]
@@ -28,11 +29,11 @@ pub fn Tab(
 
     /// Called whenever the tab comes into view.
     #[prop(into, optional)]
-    on_show: Option<Callback<()>>,
+    on_show: Option<Consumer>,
 
     /// Called whenever the tab gets hidden.
     #[prop(into, optional)]
-    on_hide: Option<Callback<()>>,
+    on_hide: Option<Consumer>,
 ) -> impl IntoView {
     let id = id.unwrap_or_else(Uuid::new_v4);
     let tabs = use_tabs();
@@ -56,7 +57,7 @@ pub fn Tab(
             let history = tabs.history.get();
             let this = name.get_value();
             if history.get_active() == Some(&this) && history.get_previous() != Some(&this) {
-                on_show.call(());
+                on_show.consume(());
             }
         });
     }
@@ -66,7 +67,7 @@ pub fn Tab(
             let history = tabs.history.get();
             let this = name.get_value();
             if history.get_active() != Some(&this) && history.get_previous() == Some(&this) {
-                on_hide.call(());
+                on_hide.consume(());
             }
         });
     }

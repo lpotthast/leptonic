@@ -10,7 +10,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::{
-    current_target_contains_target, pointer_type::PointerType, props::Attributes, ElementExt, EventExt, EventModifiers, EventTargetExt, Modifiers
+    current_target_contains_target, pointer_type::PointerType, props::Attributes, ElementExt,
+    EventExt, EventModifiers, EventTargetExt, Modifiers,
 };
 
 use super::{disable_text_selection, restore_text_selection};
@@ -133,6 +134,7 @@ enum EventRef<'a> {
     Keyboard(&'a KeyboardEvent),
 }
 
+#[allow(clippy::too_many_lines)]
 pub fn use_press(input: UsePressInput) -> UsePressReturn {
     let attrs = Attributes::new();
 
@@ -172,15 +174,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if !is_pressed.get_untracked() {
             if let Some(on_press_start) = input.on_press_start {
                 let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-                on_press_start.call(PressEvent {
-                    pointer_type: s.pointer_type.clone(),
-                    target: s.target.clone(),
-                    modifiers: match e {
-                        EventRef::Pointer(e) => e.modifiers(),
-                        EventRef::Keyboard(e) => e.modifiers(),
+                Callable::call(
+                    &on_press_start,
+                    PressEvent {
+                        pointer_type: s.pointer_type.clone(),
+                        target: s.target.clone(),
+                        modifiers: match e {
+                            EventRef::Pointer(e) => e.modifiers(),
+                            EventRef::Keyboard(e) => e.modifiers(),
+                        },
+                        continue_propagation,
                     },
-                    continue_propagation,
-                });
+                );
                 if !continue_propagation_state.into_inner() {
                     match e {
                         EventRef::Pointer(e) => e.stop_propagation(),
@@ -197,15 +202,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if is_pressed.get_untracked() {
             if let Some(on_press_end) = input.on_press_end {
                 let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-                on_press_end.call(PressEvent {
-                    pointer_type: s.pointer_type.clone(),
-                    target: s.target.clone(),
-                    modifiers: match e {
-                        EventRef::Pointer(e) => e.modifiers(),
-                        EventRef::Keyboard(e) => e.modifiers(),
+                Callable::call(
+                    &on_press_end,
+                    PressEvent {
+                        pointer_type: s.pointer_type.clone(),
+                        target: s.target.clone(),
+                        modifiers: match e {
+                            EventRef::Pointer(e) => e.modifiers(),
+                            EventRef::Keyboard(e) => e.modifiers(),
+                        },
+                        continue_propagation,
                     },
-                    continue_propagation,
-                });
+                );
                 if !continue_propagation_state.into_inner() {
                     match e {
                         EventRef::Pointer(e) => e.stop_propagation(),
@@ -225,15 +233,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         );
 
         let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-        input.on_press.call(PressEvent {
-            pointer_type: s.pointer_type.clone(),
-            target: s.target.clone(),
-            modifiers: match e {
-                EventRef::Pointer(e) => e.modifiers(),
-                EventRef::Keyboard(e) => e.modifiers(),
+        Callable::call(
+            &input.on_press,
+            PressEvent {
+                pointer_type: s.pointer_type.clone(),
+                target: s.target.clone(),
+                modifiers: match e {
+                    EventRef::Pointer(e) => e.modifiers(),
+                    EventRef::Keyboard(e) => e.modifiers(),
+                },
+                continue_propagation,
             },
-            continue_propagation,
-        });
+        );
         if !continue_propagation_state.into_inner() {
             match e {
                 EventRef::Pointer(e) => e.stop_propagation(),

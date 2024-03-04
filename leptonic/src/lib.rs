@@ -183,7 +183,7 @@ impl<O: 'static> Out<O> {
     pub fn set(&self, new_value: O) {
         match self {
             Self::Consumer(consumer) => consumer.consume(new_value),
-            Self::Callback(callback) => callback.call(new_value),
+            Self::Callback(callback) => Callable::call(callback, new_value),
             Self::WriteSignal(write_signal) => write_signal.set(new_value),
             Self::RwSignal(rw_signal) => rw_signal.set(new_value),
         }
@@ -202,6 +202,7 @@ impl<O: 'static> From<Consumer<O>> for Out<O> {
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<O: 'static> From<Callback<O, ()>> for Out<O> {
     fn from(callback: Callback<O, ()>) -> Self {
         Self::Callback(callback)

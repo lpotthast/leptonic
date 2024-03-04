@@ -2,6 +2,7 @@ use leptos::*;
 
 use crate::{
     hooks::calendar::use_calendar,
+    prelude::Consumer,
     utils::time::{GuideMode, InMonth},
 };
 
@@ -16,7 +17,7 @@ enum Selection {
 #[allow(clippy::too_many_lines)]
 pub fn DateSelector(
     value: time::OffsetDateTime,
-    #[prop(into)] on_change: Callback<time::OffsetDateTime>,
+    #[prop(into)] on_change: Consumer<time::OffsetDateTime>,
     #[prop(optional)] min: Option<time::OffsetDateTime>,
     #[prop(optional)] max: Option<time::OffsetDateTime>,
     #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: MaybeSignal<
@@ -25,7 +26,7 @@ pub fn DateSelector(
 ) -> impl IntoView {
     let calendar = use_calendar(value, min, max);
 
-    create_effect(move |_| on_change.call(calendar.selected.get()));
+    create_effect(move |_| on_change.consume(calendar.selected.get()));
 
     let (show, set_show) = create_signal(match guide_mode.get() {
         GuideMode::CalendarFirst => Selection::Day,
