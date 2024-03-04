@@ -1,8 +1,9 @@
 use leptos::View;
+use leptos_reactive::{Callable, Callback};
 use std::fmt::{Debug, Formatter};
 
-/// A callback which returns nothing.
-/// Use `Consumer<In>` when you would otherwise write `Callback<In, ()>`.
+/// A callback.
+/// Use `Consumer<In, Out>` when you would otherwise write `Callback<In, Out>`.
 pub struct Consumer<In: 'static = (), Out: 'static = ()>(
     leptos::StoredValue<Box<dyn Fn(In) -> Out>>,
 );
@@ -33,7 +34,7 @@ impl<In: 'static, Out: 'static> Clone for Consumer<In, Out> {
     }
 }
 
-impl<In: 'static, Out: 'static> leptos::Callable<In, Out> for Consumer<In, Out> {
+impl<In: 'static, Out: 'static> Callable<In, Out> for Consumer<In, Out> {
     fn call(&self, arg: In) -> Out {
         self.consume(arg)
     }
@@ -54,6 +55,12 @@ pub fn consumer<In: 'static, Out: 'static, F: Fn(In) -> Out + 'static>(
 impl<In: 'static, Out: 'static, F: Fn(In) -> Out + 'static> From<F> for Consumer<In, Out> {
     fn from(fun: F) -> Self {
         Self::new(fun)
+    }
+}
+
+impl<In: 'static, Out: 'static> From<Callback<In, Out>> for Consumer<In, Out> {
+    fn from(cb: Callback<In, Out>) -> Self {
+        Self::new(move |arg| Callable::call(&cb, arg))
     }
 }
 
@@ -87,7 +94,7 @@ impl<Out: 'static> Clone for Producer<Out> {
     }
 }
 
-impl<Out: 'static> leptos::Callable<(), Out> for Producer<Out> {
+impl<Out: 'static> Callable<(), Out> for Producer<Out> {
     fn call(&self, _arg: ()) -> Out {
         self.produce()
     }
@@ -132,7 +139,7 @@ impl std::ops::Deref for ViewProducer {
     }
 }
 
-impl leptos::Callable<(), View> for ViewProducer {
+impl Callable<(), View> for ViewProducer {
     fn call(&self, _arg: ()) -> View {
         self.produce()
     }
@@ -184,7 +191,7 @@ impl<In: 'static> Clone for ViewCallback<In> {
     }
 }
 
-impl<In: 'static> leptos::Callable<In, View> for ViewCallback<In> {
+impl<In: 'static> Callable<In, View> for ViewCallback<In> {
     fn call(&self, arg: In) -> View {
         self.render(arg)
     }

@@ -4,7 +4,6 @@ use web_sys::KeyboardEvent;
 
 use crate::{
     components::date_selector::{DateSelector, DateSelectorProps},
-    prelude::Consumer,
     utils::time::{GuideMode, Type},
     Margin, OptMaybeSignal, Out,
 };
@@ -63,7 +62,7 @@ pub fn DateTimeInput(
     let date_selector = move || {
         DateSelector(DateSelectorProps {
             value: get.get().unwrap(),
-            on_change: Consumer::new(move |new_value| {
+            on_change: Out::new_func(move |new_value| {
                 tracing::info!("Received new value {:?}", new_value);
                 // Skip propagating a change event when the received value does not deviate from the current value.
                 if let Some(current) = get.get() {

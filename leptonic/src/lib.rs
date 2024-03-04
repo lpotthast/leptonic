@@ -180,6 +180,10 @@ impl<O: 'static> Clone for Out<O> {
 }
 
 impl<O: 'static> Out<O> {
+    pub fn new_func(fun: impl Fn(O) + 'static) -> Self {
+        Self::Consumer(fun.into())
+    }
+
     pub fn set(&self, new_value: O) {
         match self {
             Self::Consumer(consumer) => consumer.consume(new_value),
@@ -192,7 +196,7 @@ impl<O: 'static> Out<O> {
 
 impl<T: 'static, F: Fn(T) + 'static> From<F> for Out<T> {
     fn from(fun: F) -> Self {
-        Self::Consumer(fun.into())
+        Self::new_func(fun)
     }
 }
 

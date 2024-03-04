@@ -5,7 +5,6 @@ use web_sys::HtmlInputElement;
 
 use crate::{
     components::form_control::{FormControlContext, FormInput},
-    prelude::Consumer,
     OptMaybeSignal, Out,
 };
 
@@ -81,7 +80,7 @@ pub fn TextInput(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Consumer<bool>>,
+    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
@@ -118,8 +117,8 @@ pub fn TextInput(
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
                 on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.consume(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.consume(true) }; }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {
@@ -143,7 +142,7 @@ pub fn PasswordInput(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Consumer<bool>>,
+    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
@@ -172,8 +171,8 @@ pub fn PasswordInput(
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
                 on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.consume(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.consume(true) }; }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {
@@ -200,7 +199,7 @@ pub fn NumberInput(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Consumer<bool>>,
+    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
@@ -241,8 +240,8 @@ pub fn NumberInput(
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set_value) = &set_value { set_value(event_target::<HtmlInputElement>(&e).value()) } }
                 on:keyup=move |e| { if let Some(set_value) = &set_value { set_value(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.consume(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.consume(true) }; }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {

@@ -8,16 +8,15 @@ use crate::{
         prelude::UseButtonReturn,
         press::{PressEvent, UsePressInput},
     },
-    prelude::Consumer,
     utils::aria::{AriaExpanded, AriaHasPopup},
-    OptMaybeSignal,
+    OptMaybeSignal, Out,
 };
 
 use super::AttributeExt;
 
 #[component]
 pub fn Button(
-    #[prop(into)] on_press: Consumer<PressEvent>,
+    #[prop(into)] on_press: Out<PressEvent>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -47,7 +46,7 @@ pub fn Button(
         use_press_input: UsePressInput {
             disabled: disabled.or(false),
             on_press: Callback::new(move |e| {
-                on_press.consume(e);
+                on_press.set(e);
             }),
             on_press_up: None,
             on_press_start: None,
