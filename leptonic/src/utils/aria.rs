@@ -7,11 +7,11 @@ use super::props::IntoAttributeName;
 
 #[derive(Debug, Clone)]
 pub enum AriaAttribute {
-    /// see: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-controls
+    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-controls>
     Controls(GenericAttribute<AriaControls>),
-    /// see: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-haspopup
+    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-haspopup>
     HasPopup(GenericAttribute<AriaHasPopup>),
-    /// see: https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded
+    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded>
     Expanded(GenericAttribute<AriaExpanded>),
 }
 
