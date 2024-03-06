@@ -9,6 +9,9 @@ use leptos::*;
 use leptos_use::use_element_bounding;
 use ringbuf::{HeapRb, Rb};
 
+use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
+
 #[derive(Clone)]
 pub enum Event {
     MoveStart(MoveStartEvent),
@@ -19,8 +22,8 @@ pub enum Event {
 #[component]
 pub fn PageMove() -> impl IntoView {
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
-    let (left, set_left) = create_signal(0);
-    let (top, set_top) = create_signal(0);
+    let (left, set_left) = create_signal(0.0);
+    let (top, set_top) = create_signal(0.0);
 
     let global_pointer_up = expect_context::<GlobalPointerUpEvent>().read_signal;
     let global_pointer_down = expect_context::<GlobalPointerDownEvent>().read_signal;
@@ -30,7 +33,7 @@ pub fn PageMove() -> impl IntoView {
     let container: NodeRef<html::Div> = create_node_ref();
     let container_bounding = use_element_bounding(container);
 
-    let draggable: NodeRef<html::Button> = create_node_ref();
+    let draggable: NodeRef<html::Div> = create_node_ref();
     let draggable_bounding = use_element_bounding(draggable);
 
     let mov: UseMoveReturn = use_move(UseMoveInput {
@@ -52,16 +55,16 @@ pub fn PageMove() -> impl IntoView {
         on_move_end: Callback::new(move |_e| {
             set_left.update(move |l| {
                 *l = (*l).clamp(
-                    0,
-                    container_bounding.width.get_untracked() as i32
-                        - draggable_bounding.width.get_untracked() as i32,
+                    0.0,
+                    container_bounding.width.get_untracked()
+                        - draggable_bounding.width.get_untracked(),
                 )
             });
             set_top.update(move |t| {
                 *t = (*t).clamp(
-                    0,
-                    container_bounding.height.get_untracked() as i32
-                        - draggable_bounding.height.get_untracked() as i32,
+                    0.0,
+                    container_bounding.height.get_untracked()
+                        - draggable_bounding.height.get_untracked(),
                 )
             });
             set_events.update(move |events| {
@@ -86,37 +89,76 @@ pub fn PageMove() -> impl IntoView {
     });
 
     view! {
-        <H1>"use_move"</H1>
+        <Article>
+            <H1>"use_move"</H1>
 
-        <P>"Track movement."</P>
+            <P>"Track movement."</P>
 
-        <Code>
-            {indoc!(r"
-                ...
-            ")}
-        </Code>
+            <Code>
+                {indoc!(r"
+                    ...
+                ")}
+            </Code>
 
-        // The `touch-action: none` is important. Browsers would otherwise interrupt touchmove events after a small delay!
-        <div node_ref=container style="width: 100%; height: 10em; background-color: grey; border: 0.1em solid darkgrey; touch-action: none;">
-            <button
-                {..mov.props.attrs}
-                node_ref=draggable
-                on:pointerdown=mov.props.on_pointer_down
-                style=move || format!("transition: none; position: relative; left: {}px; top: {}px;", left.get().clamp(
-                    0,
-                    container_bounding.width.get_untracked() as i32
-                        - draggable_bounding.width.get_untracked() as i32,
-                ), top.get().clamp(
-                    0,
-                    container_bounding.height.get_untracked() as i32
-                        - draggable_bounding.height.get_untracked() as i32,
-                ))>"Drag me"</button>
-        </div>
+            // The `touch-action: none` is important. Browsers would otherwise interrupt touchmove events after a small delay!
+            <div node_ref=container style="
+                width: 100%;
+                height: 10em;
+                touch-action: none;
+                border: none;
+                border-radius: var(--typography-code-border-radius);
+                background-color: var(--typography-code-background-color);
+                color: var(--typography-code-color);
+            ">
+                <div
+                    {..mov.props.attrs}
+                    node_ref=draggable
+                    on:pointerdown=mov.props.on_pointer_down
+                    style=move || format!("
+                        border: 0.1em solid green;
+                        padding: 0.5em 1em;
+                        transition: none;
+                        position: relative;
+                        width: fit-content;
+                        cursor: pointer;
+                    ")
+                    style:left=move || format!("{}px", left.get().clamp(
+                        0.0,
+                        container_bounding.width.get_untracked()
+                            - draggable_bounding.width.get_untracked(),
+                    ))
+                    style:top=move || format!("{}px", top.get().clamp(
+                        0.0,
+                        container_bounding.height.get_untracked()
+                            - draggable_bounding.height.get_untracked(),
+                    ))
+                >
+                    "Drag me"
+                </div>
+            </div>
 
-        <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
+            <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
 
-        <pre style="background-color: grey; width: 100%; height: 15em; border: 0.1em solid darkgrey; overflow: auto;">
-            { move || string.get() }
-        </pre>
+            <pre style="
+                width: 100%;
+                height: 15em;
+                overflow: auto;
+                padding: var(--typography-code-padding);
+                border: none;
+                border-radius: var(--typography-code-border-radius);
+                background-color: var(--typography-code-background-color);
+                color: var(--typography-code-color);
+            ">
+                { move || string.get() }
+            </pre>
+        </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Overview", link: "#overview" },
+                Toc::Leaf { title: "Need help?", link: "#help" },
+                Toc::Leaf { title: "Contribute", link: "#contribute" },
+            ]
+        }/>
     }
 }

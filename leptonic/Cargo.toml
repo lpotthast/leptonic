@@ -54,6 +54,7 @@ web-sys = { version = "0.3.68", features = [
     "DomRect",
     "Event",
     "EventTarget",
+    "ScrollIntoViewOptions",
     "HtmlFormElement",
     "HtmlInputElement",
     "Storage",
@@ -71,6 +72,8 @@ default = ["hooks"]
 csr = ["leptos/csr"]
 ssr = ["leptos/ssr", "leptos-use/ssr", "leptos-tiptap?/ssr"]
 hydrate = ["leptos/hydrate"]
+
+nightly = ["leptos/nightly"]
 
 # Core functionality. Hooks provide low level functions like `usePress` which hande interactions, aria attributes and more.
 # Use hooks to build your own set of components.

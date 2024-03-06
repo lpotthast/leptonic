@@ -37,7 +37,7 @@ pub struct UseOverlayReturn {
 }
 
 #[derive(Educe)]
-#[educe(Debug)]
+#[educe(Debug, Clone)]
 pub struct UseOverlayProps {
     /// These attributes must be spread onto the target element: `<foo {..attrs} />`
     pub attrs: Attributes,
@@ -134,6 +134,8 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
 }
 
 // ----------------------------
+
+// TODO: Serialize, Deserialize, Display, FormStr ??? 
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum PlacementX {

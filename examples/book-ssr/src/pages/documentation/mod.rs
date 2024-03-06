@@ -1,9 +1,8 @@
+pub mod article;
 pub mod atoms;
-pub mod feedback;
-pub mod general;
+pub mod components;
 pub mod getting_started;
 pub mod hooks;
-pub mod input;
-pub mod layout;
+pub mod toc;
 
 pub mod doc_root;

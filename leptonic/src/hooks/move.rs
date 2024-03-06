@@ -13,8 +13,8 @@ pub struct MoveStartEvent {}
 
 #[derive(Debug, Clone, Copy)]
 pub struct MoveEvent {
-    pub delta_x: i32,
-    pub delta_y: i32,
+    pub delta_x: f64,
+    pub delta_y: f64,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -50,7 +50,7 @@ pub struct UseMoveReturn {
 struct MoveState {
     pointer_id: i32,
     moved: bool,
-    last_pos: (i32, i32),
+    last_pos: (f64, f64),
 }
 
 pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
@@ -71,7 +71,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             state.set_value(Some(MoveState {
                 pointer_id,
                 moved: false,
-                last_pos: (e.page_x(), e.page_y()),
+                last_pos: (e.page_x() as f64, e.page_y() as f64),
             }));
             active.set_value(true);
         }
@@ -89,12 +89,12 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                 {
                     let first_move = state.with_value(|s| !s.expect("present").moved);
                     let (old_x, old_y) = state.with_value(|s| s.expect("present").last_pos);
-                    let (new_x, new_y) = (e.page_x(), e.page_y());
+                    let (new_x, new_y) = (e.page_x() as f64, e.page_y() as f64); // TODO: This should already provide a f64!
 
                     state.update_value(move |s: &mut Option<MoveState>| {
                         let s = s.as_mut().expect("present");
                         s.moved = true;
-                        s.last_pos = (e.page_x(), e.page_y());
+                        s.last_pos = (new_x, new_y);
                     });
 
                     if first_move {

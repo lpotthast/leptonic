@@ -8,7 +8,10 @@ use leptos_router::{State, ToHref};
 
 use crate::{
     atoms,
-    hooks::press::PressEvent,
+    hooks::{
+        hover::{HoverEndEvent, HoverStartEvent},
+        press::PressEvent,
+    },
     prelude::Consumer,
     utils::aria::{AriaExpanded, AriaHasPopup},
     OptMaybeSignal,
@@ -146,6 +149,8 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
 pub fn LinkButton<H>(
     href: H,
+    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] variant: OptMaybeSignal<ButtonVariant>,
     #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
@@ -210,6 +215,8 @@ where
         replace,
         attributes,
         children,
+        on_hover_start,
+        on_hover_end,
     })
     .into_view()
 }

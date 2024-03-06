@@ -4,13 +4,10 @@
 
 html {
     font-size: 16px;
-    height: 100%;
 }
 
 body {
     margin: 0;
-    min-height: var(--leptonic-vh, 100vh);
-    height: 100%;
     display: flex;
     flex-direction: column;
 }
@@ -22,6 +19,8 @@ body {
 @import "./leptonic/leptonic-themes";
 
 [data-theme="light"] {
+    color-scheme: light;
+
     --brand-color: #e66956;
 
     --drawer-background-color: none;
@@ -32,10 +31,19 @@ body {
     --book-menu-item-color: #3e3434;
     --book-menu-item-active-color: var(--std-text-bright);
     --book-menu-item-hover-color: var(--std-text-bright);
+
+    --toc-border-color: #d3d3d3;
 }
 
 [data-theme="dark"] {
+    color-scheme: dark;
+
     --brand-color: #e66956;
+
+    --app-bar-background-color: #121212;
+    --app-bar-box-shadow: 1px 0px 15px 0px #0a0a0a;
+
+    --box-background-color: #121212;
 
     --drawer-background-color: none;
     --drawer-box-shadow: none;
@@ -45,17 +53,30 @@ body {
     --book-menu-item-color: var(--std-text-bright);
     --book-menu-item-active-color: var(--std-text-bright);
     --book-menu-item-hover-color: var(--std-text-bright);
+
+    --toc-border-color: #222222;
+}
+
+.anchor {
+    &::before {
+        content: '';
+        display: block;
+        position: relative;
+        width: 0;
+        height: 3em;
+        margin-top: -3em
+    }
 }
 
 #app-bar {
     display: flex;
     justify-content: center;
+    position: fixed;
 
     #app-bar-content {
         display: flex;
         justify-content: space-between;
         width: 100%;
-        max-width: 1450px;
 
         #mobile-menu-trigger {
             font-size: 1.5em;
@@ -68,7 +89,7 @@ body {
         display: inline-flex;
         height: 2.5em;
         width: 2.5em;
-        margin-left: 0.5em;
+        margin-left: 1em;
     }
 
     #github-icon {
@@ -77,11 +98,9 @@ body {
 }
 
 #content {
-    display: flex;
-    flex-direction: row;
-    width: 100%;
-    padding: 0;
-    overflow-y: auto;
+    display: block;
+    min-height: 100vh;
+    padding-top: 3.5em;
 
     &::before {
         content: "";
@@ -120,17 +139,14 @@ body {
 
 #doc-layout {
     display: flex;
-    flex-direction: row;
-    height: 100%;
-    width: 100%;
-    max-width: 1400px;
-    margin: auto;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
 
     #doc-drawer {
         overflow: auto;
         width: auto;
-        min-width: 15em;
-        max-width: 15em;
+        width: 15em;
         padding: 1em 0;
         margin: 0;
 
@@ -156,7 +172,7 @@ body {
             font-size: 0.9rem;
 
             &[data-level="1"] {
-                padding-left: 1.5em;
+                padding-left: 2em;
             }
 
             &[data-level="2"] {
@@ -218,13 +234,60 @@ body {
         }
     }
 
-    #doc-content {
-        display: block;
-        height: 100%;
+    article {
         width: 100%;
+        max-width: 75em;
+        height: 100%;
         padding: 0 1.5em;
         padding-bottom: 6em;
-        overflow-y: auto;
+    }
+
+    nav#toc {
+        width: 12em;
+        padding: 1em 1em 1em 1em;
+        position: fixed;
+        top: 3.5em;
+        bottom: 0;
+        right: 0;
+        border-left: 0.05em solid var(--toc-border-color);
+
+        ul {
+            list-style-type: none;
+            padding-left: 0;
+
+            li {
+                margin: 0.25em 0;
+
+                &[data-level="1"] {
+                    leptonic-anchor-link {
+                        padding-left: 0.5em;
+                    }
+                }
+
+                &[data-level="2"] {
+                    leptonic-anchor-link {
+                        padding-left: 1.0em;
+                    }
+                }
+
+                &[data-level="3"] {
+                    leptonic-anchor-link {
+                        padding-left: 1.5em;
+                    }
+                }
+            }
+        }
+
+        leptonic-anchor-link {
+            display: block;
+            width: 100%;
+            padding: 0.5em;
+            border-radius: 0.25em;
+
+            &:hover {
+                background-color: #3e3434;
+            }
+        }
     }
 }
 
@@ -246,44 +309,73 @@ leptonic-quicksearch-result {
 }
 
 #welcome-page {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+    display: block;
     width: 100%;
     max-width: 1200px;
     margin: 0 auto;
     padding: 1em;
 
-    #big-logo {
-        height: 10em;
-        width: 10em;
-        margin: 3.5em 0;
-    }
+    #intro {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
 
-    #slogan {
-        font-family: monospace;
-        font-size: 4em;
-        letter-spacing: 0.2em;
-        margin-top: 0em;
-    }
-
-    #sub-slogan {
-        font-size: 1.75em;
-        max-width: 75%;
-        text-align: center;
-    }
-
-    @media only screen and (max-width: 600px) {
         #big-logo {
-            margin: 2.5em 0;
+            height: 10em;
+            width: 10em;
+            margin: 3.5em 0;
         }
-
+    
         #slogan {
-            font-size: 3em;
+            font-family: monospace;
+            margin-top: 0.2em;
+            margin-bottom: 0.2em;
+            font-size: 8em;
+            font-weight: 900;
+            letter-spacing: normal;
+            background: linear-gradient(90deg, #d53369 0%, #daae51 100%);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
-
+    
         #sub-slogan {
-            font-size: 1.5em;
+            font-size: 1.75em;
+            max-width: 75%;
+            text-align: center;
+        }
+    
+        @media only screen and (max-width: 600px) {
+            #big-logo {
+                margin: 2.5em 0;
+            }
+    
+            #slogan {
+                font-size: 3em;
+            }
+    
+            #sub-slogan {
+                font-size: 1.5em;
+            }
+        }
+    }
+
+    #features {
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+
+        .card {
+            background: linear-gradient(90deg, #d53369 0%, #daae51 100%);
+            width: 100%;
+            min-height: 5em;
+            padding: 1em;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: 700;
+            font-size: 1em;
+            border-radius: 0.25rem;
         }
     }
 }

@@ -7,7 +7,7 @@ use crate::utils::{aria::*, props::Attributes, signals::MaybeSignalExt};
 
 use super::{
     focus::{use_focus, UseFocusInput},
-    prelude::{use_press, UsePressInput},
+    prelude::{use_hover, use_press, UseHoverInput, UsePressInput},
 };
 
 #[derive(Clone, Copy, Educe)]
@@ -20,6 +20,7 @@ pub struct UseButtonInput<E: ElementDescriptor + 'static> {
     pub aria_expanded: MaybeSignal<AriaExpanded>,
 
     pub use_press_input: UsePressInput,
+    pub use_hover_input: UseHoverInput,
     pub use_focus_input: UseFocusInput,
 }
 
@@ -43,6 +44,12 @@ pub struct UseButtonProps {
     /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
     #[educe(Debug(ignore))]
     pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
+    /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
+    #[educe(Debug(ignore))]
+    pub on_pointer_enter: Box<dyn Fn(PointerEvent)>,
+    /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
+    #[educe(Debug(ignore))]
+    pub on_pointer_leave: Box<dyn Fn(PointerEvent)>,
     /// This handler must be attached to the target element: `<foo on:focus=on_focus />`
     #[educe(Debug(ignore))]
     pub on_focus: Box<dyn Fn(FocusEvent)>,
@@ -53,6 +60,8 @@ pub struct UseButtonProps {
 
 pub fn use_button<E: ElementDescriptor + 'static>(input: UseButtonInput<E>) -> UseButtonReturn {
     let press = use_press(input.use_press_input);
+
+    let hover = use_hover(input.use_hover_input);
 
     let focus = use_focus(input.use_focus_input);
 
@@ -102,6 +111,8 @@ pub fn use_button<E: ElementDescriptor + 'static>(input: UseButtonInput<E>) -> U
     let on_key_down = press.props.on_key_down;
     let on_click = press.props.on_click;
     let on_pointer_down = press.props.on_pointer_down;
+    let on_pointer_enter = hover.props.on_pointer_enter;
+    let on_pointer_leave = hover.props.on_pointer_leave;
     let on_focus = focus.props.on_focus;
     let on_blur = focus.props.on_blur;
 
@@ -111,6 +122,8 @@ pub fn use_button<E: ElementDescriptor + 'static>(input: UseButtonInput<E>) -> U
             on_key_down,
             on_click,
             on_pointer_down,
+            on_pointer_enter,
+            on_pointer_leave,
             on_focus,
             on_blur,
         },

@@ -52,7 +52,7 @@ pub mod prelude {
     pub use super::alert::AlertPrepend;
     pub use super::alert::AlertTitle;
     pub use super::alert::AlertVariant;
-    pub use super::anchor::Anchor;
+    pub use super::anchor::AnchorLink;
     pub use super::app_bar::AppBar;
     pub use super::button::Button;
     pub use super::button::ButtonColor;

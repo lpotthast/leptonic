@@ -5,6 +5,9 @@ use leptonic::hooks::r#move::{MoveEndEvent, MoveEvent, MoveStartEvent};
 use leptos::*;
 use ringbuf::{HeapRb, Rb};
 
+use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
+
 #[derive(Clone)]
 pub enum Event {
     MoveStart(MoveStartEvent),
@@ -28,49 +31,73 @@ pub fn PageHover() -> impl IntoView {
         })
     });
 
-    let press = use_hover(UseHoverInput {
+    let hover = use_hover(UseHoverInput {
         disabled: disabled.into(),
-        on_hover_start: Callback::new(move |e| {
+        on_hover_start: Some(Callback::new(move |e| {
             set_events.update(|events| {
                 events.push_overwrite(Oco::Owned(format!("HoverStart: {e:?}")));
             });
-        }),
-        on_hover_end: Callback::new(move |e| {
+        })),
+        on_hover_end: Some(Callback::new(move |e| {
             set_events.update(|events| {
                 events.push_overwrite(Oco::Owned(format!("HoverEnd: {e:?}")));
             });
-        }),
+        })),
     });
 
     view! {
-        <H1>"use_hover"</H1>
+        <Article>
+            <H1 id="use-hover" class="anchor">
+                "use_hover"
+                <AnchorLink href="#use-hover" description="Direct link to section: use_hover"/>    
+            </H1>
 
-        <P>"Track element hover."</P>
+            <P>"Track element hover."</P>
 
-        <Code>
-            {indoc!(r"
-                ...
-            ")}
-        </Code>
+            <Code>
+                {indoc!(r"
+                    ...
+                ")}
+            </Code>
 
-        <div
-            {..press.props.attrs}
-            on:pointerenter=press.props.on_pointer_enter
-            on:pointerleave=press.props.on_pointer_leave
-            style="display: inline-flex;
-            border: 0.1em solid green;
-            padding: 0.5em 1em;"
-        >
-            "Hover me"
-        </div>
+            <div
+                {..hover.props.attrs}
+                on:pointerenter=hover.props.on_pointer_enter
+                on:pointerleave=hover.props.on_pointer_leave
+                style="display: inline-flex;
+                border: 0.1em solid green;
+                padding: 0.5em 1em;"
+            >
+                "Hover me"
+            </div>
 
-        <P>"Is disabled: " { move || disabled.get() } <Checkbox checked=disabled set_checked=set_disabled /></P>
-        <P>"Is hovered: " { move || press.is_hovered.get() }</P>
+            <FormControl style="flex-direction: row; align-items: center; gap: 0.5em;">
+                <Checkbox checked=disabled set_checked=set_disabled />
+                <Label>"Disabled"</Label>
+            </FormControl>
 
-        <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
+            <P>"Is hovered: " { move || hover.is_hovered.get() }</P>
 
-        <pre style="background-color: grey; width: 100%; height: 15em; border: 0.1em solid darkgrey; overflow: auto;">
-            { move || string.get() }
-        </pre>
+            <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
+
+            <pre style="
+                width: 100%;
+                height: 15em;
+                overflow: auto;
+                padding: var(--typography-code-padding);
+                border: none;
+                border-radius: var(--typography-code-border-radius);
+                background-color: var(--typography-code-background-color);
+                color: var(--typography-code-color);
+            ">
+                { move || string.get() }
+            </pre>
+        </Article>
+        
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "use_hover", link: "#use-hover" },
+            ]
+        }/>
     }
 }

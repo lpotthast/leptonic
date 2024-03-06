@@ -89,7 +89,7 @@ $-tiers: (
   #{$-class-prefix}container-fluid {
     display: flex;
     flex-direction: column;
-    gap: var(--leptonic-grid-spacing);
+    gap: var(--leptonic-grid-gap);
     width: 100%;
   }
 
@@ -100,7 +100,7 @@ $-tiers: (
     flex: 1 1 auto;
     flex-wrap: wrap;
 
-    gap: var(--leptonic-grid-spacing);
+    gap: var(--leptonic-grid-gap);
 
     &.#{$-class-prefix}row-flex-row-reverse {
       flex-direction: row-reverse;
@@ -190,7 +190,7 @@ $-tiers: (
       @for $i from 1 through $-grid-columns {
         [data-#{$tier-name}="#{$i}"] {
           $percentage: percentage(math.div($i, $-grid-columns));
-          flex-basis: calc($percentage - var(--leptonic-grid-spacing));
+          flex-basis: calc($percentage - var(--leptonic-grid-gap));
         }
       }
 

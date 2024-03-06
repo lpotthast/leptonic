@@ -5,7 +5,8 @@ use crate::{
     hooks::{
         button::{use_button, UseButtonInput},
         focus::UseFocusInput,
-        prelude::UseButtonReturn,
+        hover::{HoverEndEvent, HoverStartEvent},
+        prelude::{UseButtonReturn, UseHoverInput},
         press::{PressEvent, UsePressInput},
     },
     prelude::Consumer,
@@ -17,7 +18,9 @@ use super::AttributeExt;
 
 #[component]
 pub fn Button(
-    #[prop(into)] on_press: Consumer<PressEvent>,
+    #[prop(into, optional)] on_press: Option<Consumer<PressEvent>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -36,22 +39,26 @@ pub fn Button(
         disabled: disabled.or(false),
         aria_haspopup: aria_haspopup.or_default(),
         aria_expanded: aria_expanded.or_default(),
-
+        use_press_input: UsePressInput {
+            disabled: disabled.or(false),
+            on_press: Callback::new(move |e| match on_press {
+                Some(on_press) => on_press.consume(e),
+                None => {}
+            }),
+            on_press_up: None,
+            on_press_start: None,
+            on_press_end: None,
+        },
+        use_hover_input: UseHoverInput {
+            disabled: disabled.or(false),
+            on_hover_start,
+            on_hover_end,
+        },
         use_focus_input: UseFocusInput {
             disabled: disabled.or(false),
             on_focus: None,
             on_blur: None,
             on_focus_change: None,
-        },
-
-        use_press_input: UsePressInput {
-            disabled: disabled.or(false),
-            on_press: Callback::new(move |e| {
-                on_press.consume(e);
-            }),
-            on_press_up: None,
-            on_press_start: None,
-            on_press_end: None,
         },
     });
 
@@ -67,6 +74,8 @@ pub fn Button(
             on:keydown=props.on_key_down
             on:click=props.on_click
             on:pointerdown=props.on_pointer_down
+            on:pointerenter=props.on_pointer_enter
+            on:pointerleave=props.on_pointer_leave
             on:focus=props.on_focus
             on:blur=props.on_blur
         >
@@ -78,6 +87,8 @@ pub fn Button(
 #[component]
 pub fn LinkButton<H>(
     href: H,
+    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<Oco<'static, str>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -104,24 +115,27 @@ where
     H: leptos_router::ToHref + 'static,
 {
     let UseButtonReturn { mut props } = use_button(UseButtonInput {
-        node_ref: NodeRef::<html::Custom>::new(), // TODO!
+        node_ref: NodeRef::<html::Custom>::new(),
         disabled: disabled.or(false),
         aria_haspopup: aria_haspopup.or_default(),
         aria_expanded: aria_expanded.or_default(),
-
-        use_focus_input: UseFocusInput {
-            disabled: disabled.or(false),
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-        },
-
         use_press_input: UsePressInput {
             disabled: disabled.or(false),
             on_press: Callback::new(move |_e| {}),
             on_press_up: None,
             on_press_start: None,
             on_press_end: None,
+        },
+        use_hover_input: UseHoverInput {
+            disabled: disabled.or(false),
+            on_hover_start,
+            on_hover_end,
+        },
+        use_focus_input: UseFocusInput {
+            disabled: disabled.or(false),
+            on_focus: None,
+            on_blur: None,
+            on_focus_change: None,
         },
     });
 

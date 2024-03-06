@@ -65,7 +65,7 @@ impl std::fmt::Debug for TextInputContext {
 }
 
 impl FormInput for TextInputContext {
-    fn on_label_click(&self) {
+    fn on_label_press(&self) {
         self.focus();
     }
 }

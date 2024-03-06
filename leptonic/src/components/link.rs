@@ -1,7 +1,7 @@
 use leptos::*;
 use leptos_router::*;
 
-use crate::OptMaybeSignal;
+use crate::{hooks::{prelude::{use_press, UsePressInput, UsePressReturn}, press::PressEvent}, OptMaybeSignal};
 
 #[component]
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
@@ -31,12 +31,39 @@ pub fn Link<H>(
     class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
+    #[prop(into, optional)] on_press: Option<Callback<(PressEvent, NodeRef<html::Custom>)>>,
 ) -> impl IntoView
 where
     H: ToHref + 'static,
 {
+    let el: NodeRef<html::Custom> = create_node_ref();
+
+    // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
+    // and so that a custom `on_press` handler can immediately work with the underlying link element.
+    let UsePressReturn { is_pressed: _, props } = use_press(UsePressInput {
+        // Links cannot be disabled (for now).
+        disabled: false.into(),
+        on_press: Callback::new(move |e| {
+            if let Some(on_press) = on_press {
+                on_press.call((e, el));
+            }
+        }),
+        on_press_up: None,
+        on_press_start: None,
+        on_press_end: None,
+    });
+
     view! {
-        <leptonic-link id=id class=class style=style>
+        <leptonic-link
+            {..props.attrs}
+            on:keydown=props.on_key_down
+            on:click=props.on_click
+            on:pointerdown=props.on_pointer_down
+            _ref=el
+            id=id
+            class=class
+            style=style
+        >
             <A href=href exact=exact state=state.unwrap_or_default() replace=replace>
                 { children() }
             </A>

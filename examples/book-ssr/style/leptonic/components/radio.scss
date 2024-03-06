@@ -7,7 +7,9 @@ leptonic-radio {
     cursor: pointer;
 
     width: var(--radio-size);
+    min-width: var(--radio-size);
     height: var(--radio-size);
+    min-height: var(--radio-size);
 
     border: var(--radio-border);
     border-radius: var(--radio-border-radius);
@@ -18,7 +20,9 @@ leptonic-radio {
     leptonic-radio-fill {
         display: block;
         width: var(--radio-fill-size);
+        min-width: var(--radio-fill-size);
         height: var(--radio-fill-size);
+        min-height: var(--radio-fill-size);
         border-radius: var(--radio-border-radius);
     }
 
