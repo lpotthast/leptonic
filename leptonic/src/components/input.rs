@@ -192,7 +192,7 @@ pub fn NumberInput(
     #[prop(into, optional)] set: Option<Out<f64>>,
     #[prop(optional)] min: Option<f64>,
     #[prop(optional)] max: Option<f64>,
-    #[prop(optional)] step: Option<f64>,
+    #[prop(optional, into)] step: OptMaybeSignal<f64>,
     #[prop(optional, into)] placeholder: OptMaybeSignal<String>,
     #[prop(optional, into)] prepend: OptMaybeSignal<View>,
     #[prop(into, optional)] id: Option<AttributeValue>,
@@ -235,7 +235,7 @@ pub fn NumberInput(
                 type="number"
                 min=min
                 max=max
-                step=step
+                step=move || step.0.as_ref().map(SignalGet::get).unwrap_or(0.0)
                 prop:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set_value) = &set_value { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
