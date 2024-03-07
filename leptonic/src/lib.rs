@@ -144,8 +144,8 @@ pub mod prelude {
     pub use super::Height;
     pub use super::Margin;
     pub use super::Mount;
-    pub use super::OptionDeref;
     pub use super::OptMaybeSignal;
+    pub use super::OptionDeref;
     pub use super::OptionalSignal;
     pub use super::Out;
     pub use super::Size;
@@ -180,10 +180,14 @@ impl<O: 'static> Clone for Out<O> {
 }
 
 impl<O: 'static> Out<O> {
+    pub fn new_func(fun: impl Fn(O) + 'static) -> Self {
+        Self::Consumer(fun.into())
+    }
+
     pub fn set(&self, new_value: O) {
         match self {
             Self::Consumer(consumer) => consumer.consume(new_value),
-            Self::Callback(callback) => callback.call(new_value),
+            Self::Callback(callback) => Callable::call(callback, new_value),
             Self::WriteSignal(write_signal) => write_signal.set(new_value),
             Self::RwSignal(rw_signal) => rw_signal.set(new_value),
         }
@@ -192,7 +196,7 @@ impl<O: 'static> Out<O> {
 
 impl<T: 'static, F: Fn(T) + 'static> From<F> for Out<T> {
     fn from(fun: F) -> Self {
-        Self::Consumer(fun.into())
+        Self::new_func(fun)
     }
 }
 
@@ -202,12 +206,14 @@ impl<O: 'static> From<Consumer<O>> for Out<O> {
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<O: 'static> From<Callback<O, ()>> for Out<O> {
     fn from(callback: Callback<O, ()>) -> Self {
         Self::Callback(callback)
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<O: 'static> From<WriteSignal<O>> for Out<O> {
     fn from(write_signal: WriteSignal<O>) -> Self {
         Self::WriteSignal(write_signal)

@@ -4,7 +4,7 @@ use leptos::*;
 use leptos_use::{use_element_bounding, use_element_hover};
 use uuid::Uuid;
 
-use crate::{Size, UseElementBoundingReturnReadOnly};
+use crate::{prelude::Consumer, Size, UseElementBoundingReturnReadOnly};
 
 #[derive(Clone)]
 struct PopoverData {
@@ -86,11 +86,11 @@ pub fn Popover(
 
     /// Custom X position of the popover.
     #[prop(optional)]
-    position_x: Option<Callback<UseElementBoundingReturnReadOnly, String>>,
+    position_x: Option<Consumer<UseElementBoundingReturnReadOnly, String>>,
 
     /// Custom Y position of the popover.
     #[prop(optional)]
-    position_y: Option<Callback<UseElementBoundingReturnReadOnly, String>>,
+    position_y: Option<Consumer<UseElementBoundingReturnReadOnly, String>>,
 
     #[prop(into, optional)] show: Option<MaybeSignal<bool>>,
 
@@ -118,49 +118,48 @@ pub fn Popover(
 
     let pop_bounds_read_only: UseElementBoundingReturnReadOnly = pop_bounds.into();
 
-    let pop_style: Signal<String> = Signal::derive(move || {
-        match show.get() {
-            true => {
-                let left = match position_x {
-                    Some(pos_x) => pos_x.call(pop_bounds_read_only),
-                    None => {
-                        let x = match align_x {
-                            PopoverAlignX::Left => el_bounds.x.get(),
-                            PopoverAlignX::Center => {
-                                el_bounds.x.get() + (el_bounds.width.get() / 2.0) - (pop_bounds_read_only.width.get() / 2.0)
-                            }
-                            PopoverAlignX::Right => el_bounds.x.get(),
-                        };
-            
-                        match align_x {
-                            PopoverAlignX::Left => format!("calc({}px - {})", x, margin),
-                            PopoverAlignX::Center => format!("{}px", x),
-                            PopoverAlignX::Right => format!("calc({}px + {})", x, margin),
+    let pop_style: Signal<String> = Signal::derive(move || match show.get() {
+        true => {
+            let left = match position_x {
+                Some(pos_x) => pos_x.consume(pop_bounds_read_only),
+                None => {
+                    let x = match align_x {
+                        PopoverAlignX::Left => el_bounds.x.get(),
+                        PopoverAlignX::Center => {
+                            el_bounds.x.get() + (el_bounds.width.get() / 2.0)
+                                - (pop_bounds_read_only.width.get() / 2.0)
                         }
-                    },
-                };
-            
-                let top = match position_y {
-                    Some(pos_y) => pos_y.call(pop_bounds_read_only),
-                    None => {
-                        let y = match align_y {
-                            PopoverAlignY::Top => el_bounds.y.get() - pop_bounds_read_only.height.get(),
-                            PopoverAlignY::Center => el_bounds.y.get(),
-                            PopoverAlignY::Bottom => el_bounds.y.get(),
-                        };
-                    
-                        match align_y {
-                            PopoverAlignY::Top => format!("calc({}px - {})", y, margin),
-                            PopoverAlignY::Center => format!("{}px", y),
-                            PopoverAlignY::Bottom => format!("calc({}px + {})", y, margin),
-                        }
-                    },
-                };
-            
-                format!("left: {}; top: {};", left, top)
-            },
-            false => String::new(),
+                        PopoverAlignX::Right => el_bounds.x.get(),
+                    };
+
+                    match align_x {
+                        PopoverAlignX::Left => format!("calc({}px - {})", x, margin),
+                        PopoverAlignX::Center => format!("{}px", x),
+                        PopoverAlignX::Right => format!("calc({}px + {})", x, margin),
+                    }
+                }
+            };
+
+            let top = match position_y {
+                Some(pos_y) => pos_y.consume(pop_bounds_read_only),
+                None => {
+                    let y = match align_y {
+                        PopoverAlignY::Top => el_bounds.y.get() - pop_bounds_read_only.height.get(),
+                        PopoverAlignY::Center => el_bounds.y.get(),
+                        PopoverAlignY::Bottom => el_bounds.y.get(),
+                    };
+
+                    match align_y {
+                        PopoverAlignY::Top => format!("calc({}px - {})", y, margin),
+                        PopoverAlignY::Center => format!("{}px", y),
+                        PopoverAlignY::Bottom => format!("calc({}px + {})", y, margin),
+                    }
+                }
+            };
+
+            format!("left: {}; top: {};", left, top)
         }
+        false => String::new(),
     });
 
     let key = Uuid::now_v7();

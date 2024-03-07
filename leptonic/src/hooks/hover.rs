@@ -76,10 +76,13 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 return;
             }
 
-            input.on_hover_start.call(HoverStartEvent {
-                pointer_type: pointer_type.clone(),
-                current_target,
-            });
+            Callable::call(
+                &input.on_hover_start,
+                HoverStartEvent {
+                    pointer_type: pointer_type.clone(),
+                    current_target,
+                },
+            );
 
             set_is_hovered.set(true);
             state.set_value(Some(HoverState { pointer_type }));
@@ -91,10 +94,14 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         }
 
         let s = state.get_value().expect("present");
-        input.on_hover_end.call(HoverEndEvent {
-            pointer_type: s.pointer_type,
-            current_target,
-        });
+
+        Callable::call(
+            &input.on_hover_end,
+            HoverEndEvent {
+                pointer_type: s.pointer_type,
+                current_target,
+            },
+        );
 
         set_is_hovered.set(false);
         state.set_value(None);

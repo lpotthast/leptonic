@@ -42,11 +42,11 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
             && !input.disabled.get()
         {
             if let Some(on_focus) = input.on_focus {
-                on_focus.call(e);
+                Callable::call(&on_focus, e);
             }
 
             if let Some(on_focus_change) = input.on_focus_change {
-                on_focus_change.call(true);
+                Callable::call(&on_focus_change, true);
             }
         }
     });
@@ -54,11 +54,11 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     let on_blur = Box::new(move |e: FocusEvent| {
         if e.target() == e.current_target() && !input.disabled.get() {
             if let Some(on_blur) = input.on_blur {
-                on_blur.call(e);
+                Callable::call(&on_blur, e);
             }
 
             if let Some(on_focus_change) = input.on_focus_change {
-                on_focus_change.call(true);
+                Callable::call(&on_focus_change, true);
             }
         }
     });

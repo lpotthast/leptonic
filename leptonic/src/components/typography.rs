@@ -1,6 +1,9 @@
 use leptos::*;
 
-use crate::components::prelude::{Button, ButtonVariant, Icon};
+use crate::{
+    components::prelude::{Button, ButtonVariant, Icon},
+    Out,
+};
 
 #[component]
 pub fn H1(
@@ -135,7 +138,7 @@ pub fn Code(
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(optional)] inline: Option<bool>,
     #[prop(optional)] show_copy_button: Option<bool>,
-    #[prop(optional)] on_copy: Option<Callback<Result<(), ()>>>,
+    #[prop(into, optional)] on_copy: Option<Out<Result<(), ()>>>,
     children: Children,
 ) -> impl IntoView {
     let code_text = store_value(
@@ -152,12 +155,12 @@ pub fn Code(
     let show_copy_button = show_copy_button.unwrap_or_else(|| !inline.unwrap_or(false));
     let on_success = move || {
         if let Some(on_copy) = on_copy {
-            on_copy.call(Ok(()));
+            on_copy.set(Ok(()));
         }
     };
     let on_err = move || {
         if let Some(on_copy) = on_copy {
-            on_copy.call(Err(()));
+            on_copy.set(Err(()));
         } else {
             tracing::warn!("copy to clipboard failed");
         }

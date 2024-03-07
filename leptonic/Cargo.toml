@@ -94,6 +94,8 @@ tiptap = ["components", "dep:leptos-tiptap", "dep:leptos-tiptap-build"]
 
 full = ["hooks", "atoms", "components", "clipboard", "tiptap"]
 
+nightly = ["leptos/nightly"]
+
 # Disable the build script when running on docs.rs
 docsrs = []
 
