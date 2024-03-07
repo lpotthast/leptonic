@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use leptos::*;
 use web_sys::MouseEvent;
 
-use crate::{components::icon::Icon, OptMaybeSignal};
+use crate::{components::icon::Icon, OptMaybeSignal, Out};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ChipColor {
@@ -38,7 +38,7 @@ impl Display for ChipColor {
 #[component]
 pub fn Chip(
     #[prop(into, optional)] color: OptMaybeSignal<ChipColor>,
-    #[prop(into, optional)] dismissible: Option<Callback<MouseEvent>>,
+    #[prop(into, optional)] dismissible: Option<Out<MouseEvent>>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -49,7 +49,7 @@ pub fn Chip(
             { children() }
             { match dismissible {
                 Some(callback) => view! {
-                    <Icon class="dismiss" icon=icondata::BsXCircleFill on:click=move |e| callback.call(e) />
+                    <Icon class="dismiss" icon=icondata::BsXCircleFill on:click=move |e| callback.set(e) />
                 }.into_view(),
                 None => ().into_view(),
             } }

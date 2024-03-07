@@ -50,14 +50,13 @@ impl ModalRootContext {
 pub fn ModalRoot(children: Children) -> impl IntoView {
     let modals = create_rw_signal(Vec::new());
     let shown_modals = create_rw_signal(Vec::new());
-    let ctx = ModalRootContext { modals, shown_modals };
+    let ctx = ModalRootContext {
+        modals,
+        shown_modals,
+    };
     provide_context::<ModalRootContext>(ctx.clone());
 
-    let has_modals = create_memo(move |_| {
-        shown_modals.with(|modals| {
-            !modals.is_empty()
-        })
-    });
+    let has_modals = create_memo(move |_| shown_modals.with(|modals| !modals.is_empty()));
 
     view! {
         { children() }
@@ -91,7 +90,7 @@ pub fn Modal(
         create_effect(move |_| {
             if let Some(e) = g_keyboard_event.read_signal.get() {
                 if show_when.get_untracked() && e.key().as_str() == "Escape" {
-                    on_escape.call(());
+                    on_escape.produce();
                 }
             }
         });
@@ -105,7 +104,7 @@ pub fn Modal(
 
     let modal = Rc::new(move || {
         view! {
-            <leptonic-modal id=id.get_value() class=class.get_value()> 
+            <leptonic-modal id=id.get_value() class=class.get_value()>
                 { children() }
             </leptonic-modal>
         }
@@ -113,14 +112,13 @@ pub fn Modal(
         .into()
     });
 
-    create_isomorphic_effect(move |_| {
-        match shown.get() {
-            true => {
-                ctx.push_shown(ShownModalData { key, children: modal.clone() })
-            },
-            false => {
-                ctx.remove_shown(key);
-            },
+    create_isomorphic_effect(move |_| match shown.get() {
+        true => ctx.push_shown(ShownModalData {
+            key,
+            children: modal.clone(),
+        }),
+        false => {
+            ctx.remove_shown(key);
         }
     });
 

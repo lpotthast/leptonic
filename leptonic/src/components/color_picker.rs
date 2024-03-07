@@ -183,14 +183,13 @@ pub fn ColorPicker(
     let saturation = Signal::derive(move || hsv.get().saturation);
     let value = Signal::derive(move || hsv.get().value);
 
-    let set_hue = Callback::new(move |new_hue| set_hsv.set(hsv.get_untracked().with_hue(new_hue)));
+    let set_hue = move |new_hue| set_hsv.set(hsv.get_untracked().with_hue(new_hue));
 
-    let set_saturation = Callback::new(move |new_saturation| {
+    let set_saturation = move |new_saturation| {
         set_hsv.set(hsv.get_untracked().with_saturation(new_saturation));
-    });
+    };
 
-    let set_value =
-        Callback::new(move |new_value| set_hsv.set(hsv.get_untracked().with_value(new_value)));
+    let set_value = move |new_value| set_hsv.set(hsv.get_untracked().with_value(new_value));
 
     let rgb = Signal::derive(move || RGB8::from(hsv.get()));
 

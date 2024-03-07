@@ -98,12 +98,15 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     });
 
                     if first_move {
-                        input.on_move_start.call(MoveStartEvent {});
+                        Callable::call(&input.on_move_start, MoveStartEvent {});
                     }
-                    input.on_move.call(MoveEvent {
-                        delta_x: new_x - old_x,
-                        delta_y: new_y - old_y,
-                    });
+                    Callable::call(
+                        &input.on_move,
+                        MoveEvent {
+                            delta_x: new_x - old_x,
+                            delta_y: new_y - old_y,
+                        },
+                    );
                 }
             }
         }
@@ -122,7 +125,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     let moved = state.with_value(|s| s.expect("present").moved);
 
                     if moved {
-                        input.on_move_end.call(MoveEndEvent {});
+                        Callable::call(&input.on_move_end, MoveEndEvent {});
                     }
 
                     state.set_value(None);
@@ -145,7 +148,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     let moved = state.with_value(|s| s.expect("present").moved);
 
                     if moved {
-                        input.on_move_end.call(MoveEndEvent {});
+                        Callable::call(&input.on_move_end, MoveEndEvent {});
                     }
 
                     state.set_value(None);

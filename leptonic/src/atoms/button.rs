@@ -9,18 +9,17 @@ use crate::{
         prelude::{UseButtonReturn, UseHoverInput},
         press::{PressEvent, UsePressInput},
     },
-    prelude::Consumer,
     utils::aria::{AriaExpanded, AriaHasPopup},
-    OptMaybeSignal,
+    OptMaybeSignal, Out,
 };
 
 use super::AttributeExt;
 
 #[component]
 pub fn Button(
-    #[prop(into, optional)] on_press: Option<Consumer<PressEvent>>,
-    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
-    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
+    #[prop(into, optional)] on_press: Option<Out<PressEvent>>,
+    #[prop(into, optional)] on_hover_start: Option<Out<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Out<HoverEndEvent>>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -42,7 +41,7 @@ pub fn Button(
         use_press_input: UsePressInput {
             disabled: disabled.or(false),
             on_press: Callback::new(move |e| match on_press {
-                Some(on_press) => on_press.consume(e),
+                Some(on_press) => on_press.set(e),
                 None => {}
             }),
             on_press_up: None,
