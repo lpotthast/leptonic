@@ -80,7 +80,7 @@ pub fn TextInput(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
+    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
@@ -117,8 +117,8 @@ pub fn TextInput(
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
                 on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.call(true) }; }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {
@@ -142,7 +142,7 @@ pub fn PasswordInput(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
+    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
@@ -171,8 +171,8 @@ pub fn PasswordInput(
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
                 on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.call(true) }; }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {
@@ -199,7 +199,7 @@ pub fn NumberInput(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
+    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
     #[prop(into, optional)] autofocus: bool,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
@@ -214,12 +214,12 @@ pub fn NumberInput(
     }
 
     let set_value = set.map(|set| {
-        Callback::new(move |v: String| {
+        move |v: String| {
             let parsed = str::parse::<f64>(&v).ok();
             if let Some(parsed) = parsed {
                 set.set(parsed);
             }
-        })
+        }
     });
 
     view! {
@@ -238,10 +238,10 @@ pub fn NumberInput(
                 step=step
                 prop:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
                 prop:value=move || get.get()
-                on:change=move |e| { if let Some(set_value) = &set_value { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set_value) = &set_value { set_value.call(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.call(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.call(true) }; }
+                on:change=move |e| { if let Some(set_value) = &set_value { set_value(event_target::<HtmlInputElement>(&e).value()) } }
+                on:keyup=move |e| { if let Some(set_value) = &set_value { set_value(event_target::<HtmlInputElement>(&e).value()) } }
+                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
+                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
             />
             {match prepend.0 {
                 Some(view) => view! {

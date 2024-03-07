@@ -94,5 +94,7 @@ tiptap = ["components", "dep:leptos-tiptap", "dep:leptos-tiptap-build"]
 
 full = ["hooks", "atoms", "components", "clipboard", "tiptap"]
 
+nightly = ["leptos/nightly"]
+
 [lints]
 workspace = true

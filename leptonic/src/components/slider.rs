@@ -6,6 +6,7 @@ use leptos_use::{use_element_bounding, use_element_hover};
 use crate::{
     components::popover::{Popover, PopoverContent},
     contexts::global_mouseup_event::GlobalMouseupEvent,
+    prelude::Consumer,
     utils::math::project_into_range,
     Out, RelativeMousePosition, Size, TrackedElementClientBoundingRect,
     UseElementBoundingReturnReadOnly,
@@ -67,9 +68,9 @@ fn create_marks(
     max: f64,
     step: Option<f64>,
     range: Memo<f64>,
-    in_range: Callback<f64, Signal<bool>>,
+    in_range: Consumer<f64, Signal<bool>>,
     marks: SliderMarks,
-    value_display: Option<Callback<f64, String>>,
+    value_display: Option<Consumer<f64, String>>,
 ) -> Signal<Vec<Mark>> {
     match marks {
         SliderMarks::None => Signal::derive(Vec::new),
@@ -92,10 +93,10 @@ fn create_marks(
                     }
                     marks_at.push(Mark {
                         percentage: crate::utils::math::percentage_in_range(min, max, current),
-                        in_range: in_range.call(current),
+                        in_range: in_range.consume(current),
                         name: match create_names {
                             true => Some(Cow::Owned(match &value_display {
-                                Some(callback) => callback.call(current),
+                                Some(callback) => callback.consume(current),
                                 None => format!("{current}"),
                             })),
                             false => None,
@@ -156,7 +157,7 @@ fn create_marks(
                             }
                             SliderMarkValue::Percentage(percentage) => percentage,
                         },
-                        in_range: in_range.call(value),
+                        in_range: in_range.consume(value),
                         name: mark.name.clone(),
                     }
                 })
@@ -247,7 +248,7 @@ pub fn Slider(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
+    #[prop(into, optional)] value_display: Option<Consumer<f64, String>>,
 ) -> impl IntoView {
     let range = create_memo(move |_| max - min);
 
@@ -294,7 +295,7 @@ pub fn Slider(
         max,
         step,
         range,
-        Callback::new(move |v| match max > min {
+        Consumer::new(move |v| match max > min {
             true => Signal::derive(move || v <= value.get()),
             false => Signal::derive(move || v >= value.get()),
         }),
@@ -302,7 +303,7 @@ pub fn Slider(
         value_display,
     );
 
-    let pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+    let pos_x = Consumer::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
         format!(
             "calc({}px + {}px - {}px)",
             bar_bounds.x.get(),
@@ -348,7 +349,7 @@ pub fn Slider(
                                 {move || {
                                     let value = value.get();
                                     match &value_display {
-                                        Some(callback) => callback.call(value),
+                                        Some(callback) => callback.consume(value),
                                         None => format!("{value}"),
                                     }
                                 }}
@@ -385,7 +386,7 @@ pub fn RangeSlider(
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
-    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
+    #[prop(into, optional)] value_display: Option<Consumer<f64, String>>,
 ) -> impl IntoView {
     let range = create_memo(move |_| max - min);
 
@@ -463,7 +464,7 @@ pub fn RangeSlider(
         max,
         step,
         range,
-        Callback::new(move |v| match max > min {
+        Consumer::new(move |v| match max > min {
             true => Signal::derive(move || v >= value_a.get() && v <= value_b.get()),
             false => Signal::derive(move || v <= value_a.get() && v >= value_b.get()),
         }),
@@ -474,7 +475,7 @@ pub fn RangeSlider(
     let value_display_a = value_display;
     let value_display_b = value_display;
 
-    let knob_a_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+    let knob_a_pos_x = Consumer::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
         format!(
             "calc({}px + {}px - {}px)",
             bar_bounds.x.get(),
@@ -482,7 +483,7 @@ pub fn RangeSlider(
             (pop_bounds.width.get() / 2.0)
         )
     });
-    let knob_b_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+    let knob_b_pos_x = Consumer::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
         format!(
             "calc({}px + {}px - {}px)",
             bar_bounds.x.get(),
@@ -549,7 +550,7 @@ pub fn RangeSlider(
                                 {move || {
                                     let value = value_a.get();
                                     match &value_display_a {
-                                        Some(callback) => callback.call(value),
+                                        Some(callback) => callback.consume(value),
                                         None => format!("{value}"),
                                     }
                                 }}
@@ -565,7 +566,7 @@ pub fn RangeSlider(
                                 {move || {
                                     let value = value_b.get();
                                     match &value_display_b {
-                                        Some(callback) => callback.call(value),
+                                        Some(callback) => callback.consume(value),
                                         None => format!("{value}"),
                                     }
                                 }}

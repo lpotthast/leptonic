@@ -83,15 +83,12 @@ where
 
     let toggle = Toggle(ToggleProps {
         state: MaybeSignal::derive(move || theme_context.theme.get() == on),
-        set_state: Some(
-            Callback::new(move |val: bool| {
-                theme_context.set_theme.update(|current| match val {
-                    true => *current = on,
-                    false => *current = off,
-                });
-            })
-            .into(),
-        ),
+        set_state: Some(Into::into(move |val: bool| {
+            theme_context.set_theme.update(|current| match val {
+                true => *current = on,
+                false => *current = off,
+            });
+        })),
         active: OptMaybeSignal(None),
         disabled: OptMaybeSignal(None),
         id: None,

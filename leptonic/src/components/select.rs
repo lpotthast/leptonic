@@ -10,7 +10,7 @@ use crate::{
         input::TextInput,
         prelude::Leptonic,
     },
-    prelude::{GlobalClickEvent, GlobalKeyboardEvent, ViewCallback},
+    prelude::{Consumer, GlobalClickEvent, GlobalKeyboardEvent, ViewCallback},
     Out,
 };
 
@@ -36,7 +36,7 @@ impl<T: Debug + Clone + PartialEq> SelectOption for T {}
 // be decrementing or incrementing the old index!
 
 // TODO: Prop: close_options_menu_on_selection: bool
-// TODO: Prop: selection_changed: Callback<Selection<T>>
+// TODO: Prop: selection_changed: Consumer<Selection<T>>
 // TODO: multiselect deselect performance
 // TODO: remove code duplication between select variants
 
@@ -84,9 +84,9 @@ pub fn Select<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Out<O>,
-    #[prop(into)] search_text_provider: Callback<O, String>,
+    #[prop(into)] search_text_provider: Consumer<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
-    #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
+    #[prop(into, optional)] search_filter_provider: Option<Consumer<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -94,8 +94,6 @@ pub fn Select<O>(
 where
     O: SelectOption + 'static,
 {
-    let render_option = StoredValue::new(render_option);
-
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
@@ -117,12 +115,12 @@ where
     let (search, set_search) = create_signal(String::new());
 
     let search_filter_provider =
-        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
+        search_filter_provider.unwrap_or(Consumer::new(move |(s, o): (String, Vec<O>)| {
             let lowercased_search = s.to_lowercase();
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .call(it.clone())
+                        .consume(it.clone())
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })
@@ -130,15 +128,15 @@ where
         }));
 
     let filtered_options = create_memo(move |_| {
-        search_filter_provider.call((search.get(), stored_options.get_value().get()))
+        search_filter_provider.consume((search.get(), stored_options.get_value().get()))
     });
 
     let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));
 
-    let select = StoredValue::new(Callback::new(move |option: O| {
+    let select = Consumer::new(move |option: O| {
         set_selected.set(option);
         set_show_options.set(false);
-    }));
+    });
 
     let is_selected = move |option: &O| selected.with(|selected| selected == option);
 
@@ -185,7 +183,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.get_value().call(preselected);
+                            select.consume(preselected);
                         }
                     }
                 }
@@ -237,7 +235,7 @@ where
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
-                    { move || render_option.get_value().call(selected.get()) }
+                    { move || render_option.render(selected.get()) }
 
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
@@ -287,11 +285,11 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.get_value().call(clone2.clone());
+                                            select.consume(clone2.clone());
                                         }
                                     }
                                 >
-                                    { render_option.get_value().call(clone1) }
+                                    { render_option.render(clone1) }
                                 </leptonic-select-option>
                             }
                         }).collect_view() }
@@ -317,10 +315,10 @@ pub fn OptionalSelect<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
     #[prop(into)] set_selected: Out<Option<O>>,
-    #[prop(into)] search_text_provider: Callback<O, String>,
+    #[prop(into)] search_text_provider: Consumer<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into)] allow_deselect: MaybeSignal<bool>,
-    #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
+    #[prop(into, optional)] search_filter_provider: Option<Consumer<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -328,8 +326,6 @@ pub fn OptionalSelect<O>(
 where
     O: SelectOption + 'static,
 {
-    let render_option = StoredValue::new(render_option);
-
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
@@ -351,12 +347,12 @@ where
     let (search, set_search) = create_signal(String::new());
 
     let search_filter_provider =
-        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
+        search_filter_provider.unwrap_or(Consumer::new(move |(s, o): (String, Vec<O>)| {
             let lowercased_search = s.to_lowercase();
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .call(it.clone())
+                        .consume(it.clone())
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })
@@ -364,15 +360,15 @@ where
         }));
 
     let filtered_options = create_memo(move |_| {
-        search_filter_provider.call((search.get(), stored_options.get_value().get()))
+        search_filter_provider.consume((search.get(), stored_options.get_value().get()))
     });
 
     let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));
 
-    let select = StoredValue::new(Callback::new(move |option: O| {
+    let select = Consumer::new(move |option: O| {
         set_selected.set(Some(option));
         set_show_options.set(false);
-    }));
+    });
 
     let deselect = move || {
         set_selected.set(None);
@@ -423,7 +419,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.get_value().call(preselected);
+                            select.consume(preselected);
                         }
                     }
                 }
@@ -477,7 +473,7 @@ where
                     { move || match selected.get() {
                         Some(selected) => view! {
                             <leptonic-select-option>
-                                { render_option.get_value().call(selected) }
+                                { render_option.render(selected) }
                             </leptonic-select-option>
                         }.into_view(),
                         None => ().into_view(),
@@ -544,11 +540,11 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.get_value().call(clone2.clone());
+                                            select.consume(clone2.clone());
                                         }
                                     }
                                 >
-                                    { render_option.get_value().call(clone1) }
+                                    { render_option.render(clone1) }
                                 </leptonic-select-option>
                             }
                         }).collect_view() }
@@ -575,9 +571,9 @@ pub fn Multiselect<O>(
     #[prop(into)] options: MaybeSignal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Out<Vec<O>>,
-    #[prop(into)] search_text_provider: Callback<O, String>,
+    #[prop(into)] search_text_provider: Consumer<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
-    #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
+    #[prop(into, optional)] search_filter_provider: Option<Consumer<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -585,8 +581,6 @@ pub fn Multiselect<O>(
 where
     O: SelectOption + PartialOrd + Ord + 'static,
 {
-    let render_option = StoredValue::new(render_option);
-
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
     let id_selector_string = format!("#{id_string}");
@@ -608,12 +602,12 @@ where
     let (search, set_search) = create_signal(String::new());
 
     let search_filter_provider =
-        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
+        search_filter_provider.unwrap_or(Consumer::new(move |(s, o): (String, Vec<O>)| {
             let lowercased_search = s.to_lowercase();
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .call(it.clone())
+                        .consume(it.clone())
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })
@@ -621,12 +615,12 @@ where
         }));
 
     let filtered_options = create_memo(move |_| {
-        search_filter_provider.call((search.get(), stored_options.get_value().get()))
+        search_filter_provider.consume((search.get(), stored_options.get_value().get()))
     });
 
     let has_options = create_memo(move |_| !filtered_options.with(Vec::is_empty));
 
-    let select = StoredValue::new(Callback::new(move |option: O| {
+    let select = Consumer::new(move |option: O| {
         let mut vec = selected.get_untracked();
         if !vec.contains(&option) {
             vec.push(option); // TODO
@@ -635,9 +629,9 @@ where
         tracing::info!(?vec, "selected");
         set_selected.set(vec);
         set_show_options.set(false); // TODO: Make this optional.
-    }));
+    });
 
-    let deselect = StoredValue::new(Callback::new(move |option: O| {
+    let deselect = Consumer::new(move |option: O| {
         let mut vec = selected.get_untracked();
         if let Some(pos) = vec.iter().position(|it| it == &option) {
             vec.remove(pos);
@@ -645,7 +639,7 @@ where
         tracing::info!(?vec, "deselected");
         set_selected.set(vec);
         // set_show_options.set(false); // TODO: Make this optional.
-    }));
+    });
 
     let is_selected = move |option: &O| selected.with(|selected| selected.contains(option));
 
@@ -696,7 +690,7 @@ where
                     e.stop_propagation();
                     if let Some(preselected) = preselected.get_untracked() {
                         if !is_disabled_untracked(&preselected) {
-                            select.get_value().call(preselected);
+                            select.consume(preselected);
                         }
                     }
                 }
@@ -759,9 +753,9 @@ where
                                     }
                                     dismissible=move |e: MouseEvent| {
                                         e.stop_propagation();
-                                        deselect.get_value().call(clone.clone());
+                                        deselect.consume(clone.clone());
                                     }>
-                                    { render_option.get_value().call(selected) }
+                                    { render_option.render(selected) }
                                 </Chip>
                             </leptonic-select-option>
                         }}).collect_view()
@@ -815,11 +809,11 @@ where
                                     }
                                     on:click=move |_e| {
                                         if !is_disabled_untracked(&clone2) {
-                                            select.get_value().call(clone2.clone());
+                                            select.consume(clone2.clone());
                                         }
                                     }
                                 >
-                                    { render_option.get_value().call(clone1) }
+                                    { render_option.render(clone1) }
                                 </leptonic-select-option>
                             }
                         }).collect_view() }
