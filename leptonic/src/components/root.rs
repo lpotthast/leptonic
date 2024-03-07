@@ -10,7 +10,15 @@ use crate::{
         modal::ModalRoot, popover::PopoverRoot, prelude::ToastRoot, theme::ThemeProvider,
     },
     contexts::{
-        global_click_event::GlobalClickEvent, global_keyboard_event::GlobalKeyboardEvent, global_mouseup_event::GlobalMouseupEvent, global_pointer_event::{GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent, GlobalPointerUpEvent}, global_resize_event::GlobalResizeEvent, global_scroll_event::GlobalScrollEvent
+        global_click_event::GlobalClickEvent,
+        global_keyboard_event::GlobalKeyboardEvent,
+        global_mouseup_event::GlobalMouseupEvent,
+        global_pointer_event::{
+            GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent,
+            GlobalPointerUpEvent,
+        },
+        global_resize_event::GlobalResizeEvent,
+        global_scroll_event::GlobalScrollEvent,
     },
     create_signal_ls,
 };
@@ -21,7 +29,7 @@ use super::theme::Theme;
 #[derive(Debug, Clone, Copy)]
 pub struct Leptonic {
     /// Whether or not the users device should be considered 'mobile'.
-    /// Please read: https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent
+    /// Please read: <https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent>
     /// and prefer other detection methods for selective functionality or styling.
     pub is_mobile_device: Signal<bool>,
 
@@ -69,10 +77,12 @@ where
     ));
 
     // POINTER DOWN
-    let (g_pointer_down_event, set_g_pointer_down_event) = create_signal::<Option<PointerEvent>>(None);
+    let (g_pointer_down_event, set_g_pointer_down_event) =
+        create_signal::<Option<PointerEvent>>(None);
     let mut on_pointer_down = None;
     if let Some(doc) = &*doc {
-        let boxed: Box<dyn FnMut(PointerEvent)> = Box::new(move |e| set_g_pointer_down_event.set(Some(e)));
+        let boxed: Box<dyn FnMut(PointerEvent)> =
+            Box::new(move |e| set_g_pointer_down_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
         doc.set_onpointerdown(Some(closure.as_ref().unchecked_ref()));
         on_pointer_down = Some(Rc::new(Box::new(closure)));
@@ -87,7 +97,8 @@ where
     let (g_pointer_up_event, set_g_pointer_up_event) = create_signal::<Option<PointerEvent>>(None);
     let mut on_pointer_up = None;
     if let Some(doc) = &*doc {
-        let boxed: Box<dyn FnMut(PointerEvent)> = Box::new(move |e| set_g_pointer_up_event.set(Some(e)));
+        let boxed: Box<dyn FnMut(PointerEvent)> =
+            Box::new(move |e| set_g_pointer_up_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
         doc.set_onpointerup(Some(closure.as_ref().unchecked_ref()));
         on_pointer_up = Some(Rc::new(Box::new(closure)));
@@ -99,10 +110,12 @@ where
     ));
 
     // POINTER CANCEL
-    let (g_pointer_cancel_event, set_g_pointer_cancel_event) = create_signal::<Option<PointerEvent>>(None);
+    let (g_pointer_cancel_event, set_g_pointer_cancel_event) =
+        create_signal::<Option<PointerEvent>>(None);
     let mut on_pointer_cancel = None;
     if let Some(doc) = &*doc {
-        let boxed: Box<dyn FnMut(PointerEvent)> = Box::new(move |e| set_g_pointer_cancel_event.set(Some(e)));
+        let boxed: Box<dyn FnMut(PointerEvent)> =
+            Box::new(move |e| set_g_pointer_cancel_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
         doc.set_onpointercancel(Some(closure.as_ref().unchecked_ref()));
         on_pointer_cancel = Some(Rc::new(Box::new(closure)));
@@ -114,10 +127,12 @@ where
     ));
 
     // POINTER MOVE
-    let (g_pointer_move_event, set_g_pointer_move_event) = create_signal::<Option<PointerEvent>>(None);
+    let (g_pointer_move_event, set_g_pointer_move_event) =
+        create_signal::<Option<PointerEvent>>(None);
     let mut on_pointer_move = None;
     if let Some(doc) = &*doc {
-        let boxed: Box<dyn FnMut(PointerEvent)> = Box::new(move |e| set_g_pointer_move_event.set(Some(e)));
+        let boxed: Box<dyn FnMut(PointerEvent)> =
+            Box::new(move |e| set_g_pointer_move_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
         doc.set_onpointermove(Some(closure.as_ref().unchecked_ref()));
         on_pointer_move = Some(Rc::new(Box::new(closure)));

@@ -27,8 +27,12 @@ struct LeptonicMetadata {
 
 #[allow(clippy::unwrap_used)]
 pub fn main() -> Result<()> {
+    if cfg!(feature = "docsrs") {
+        return Ok(());
+    }
+
     let out_dir = get_out_dir().context("Could not find 'out_dir'.")?;
-    let target_dir = get_cargo_target_dir(&out_dir).context("Could not find 'target_dir'.")?;
+    let target_dir = get_cargo_target_dir(out_dir).context("Could not find 'target_dir'.")?;
     let root_dir = target_dir
         .parent()
         .context("Expected 'target_dir' to have a parent.")?
@@ -45,9 +49,8 @@ pub fn main() -> Result<()> {
         cargo_toml_path.display()
     );
 
-    let metadata = match read_leptonic_metadata(&cargo_toml_path)? {
-        Some(metadata) => metadata,
-        None => return Ok(()),
+    let Some(metadata) = read_leptonic_metadata(&cargo_toml_path)? else {
+        return Ok(());
     };
 
     println!("cargo:rerun-if-changed={}", cargo_lock_path.display());
@@ -98,7 +101,7 @@ fn copy_tiptap_files(js_dir: &PathBuf) {
 /// Parse the Cargo.toml file! Abort if the Cargo.toml has no config.
 fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMetadata>> {
     let cargo_toml: Manifest<Value> =
-        cargo_toml::Manifest::from_path_with_metadata(&cargo_toml_path).with_context(|| {
+        cargo_toml::Manifest::from_path_with_metadata(cargo_toml_path).with_context(|| {
             format!(
                 "Could not parse Cargo.toml at '{}'",
                 cargo_toml_path.display()
