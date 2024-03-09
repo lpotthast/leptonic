@@ -1,6 +1,9 @@
 [submodule "examples/leptonic-template-csr"]
 	path = examples/leptonic-template-csr
-	url = https://github.com/lpotthast/leptonic-template-csr.git
+	url = https://github.com/lpotthast/leptonic-template-csr
 [submodule "examples/leptonic-template-ssr"]
 	path = examples/leptonic-template-ssr
-	url = https://github.com/lpotthast/leptonic-template-ssr.git
+	url = https://github.com/lpotthast/leptonic-template-ssr
+[submodule "examples/leptonic-template-tauri"]
+	path = examples/leptonic-template-tauri
+	url = https://github.com/lpotthast/leptonic-template-tauri
