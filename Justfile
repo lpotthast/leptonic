@@ -40,6 +40,8 @@ install-tools:
   cargo install tokei # Count your code, line counts, quickly.
   cargo install trunk # Build, watch, server WASM frontends.
   cargo install twiggy # Inspect WASM bundles.
+  cargo install create-tauri-app # Create new Tauri application.
+  cargo install tauri-cli@2.0.0-beta.8 # Run tauri applications.
 
 # Find the minimum supported rust version
 msrv:
@@ -63,6 +65,7 @@ sort:
   cargo sort ./examples/book-ssr -w -g
   cargo sort ./examples/leptonic-template-csr -w -g
   cargo sort ./examples/leptonic-template-ssr -w -g
+  cargo sort ./examples/leptonic-template-tauri -w -g
 
 # Run `cargo fmt` for every crate.
 fmt:
@@ -71,6 +74,7 @@ fmt:
   cargo fmt --all --manifest-path ./examples/book-ssr/Cargo.toml
   cargo fmt --all --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   cargo fmt --all --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
+  cargo fmt --all --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
 
 leptosfmt:
   cargo install leptosfmt
@@ -84,6 +88,7 @@ update:
   cargo update --manifest-path ./examples/book-ssr/Cargo.toml
   cargo update --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   cargo update --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
+  cargo update --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
 
 # Run `cargo test` for every crate.
 test:
@@ -92,6 +97,7 @@ test:
   cargo test --manifest-path ./examples/book-ssr/Cargo.toml
   cargo test --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   cargo test --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
+  cargo test --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
 
 # Run `cargo upgrades` for every crate, checking if new crate versions including potentially breaking changes are available.
 upgrades: # "-" prefixes allow for non-zero status codes!
@@ -100,6 +106,7 @@ upgrades: # "-" prefixes allow for non-zero status codes!
   -cargo upgrades --manifest-path ./examples/book-ssr/Cargo.toml
   -cargo upgrades --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   -cargo upgrades --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
+  -cargo upgrades --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
 
 # Run `cargo upgrade` for every crate, automatically bumping all dependencies to their latest versions
 upgrade: # "-" prefixes allow for non-zero status codes!
@@ -108,6 +115,7 @@ upgrade: # "-" prefixes allow for non-zero status codes!
   -cargo upgrade --manifest-path ./examples/book-ssr/Cargo.toml
   -cargo upgrade --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   -cargo upgrade --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
+  -cargo upgrade --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
 
 # Run `cargo clippy --tests -- -Dclippy::all -Dclippy::pedantic` for every crate.
 clippy: # "-" prefixes allow for non-zero status codes!
@@ -116,3 +124,4 @@ clippy: # "-" prefixes allow for non-zero status codes!
   -cargo clippy --tests --manifest-path ./examples/book-ssr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
   -cargo clippy --tests --manifest-path ./examples/leptonic-template-csr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
   -cargo clippy --tests --manifest-path ./examples/leptonic-template-ssr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
+  -cargo clippy --tests --manifest-path ./examples/leptonic-template-tauri/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
