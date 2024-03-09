@@ -190,8 +190,8 @@ pub fn PasswordInput(
 pub fn NumberInput(
     #[prop(into)] get: MaybeSignal<f64>,
     #[prop(into, optional)] set: Option<Out<f64>>,
-    #[prop(optional)] min: Option<f64>,
-    #[prop(optional)] max: Option<f64>,
+    #[prop(optional)] min: OptMaybeSignal<f64>,
+    #[prop(optional)] max: OptMaybeSignal<f64>,
     #[prop(optional, into)] step: OptMaybeSignal<f64>,
     #[prop(optional, into)] placeholder: OptMaybeSignal<String>,
     #[prop(optional, into)] prepend: OptMaybeSignal<View>,
@@ -233,8 +233,8 @@ pub fn NumberInput(
                     None => leptos::Oco::from(""),
                 }
                 type="number"
-                min=min
-                max=max
+                min=move || min.0.as_ref().map(SignalGet::get).unwrap_or(0.0)
+                max=move || max.0.as_ref().map(SignalGet::get).unwrap_or(0.0)
                 step=move || step.0.as_ref().map(SignalGet::get).unwrap_or(0.0)
                 prop:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
                 prop:value=move || get.get()
