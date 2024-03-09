@@ -1,0 +1,73 @@
+leptonic-alert {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  line-height: inherit;
+  margin: var(--alert-margin);
+  padding: var(--alert-padding);
+  border: var(--alert-border);
+  border-radius: var(--alert-border-radius);
+
+  &[data-variant="info"] {
+    color: var(--alert-info-color);
+    background-color: var(--alert-info-background-color);
+  }
+
+  &[data-variant="success"] {
+    color: var(--alert-success-color);
+    background-color: var(--alert-success-background-color);
+  }
+
+  &[data-variant="warn"] {
+    color: var(--alert-warn-color);
+    background-color: var(--alert-warn-background-color);
+  }
+
+  &[data-variant="danger"] {
+    color: var(--alert-danger-color);
+    background-color: var(--alert-danger-background-color);
+  }
+
+  leptonic-alert-prepend {
+    margin-right: 0.75em;
+    display: flex;
+    align-self: flex-start;
+    height: 100%;
+
+    leptonic-icon {
+      font-size: 1.5em;
+    }
+  }
+
+  leptonic-alert-center {
+    height: 100%;
+
+    leptonic-alert-title {
+      display: flex;
+      flex-direction: row;
+      width: 100%;
+      font-weight: bold;
+      font-size: 1.1em;
+      line-height: 1.1em;
+      margin-bottom: 0.35em;
+    }
+
+    leptonic-alert-content {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      line-height: 1em;
+    }
+  }
+
+  leptonic-alert-append {
+    margin-left: 0.75em;
+    display: flex;
+    align-self: flex-start;
+    height: 100%;
+
+    leptonic-icon {
+      font-size: 1.5em;
+    }
+  }
+}

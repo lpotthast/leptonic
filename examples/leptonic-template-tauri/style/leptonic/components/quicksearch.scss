@@ -1,0 +1,63 @@
+leptonic-modal.quicksearch-modal {
+    margin: auto;
+    width: auto;
+    min-width: unset;
+    max-width: 45em;
+    max-height: 80em;
+
+    leptonic-modal-header {
+        padding: 0;
+
+        leptonic-input {
+            width: 100%;
+
+            input.search-input {
+                width: 100%;
+                background-color: transparent;
+                border: 0.125em solid var(--brand-color);
+                border-radius: 0.4em;
+                font-size: 1.4em;
+            }
+        }
+    }
+
+    leptonic-modal-body {
+        padding: 1em 0;
+    }
+
+    leptonic-quicksearch-results {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: auto;
+        overflow-y: scroll;
+        max-height: 60vh;
+
+        leptonic-quicksearch-result {
+            width: 100%;
+            border: 0.1em solid lightgrey;
+            border-radius: 0.4em;
+            padding: 0; // Gives the opportunity to let the content own all the space (for example a link).
+            margin-bottom: 0.5em;
+            cursor: pointer;
+        }
+    }
+}
+
+leptonic-quicksearch {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    leptonic-quicksearch-trigger {
+        display: flex;
+        padding: var(--input-padding);
+        color: #7c7c7c;
+        margin: auto;
+        background-color: transparent;
+        border: 1px solid lightgrey;
+        border-radius: 0.4em;
+        cursor: pointer;
+        user-select: none;
+    }
+}
