@@ -6,6 +6,7 @@ pub mod r#move;
 pub mod overlay;
 pub mod popover;
 pub mod press;
+pub mod scroll;
 pub mod tooltip;
 
 pub mod prelude {
