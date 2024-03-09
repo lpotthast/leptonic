@@ -10,16 +10,16 @@ use crate::{
         press::{PressEvent, UsePressInput},
     },
     utils::aria::{AriaExpanded, AriaHasPopup},
-    OptMaybeSignal, Out,
+    OptMaybeSignal,
 };
 
 use super::AttributeExt;
 
 #[component]
 pub fn Button(
-    #[prop(into, optional)] on_press: Option<Out<PressEvent>>,
-    #[prop(into, optional)] on_hover_start: Option<Out<HoverStartEvent>>,
-    #[prop(into, optional)] on_hover_end: Option<Out<HoverEndEvent>>,
+    #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -41,7 +41,7 @@ pub fn Button(
         use_press_input: UsePressInput {
             disabled: disabled.or(false),
             on_press: Callback::new(move |e| match on_press {
-                Some(on_press) => on_press.set(e),
+                Some(on_press) => Callback::call(&on_press, e),
                 None => {}
             }),
             on_press_up: None,

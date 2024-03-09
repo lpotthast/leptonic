@@ -12,9 +12,8 @@ use crate::{
         hover::{HoverEndEvent, HoverStartEvent},
         press::PressEvent,
     },
-    prelude::Consumer,
     utils::aria::{AriaExpanded, AriaHasPopup},
-    OptMaybeSignal, Out,
+    OptMaybeSignal,
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -97,7 +96,7 @@ impl Display for ButtonSize {
 
 #[component]
 pub fn Button(
-    #[prop(into)] on_press: Out<PressEvent>,
+    #[prop(into)] on_press: Callback<PressEvent>,
     #[prop(into, optional)] variant: OptMaybeSignal<ButtonVariant>,
     #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
