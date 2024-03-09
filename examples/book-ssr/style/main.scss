@@ -325,9 +325,8 @@ leptonic-quicksearch-result {
             width: 10em;
             margin: 3.5em 0;
         }
-    
+
         #slogan {
-            font-family: monospace;
             margin-top: 0.2em;
             margin-bottom: 0.2em;
             font-size: 8em;
@@ -338,22 +337,22 @@ leptonic-quicksearch-result {
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
-    
+
         #sub-slogan {
             font-size: 1.75em;
             max-width: 75%;
             text-align: center;
         }
-    
+
         @media only screen and (max-width: 600px) {
             #big-logo {
                 margin: 2.5em 0;
             }
-    
+
             #slogan {
                 font-size: 3em;
             }
-    
+
             #sub-slogan {
                 font-size: 1.5em;
             }
