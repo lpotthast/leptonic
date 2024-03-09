@@ -50,7 +50,6 @@ wasm-bindgen = "0.2.91"
 wasm-bindgen-futures = "0.4.41"
 # TODO: What of all below is really required?
 web-sys = { version = "0.3.68", features = [
-    "Clipboard",
     "DomRect",
     "Event",
     "EventTarget",
@@ -73,8 +72,6 @@ csr = ["leptos/csr"]
 ssr = ["leptos/ssr", "leptos-use/ssr", "leptos-tiptap?/ssr"]
 hydrate = ["leptos/hydrate"]
 
-nightly = ["leptos/nightly"]
-
 # Core functionality. Hooks provide low level functions like `usePress` which hande interactions, aria attributes and more.
 # Use hooks to build your own set of components.
 hooks = []
@@ -83,14 +80,14 @@ hooks = []
 # Atoms use hooks and allow you to build more complex component without requring too much knowledge about hooks.
 atoms = ["hooks"]
 
-# Components provide headless, pre-build, complex functionality, building on atoms.   
+# Components provide headless, pre-build, complex functionality, building on atoms.
 components = ["atoms"]
 
 # Themes for atoms and components. Copied on build to your applicaiton root directory.
 themes = []
 
 # Enables clipboard support. Requires `[build] rustflags = ["--cfg=web_sys_unstable_apis"]` in your cargo.toml.
-clipboard = ["components"]
+clipboard = ["components", "web-sys/Clipboard"]
 
 # Enables tiptap editor support. Tiptap related JS files will be copied to your proect directory when running a build.
 tiptap = ["components", "dep:leptos-tiptap", "dep:leptos-tiptap-build"]
