@@ -3,6 +3,7 @@ use std::rc::Rc;
 use uuid::Uuid;
 
 use crate::{
+    hooks::scroll::{use_prevent_scroll, UsePreventScrollInput},
     prelude::{GlobalKeyboardEvent, Producer},
     OptMaybeSignal,
 };
@@ -57,6 +58,12 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     provide_context::<ModalRootContext>(ctx.clone());
 
     let has_modals = create_memo(move |_| shown_modals.with(|modals| !modals.is_empty()));
+
+    let disable_prevent_scroll = Signal::derive(move || !has_modals.get());
+
+    let _ = use_prevent_scroll(UsePreventScrollInput {
+        disabled: disable_prevent_scroll.into(),
+    });
 
     view! {
         { children() }

@@ -49,6 +49,7 @@ leptonic-modal {
   max-height: 95vh;
   border-radius: var(--modal-border-radius);
   box-shadow: var(--modal-box-shadow);
+  overflow: auto;
 
   leptonic-modal-header {
     display: flex;
@@ -70,6 +71,7 @@ leptonic-modal {
     justify-content: center;
     align-items: center;
     padding: var(--modal-body-padding);
+    overflow: auto;
   }
 
   leptonic-modal-footer {
