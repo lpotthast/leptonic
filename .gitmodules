@@ -1,12 +1,12 @@
 [submodule "examples/leptonic-template-csr"]
 	path = examples/leptonic-template-csr
-	url = https://github.com/lpotthast/leptonic-template-csr
+	url = https://github.com/lpotthast/leptonic-template-csr.git
 [submodule "examples/leptonic-template-ssr"]
 	path = examples/leptonic-template-ssr
-	url = https://github.com/lpotthast/leptonic-template-ssr
+	url = https://github.com/lpotthast/leptonic-template-ssr.git
 [submodule "examples/leptonic-template-tauri"]
 	path = examples/leptonic-template-tauri
-	url = https://github.com/lpotthast/leptonic-template-tauri
+	url = https://github.com/lpotthast/leptonic-template-tauri.git
 [submodule "examples/leptonic-template-ssr-nightly"]
 	path = examples/leptonic-template-ssr-nightly
 	url = https://github.com/lpotthast/leptonic-template-ssr-nightly.git
