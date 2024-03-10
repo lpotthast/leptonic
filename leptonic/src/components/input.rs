@@ -222,6 +222,21 @@ pub fn NumberInput(
         }
     });
 
+    let min_value = move || {
+        min.0
+            .as_ref()
+            .map(SignalGet::get)
+            .map(|v| v.to_string())
+            .unwrap_or_default()
+    };
+    let max_value = move || {
+        max.0
+            .as_ref()
+            .map(SignalGet::get)
+            .map(|v| v.to_string())
+            .unwrap_or_default()
+    };
+
     view! {
         <leptonic-input style=style>
             <input
@@ -233,8 +248,8 @@ pub fn NumberInput(
                     None => leptos::Oco::from(""),
                 }
                 type="number"
-                min=move || min.0.as_ref().map(SignalGet::get).unwrap_or(0.0)
-                max=move || max.0.as_ref().map(SignalGet::get).unwrap_or(0.0)
+                min=min_value
+                max=max_value
                 step=move || step.0.as_ref().map(SignalGet::get).unwrap_or(0.0)
                 prop:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
                 prop:value=move || get.get()
