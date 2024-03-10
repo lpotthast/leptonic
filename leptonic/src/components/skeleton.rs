@@ -16,7 +16,7 @@ pub fn Skeleton(
     let width = width.unwrap_or(Size::Percent(100.0));
     let height = height.unwrap_or(Size::Auto);
 
-    let element: NodeRef<leptos::html::Custom> = create_node_ref();
+    let element: NodeRef<html::Custom> = create_node_ref();
 
     let UseElementSizeReturn {
         width: el_width,

@@ -168,11 +168,11 @@ where
         children,
     })
     .into_view()
-    .on(leptos::ev::keydown, props.on_key_down)
-    .on(leptos::ev::click, props.on_click)
-    .on(leptos::ev::pointerdown, props.on_pointer_down)
-    .on(leptos::ev::focus, props.on_focus)
-    .on(leptos::ev::blur, props.on_blur)
+    .on(ev::keydown, props.on_key_down)
+    .on(ev::click, props.on_click)
+    .on(ev::pointerdown, props.on_pointer_down)
+    .on(ev::focus, props.on_focus)
+    .on(ev::blur, props.on_blur)
 }
 
 #[component]

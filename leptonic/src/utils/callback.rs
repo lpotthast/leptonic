@@ -58,6 +58,7 @@ impl<In: 'static, Out: 'static, F: Fn(In) -> Out + 'static> From<F> for Consumer
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<In: 'static, Out: 'static> From<Callback<In, Out>> for Consumer<In, Out> {
     fn from(cb: Callback<In, Out>) -> Self {
         Self::new(move |arg| Callable::call(&cb, arg))

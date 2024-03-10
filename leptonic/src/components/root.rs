@@ -226,7 +226,7 @@ where
                     .map_err(|_err| Error::SetPropertyFailed)?;
             }
         }
-        std::result::Result::<(), Error>::Ok(())
+        Result::<(), Error>::Ok(())
     };
 
     if let Err(err) = update_vh() {
@@ -234,7 +234,7 @@ where
     }
 
     if let Some(win) = &*win {
-        let _cleanup = use_event_listener(win.clone(), leptos::ev::resize, move |_e| {
+        let _cleanup = use_event_listener(win.clone(), ev::resize, move |_e| {
             if let Err(err) = update_vh() {
                 tracing::warn!(?err, "Could not calculate real viewport height");
             }

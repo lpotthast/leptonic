@@ -71,6 +71,8 @@ fn QuicksearchModal(
         }
     });
 
+    let cancel = Callback::new(move |_| on_cancel.produce());
+
     view! {
         <Modal show_when=show_when on_escape=move || on_cancel.produce() class="quicksearch-modal">
             <ModalHeader>
@@ -97,7 +99,7 @@ fn QuicksearchModal(
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_press=move |_| on_cancel.produce() color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=cancel color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>
