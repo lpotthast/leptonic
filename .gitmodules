@@ -7,3 +7,6 @@
 [submodule "examples/leptonic-template-tauri"]
 	path = examples/leptonic-template-tauri
 	url = https://github.com/lpotthast/leptonic-template-tauri
+[submodule "examples/leptonic-template-ssr-nightly"]
+	path = examples/leptonic-template-ssr-nightly
+	url = https://github.com/lpotthast/leptonic-template-ssr-nightly.git
