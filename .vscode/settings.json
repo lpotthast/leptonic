@@ -65,6 +65,7 @@
         "./examples/book-ssr/Cargo.toml",
         "./examples/leptonic-template-csr/Cargo.toml",
         "./examples/leptonic-template-ssr/Cargo.toml",
+        "./examples/leptonic-template-ssr-nightly/Cargo.toml",
         "./examples/leptonic-template-tauri/Cargo.toml"
     ]
 }
