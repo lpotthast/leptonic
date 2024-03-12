@@ -15,7 +15,7 @@ pub fn PageInstallation() -> impl IntoView {
             </H1>
 
             <P>
-                "The easies way to get started is by cloning either "
+                "The easiest way to get started is by cloning either "
                 <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkExtTarget::Blank>"template-ssr"</LinkExt> " or "
                 <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkExtTarget::Blank>"template-csr"</LinkExt> "."
             </P>
@@ -28,11 +28,11 @@ pub fn PageInstallation() -> impl IntoView {
             </Code>
 
             <Ul>
-                <Li slot>"Prefer server-side-rendering and hydration (SSR) when you wan't the best performing and feature rich (server functions) solution."</Li>
-                <Li slot>"Use client-side-rendering (CSR) when big bundle-sizes and slow initial load times are not an issue for you or when you wan't a solution with less complexity involved."</Li>
+                <Li slot>"Prefer server-side-rendering and hydration (SSR) when you want the best performing and feature rich (server functions) solution."</Li>
+                <Li slot>"Use client-side-rendering (CSR) when big bundle-sizes and slow initial load times are not an issue for you or when you want a solution with less complexity involved."</Li>
             </Ul>
 
-            <P>"The way you will use Leptonic will stay the same either way."</P>
+            <P>"The way you use Leptonic will stay the same either way."</P>
 
             <H2 id="custom-setup" class="anchor">
                 "Custom setup"
@@ -82,7 +82,7 @@ pub fn PageInstallation() -> impl IntoView {
                     [data-theme="light"] {
                         --brand-color: #8856e6;
                     }
-                    
+
                     [data-theme="dark"] {
                         --brand-color: #8856e6;
                     }
@@ -130,7 +130,7 @@ pub fn PageInstallation() -> impl IntoView {
                             <Root default_theme=LeptonicTheme::default()>
                                 <Box style="display: flex; flex-direction: column; align-items: center; padding: 1em; min-height: 100%; min-width: 100%">
                                     <H2>"Welcome to Leptonic"</H2>
-                        
+
                                     <span style="margin-top: 3em;">"Count: " {move || count.get()}</span>
                                     <Button on_click=move|_| set_count.update(|c| *c += 1)>
                                         "Increase"
