@@ -1,9 +1,13 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::prelude::*;
 use leptonic::hooks::r#move::{MoveEndEvent, MoveEvent, MoveStartEvent};
 use leptos::*;
 use ringbuf::{HeapRb, Rb};
+
+use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
 
 #[derive(Clone)]
 pub enum Event {
@@ -31,6 +35,7 @@ pub fn PagePress() -> impl IntoView {
 
     let press = use_press(UsePressInput {
         disabled: disabled.into(),
+        force_prevent_default: false,
         on_press: Callback::new(move |e| {
             set_count.update(|c| *c += 1);
             set_events.update(|events| {
@@ -55,36 +60,60 @@ pub fn PagePress() -> impl IntoView {
     });
 
     view! {
-        <H1>"use_press"</H1>
+        <Article>
+            <H1 id="use_press" class="anchor">
+                "use_press"
+                <AnchorLink href="#use_press" description="Direct link to article header"/>
+            </H1>
 
-        <P>"Track element press."</P>
+            <P>"Track element press."</P>
 
-        <Code>
-            {indoc!(r"
-                ...
-            ")}
-        </Code>
+            <Code>
+                {indoc!(r"
+                    ...
+                ")}
+            </Code>
 
-        <button
-            {..press.props.attrs}
-            on:keydown=press.props.on_key_down
-            on:click=press.props.on_click
-            on:pointerdown=press.props.on_pointer_down
-        >
-            "Press me"
-        </button>
+            <button
+                {..press.props.attrs}
+                on:keydown=press.props.on_key_down
+                on:click=press.props.on_click
+                on:pointerdown=press.props.on_pointer_down
+            >
+                "Press me"
+            </button>
 
-        <P>"Is disabled: " { move || disabled.get() } <Checkbox checked=disabled set_checked=set_disabled /></P>
-        <P>"Is pressed: " { move || press.is_pressed.get() }</P>
-        <P>"Was pressed: " { move || count.get() } { move || match count.get() {
-            1 => " time",
-            _ => " times",
-        } }</P>
+            <FormControl style="flex-direction: row; align-items: center; gap: 0.5em;">
+                <Checkbox checked=disabled set_checked=set_disabled />
+                <Label>"Disabled"</Label>
+            </FormControl>
 
-        <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
+            <P>"Is pressed: " { move || press.is_pressed.get() }</P>
+            <P>"Was pressed: " { move || count.get() } { move || match count.get() {
+                1 => " time",
+                _ => " times",
+            } }</P>
 
-        <pre style="background-color: grey; width: 100%; height: 15em; border: 0.1em solid darkgrey; overflow: auto;">
-            { move || string.get() }
-        </pre>
+            <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
+
+            <pre style="
+                width: 100%;
+                height: 15em;
+                overflow: auto;
+                padding: var(--typography-code-padding);
+                border: none;
+                border-radius: var(--typography-code-border-radius);
+                background-color: var(--typography-code-background-color);
+                color: var(--typography-code-color);
+            ">
+                { move || string.get() }
+            </pre>
+        </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "use_press", link: "#use-press" },
+            ]
+        }/>
     }
 }

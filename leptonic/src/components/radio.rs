@@ -69,12 +69,17 @@ impl RadioGroupContext {
 }
 
 #[component]
-pub fn RadioGroup(children: Children) -> impl IntoView {
+pub fn RadioGroup(
+    children: Children,
+    #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] class: Option<AttributeValue>,
+    #[prop(into, optional)] style: Option<AttributeValue>,
+) -> impl IntoView {
     let ctx = RadioGroupContext {
         states: store_value(Vec::new()),
     };
     view! {
-        <leptonic-radio-group role="radiogroup">
+        <leptonic-radio-group id=id class=class style=style role="radiogroup">
             <Provider value=ctx>
                 { children() }
             </Provider>
@@ -95,8 +100,7 @@ impl RadioContext {
 }
 
 impl FormInput for RadioContext {
-    fn on_label_click(&self) {
-        tracing::info!("toggke");
+    fn on_label_press(&self) {
         self.toggle();
     }
 }
@@ -110,7 +114,7 @@ pub fn Radio(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let ctx: RadioContext = RadioContext {
+    let ctx = RadioContext {
         checked,
         set_checked,
     };

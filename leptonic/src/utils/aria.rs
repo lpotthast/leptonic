@@ -7,6 +7,8 @@ use super::props::IntoAttributeName;
 
 #[derive(Debug, Clone)]
 pub enum AriaAttribute {
+    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles>
+    Role(GenericAttribute<AriaRole>),
     /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-controls>
     Controls(GenericAttribute<AriaControls>),
     /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-haspopup>
@@ -19,6 +21,7 @@ impl From<AriaAttribute> for (&'static str, Attribute) {
     fn from(value: AriaAttribute) -> Self {
         let attr_name = value.to_attribute_name();
         match value {
+            AriaAttribute::Role(val) => (attr_name, val.into_attribute()),
             AriaAttribute::Controls(val) => (attr_name, val.into_attribute()),
             AriaAttribute::HasPopup(val) => (attr_name, val.into_attribute()),
             AriaAttribute::Expanded(val) => (attr_name, val.into_attribute()),
@@ -29,6 +32,7 @@ impl From<AriaAttribute> for (&'static str, Attribute) {
 impl IntoAttributeName for AriaAttribute {
     fn to_attribute_name(&self) -> &'static str {
         match self {
+            Self::Role(_) => "role",
             Self::Controls(_) => "aria-controls",
             Self::HasPopup(_) => "aria-haspopup",
             Self::Expanded(_) => "aria-expanded",
@@ -80,6 +84,26 @@ impl<T: IntoAttribute + 'static> IntoAttribute for GenericAttribute<T> {
                 None => Attribute::Option(None),
             },
             GenericAttribute::Bool(v) => Attribute::Bool(v),
+        }
+    }
+
+    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
+        self.into_attribute()
+    }
+}
+
+// ----------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AriaRole {
+    /// See: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles/link_role>
+    Link,
+}
+
+impl IntoAttribute for AriaRole {
+    fn into_attribute(self) -> Attribute {
+        match self {
+            Self::Link => Attribute::String(Oco::Borrowed("link")),
         }
     }
 

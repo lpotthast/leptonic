@@ -2,10 +2,6 @@ leptonic-link {
     display: inline-flex;
     color: var(--link-color);
 
-    &.leptonic-anchor::before {
-        content: "\00a0";
-    }
-
     a {
         display: inline-flex;
         justify-content: center;
@@ -14,5 +10,22 @@ leptonic-link {
         color: inherit;
         cursor: pointer;
         font-size: 1em;
+    }
+}
+
+.leptonic-anchor-link {
+    display: inline;
+    text-decoration: auto;
+    color: var(--link-color);
+    font-size: 1em;
+    cursor: pointer;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    .leptonic-anchor-link {
+        &::before, &::after {
+            display: inline;
+            content: ' ';
+        }
     }
 }

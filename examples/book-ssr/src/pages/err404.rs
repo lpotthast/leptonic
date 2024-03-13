@@ -6,7 +6,7 @@ use crate::app::AppRoutes;
 #[component]
 pub(crate) fn PageErr404() -> impl IntoView {
     view! {
-        <Grid spacing=Size::Zero class="err-404">
+        <Grid gap=Size::Zero class="err-404">
             <Row>
                 <Col sm=6 xs=12 class="info" h_align=ColAlign::Center>
                     <H1 id="error">"404"</H1>

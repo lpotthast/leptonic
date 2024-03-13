@@ -166,16 +166,18 @@ pub fn Code(
         }
     };
 
+    let on_press = Callback::new(move |_| copy_to_clipboard(
+        code_text.with_value(|c| c.clone()),
+        on_success,
+        on_err
+    ));
+
     let copy_btn = show_copy_button.then(|| {
         view!(
             <Button
                 class="leptonic-code-copy-button"
                 variant=ButtonVariant::Flat
-                on_press=move |_| copy_to_clipboard(
-                    code_text.with_value(|c| c.clone()),
-                    on_success,
-                    on_err
-                )>
+                on_press=on_press>
                 <Icon icon=icondata::VsCopy/>
             </Button>
         )

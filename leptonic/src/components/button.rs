@@ -8,9 +8,12 @@ use leptos_router::{State, ToHref};
 
 use crate::{
     atoms,
-    hooks::press::PressEvent,
+    hooks::{
+        hover::{HoverEndEvent, HoverStartEvent},
+        press::PressEvent,
+    },
     utils::aria::{AriaExpanded, AriaHasPopup},
-    OptMaybeSignal, Out,
+    OptMaybeSignal,
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -93,7 +96,7 @@ impl Display for ButtonSize {
 
 #[component]
 pub fn Button(
-    #[prop(into)] on_press: Out<PressEvent>,
+    #[prop(into)] on_press: Callback<PressEvent>,
     #[prop(into, optional)] variant: OptMaybeSignal<ButtonVariant>,
     #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
@@ -145,6 +148,8 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
 pub fn LinkButton<H>(
     href: H,
+    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] variant: OptMaybeSignal<ButtonVariant>,
     #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
     #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
@@ -209,6 +214,8 @@ where
         replace,
         attributes,
         children,
+        on_hover_start,
+        on_hover_end,
     })
     .into_view()
 }

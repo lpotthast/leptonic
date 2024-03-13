@@ -6,47 +6,48 @@ use leptos_router::*;
 
 use crate::app::APP_BAR_HEIGHT;
 use crate::app::{AppLayoutContext, AppRoutes};
+use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
 use crate::pages::documentation::atoms::button::PageAtomButton;
-use crate::pages::documentation::feedback::alert::PageAlert;
-use crate::pages::documentation::feedback::chip::PageChip;
-use crate::pages::documentation::feedback::modal::PageModal;
-use crate::pages::documentation::feedback::popover::PagePopover;
-use crate::pages::documentation::feedback::progress::PageProgress;
-use crate::pages::documentation::feedback::toast::PageToast;
-use crate::pages::documentation::general::anchor::PageAnchor;
-use crate::pages::documentation::general::callback::PageCallback;
-use crate::pages::documentation::general::icon::PageIcon;
-use crate::pages::documentation::general::kbd::PageKbd;
-use crate::pages::documentation::general::link::PageLink;
-use crate::pages::documentation::general::typography::PageTypography;
+use crate::pages::documentation::atoms::popover::PageAtomPopover;
+use crate::pages::documentation::components::feedback::alert::PageAlert;
+use crate::pages::documentation::components::feedback::chip::PageChip;
+use crate::pages::documentation::components::feedback::kbd::PageKbd;
+use crate::pages::documentation::components::feedback::modal::PageModal;
+use crate::pages::documentation::components::feedback::popover::PagePopover;
+use crate::pages::documentation::components::feedback::progress::PageProgress;
+use crate::pages::documentation::components::feedback::toast::PageToast;
+use crate::pages::documentation::components::general::callback::PageCallback;
+use crate::pages::documentation::components::general::icon::PageIcon;
+use crate::pages::documentation::components::general::link::PageLink;
+use crate::pages::documentation::components::general::typography::PageTypography;
+use crate::pages::documentation::components::input::button::PageButton;
+use crate::pages::documentation::components::input::checkbox::PageCheckbox;
+use crate::pages::documentation::components::input::color_picker::PageColorPicker;
+use crate::pages::documentation::components::input::date_time::PageDateTime;
+use crate::pages::documentation::components::input::input_field::PageInput;
+use crate::pages::documentation::components::input::radio::PageRadio;
+use crate::pages::documentation::components::input::select::PageSelect;
+use crate::pages::documentation::components::input::slider::PageSlider;
+use crate::pages::documentation::components::input::tiptap_editor::PageTiptapEditor;
+use crate::pages::documentation::components::input::toggle::PageToggle;
+use crate::pages::documentation::components::layout::app_bar::PageAppBar;
+use crate::pages::documentation::components::layout::collapsible::PageCollapsible;
+use crate::pages::documentation::components::layout::drawer::PageDrawer;
+use crate::pages::documentation::components::layout::grid::PageGrid;
+use crate::pages::documentation::components::layout::separator::PageSeparator;
+use crate::pages::documentation::components::layout::skeleton::PageSkeleton;
+use crate::pages::documentation::components::layout::stack::PageStack;
+use crate::pages::documentation::components::layout::tab::PageTab;
+use crate::pages::documentation::components::layout::table::PageTable;
 use crate::pages::documentation::getting_started::changelog::PageChangelog;
 use crate::pages::documentation::getting_started::installation::PageInstallation;
 use crate::pages::documentation::getting_started::overview::PageOverview;
 use crate::pages::documentation::getting_started::themes::PageThemes;
 use crate::pages::documentation::hooks::button::PageUseButton;
 use crate::pages::documentation::hooks::hover::PageHover;
-use crate::pages::documentation::hooks::r#move::PageMove;
 use crate::pages::documentation::hooks::overlay::PageOverlayButton;
 use crate::pages::documentation::hooks::press::PagePress;
-use crate::pages::documentation::input::button::PageButton;
-use crate::pages::documentation::input::checkbox::PageCheckbox;
-use crate::pages::documentation::input::color_picker::PageColorPicker;
-use crate::pages::documentation::input::date_time::PageDateTime;
-use crate::pages::documentation::input::input_field::PageInput;
-use crate::pages::documentation::input::radio::PageRadio;
-use crate::pages::documentation::input::select::PageSelect;
-use crate::pages::documentation::input::slider::PageSlider;
-use crate::pages::documentation::input::tiptap_editor::PageTiptapEditor;
-use crate::pages::documentation::input::toggle::PageToggle;
-use crate::pages::documentation::layout::app_bar::PageAppBar;
-use crate::pages::documentation::layout::collapsible::PageCollapsible;
-use crate::pages::documentation::layout::drawer::PageDrawer;
-use crate::pages::documentation::layout::grid::PageGrid;
-use crate::pages::documentation::layout::separator::PageSeparator;
-use crate::pages::documentation::layout::skeleton::PageSkeleton;
-use crate::pages::documentation::layout::stack::PageStack;
-use crate::pages::documentation::layout::tab::PageTab;
-use crate::pages::documentation::layout::table::PageTable;
+use crate::pages::documentation::hooks::r#move::PageMove;
 
 #[derive(Debug, Copy, Clone)]
 pub enum DocRoutes {
@@ -65,6 +66,8 @@ pub enum DocRoutes {
 
     // Atoms
     AtomButton,
+    AtomPopover,
+    AtomAnchorLink,
 
     // Layout
     Stack,
@@ -102,7 +105,6 @@ pub enum DocRoutes {
     Typography,
     Icon,
     Link,
-    Anchor,
     Callback,
 
     // Animation
@@ -127,6 +129,8 @@ impl DocRoutes {
             Self::UseOverlay => "hooks/use-overlay",
 
             Self::AtomButton => "atoms/button",
+            Self::AtomPopover => "atoms/popover",
+            Self::AtomAnchorLink => "atoms/anchor-link",
 
             Self::Stack => "components/stack",
             Self::Grid => "components/grid",
@@ -160,7 +164,6 @@ impl DocRoutes {
             Self::Typography => "components/typography",
             Self::Icon => "components/icon",
             Self::Link => "components/link",
-            Self::Anchor => "components/anchor",
             Self::Callback => "components/callback",
 
             //Self::Transition => "transition",
@@ -202,6 +205,8 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::UseOverlay view=|| view! { <PageOverlayButton/> }/>
 
             <Route path=DocRoutes::AtomButton view=|| view! { <PageAtomButton/> }/>
+            <Route path=DocRoutes::AtomPopover view=|| view! { <PageAtomPopover/> }/>
+            <Route path=DocRoutes::AtomAnchorLink view=|| view! { <PageAtomAnchorLink/> }/>
 
             <Route path=DocRoutes::Stack view=|| view! { <PageStack/> }/>
             <Route path=DocRoutes::Grid view=|| view! { <PageGrid/> }/>
@@ -235,9 +240,8 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::Typography view=|| view! { <PageTypography/> }/>
             <Route path=DocRoutes::Icon view=|| view! { <PageIcon/> }/>
             <Route path=DocRoutes::Link view=|| view! { <PageLink/> }/>
-            <Route path=DocRoutes::Anchor view=|| view! { <PageAnchor/> }/>
             <Route path=DocRoutes::Callback view=|| view! { <PageCallback/> }/>
-            
+
             //<Route path=DocRoutes::Transition view=|| view! { <PageTransition/> }/>
 
             <Route path=DocRoutes::NotFound view=|| view! { <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
@@ -290,6 +294,8 @@ pub fn DocLayout() -> impl IntoView {
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::AtomButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
+                <Link href=DocRoutes::AtomPopover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
+                <Link href=DocRoutes::AtomAnchorLink class="item" on:click=move |_| close_doc_drawer_on_mobile()>"AnchorLink"</Link>
             </Stack>
         </DrawerSection>
 
@@ -350,7 +356,6 @@ pub fn DocLayout() -> impl IntoView {
                     <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
                     <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
                     <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
-                    <Link href=DocRoutes::Anchor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Anchor"</Link>
                     <Link href=DocRoutes::Callback class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Callback"</Link>
                 </Stack>
             </DrawerSection>
@@ -366,33 +371,37 @@ pub fn DocLayout() -> impl IntoView {
     };
 
     view! {
-        <Box id="doc-layout">
+        <Box id="doc-layout" style=move || format!(
+            "margin-left: {}em; margin-right: {}em;",
+            match app_layout_context.doc_drawer_closed.get() {
+                true => 0,
+                false => 15,
+            },
+            match app_layout_context.is_medium.get() {
+                true => 0,
+                false => 12,
+            },
+        )>
             <Drawer
                 side=DrawerSide::Left
                 id="doc-drawer"
                 shown=Signal::derive(move || !app_layout_context.doc_drawer_closed.get())
                 class=drawer_class
-                style=format!("top: {APP_BAR_HEIGHT}")
+                style=format!("position: fixed; left: 0; top: {APP_BAR_HEIGHT}; bottom: 0;")
             >
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
                     { drawer_content }
                 </Stack>
             </Drawer>
 
-            <Box id="doc-content">
-                // <Outlet/> will show nested child routes.
-                <Outlet/>
-            </Box>
+            // <Outlet/> will show nested child routes.
+            <Outlet/>
         </Box>
     }
 }
 
 #[component]
-pub fn DrawerSection<H, IV>(
-    level: u32,
-    header: H,
-    children: Children
-) -> impl IntoView
+pub fn DrawerSection<H, IV>(level: u32, header: H, children: Children) -> impl IntoView
 where
     H: Fn() -> IV + 'static,
     IV: IntoView + 'static,

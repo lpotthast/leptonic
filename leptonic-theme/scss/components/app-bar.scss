@@ -10,7 +10,7 @@ leptonic-app-bar {
   border-bottom: var(--app-bar-border-bottom);
   width: 100%;
   height: var(--app-bar-height);
-  z-index: 999;
+  z-index: 1000;
   box-shadow: var(--app-bar-box-shadow);
   overflow: hidden;
 }

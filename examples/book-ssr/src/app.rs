@@ -168,6 +168,7 @@ pub const APP_BAR_HEIGHT: Height = Height::Em(3.5);
 #[derive(Debug, Clone, Copy)]
 pub struct AppLayoutContext {
     pub is_small: Signal<bool>,
+    pub is_medium: Signal<bool>,
     pub main_drawer_closed: Signal<bool>,
     set_main_drawer_closed: WriteSignal<bool>,
     pub doc_drawer_closed: Signal<bool>,
@@ -205,6 +206,7 @@ impl AppLayoutContext {
 #[allow(clippy::too_many_lines)]
 pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     let is_small = use_media_query("(max-width: 800px)");
+    let is_medium = use_media_query("(max-width: 1200px)");
 
     let router_context = use_context::<RouterContext>();
     
@@ -224,6 +226,10 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     create_effect(move |_| {
         if !is_doc.get() {
             set_doc_drawer_closed.set(true);
+        } else {
+            if !is_small.get() {
+                set_doc_drawer_closed.set(false);
+            }
         }
     });
 
@@ -246,6 +252,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
 
     let ctx = AppLayoutContext {
         is_small,
+        is_medium,
         main_drawer_closed: main_drawer_closed.into(),
         set_main_drawer_closed,
         doc_drawer_closed: doc_drawer_closed.into(),
@@ -283,7 +290,6 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
         create_search_option(DocRoutes::Typography, "Typography"),
         create_search_option(DocRoutes::Icon, "Icon"),
         create_search_option(DocRoutes::Link, "Link"),
-        create_search_option(DocRoutes::Anchor, "Anchor"),
         create_search_option(DocRoutes::Callback, "Callback"),
         //create_search_option(DocRoutes::Transition, "Transition"),
     ];
@@ -368,7 +374,6 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
         <Box 
             id="content" 
             attr:aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
-            style=format!("height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT}); max-height: calc(var(--leptonic-vh, 100vh) - {APP_BAR_HEIGHT});")
         >
             {
                 match children {

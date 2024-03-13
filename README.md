@@ -14,8 +14,10 @@ Our website is the deployed `book-ssr` example and itself build with Leptonic.
 
 To get started quickly either
 
-- Copy `/examples/template-ssr` and launch it with `cargo leptos watch` (uses server-side-rendering) or
-- Copy `/examples/template-csr` and launch it with `trunk serve` (uses client-side-rendering only)
+- `git clone https://github.com/lpotthast/leptonic-template-ssr.git` and launch it with `cargo leptos watch` (uses server-side-rendering) or
+- `git clone https://github.com/lpotthast/leptonic-template-csr.git` and launch it with `trunk serve` (uses client-side-rendering only) or
+- `git clone https://github.com/lpotthast/leptonic-template-tauri.git` and launch it with `cargo tauri dev` (uses client-side-rendering only) or
+- `git clone https://github.com/lpotthast/leptonic-template-tailwind.git` and launch it with `cargo leptos watch` (uses server-side-rendering)
 
 ## Development
 

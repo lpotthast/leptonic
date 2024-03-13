@@ -65,7 +65,7 @@ impl std::fmt::Debug for TextInputContext {
 }
 
 impl FormInput for TextInputContext {
-    fn on_label_click(&self) {
+    fn on_label_press(&self) {
         self.focus();
     }
 }
@@ -163,8 +163,8 @@ pub fn PasswordInput(
                 id=id
                 class=class
                 placeholder=move || match &placeholder.0 {
-                    Some(label) => leptos::Oco::from(label.get()),
-                    None => leptos::Oco::from(""),
+                    Some(label) => Oco::from(label.get()),
+                    None => Oco::from(""),
                 }
                 type="password"
                 prop:disabled=move || disabled.0.as_ref().map_or(false, SignalGet::get)
@@ -244,8 +244,8 @@ pub fn NumberInput(
                 id=id
                 class=class
                 placeholder=move || match &placeholder.0 {
-                    Some(label) => leptos::Oco::from(label.get()),
-                    None => leptos::Oco::from(""),
+                    Some(label) => Oco::from(label.get()),
+                    None => Oco::from(""),
                 }
                 type="number"
                 min=min_value

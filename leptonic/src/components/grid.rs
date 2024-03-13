@@ -5,7 +5,7 @@ use crate::Size;
 // TODO: Only allow rows as children.
 #[component]
 pub fn Grid(
-    spacing: Size,
+    gap: Size,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -16,7 +16,7 @@ pub fn Grid(
             id=id
             class=class
             style=style
-            style=("--leptonic-grid-spacing", format!("{spacing}"))
+            style=("--leptonic-grid-gap", format!("{gap}"))
         >
             {children()}
         </leptonic-grid-container>
@@ -26,7 +26,7 @@ pub fn Grid(
 // TODO: Only allow columns as children.
 #[component]
 pub fn Row(
-    #[prop(into, optional)] spacing: Option<Size>,
+    #[prop(into, optional)] gap: Option<Size>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -37,7 +37,7 @@ pub fn Row(
             id=id
             class=class
             style=style
-            style=("--leptonic-grid-spacing", spacing.map(|spacing| format!("{spacing}")))
+            style=("--leptonic-grid-gap", gap.map(|gap| format!("{gap}")))
         >
             {children()}
         </leptonic-grid-row>

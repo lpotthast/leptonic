@@ -1,6 +1,26 @@
 use leptos::*;
 
-use crate::{components::icon::Icon, OptMaybeSignal, Out};
+use crate::{components::{form_control::FormControlContext, icon::Icon}, OptMaybeSignal, Out};
+
+use super::form_control::FormInput;
+
+#[derive(Debug, Clone, Copy)]
+pub struct CheckboxContext {
+    checked: Signal<bool>,
+    set_checked: Out<bool>,
+}
+
+impl CheckboxContext {
+    fn toggle(&self) {
+        self.set_checked.set(!self.checked.get_untracked());
+    }
+}
+
+impl FormInput for CheckboxContext {
+    fn on_label_press(&self) {
+        self.toggle();
+    }
+}
 
 #[component]
 pub fn Checkbox(
@@ -14,6 +34,17 @@ pub fn Checkbox(
     /// Arbitrary additional attributes.
     #[prop(attrs)] attributes: Vec<(&'static str, Attribute)>,
 ) -> impl IntoView {
+    let ctx = CheckboxContext {
+        checked,
+        set_checked,
+    };
+
+    let form_ctrl_ctx = use_context::<FormControlContext>();
+
+    if let Some(form_ctrl_ctx) = form_ctrl_ctx {
+        form_ctrl_ctx.input.set(Some(Box::new(ctx)));
+    }
+
     let disabled = move || disabled.0.as_ref().map_or(false, SignalGet::get);
 
     view! {

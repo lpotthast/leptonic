@@ -102,10 +102,10 @@ pub fn Popover(
 
     let ctx = expect_context::<PopoverRootContext>();
 
-    let el: NodeRef<leptos::html::Custom> = create_node_ref();
+    let el: NodeRef<html::Custom> = create_node_ref();
     let el_bounds = use_element_bounding(el);
 
-    let pop_el: NodeRef<leptos::html::Custom> = create_node_ref();
+    let pop_el: NodeRef<html::Custom> = create_node_ref();
     let pop_bounds = use_element_bounding(pop_el);
 
     let show: MaybeSignal<bool> = match show {

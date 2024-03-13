@@ -1,3 +1,9 @@
-target
-.DS_Store
+# Rust
+/target
 /Cargo.lock
+
+# IDE's
+/.idea
+
+# OS
+.DS_Store

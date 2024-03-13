@@ -1,6 +1,7 @@
 {
     "cSpell.words": [
         "bindgen",
+        "blazingly",
         "collapsibles",
         "darkgrey",
         "datetime",
@@ -16,6 +17,7 @@
         "icondata",
         "indoc",
         "inplace",
+        "interactable",
         "itertools",
         "jobspec",
         "keydown",
@@ -41,13 +43,16 @@
         "pointerleave",
         "pointermove",
         "pointerup",
+        "pressable",
         "quicksearch",
+        "Quickstart",
         "radiogroup",
         "ringbuf",
         "rustls",
         "Spacebar",
         "Stylesheet",
         "tabindex",
+        "tauri",
         "thiserror",
         "tiptap",
         "touchend",
@@ -60,6 +65,8 @@
         "./leptonic-theme/Cargo.toml",
         "./examples/book-ssr/Cargo.toml",
         "./examples/leptonic-template-csr/Cargo.toml",
-        "./examples/leptonic-template-ssr/Cargo.toml"
+        "./examples/leptonic-template-ssr/Cargo.toml",
+        "./examples/leptonic-template-ssr-nightly/Cargo.toml",
+        "./examples/leptonic-template-tauri/Cargo.toml"
     ]
 }
