@@ -226,15 +226,11 @@ pub fn NumberInput(
         min.0
             .as_ref()
             .map(SignalGet::get)
-            .map(|v| v.to_string())
-            .unwrap_or_default()
     };
     let max_value = move || {
         max.0
             .as_ref()
             .map(SignalGet::get)
-            .map(|v| v.to_string())
-            .unwrap_or_default()
     };
 
     view! {
