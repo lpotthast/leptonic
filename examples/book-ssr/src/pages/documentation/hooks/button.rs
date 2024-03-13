@@ -1,4 +1,5 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::button::UseButtonInput;
 use leptonic::hooks::focus::UseFocusInput;
@@ -21,6 +22,7 @@ pub fn PageUseButton() -> impl IntoView {
         aria_expanded: AriaExpanded::default().into(),
         use_press_input: UsePressInput {
             disabled: false.into(),
+            force_prevent_default: false,
             on_press: Callback::new(move |_e| {
                 if let Some(window) = use_window().as_ref() {
                     let _ = window.alert_with_message("Pressed!");
@@ -45,7 +47,10 @@ pub fn PageUseButton() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"use_button"</H1>
+            <H1 id="use_button" class="anchor">
+                "use_button"
+                <AnchorLink href="#use_button" description="Direct link to article header"/>
+            </H1>
 
             <P>"Create standardized buttons from arbitrary elements."</P>
 
@@ -58,14 +63,14 @@ pub fn PageUseButton() -> impl IntoView {
                         disabled: false.into(),
                         aria_haspopup: AriaHasPopup::default().into(),
                         aria_expanded: AriaExpanded::default().into(),
-                
+
                         use_focus_input: UseFocusInput {
                             disabled: false.into(),
                             on_focus: None,
                             on_blur: None,
                             on_focus_change: None,
                         },
-                
+
                         use_press_input: UsePressInput {
                             disabled: false.into(),
                             on_press: Callback::new(move |_e| {
@@ -119,9 +124,10 @@ pub fn PageUseButton() -> impl IntoView {
                 "Press me"
             </div>
         </Article>
-        
+
         <Toc toc=Toc::List {
             inner: vec![
+                Toc::Leaf { title: "use_button", link: "#use-button" },
             ]
         }/>
     }

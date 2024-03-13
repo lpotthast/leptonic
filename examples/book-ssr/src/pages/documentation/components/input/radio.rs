@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageRadio() -> impl IntoView {
@@ -13,7 +13,10 @@ pub fn PageRadio() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Radio"</H1>
+            <H1 id="radio" class="anchor">
+                "Radio"
+                <AnchorLink href="#radio" description="Direct link to article header"/>
+            </H1>
 
             <P>"Radio..."</P>
 
@@ -30,7 +33,10 @@ pub fn PageRadio() -> impl IntoView {
 
             <span>"checked: " {move || checked.get()}</span>
 
-            <H2>"Radio groups"</H2>
+            <H2 id="radio-groups" class="anchor">
+                "Radio groups"
+                 <AnchorLink href="#radio-groups" description="Direct link to section: Radio groups"/>
+            </H2>
 
             <Code>
                 {indoc!(r"
@@ -46,10 +52,13 @@ pub fn PageRadio() -> impl IntoView {
                 <Radio checked=checked3 set_checked=set_checked3 />
             </RadioGroup>
 
-            <H2>"Labeled"</H2>
+            <H2 id="labeled" class="anchor">
+                "Labeled"
+                <AnchorLink href="#labeled" description="Direct link to section: Labeled"/>
+            </H2>
 
             <P>"Wrap an input and a label to link them together."</P>
-            
+
             <Code>
                 {indoc!(r#"
                     <FormControl>
@@ -66,7 +75,10 @@ pub fn PageRadio() -> impl IntoView {
                 </Label>
             </FormControl>
 
-            <H2>"Disabled"</H2>
+            <H2 id="disabled" class="anchor">
+                "Disabled"
+                <AnchorLink href="#disabled" description="Direct link to section: Disabled"/>
+            </H2>
 
             <P>"Radio buttons support the " <Code inline=true>"disabled"</Code> " property, making them unmodifiable if set true."</P>
 
@@ -79,7 +91,10 @@ pub fn PageRadio() -> impl IntoView {
             <Radio disabled=true checked=checked_disabled set_checked=set_checked_disabled />
             <Button variant=ButtonVariant::Flat color=ButtonColor::Secondary size=ButtonSize::Small on_press=move |_| set_checked_disabled.set(!checked_disabled.get_untracked())>"TOGGLE"</Button>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -98,5 +113,15 @@ pub fn PageRadio() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Radio", link: "#radio" },
+                Toc::Leaf { title: "Groups", link: "#radio-groups" },
+                Toc::Leaf { title: "Labeled", link: "#labeled" },
+                Toc::Leaf { title: "Disabled", link: "#disabled" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

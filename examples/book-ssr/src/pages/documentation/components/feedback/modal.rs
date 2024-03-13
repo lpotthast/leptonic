@@ -1,4 +1,5 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::prelude::*;
 use leptos::*;
@@ -23,7 +24,10 @@ pub fn PageModal() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Modals"</H1>
+            <H1 id="modal" class="anchor">
+                "Modal"
+                <AnchorLink href="#modal" description="Direct link to article header"/>
+            </H1>
 
             <P>"Create modals to ask critical questions or notify the user about an upcoming event which must be acknowledged in some way."</P>
 
@@ -58,7 +62,10 @@ pub fn PageModal() -> impl IntoView {
                 </ModalFooter>
             </Modal>
 
-            <H2>"Stages"</H2>
+            <H2 id="stages" class="anchor">
+                "Stages"
+                <AnchorLink href="#stages" description="Direct link to section: Stages"/>
+            </H2>
 
             <P>"You can connect multiple modals by setting their visibility props appropriately."</P>
 
@@ -80,7 +87,7 @@ pub fn PageModal() -> impl IntoView {
                                 </ButtonWrapper>
                             </ModalFooter>
                         </Modal>
-                
+
                         <Modal show_when=show_staged_modal2>
                             <ModalHeader><ModalTitle>"Next one"</ModalTitle></ModalHeader>
                             <ModalBody>"This overlays..."</ModalBody>
@@ -89,7 +96,7 @@ pub fn PageModal() -> impl IntoView {
                                     <Button on_press=move |_| set_show_staged_modal2.set(false) color=ButtonColor::Secondary>"Back"</Button>
                                 </ButtonWrapper>
                             </ModalFooter>
-                        </Modal>            
+                        </Modal>
                     }
                 "#)}
             </Code>
@@ -117,7 +124,10 @@ pub fn PageModal() -> impl IntoView {
                 </ModalFooter>
             </Modal>
 
-            <H2>"React to user input"</H2>
+            <H2 id="react-to-user-input" class="anchor">
+                "React to user input"
+                <AnchorLink href="#react-to-user-input" description="Direct link to section: React to user input"/>
+            </H2>
 
             <P>"You can include arbitrary (reactive) children inside a modal. The next modal can only be accepted after entering \"ok\" in the presented input field."</P>
 
@@ -127,13 +137,13 @@ pub fn PageModal() -> impl IntoView {
 
                     view! {
                         <P><Button on_press=move |_| set_show_confirm_modal.set(true)>"Show confirmation modal"</Button></P>
-                
+
                         <ConfirmModal
                             show_when=show_confirm_modal
                             requires_confirmation_of="ok".to_owned()
                             on_accept=move || set_show_confirm_modal.set(false)
                             on_cancel=move || set_show_confirm_modal.set(false)
-                        />  
+                        />
                     }
                 "#)}
             </Code>
@@ -154,12 +164,12 @@ pub fn PageModal() -> impl IntoView {
                         C: Fn() + Copy + 'static,
                     {
                         let required = store_value(requires_confirmation_of);
-                    
+
                         let (input, set_input) = create_signal(String::new());
-                    
+
                         let confirmed = move || required.with_value(|r| input.with(|i| r == i));
                         let disabled = Signal::derive(move || !confirmed());
-                    
+
                         let on_accept = move || {
                             set_input.update(|it| it.clear());
                             (on_accept)();
@@ -168,7 +178,7 @@ pub fn PageModal() -> impl IntoView {
                             set_input.update(|it| it.clear());
                             (on_cancel)();
                         };
-                    
+
                         view! {
                             <Modal show_when=show_when on_escape=move || (on_cancel)()>
                                 <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
@@ -232,7 +242,7 @@ pub fn PageModal() -> impl IntoView {
                             </ButtonWrapper>
                         </ModalFooter>
                     </Modal>
-                "#)} 
+                "#)}
             </Code>
 
             <H2 id="styling" class="anchor">

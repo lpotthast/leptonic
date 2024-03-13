@@ -1,4 +1,5 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::prelude::*;
 use leptonic::hooks::r#move::{MoveEndEvent, MoveEvent, MoveStartEvent};
@@ -49,7 +50,7 @@ pub fn PageHover() -> impl IntoView {
         <Article>
             <H1 id="use-hover" class="anchor">
                 "use_hover"
-                <AnchorLink href="#use-hover" description="Direct link to section: use_hover"/>    
+                <AnchorLink href="#use-hover" description="Direct link to section: use_hover"/>
             </H1>
 
             <P>"Track element hover."</P>
@@ -93,7 +94,7 @@ pub fn PageHover() -> impl IntoView {
                 { move || string.get() }
             </pre>
         </Article>
-        
+
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "use_hover", link: "#use-hover" },

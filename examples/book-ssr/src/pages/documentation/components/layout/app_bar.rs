@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageAppBar() -> impl IntoView {
@@ -10,7 +10,10 @@ pub fn PageAppBar() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"App Bar"</H1>
+            <H1 id="overview">
+                "App Bar"
+                <AnchorLink href="#overview" description="Direct link to main article header"/>
+            </H1>
 
             <P>"The "<Code inline=true>"<AppBar>"</Code>" component sticks to the top of its parent and provides a convenient entrypoint for many app layouts."</P>
 
@@ -52,7 +55,10 @@ pub fn PageAppBar() -> impl IntoView {
                 "#)}
             </Code>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -65,5 +71,12 @@ pub fn PageAppBar() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "AppBar", link: "#overview" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

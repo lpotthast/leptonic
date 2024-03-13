@@ -1,4 +1,5 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::button::UseButtonInput;
 use leptonic::hooks::overlay::{PlacementX, PlacementY};
@@ -54,6 +55,7 @@ pub fn PageOverlayButton() -> impl IntoView {
         aria_expanded: AriaExpanded::default().into(),
         use_press_input: UsePressInput {
             disabled: false.into(),
+            force_prevent_default: false,
             on_press: Callback::new(move |_e| {
                 set_state.set(!state.get_untracked());
             }),
@@ -75,7 +77,10 @@ pub fn PageOverlayButton() -> impl IntoView {
     });
     view! {
         <Article>
-            <H1>"use_overlay"</H1>
+            <H1 id="use_overlay" class="anchor">
+                "use_overlay"
+                <AnchorLink href="#use_overlay" description="Direct link to article header"/>
+            </H1>
 
             <P>"Create overlays."</P>
 
@@ -205,6 +210,10 @@ pub fn PageOverlayButton() -> impl IntoView {
             </Portal>
         </Article>
 
-        <Toc toc=Toc::Leaf { title: "asd", link: "asd" } />
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "use_overlay", link: "#use-overlay" },
+            ]
+        }/>
     }
 }

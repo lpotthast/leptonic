@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 #[allow(clippy::too_many_lines)]
@@ -20,7 +20,10 @@ pub fn PageSlider() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Slider"</H1>
+            <H1 id="slider" class="anchor">
+                "Slider"
+                <AnchorLink href="#slider" description="Direct link to article header"/>
+            </H1>
 
             <P>"Allow users to adjust a value within a specified range by sliding a handle."</P>
 
@@ -50,7 +53,10 @@ pub fn PageSlider() -> impl IntoView {
                 value=value4 set_value=set_value4
                 value_display=move |v| format!("{v:.4}") />
 
-            <H2>"Volume slider"</H2>
+            <H1 id="example" class="anchor">
+                "Example - Volume slider"
+                <AnchorLink href="#example" description="Direct link to section: Example"/>
+            </H1>
 
             <P>"Continuous sliders are perfect when the exact value selected is of no particular interest to your user. For example, when operating a volume slider."</P>
 
@@ -77,7 +83,10 @@ pub fn PageSlider() -> impl IntoView {
                 <Icon icon=icondata::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
             </Stack>
 
-            <H2>"Marks"</H2>
+            <H2 id="marks" class="anchor">
+                "Marks"
+                <AnchorLink href="#marks" description="Direct link to section: Marks"/>
+            </H2>
 
             <P>
                 "Small step values result in lesser selectable values, as only values starting from min and increased by multiples of step are selectable. "
@@ -162,7 +171,10 @@ pub fn PageSlider() -> impl IntoView {
                 }
                 value_display=move |v| format!("{v:.0}")/>
 
-            <H2>"Arbitrary ranges"</H2>
+            <H2 id="arbitrary-ranges" class="anchor">
+                "Arbitrary ranges"
+                <AnchorLink href="#arbitrary-ranges" description="Direct link to section: Arbitrary ranges"/>
+            </H2>
 
             <P>"Sliders can use any combination of min, max and step values."</P>
 
@@ -176,7 +188,10 @@ pub fn PageSlider() -> impl IntoView {
                 marks=SliderMarks::Automatic { create_names: false }
                 value_display=move |v| format!("{v:.0}")/>
 
-            <H2>"Range sliders"</H2>
+            <H2 id="range-sliders" class="anchor">
+                "Range sliders"
+                <AnchorLink href="#range-sliders" description="Direct link to section: Range sliders"/>
+            </H2>
 
             <P>
                 "A range of values can be selected using the "<Code inline=true>"RangeSlider"</Code>" component. "
@@ -228,14 +243,20 @@ pub fn PageSlider() -> impl IntoView {
                 value_display=move |v| format!("{v:.0}")
             />
 
-            <H2>"Keyboard input"</H2>
+            <H2 id="keyboard-input" class="anchor">
+                "Keyboard input"
+                <AnchorLink href="#keyboard-input" description="Direct link to section: Keyboard input"/>
+            </H2>
 
             <P>
                 "Slider knobs are keyboard-interactable and can be cycled through using the "<Code inline=true>"Tab"</Code>" key. "
                 "Manipulation of slider knobs using the error keys will come in a future update."
             </P>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -267,5 +288,17 @@ pub fn PageSlider() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Slider", link: "#slider" },
+                Toc::Leaf { title: "Example", link: "#example" },
+                Toc::Leaf { title: "Marks", link: "#marks" },
+                Toc::Leaf { title: "Arbitrary ranges", link: "#arbitrary-ranges" },
+                Toc::Leaf { title: "Range sliders", link: "#range-sliders" },
+                Toc::Leaf { title: "Keyboard input", link: "#keyboard-input" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

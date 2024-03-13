@@ -1,16 +1,22 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageStack() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Stack"</H1>
+            <H1 id="stack" class="anchor">
+                "Stack"
+                <AnchorLink href="#stack" description="Direct link to article header"/>
+            </H1>
 
-            <H2>"Vertical stacks"</H2>
+            <H2 id="vertical-stacks" class="anchor">
+                "Vertical stacks"
+                <AnchorLink href="#vertical-stacks" description="Direct link to section: Vertical stacks"/>
+            </H2>
 
             <P>"Use a stack to create a container displaying its list of children one after the other while spacing them out by a predefined distance."</P>
 
@@ -30,7 +36,10 @@ pub fn PageStack() -> impl IntoView {
                 <Skeleton animated=false>"Item 3"</Skeleton>
             </Stack>
 
-            <H2>"Horizontal stacks"</H2>
+            <H2 id="horizontal-stacks" class="anchor">
+                "Horizontal stacks"
+                <AnchorLink href="#horizontal-stacks" description="Direct link to section: Horizontal stacks"/>
+            </H2>
 
             <P>
                 "A stacks default orientation is "<Code inline=true>"StackOrientation::Vertical"</Code>". "
@@ -54,5 +63,13 @@ pub fn PageStack() -> impl IntoView {
                 <Skeleton animated=false>"Item 3"</Skeleton>
             </Stack>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Stack", link: "#stack" },
+                Toc::Leaf { title: "Vertical stacks", link: "#vertical-stacks" },
+                Toc::Leaf { title: "Horizontal stacks", link: "#horizontal-stacks" },
+            ]
+        }/>
     }
 }

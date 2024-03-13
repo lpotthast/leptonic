@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageDrawer() -> impl IntoView {
@@ -11,7 +11,10 @@ pub fn PageDrawer() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Drawer"</H1>
+            <H1 id="drawer" class="anchor">
+                "Drawer"
+                <AnchorLink href="#drawer" description="Direct link to article header"/>
+            </H1>
 
             <P>
                 "The "<Code inline=true>"<Drawer>"</Code>" component is intended to be used as a side menu. It is animated to conditionally move in and out of visibility."
@@ -52,7 +55,10 @@ pub fn PageDrawer() -> impl IntoView {
                 "#)}
             </Code>
 
-            <H2>"Layout shifts"</H2>
+            <H2 id="layout-shifts" class="anchor">
+                "Layout shifts"
+                <AnchorLink href="#layout-shifts" description="Direct link to section: Layout shifts"/>
+            </H2>
 
             <P>
                 "To avoid layout shifts, you may declare the drawer as absolutely positioned to let it overlay your content when shown. "
@@ -94,7 +100,10 @@ pub fn PageDrawer() -> impl IntoView {
                 "#)}
             </Code>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -105,5 +114,13 @@ pub fn PageDrawer() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Drawer", link: "#drawer" },
+                Toc::Leaf { title: "Layout shifts", link: "#layout-shifts" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

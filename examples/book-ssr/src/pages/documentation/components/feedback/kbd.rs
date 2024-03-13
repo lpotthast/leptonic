@@ -1,9 +1,9 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 use strum::IntoEnumIterator;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageKbd() -> impl IntoView {
@@ -11,7 +11,10 @@ pub fn PageKbd() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Keyboard"</H1>
+            <H1 id="keyboard" class="anchor">
+                "Keyboard"
+                <AnchorLink href="#keyboard" description="Direct link to article header"/>
+            </H1>
 
             <P>
                 "Display labeled keyboard key-caps using the "<Code inline=true>"<KbdKey>"</Code>" component."
@@ -26,7 +29,10 @@ pub fn PageKbd() -> impl IntoView {
 
             <KbdKey key=Key::Option/>
 
-            <H2>"Shortcuts"</H2>
+            <H2 id="shortcuts" class="anchor">
+                "Shortcuts"
+                <AnchorLink href="#shortcuts" description="Direct link to section: Shortcuts"/>
+            </H2>
 
             <P>
                 "You may use this component to display a hint to a keyboard shortcut your users can use to interact with your app."
@@ -62,7 +68,10 @@ pub fn PageKbd() -> impl IntoView {
                 <KbdKey key=Key::Enter/>
             </KbdShortcutRoot>
 
-            <H2>Keys</H2>
+            <H2 id="keys" class="anchor">
+                "Keys"
+                <AnchorLink href="#keys" description="Direct link to section: Keys"/>
+            </H2>
 
             <P>"Here is a list of all keys provided by the "<Code inline=true>"Key"</Code>" enum."</P>
 
@@ -86,7 +95,10 @@ pub fn PageKbd() -> impl IntoView {
 
             <KbdKey key=Key::Custom("Foo")/>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -106,5 +118,14 @@ pub fn PageKbd() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Keyboard", link: "#keyboard" },
+                Toc::Leaf { title: "Shortcuts", link: "#shortcuts" },
+                Toc::Leaf { title: "Keys", link: "#keys" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

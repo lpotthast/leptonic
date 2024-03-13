@@ -1,4 +1,4 @@
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
@@ -95,7 +95,7 @@ pub fn PageChangelog() -> impl IntoView {
             </ul>
 
             <H2 id="v0.3.0" class="anchor">
-                "0.3.0"    
+                "0.3.0"
                 <AnchorLink href="#v0.3.0" description="Direct link to section: v0.3.0"/>
             </H2>
 

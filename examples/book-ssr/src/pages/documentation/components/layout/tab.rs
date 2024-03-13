@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 #[allow(clippy::too_many_lines)]
@@ -10,7 +10,10 @@ pub fn PageTab() -> impl IntoView {
     let (test_reactive_label_bool, set_test_reactive_label_bool) = create_signal(false);
     view! {
         <Article>
-            <H1>"Tabs"</H1>
+            <H1 id="tab" class="anchor">
+                "Tab"
+                <AnchorLink href="#tab" description="Direct link to article header"/>
+            </H1>
 
             <P>
                 <Code inline=true>"<Tabs>"</Code>" allow you to spread out your UI components into multiple pages, where only one page is shown at any given time. "
@@ -33,7 +36,10 @@ pub fn PageTab() -> impl IntoView {
                 <Tab name="tab-3" label="Tab 3".into_view()>"Content of tab 3"</Tab>
             </Tabs>
 
-            <H2>"Reactivity"</H2>
+            <H2 id="reactivity" class="anchor">
+                "Reactivity"
+                <AnchorLink href="#reactivity" description="Direct link to section: Reactivity"/>
+            </H2>
 
             <P>
                 "Labels can be anything implementing Leptos's "<Code inline=true>"IntoView"</Code>" trait and are therefore as reactive as anything else."
@@ -65,7 +71,10 @@ pub fn PageTab() -> impl IntoView {
                 </Tab>
             </Tabs>
 
-            <H2>"Nesting"</H2>
+            <H2 id="nesting" class="anchor">
+                "Nesting"
+                <AnchorLink href="#nesting" description="Direct link to section: Nesting"/>
+            </H2>
 
             <P>
                 "Tabs can be nested just as one would expect."
@@ -103,7 +112,10 @@ pub fn PageTab() -> impl IntoView {
                 <Tab name="outer-2" label="Outer 2".into_view()></Tab>
             </Tabs>
 
-            <H2>"When are tabs rendered?"</H2>
+            <H2 id="when-are-tabs-rendered" class="anchor">
+                "When are tabs rendered?"
+                <AnchorLink href="#when-are-tabs-rendered" description="Direct link to section: When are tabs rendered?"/>
+            </H2>
 
             <P>
                 "You might have spotted a particular behavior in the above example. "
@@ -148,5 +160,14 @@ pub fn PageTab() -> impl IntoView {
 
             // <H2>"Default tab"</H2>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Tab", link: "#tab" },
+                Toc::Leaf { title: "Reactivity", link: "#reactivity" },
+                Toc::Leaf { title: "Nesting", link: "#nesting" },
+                Toc::Leaf { title: "When are tabs rendered?", link: "#when-are-tabs-rendered" },
+            ]
+        }/>
     }
 }

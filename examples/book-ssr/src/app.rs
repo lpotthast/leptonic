@@ -290,7 +290,6 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
         create_search_option(DocRoutes::Typography, "Typography"),
         create_search_option(DocRoutes::Icon, "Icon"),
         create_search_option(DocRoutes::Link, "Link"),
-        create_search_option(DocRoutes::Anchor, "Anchor"),
         create_search_option(DocRoutes::Callback, "Callback"),
         //create_search_option(DocRoutes::Transition, "Transition"),
     ];

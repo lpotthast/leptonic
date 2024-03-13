@@ -1,14 +1,17 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageSkeleton() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Skeletons"</H1>
+            <H1 id="skeleton" class="anchor">
+                "Skeleton"
+                <AnchorLink href="#skeleton" description="Direct link to article header"/>
+            </H1>
 
             <P>
                 "A skeleton is a placeholder element of a specific shape and size which can be displayed in place of some actual content, "
@@ -31,7 +34,10 @@ pub fn PageSkeleton() -> impl IntoView {
 
             <Skeleton height=Size::Em(5.0)/>
 
-            <H2>"Animation"</H2>
+            <H2 id="animation">
+                "Animation"
+                <AnchorLink href="#animation" description="Direct link to section: Animation"/>
+            </H2>
 
             <P>
                 "By default, skeleton components contain an animation, suggesting that something is waiting to replace this component shortly. "
@@ -54,7 +60,10 @@ pub fn PageSkeleton() -> impl IntoView {
                 "But, even if your services respond quickly, keep in mind that the (uncontrollable) user-network-speeds may still result in slow resources."
             </P>
 
-            <H2>"Children"</H2>
+            <H2 id="children">
+                "Children"
+                <AnchorLink href="#children" description="Direct link to section: Children"/>
+            </H2>
 
             <P>
                 "As already mentioned briefly, the skeleton component optionally accepts children, so that content con be rendered if desired. "
@@ -77,7 +86,10 @@ pub fn PageSkeleton() -> impl IntoView {
 
             <P>"We will encounter these skeletons on other pages of this layout chapter."</P>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -91,5 +103,14 @@ pub fn PageSkeleton() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Skeleton", link: "#skeleton" },
+                Toc::Leaf { title: "Animation", link: "#animation" },
+                Toc::Leaf { title: "Children", link: "#children" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

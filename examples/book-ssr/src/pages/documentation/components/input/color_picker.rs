@@ -1,9 +1,11 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::utils::color::HSV;
 use leptos::*;
 
 use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageColorPicker() -> impl IntoView {
@@ -14,7 +16,10 @@ pub fn PageColorPicker() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Color Picker"</H1>
+            <H1 id="color-picker" class="anchor">
+                "Color Picker"
+                <AnchorLink href="#color-picker" description="Direct link to article header"/>
+            </H1>
 
             <P>"Select colors using the "<Code inline=true>"<ColorPicker>"</Code>" component."</P>
 
@@ -29,7 +34,10 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <ColorPicker hsv=hsv set_hsv=set_hsv/>
 
-            <H2>"Parts"</H2>
+            <H2 id="parts" class="anchor">
+                "Parts"
+                <AnchorLink href="#parts" description="Direct link to section: Parts"/>
+            </H2>
 
             <P>"The "<Code inline=true>"<ColorPicker>"</Code>" build on top of a few other components build to help work with colors. You may use them directly and build your own color picker."</P>
 
@@ -42,7 +50,10 @@ pub fn PageColorPicker() -> impl IntoView {
                 ")}
             </Code>
 
-            <H3>ColorPreview</H3>
+            <H3 id="part-color-preview" class="anchor">
+                "ColorPreview"
+                <AnchorLink href="#part-color-preview" description="Direct link to section: Part - ColorPreview"/>
+            </H3>
 
             <P>"The "<Code inline=true>"<ColorPreview>"</Code>" component simply displays a reactive color patch based on the given RGB color signal."</P>
 
@@ -56,7 +67,10 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <ColorPreview rgb=hsv_test_rgb_preview style="width: 5em%; height: 5em;"/>
 
-            <H3>ColorPalette</H3>
+            <H3 id="part-color-palette" class="anchor">
+                "ColorPalette"
+                <AnchorLink href="#part-color-palette" description="Direct link to section: Part - ColorPalette"/>
+            </H3>
 
             <P>
                 "The "<Code inline=true>"<ColorPalette>"</Code>" component works on an HSV color signal, "
@@ -84,7 +98,10 @@ pub fn PageColorPicker() -> impl IntoView {
                 style="width: 10em; height: 5em;"
             />
 
-            <H3>HueSlider</H3>
+            <H3 id="part-hue-slider" class="anchor">
+                "HueSlider"
+                <AnchorLink href="#part-hue-slider" description="Direct link to section: Part - HueSlider"/>
+            </H3>
 
             <P>
                 "The "<Code inline=true>"<HueSlider>"</Code>" component renders a specialized "<Code inline=true>"<Slider>"</Code>", "
@@ -110,7 +127,10 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <P>"If you look at the source of Leptonic's <ColorPicker>, you will see that there is not much more to it as what you saw here!"</P>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -130,5 +150,17 @@ pub fn PageColorPicker() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Color picker", link: "#color-picker" },
+                Toc::Group { title: "Parts", link: "#parts", inner: vec![
+                    Toc::Leaf { title: "ColorPreview", link: "#part-color-preview" },
+                    Toc::Leaf { title: "ColorPalette", link: "#part-color-palette" },
+                    Toc::Leaf { title: "HueSlider", link: "#part-hue-slider" },
+                ]},
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

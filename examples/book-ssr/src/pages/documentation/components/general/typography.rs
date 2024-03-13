@@ -1,14 +1,17 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageTypography() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Typography"</H1>
+            <H1 id="typography" class="anchor">
+                "Typography"
+                <AnchorLink href="#typography" description="Direct link to article header"/>
+            </H1>
 
             <Separator />
 
@@ -29,7 +32,10 @@ pub fn PageTypography() -> impl IntoView {
                 " piece of code."
             </P>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -72,5 +78,12 @@ pub fn PageTypography() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Typography", link: "#typography" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

@@ -2,13 +2,13 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageCallback() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Callbacks (deprecated)"</H1>
+            <H1>"Callbacks (deprecated) ..TODO"</H1>
 
             <Code>
                 {indoc!(r#"
@@ -130,5 +130,15 @@ pub fn PageCallback() -> impl IntoView {
                 <li>"If a child requires a callback of slightly changed signature, you have to pay for creating an intermediate callback.."</li>
             </ul>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Link", link: "#link" },
+                Toc::Leaf { title: "Internal links", link: "#internal-links" },
+                Toc::Leaf { title: "External links", link: "#external-links" },
+                Toc::Leaf { title: "Link buttons", link: "#link-buttons" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

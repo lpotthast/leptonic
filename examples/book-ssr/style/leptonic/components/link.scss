@@ -12,3 +12,20 @@ leptonic-link {
         font-size: 1em;
     }
 }
+
+.leptonic-anchor-link {
+    display: inline;
+    text-decoration: auto;
+    color: var(--link-color);
+    font-size: 1em;
+    cursor: pointer;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    .leptonic-anchor-link {
+        &::before, &::after {
+            display: inline;
+            content: ' ';
+        }
+    }
+}

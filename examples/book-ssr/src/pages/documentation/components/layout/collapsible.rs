@@ -1,14 +1,17 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageCollapsible() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Collapsibles"</H1>
+            <H1 id="collapsible" class="anchor">
+                "Collapsible"
+                <AnchorLink href="#collapsible" description="Direct link to article header"/>
+            </H1>
 
             <Code>
                 {indoc!(r#"
@@ -48,5 +51,11 @@ pub fn PageCollapsible() -> impl IntoView {
                 </Stack>
             </Collapsibles>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Collapsible", link: "#collapsible" },
+            ]
+        }/>
     }
 }

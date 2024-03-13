@@ -1,14 +1,17 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageSeparator() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Separators"</H1>
+            <H1 id="separator" class="anchor">
+                "Separator"
+                <AnchorLink href="#separator" description="Direct link to article header"/>
+            </H1>
 
             <Code>
                 {indoc!(r"
@@ -18,5 +21,11 @@ pub fn PageSeparator() -> impl IntoView {
 
             <Separator />
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Separator", link: "#separator" },
+            ]
+        }/>
     }
 }

@@ -1,4 +1,4 @@
-use leptonic::components::anchor::AnchorLink;
+use leptonic::atoms::link::AnchorLink;
 use leptos::*;
 
 use crate::app::AppLayoutContext;

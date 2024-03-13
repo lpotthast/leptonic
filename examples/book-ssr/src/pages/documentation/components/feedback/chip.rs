@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageChip() -> impl IntoView {
@@ -10,7 +10,10 @@ pub fn PageChip() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Chips"</H1>
+            <H1 id="chip" class="anchor">
+                "Chip"
+                <AnchorLink href="#chip" description="Direct link to article header"/>
+            </H1>
 
             <Code>
                 {indoc!(r#"
@@ -25,7 +28,10 @@ pub fn PageChip() -> impl IntoView {
             <Chip color=ChipColor::Warn>"Warn"</Chip>
             <Chip color=ChipColor::Danger>"Danger"</Chip>
 
-            <H2>"Dismissible chips"</H2>
+            <H2 id="dismissible-chips" class="anchor">
+                "Dismissible chips"
+                <AnchorLink href="#dismissible-chips" description="Direct link to section: Dismissible chips"/>
+            </H2>
 
             <P>
                 "As chips are often used to convey mutable state, we allow chips to be dismissible. "
@@ -50,7 +56,10 @@ pub fn PageChip() -> impl IntoView {
                 </Chip>
             </Show>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -88,5 +97,13 @@ pub fn PageChip() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Chip", link: "#chip" },
+                Toc::Leaf { title: "Dismissible chips", link: "#dismissible-chips" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

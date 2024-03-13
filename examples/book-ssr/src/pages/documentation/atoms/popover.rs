@@ -1,68 +1,83 @@
 use indoc::indoc;
-use leptonic::atoms::popover::PopoverContext;
-use leptonic::atoms::prelude as atoms;
-use leptonic::components::prelude::*;
+use leptonic::atoms::button::Button;
+use leptonic::atoms::hoverable::Hoverable;
+use leptonic::atoms::link::AnchorLink;
+use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger};
+use leptonic::components::typography::{Code, H1, P};
 use leptonic::hooks::overlay::{PlacementX, PlacementY};
 use leptonic::utils::locale::WritingDirection;
 use leptos::*;
 
 use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageAtomPopover() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Popover"</H1>
+            <H1 id="popover" class="anchor">
+                "Popover"
+                <AnchorLink href="#popover" description="Direct link to article header"/>
+            </H1>
 
             <P>"..."</P>
 
             <Code>
                 {indoc!(r#"
-                    use leptonic::atoms::prelude as atoms;
+                    use leptonic::atoms::button::Button;
+                    use leptonic::atoms::hoverable::Hoverable;
+                    use leptonic::atoms::link::AnchorLink;
+                    use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger};
 
                     view! {
-                        <atoms::Popover disabled=false>
-                            <atoms::PopoverTrigger>
-                                { 
+                        <Popover disabled=false>
+                            <PopoverTrigger>
+                                {
                                     let ctx = expect_context::<PopoverContext>();
                                     view! {
-                                        <atoms::Button on_hover_start=move |_| ctx.set_state.set(true) on_hover_end=move |_| ctx.set_state.set(false)>
+                                        <Button on_hover_start=move |_| ctx.set_state.set(true) on_hover_end=move |_| ctx.set_state.set(false)>
                                             "Press me"
-                                        </atoms::Button>
+                                        </Button>
                                     }
                                 }
-                            </atoms::PopoverTrigger>
-                
-                            <atoms::PopoverContent placement_x=PlacementX::Center placement_y=PlacementY::Above writing_direction=WritingDirection::Ltr>
+                            </PopoverTrigger>
+
+                            <PopoverContent placement_x=PlacementX::Center placement_y=PlacementY::Above writing_direction=WritingDirection::Ltr>
                                 "Overlay"
-                            </atoms::PopoverContent>
-                        </atoms::Popover>
+                            </PopoverContent>
+                        </Popover>
                     }
                 "#)}
             </Code>
 
-            <atoms::Popover disabled=false>
-                <atoms::PopoverTrigger>
+            <Popover disabled=false>
+                <PopoverTrigger>
                     {
                         let ctx = expect_context::<PopoverContext>();
                         view! {
-                            <atoms::Button on_press=move |_| ctx.set_state.set(!ctx.state.get_untracked())>
+                            <Button on_press=move |_| ctx.set_state.set(!ctx.state.get_untracked())>
                                 "Press me"
-                            </atoms::Button>
+                            </Button>
 
-                            <atoms::Hoverable on_hover_start=move |_| ctx.set_state.set(true) on_hover_end=move |_| ctx.set_state.set(false)>
+                            <Hoverable on_hover_start=move |_| ctx.set_state.set(true) on_hover_end=move |_| ctx.set_state.set(false)>
                                 <div>
                                     "Hover me"
                                 </div>
-                            </atoms::Hoverable>
+                            </Hoverable>
                         }
                     }
-                </atoms::PopoverTrigger>
+                </PopoverTrigger>
 
-                <atoms::PopoverContent placement_x=PlacementX::Center placement_y=PlacementY::Above writing_direction=WritingDirection::Ltr>
+                <PopoverContent placement_x=PlacementX::Center placement_y=PlacementY::Above writing_direction=WritingDirection::Ltr>
                     "Overlay"
-                </atoms::PopoverContent>
-            </atoms::Popover>
+                </PopoverContent>
+            </Popover>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Popover", link: "#popover" },
+            ]
+        }/>
     }
 }

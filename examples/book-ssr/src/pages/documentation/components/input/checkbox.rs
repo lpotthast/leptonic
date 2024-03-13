@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageCheckbox() -> impl IntoView {
@@ -11,7 +11,10 @@ pub fn PageCheckbox() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Checkbox"</H1>
+            <H1 id="checkbox" class="anchor">
+                "Checkbox"
+                <AnchorLink href="#checkbox" description="Direct link to article header"/>
+            </H1>
 
             <P>"Checkbox..."</P>
 
@@ -28,7 +31,10 @@ pub fn PageCheckbox() -> impl IntoView {
 
             <span>"checked: " {move || checked.get()}</span>
 
-            <H2>"Disabled"</H2>
+            <H2 id="disabled" class="anchor">
+                "Disabled"
+                <AnchorLink href="#disabled" description="Direct link to section: Disabled"/>
+            </H2>
 
             <P>"Checkboxes support the " <Code inline=true>"disabled"</Code> " property, making them unmodifiable if set true."</P>
 
@@ -41,7 +47,10 @@ pub fn PageCheckbox() -> impl IntoView {
             <Checkbox disabled=true checked=checked_disabled set_checked=set_checked_disabled />
             <Button variant=ButtonVariant::Flat color=ButtonColor::Secondary size=ButtonSize::Small on_press=move |_| set_checked_disabled.set(!checked_disabled.get_untracked())>"TOGGLE"</Button>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -66,5 +75,13 @@ pub fn PageCheckbox() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Checkbox", link: "#checkbox" },
+                Toc::Leaf { title: "Disabled", link: "#disabled" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

@@ -1,4 +1,5 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::contexts::global_pointer_event::{
     GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent, GlobalPointerUpEvent,
@@ -90,7 +91,10 @@ pub fn PageMove() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"use_move"</H1>
+            <H1 id="use_move" class="anchor">
+                "use_move"
+                <AnchorLink href="#use_move" description="Direct link to article header"/>
+            </H1>
 
             <P>"Track movement."</P>
 
@@ -155,9 +159,7 @@ pub fn PageMove() -> impl IntoView {
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "Overview", link: "#overview" },
-                Toc::Leaf { title: "Need help?", link: "#help" },
-                Toc::Leaf { title: "Contribute", link: "#contribute" },
+                Toc::Leaf { title: "use_move", link: "#use_move" },
             ]
         }/>
     }

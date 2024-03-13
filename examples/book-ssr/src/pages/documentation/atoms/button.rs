@@ -1,16 +1,21 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::atoms::prelude as atoms;
 use leptonic::components::prelude::*;
 use leptos::*;
 use leptos_use::use_window;
 
 use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageAtomButton() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Button"</H1>
+            <H1 id="button" class="anchor">
+                "Button"
+                <AnchorLink href="#button" description="Direct link to article header"/>
+            </H1>
 
             <P>"..."</P>
 
@@ -39,5 +44,11 @@ pub fn PageAtomButton() -> impl IntoView {
                 "Press me"
             </atoms::Button>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Button", link: "#button" },
+            ]
+        }/>
     }
 }

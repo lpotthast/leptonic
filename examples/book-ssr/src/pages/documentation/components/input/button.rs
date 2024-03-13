@@ -1,9 +1,11 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::prelude::*;
 use leptos::*;
 
 use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
 
 #[component]
 #[allow(clippy::too_many_lines)]
@@ -11,7 +13,10 @@ pub fn PageButton() -> impl IntoView {
     let (disabled, set_disabled) = create_signal(false);
     view! {
         <Article>
-            <H1>"Buttons"</H1>
+            <H1 id="button" class="anchor">
+                "Button"
+                <AnchorLink href="#button" description="Direct link to article header"/>
+            </H1>
 
             <P>"Buttons are one of the most common input mechanisms with which your users can interact with your software."</P>
             <P>"Buttons only require an action handler and can therefor be created like in this minimal example."</P>
@@ -28,7 +33,10 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {}>"My Button"</Button>
             </div>
 
-            <H2>"Colors"</H2>
+            <H2 id="colors" class="anchor">
+                "Colors"
+                <AnchorLink href="#colors" description="Direct link to section: Colors"/>
+            </H2>
 
             <P>"Buttons come in different colors. You can overwrite these using theme variables."</P>
 
@@ -50,7 +58,10 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {} color=ButtonColor::Info>"Info"</Button>
             </Stack>
 
-            <H2>"Variants"</H2>
+            <H2 id="variants" class="anchor">
+                "Variants"
+                <AnchorLink href="#variants" description="Direct link to section: Variants"/>
+            </H2>
 
             <P>
                 "Buttons come in three different " <Code inline=true>"ButtonVariant"</Code> "s."
@@ -73,7 +84,10 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
             </Stack>
 
-            <H2>"Button group"</H2>
+            <H2 id="groups" class="anchor">
+                "Groups"
+                <AnchorLink href="#groups" description="Direct link to section: Groups"/>
+            </H2>
 
             <P>"Buttons can be displayed in a group. This lets adjacent buttons snap to each other, creating a seamless row of buttons. It is recommended to only use the Filled button variant when putting buttons inside a group."</P>
 
@@ -93,7 +107,10 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {}>"Button 3"</Button>
             </ButtonGroup>
 
-            <H2>"Disabled"</H2>
+            <H2 id="disabled" class="anchor">
+                "Disabled"
+                <AnchorLink href="#disabled" description="Direct link to section: Disabled"/>
+            </H2>
 
             <P>"Buttons can be set disabled using a signal."</P>
 
@@ -121,7 +138,10 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
             </ButtonWrapper>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -241,5 +261,16 @@ pub fn PageButton() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Button", link: "#button" },
+                Toc::Leaf { title: "Colors", link: "#colors" },
+                Toc::Leaf { title: "Variants", link: "#variants" },
+                Toc::Leaf { title: "Groups", link: "#groups" },
+                Toc::Leaf { title: "Disabled", link: "#disabled" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

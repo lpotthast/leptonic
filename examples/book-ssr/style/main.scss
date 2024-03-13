@@ -259,26 +259,26 @@ body {
                 margin: 0.25em 0;
 
                 &[data-level="1"] {
-                    leptonic-anchor-link {
+                    .leptonic-anchor-link {
                         padding-left: 0.5em;
                     }
                 }
 
                 &[data-level="2"] {
-                    leptonic-anchor-link {
+                    .leptonic-anchor-link {
                         padding-left: 1.0em;
                     }
                 }
 
                 &[data-level="3"] {
-                    leptonic-anchor-link {
+                    .leptonic-anchor-link {
                         padding-left: 1.5em;
                     }
                 }
             }
         }
 
-        leptonic-anchor-link {
+        .leptonic-anchor-link {
             display: block;
             width: 100%;
             padding: 0.5em;

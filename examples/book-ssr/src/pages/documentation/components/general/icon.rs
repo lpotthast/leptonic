@@ -1,15 +1,20 @@
 use indoc::indoc;
+use leptonic::atoms::link::AnchorLink;
 use leptonic::prelude::*;
 use leptonic::components::prelude::*;
 use leptos::*;
 
 use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageIcon() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Icons"</H1>
+            <H1 id="icon" class="anchor">
+                "Icon"
+                <AnchorLink href="#icon" description="Direct link to article header"/>
+            </H1>
 
             <P>
                 "Icons are supported through the "<LinkExt target=LinkExtTarget::Blank href="https://crates.io/crates/icondata">"https://crates.io/crates/icondata"</LinkExt> " crate. "
@@ -38,7 +43,10 @@ pub fn PageIcon() -> impl IntoView {
 
             <P>"SVG data of all the icons used in your application is embedded into your binary."</P>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"There are currently no CSS variables exposed, targeting the "<Code inline=true>"<Icon>"</Code> " component."</P>
 
@@ -49,5 +57,12 @@ pub fn PageIcon() -> impl IntoView {
                 <li>"Some icons may also render different when altering the css "<Code inline=true>"background-color"</Code> " attribute."</li>
             </ul>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Icon", link: "#icon" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

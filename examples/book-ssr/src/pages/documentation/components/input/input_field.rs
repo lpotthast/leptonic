@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 #[allow(clippy::too_many_lines)]
@@ -16,7 +16,10 @@ pub fn PageInput() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Inputs"</H1>
+            <H1 id="input" class="anchor">
+                "Input"
+                <AnchorLink href="#input" description="Direct link to article header"/>
+            </H1>
 
             <P>"Creating an input is as simple as doing the following"</P>
 
@@ -32,7 +35,10 @@ pub fn PageInput() -> impl IntoView {
             <TextInput get=text set=set_text/>
             <P style="color: gray; margin-top: 0; font-style: italic;">"Text is: " {move || text.get()}</P>
 
-            <H2>"Labeled"</H2>
+            <H2 id="labeled" class="anchor">
+                "Labeled"
+                <AnchorLink href="#labeled" description="Direct link to section: Labeled"/>
+            </H2>
 
             <P>"Wrap an input and a label to link them together."</P>
 
@@ -54,7 +60,10 @@ pub fn PageInput() -> impl IntoView {
                 <TextInput get=text set=set_text/>
             </FormControl>
 
-            <H2>"Types"</H2>
+            <H2 id="types" class="anchor">
+                "Types"
+                <AnchorLink href="#types" description="Direct link to section: Types"/>
+            </H2>
 
             <P>
                 "You can use the "<Code inline=true>"InputType"</Code>" enum, to either create a "
@@ -102,7 +111,10 @@ pub fn PageInput() -> impl IntoView {
             />
             <P style="color: gray; margin-top: 0; font-style: italic;">"Number is: " {move || number_string.get()}</P>
 
-            <H2>"Value updates"</H2>
+            <H2 id="value-updates" class="anchor">
+                "Value updates"
+                <AnchorLink href="#value-updates" description="Direct link to section: Value updates"/>
+            </H2>
 
             <P>
                 "An input can be used without providing the "<Code inline=true>"set"</Code>" prop. "
@@ -131,7 +143,10 @@ pub fn PageInput() -> impl IntoView {
                 ")}
             </Code>
 
-            <H2>"Placeholder"</H2>
+            <H2 id="placeholder" class="anchor">
+                "Placeholder"
+                <AnchorLink href="#placeholder" description="Direct link to section: Placeholder"/>
+            </H2>
 
             <P>"You can supply a placeholder to the input. It is shown as when the input is empty."</P>
 
@@ -153,7 +168,10 @@ pub fn PageInput() -> impl IntoView {
             <TextInput get=placeholder_input set=set_placeholder_input placeholder="This is a placeholder"/>
             <Button variant=ButtonVariant::Flat size=ButtonSize::Small on_press=move |_| set_placeholder_input.set(String::new())>"Clear input"</Button>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -170,5 +188,16 @@ pub fn PageInput() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Input", link: "#input" },
+                Toc::Leaf { title: "Labeled", link: "#labeled" },
+                Toc::Leaf { title: "Types", link: "#types" },
+                Toc::Leaf { title: "Value updates", link: "#value-updates" },
+                Toc::Leaf { title: "Placeholder", link: "#placeholder" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

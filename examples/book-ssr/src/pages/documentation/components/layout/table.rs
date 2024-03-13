@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[derive(Clone)]
 pub struct Minion {
@@ -43,7 +43,10 @@ pub fn PageTable() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Table"</H1>
+            <H1 id="table" class="anchor">
+                "Table"
+                <AnchorLink href="#table" description="Direct link to article header"/>
+            </H1>
 
             <P>"Tables..."</P>
 
@@ -105,7 +108,10 @@ pub fn PageTable() -> impl IntoView {
                 </Table>
             </TableContainer>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -128,5 +134,12 @@ pub fn PageTable() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Table", link: "#table" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

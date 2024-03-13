@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageTiptapEditor() -> impl IntoView {
@@ -11,7 +11,10 @@ pub fn PageTiptapEditor() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Tiptap editor"</H1>
+            <H1 id="editor" class="anchor">
+                "Tiptap editor"
+                <AnchorLink href="#editor" description="Direct link to article header"/>
+            </H1>
 
             <P>"Embed a simple WYSIWYG editor into your app."</P>
 
@@ -44,5 +47,11 @@ pub fn PageTiptapEditor() -> impl IntoView {
                 TiptapContent::Html(content) | TiptapContent::Json(content) => set_value.set(content),
             }/>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Editor", link: "#editor" },
+            ]
+        }/>
     }
 }

@@ -1,14 +1,17 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageAlert() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Alerts"</H1>
+            <H1 id="alert" class="anchor">
+                "Alert"
+                <AnchorLink href="#alert" description="Direct link to article header"/>
+            </H1>
 
             <Code>
                 {indoc!(r#"
@@ -39,7 +42,10 @@ pub fn PageAlert() -> impl IntoView {
                 <AlertContent slot>"There was an error!"</AlertContent>
             </Alert>
 
-            <H2>"Customization"</H2>
+            <H2 id="customization" class="anchor">
+                "Customization"
+                <AnchorLink href="#customization" description="Direct link to section: Customization"/>
+            </H2>
 
             <Ul>
                 <Li slot>"The "<Code inline=true>"default_icon_slot"</Code> " can be specified to change the default position of the icon. Slot `None` will lead to no icon being rendered."</Li>
@@ -100,7 +106,10 @@ pub fn PageAlert() -> impl IntoView {
                 <AlertContent slot>"This is dangerous!"</AlertContent>
             </Alert>
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -123,5 +132,13 @@ pub fn PageAlert() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Alert", link: "#alert" },
+                Toc::Leaf { title: "Customization", link: "#customization" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

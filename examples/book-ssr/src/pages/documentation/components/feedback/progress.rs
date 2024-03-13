@@ -1,8 +1,8 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageProgress() -> impl IntoView {
@@ -10,7 +10,10 @@ pub fn PageProgress() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Progress"</H1>
+            <H1 id="progress" class="anchor">
+                "Progress"
+                <AnchorLink href="#progress" description="Direct link to article header"/>
+            </H1>
 
             <P>
                 "Display how much work of an operation is already completed using the "<Code inline=true>"<ProgressBar>"</Code>" component."
@@ -42,7 +45,10 @@ pub fn PageProgress() -> impl IntoView {
                 step=0.01
             />
 
-            <H2>"Indeterminate state"</H2>
+            <H2 id="indeterminate-state" class="anchor">
+                "Indeterminate state"
+                <AnchorLink href="#indeterminate-state" description="Direct link to section: Indeterminate state"/>
+            </H2>
 
             <P>
                 "As you have probably spotted in the above example, progress is stored as "<Code inline=true>"Option<T>"</Code>". "
@@ -59,7 +65,10 @@ pub fn PageProgress() -> impl IntoView {
 
             <ProgressBar progress=create_signal(None).0 />
 
-            <H2>"Styling"</H2>
+            <H2 id="styling" class="anchor">
+                "Styling"
+                <AnchorLink href="#styling" description="Direct link to section: Styling"/>
+            </H2>
 
             <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
 
@@ -76,5 +85,13 @@ pub fn PageProgress() -> impl IntoView {
                 ")}
             </Code>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Progress", link: "#progress" },
+                Toc::Leaf { title: "Indeterminate state", link: "#indeterminate-state" },
+                Toc::Leaf { title: "Styling", link: "#styling" },
+            ]
+        }/>
     }
 }

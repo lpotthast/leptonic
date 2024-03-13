@@ -1,14 +1,17 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
 use leptos::*;
 
-use crate::pages::documentation::article::Article;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageGrid() -> impl IntoView {
     view! {
         <Article>
-            <H1>"Grid"</H1>
+            <H1 id="grid" class="anchor">
+                "Grid"
+                <AnchorLink href="#grid" description="Direct link to article header"/>
+            </H1>
 
             <Code>
                 {indoc!(r#"
@@ -64,5 +67,11 @@ pub fn PageGrid() -> impl IntoView {
                 </Row>
             </Grid>
         </Article>
+
+        <Toc toc=Toc::List {
+            inner: vec![
+                Toc::Leaf { title: "Grid", link: "#grid" },
+            ]
+        }/>
     }
 }
