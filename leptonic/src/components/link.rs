@@ -43,6 +43,7 @@ where
     let UsePressReturn { is_pressed: _, props } = use_press(UsePressInput {
         // Links cannot be disabled (for now).
         disabled: false.into(),
+        force_prevent_default: false,
         on_press: Callback::new(move |e| {
             if let Some(on_press) = on_press {
                 on_press.call((e, el));

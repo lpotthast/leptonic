@@ -50,6 +50,10 @@ pub struct UsePressInput {
     /// Wether the targeted element is currently disabled.
     pub disabled: MaybeSignal<bool>,
 
+    /// Set this to true if you want controlled press behavior
+    /// with the guarantee of no browser-specific behavior happening on user interactions.
+    pub force_prevent_default: bool,
+
     pub on_press: Callback<PressEvent>,
     pub on_press_up: Option<Callback<PressEvent>>,
     pub on_press_start: Option<Callback<PressEvent>>,
@@ -337,7 +341,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             return;
         }
 
-        if input.disabled.get_untracked() {
+        if input.disabled.get_untracked() || input.force_prevent_default {
             e.prevent_default();
         }
         e.stop_propagation();
@@ -375,6 +379,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             if let Some(s) = s.as_ref() {
                 trigger_press_end(s, EventRef::Pointer(&e));
 
+                if input.force_prevent_default {
+                    e.prevent_default();
+                }
                 e.stop_propagation();
 
                 let is_over_target = e

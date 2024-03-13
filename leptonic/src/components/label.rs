@@ -22,6 +22,7 @@ pub fn Label(
         props,
     } = use_press(UsePressInput {
         disabled: disabled.0.unwrap_or(false.into()),
+        force_prevent_default: false,
         on_press: Callback::new(move |_| {
             if let Some(fc_ctx) = &fc_ctx {
                 fc_ctx.input.with_untracked(move |input| match input {

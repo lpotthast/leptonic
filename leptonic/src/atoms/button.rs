@@ -40,6 +40,7 @@ pub fn Button(
         aria_expanded: aria_expanded.or_default(),
         use_press_input: UsePressInput {
             disabled: disabled.or(false),
+            force_prevent_default: false,
             on_press: Callback::new(move |e| match on_press {
                 Some(on_press) => Callback::call(&on_press, e),
                 None => {}
@@ -120,6 +121,7 @@ where
         aria_expanded: aria_expanded.or_default(),
         use_press_input: UsePressInput {
             disabled: disabled.or(false),
+            force_prevent_default: false,
             on_press: Callback::new(move |_e| {}),
             on_press_up: None,
             on_press_start: None,

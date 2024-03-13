@@ -1,5 +1,4 @@
 pub mod alert;
-pub mod anchor;
 pub mod app_bar;
 pub mod r#box;
 pub mod button;
@@ -52,7 +51,6 @@ pub mod prelude {
     pub use super::alert::AlertPrepend;
     pub use super::alert::AlertTitle;
     pub use super::alert::AlertVariant;
-    pub use super::anchor::AnchorLink;
     pub use super::app_bar::AppBar;
     pub use super::button::Button;
     pub use super::button::ButtonColor;
