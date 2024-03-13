@@ -43,6 +43,7 @@
         "pointerleave",
         "pointermove",
         "pointerup",
+        "pressable",
         "quicksearch",
         "Quickstart",
         "radiogroup",
