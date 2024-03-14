@@ -281,8 +281,7 @@
     --input-padding: 0.75em 2em 0.75em 0.75em;
     --input-color: var(--std-text-bright);
     --input-background-color: #0f0f0f; // 202020
-    --input-border: none;
-    --input-border-bottom: 0.125em solid rgb(255 255 255 / 15%);
+    --input-border: 0.1em solid rgb(255 255 255 / 15%);
     --input-border-radius: 0.25em;
     --input-min-height: 2.75em;
     --input-focused-border-color: var(--brand-color);
@@ -351,7 +350,6 @@
     --select-selected-color: var(--input-color);
     --select-selected-background-color: var(--input-background-color);
     --select-selected-border: var(--input-border);
-    --select-selected-border-bottom: var(--input-border-bottom);
     --select-selected-border-radius: var(--input-border-radius);
     --select-selected-badge-color: var(--std-text-bright);
     --select-selected-badge-background-color: #12d4e7;
