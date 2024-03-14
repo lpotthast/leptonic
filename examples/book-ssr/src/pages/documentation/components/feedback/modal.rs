@@ -269,7 +269,7 @@ pub fn PageModal() -> impl IntoView {
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "Modals", link: "#modals" },
+                Toc::Leaf { title: "Modal", link: "#modal" },
                 Toc::Leaf { title: "Stages", link: "#stages" },
                 Toc::Leaf { title: "React to user input", link: "#react-to-user-input" },
                 Toc::Leaf { title: "Escape", link: "#escape" },

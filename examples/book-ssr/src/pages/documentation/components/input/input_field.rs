@@ -10,6 +10,7 @@ pub fn PageInput() -> impl IntoView {
     let (text, set_text) = create_signal("text".to_owned());
     let (password, set_password) = create_signal("secret".to_owned());
     let (number, set_number) = create_signal(4.2);
+    let (unrestricted_number, set_unrestricted_number) = create_signal(4.2);
     let number_string = Signal::derive(move || format!("{:.1}", number.get()));
 
     let (placeholder_input, set_placeholder_input) = create_signal(String::new());
@@ -104,6 +105,11 @@ pub fn PageInput() -> impl IntoView {
                     }
                 "#)}
             </Code>
+
+            <NumberInput
+                get=unrestricted_number
+                set=set_unrestricted_number
+            />
 
             <NumberInput min=0.0 max=10.0 step=0.1
                 get=number
