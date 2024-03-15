@@ -12,7 +12,7 @@ use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
 #[component]
-pub fn PageOverlayButton() -> impl IntoView {
+pub fn PageUseOverlay() -> impl IntoView {
     let (selected_placement_x, set_selected_placement_x) = create_signal(PlacementX::Right);
     let (selected_placement_y, set_selected_placement_y) = create_signal(PlacementY::Above);
 

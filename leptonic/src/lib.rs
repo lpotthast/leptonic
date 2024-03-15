@@ -125,6 +125,9 @@ impl<T: IntoAttribute + Clone> IntoAttribute for OptMaybeSignal<T> {
     }
 }
 
+// Let's make some types of our public API more easily accessible.
+pub use crate::utils::scroll_behavior::ScrollBehavior;
+
 pub mod prelude {
     #[cfg(feature = "tiptap")]
     pub use leptos_tiptap::*;

@@ -17,7 +17,7 @@ pub enum Event {
 }
 
 #[component]
-pub fn PageHover() -> impl IntoView {
+pub fn PageUseHover() -> impl IntoView {
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = create_signal(false);
 

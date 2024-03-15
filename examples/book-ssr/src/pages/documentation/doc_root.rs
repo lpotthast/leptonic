@@ -43,11 +43,12 @@ use crate::pages::documentation::getting_started::changelog::PageChangelog;
 use crate::pages::documentation::getting_started::installation::PageInstallation;
 use crate::pages::documentation::getting_started::overview::PageOverview;
 use crate::pages::documentation::getting_started::themes::PageThemes;
+use crate::pages::documentation::hooks::anchor_link::PageUseAnchorLink;
 use crate::pages::documentation::hooks::button::PageUseButton;
-use crate::pages::documentation::hooks::hover::PageHover;
-use crate::pages::documentation::hooks::overlay::PageOverlayButton;
-use crate::pages::documentation::hooks::press::PagePress;
-use crate::pages::documentation::hooks::r#move::PageMove;
+use crate::pages::documentation::hooks::hover::PageUseHover;
+use crate::pages::documentation::hooks::overlay::PageUseOverlay;
+use crate::pages::documentation::hooks::press::PageUsePress;
+use crate::pages::documentation::hooks::r#move::PageUseMove;
 
 #[derive(Debug, Copy, Clone)]
 pub enum DocRoutes {
@@ -63,6 +64,7 @@ pub enum DocRoutes {
     UseHover,
     UseButton,
     UseOverlay,
+    UseAnchorLink,
 
     // Atoms
     AtomButton,
@@ -127,6 +129,7 @@ impl DocRoutes {
             Self::UseHover => "hooks/use-hover",
             Self::UseButton => "hooks/use-button",
             Self::UseOverlay => "hooks/use-overlay",
+            Self::UseAnchorLink => "hooks/use-anchor-link",
 
             Self::AtomButton => "atoms/button",
             Self::AtomPopover => "atoms/popover",
@@ -198,11 +201,12 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::Themes view=|| view! { <PageThemes/> }/>
             <Route path=DocRoutes::Changelog view=|| view! { <PageChangelog/> }/>
 
-            <Route path=DocRoutes::UsePress view=|| view! { <PagePress/> }/>
-            <Route path=DocRoutes::UseMove view=|| view! { <PageMove/> }/>
-            <Route path=DocRoutes::UseHover view=|| view! { <PageHover/> }/>
+            <Route path=DocRoutes::UsePress view=|| view! { <PageUsePress/> }/>
+            <Route path=DocRoutes::UseMove view=|| view! { <PageUseMove/> }/>
+            <Route path=DocRoutes::UseHover view=|| view! { <PageUseHover/> }/>
             <Route path=DocRoutes::UseButton view=|| view! { <PageUseButton/> }/>
-            <Route path=DocRoutes::UseOverlay view=|| view! { <PageOverlayButton/> }/>
+            <Route path=DocRoutes::UseOverlay view=|| view! { <PageUseOverlay/> }/>
+            <Route path=DocRoutes::UseAnchorLink view=|| view! { <PageUseAnchorLink/> }/>
 
             <Route path=DocRoutes::AtomButton view=|| view! { <PageAtomButton/> }/>
             <Route path=DocRoutes::AtomPopover view=|| view! { <PageAtomPopover/> }/>
@@ -286,6 +290,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=DocRoutes::UseHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
                 <Link href=DocRoutes::UseButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
                 <Link href=DocRoutes::UseOverlay class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
+                <Link href=DocRoutes::UseAnchorLink class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_anchor_link"</Link>
             </Stack>
         </DrawerSection>
 
@@ -375,7 +380,7 @@ pub fn DocLayout() -> impl IntoView {
             "margin-left: {}em; margin-right: {}em;",
             match app_layout_context.doc_drawer_closed.get() {
                 true => 0,
-                false => 15,
+                false => 16,
             },
             match app_layout_context.is_medium.get() {
                 true => 0,

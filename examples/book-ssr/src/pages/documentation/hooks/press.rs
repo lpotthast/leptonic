@@ -17,7 +17,7 @@ pub enum Event {
 }
 
 #[component]
-pub fn PagePress() -> impl IntoView {
+pub fn PageUsePress() -> impl IntoView {
     let (count, set_count) = create_signal(0);
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = create_signal(false);

@@ -21,7 +21,7 @@ pub enum Event {
 }
 
 #[component]
-pub fn PageMove() -> impl IntoView {
+pub fn PageUseMove() -> impl IntoView {
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
     let (left, set_left) = create_signal(0.0);
     let (top, set_top) = create_signal(0.0);

@@ -5,6 +5,7 @@ pub mod locale;
 pub mod math;
 pub mod pointer_type;
 pub mod props;
+pub mod scroll_behavior;
 pub mod signals;
 pub mod time;
 

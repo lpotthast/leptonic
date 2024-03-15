@@ -1,8 +1,11 @@
 use leptos::*;
 
-use crate::hooks::{
-    anchor_link::{use_anchor_link, Href, UseAnchorLinkReturn},
-    prelude::{UseAnchorLinkInput, UsePressInput},
+use crate::{
+    hooks::{
+        anchor_link::{use_anchor_link, Href, UseAnchorLinkReturn},
+        prelude::{UseAnchorLinkInput, UsePressInput},
+    },
+    ScrollBehavior,
 };
 
 #[component]
@@ -11,8 +14,7 @@ pub fn AnchorLink(
     #[prop(into)]
     href: Oco<'static, str>,
 
-    #[prop(into, optional)]
-    scroll_behavior: Option<web_sys::ScrollBehavior>,
+    #[prop(into, optional)] scroll_behavior: Option<ScrollBehavior>,
 
     /// Description of this anchor for accessibility.
     /// If text is provided in children, this could be omitted.
@@ -33,7 +35,7 @@ pub fn AnchorLink(
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
     let UseAnchorLinkReturn { props } = use_anchor_link(UseAnchorLinkInput {
         href: Href::from_str(href).expect("valid href"),
-        scroll_behavior: scroll_behavior.or(Some(web_sys::ScrollBehavior::Smooth)),
+        scroll_behavior: scroll_behavior.or(Some(ScrollBehavior::default())),
         disabled: false.into(),
         description,
         use_press_input: UsePressInput {

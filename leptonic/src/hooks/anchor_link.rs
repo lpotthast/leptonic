@@ -5,7 +5,7 @@ use leptos_use::{use_document, use_window};
 use wasm_bindgen::JsValue;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent, ScrollIntoViewOptions};
 
-use crate::utils::{aria::*, props::Attributes, signals::MaybeSignalExt};
+use crate::utils::{aria::*, props::Attributes, signals::MaybeSignalExt, scroll_behavior::ScrollBehavior};
 
 use super::prelude::{use_press, UsePressInput};
 
@@ -28,7 +28,7 @@ pub struct UseAnchorLinkInput {
     pub href: Href,
 
     /// How the browser should scroll to the referenced anchor element. Doe not perform any scrolling when set to None.
-    pub scroll_behavior: Option<web_sys::ScrollBehavior>, // TODO: Use custom ScrollBehavior enum?
+    pub scroll_behavior: Option<ScrollBehavior>,
 
     /// Wether the link is disabled.
     pub disabled: MaybeSignal<bool>,
@@ -91,7 +91,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
                     let el_id = href.0.replace('#', "");
                     if let Some(el) = document.get_element_by_id(el_id.as_str()) {
                         el.scroll_into_view_with_scroll_into_view_options(
-                            ScrollIntoViewOptions::new().behavior(scroll_behavior),
+                            ScrollIntoViewOptions::new().behavior(web_sys::ScrollBehavior::from(scroll_behavior)),
                         );
                     } else {
                         tracing::warn!("AnchorLink could not find anchor (element) with id '{el_id}'.")
