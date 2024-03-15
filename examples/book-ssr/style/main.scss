@@ -33,6 +33,7 @@ body {
     --book-menu-item-hover-color: var(--std-text-bright);
 
     --toc-border-color: #d3d3d3;
+    --toc-entry-hovered-background-color: #d3d3d3;
 }
 
 [data-theme="dark"] {
@@ -40,10 +41,10 @@ body {
 
     --brand-color: #e66956;
 
-    --app-bar-background-color: #121212;
+    --app-bar-background-color: #141414;
     --app-bar-box-shadow: 1px 0px 15px 0px #0a0a0a;
 
-    --box-background-color: #121212;
+    --box-background-color: #141414;
 
     --drawer-background-color: none;
     --drawer-box-shadow: none;
@@ -55,6 +56,7 @@ body {
     --book-menu-item-hover-color: var(--std-text-bright);
 
     --toc-border-color: #222222;
+    --toc-entry-hovered-background-color: #222222;
 }
 
 .anchor {
@@ -285,7 +287,8 @@ body {
             border-radius: 0.25em;
 
             &:hover {
-                background-color: #3e3434;
+                color: var(--brand-color);
+                background-color: var(--toc-entry-hovered-background-color);
             }
         }
     }
