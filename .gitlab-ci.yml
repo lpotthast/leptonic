@@ -4,13 +4,13 @@ stages:
   - deploy
 
 variables:
-  CARGO_HOME: "${CI_PROJECT_DIR}/cargo"
+  CARGO_HOME: "${CI_PROJECT_DIR}/cargo" # Move cargo data into the project directory so it can be cached!
   RULES_CHANGES_PATH: "**/*"
   RULES_ONLY: "ALL"
   GIT_SUBMODULE_STRATEGY: recursive
 
 .deploy-configuration: &deploy_configuration
-  image: registry.gitlab.com/lukaspotthast/docker-images/nomad-deployment:latest
+  image: registry.gitlab.com/lukaspotthast/docker-images/nomad-deployment:1.6.3
   before_script:
     - export NOMAD_ADDR=${NOMAD_ADDR}
     - export NOMAD_CACERT=${NOMAD_CA_PEM}
@@ -82,7 +82,6 @@ book-build-and-package:
     - image="${CI_REGISTRY_IMAGE}/leptonic-book"
     - tag="${CI_COMMIT_SHA}"
     - docker pull "${image}:latest" || true
-    - echo "Finalizing Dockerfile"
     - cat "${LEPTONIC_DEV_CERT_PEM_FILE}" > "certs/ssl_cert.pem"
     - cat "${LEPTONIC_DEV_KEY_PEM_FILE}" > "certs/ssl_key.pem"
     - echo "Building docker image '${image}:${tag}'"
