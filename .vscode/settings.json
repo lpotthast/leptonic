@@ -6,6 +6,7 @@
         "darkgrey",
         "datetime",
         "Deque",
+        "dind",
         "dotenv",
         "dotenvy",
         "fileserv",
