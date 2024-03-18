@@ -3,6 +3,7 @@ pub mod button;
 pub mod calendar;
 pub mod focus;
 pub mod hover;
+pub mod menu;
 pub mod r#move;
 pub mod overlay;
 pub mod popover;
