@@ -7,6 +7,7 @@ pub mod button;
 pub mod button_group;
 pub mod hoverable;
 pub mod link;
+pub mod press;
 pub mod popover;
 
 pub mod prelude {

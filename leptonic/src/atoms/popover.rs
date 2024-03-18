@@ -12,7 +12,7 @@ use leptos::*;
 pub struct PopoverContext {
     pub state: ReadSignal<bool>,
     pub set_state: WriteSignal<bool>,
-    
+
     id: Oco<'static, str>,
     overlay_props: UseOverlayProps, // TODO: Rc?
     trigger_el: ReadSignal<Option<NodeRef<html::Custom>>>,

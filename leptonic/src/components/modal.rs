@@ -3,7 +3,10 @@ use std::rc::Rc;
 use uuid::Uuid;
 
 use crate::{
-    hooks::scroll::{use_prevent_scroll, UsePreventScrollInput},
+    hooks::{
+        prelude::{use_press, UsePressInput, UsePressReturn},
+        scroll::{use_prevent_scroll, UsePreventScrollInput},
+    },
     prelude::{GlobalKeyboardEvent, Producer},
     OptMaybeSignal,
 };
@@ -12,6 +15,7 @@ use crate::{
 struct ShownModalData {
     key: Uuid,
     children: ChildrenFn,
+    on_backdrop_interaction: Option<Producer<()>>,
 }
 
 #[derive(Copy, Clone)]
@@ -65,11 +69,34 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
         disabled: disable_prevent_scroll.into(),
     });
 
+    let UsePressReturn {
+        props,
+        is_pressed: _,
+    } = use_press(UsePressInput {
+        disabled: false.into(),
+        force_prevent_default: true,
+        on_press: Callback::new(move |_| {
+            if let Some(modal_on_top) = shown_modals.get_untracked().into_iter().rev().next() {
+                if let Some(on_backdrop_interaction) = modal_on_top.on_backdrop_interaction {
+                    on_backdrop_interaction.call(());
+                }
+            }
+        }),
+        on_press_up: None,
+        on_press_start: None,
+        on_press_end: None,
+    });
+
     view! {
         { children() }
 
         <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
-            <leptonic-modal-backdrop />
+            <leptonic-modal-backdrop
+                {..props.attrs}
+                on:keydown=props.on_key_down
+                on:click=props.on_click
+                on:pointerdown=props.on_pointer_down
+            />
 
             <leptonic-modals>
                 <For
@@ -88,6 +115,7 @@ pub fn Modal(
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] class: Option<String>,
     #[prop(into, optional)] on_escape: Option<Producer<()>>,
+    #[prop(into, optional)] on_backdrop_interaction: Option<Producer<()>>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<ModalRootContext>();
@@ -123,6 +151,7 @@ pub fn Modal(
         true => ctx.push_shown(ShownModalData {
             key,
             children: modal.clone(),
+            on_backdrop_interaction,
         }),
         false => {
             ctx.remove_shown(key);

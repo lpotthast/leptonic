@@ -1,6 +1,9 @@
 use leptos::View;
-use leptos_reactive::{Callable, Callback};
+use leptos_reactive::Callable;
 use std::fmt::{Debug, Formatter};
+
+#[cfg(not(feature = "nightly"))]
+use leptos::Callback;
 
 /// A callback.
 /// Use `Consumer<In, Out>` when you would otherwise write `Callback<In, Out>`.

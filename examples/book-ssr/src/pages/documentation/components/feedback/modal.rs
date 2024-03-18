@@ -52,7 +52,11 @@ pub fn PageModal() -> impl IntoView {
 
             <P><Button on_press=move |_| set_show_simple_modal.set(true)>"Show simple modal"</Button></P>
 
-            <Modal show_when=show_simple_modal on_escape=move || set_show_simple_modal.set(false)>
+            <Modal
+                show_when=show_simple_modal
+                on_escape=move || set_show_simple_modal.set(false)
+                on_backdrop_interaction=move || set_show_simple_modal.set(false)
+            >
                 <ModalHeader><ModalTitle>"Hello"</ModalTitle></ModalHeader>
                 <ModalBody>"This ia a simple modal."</ModalBody>
                 <ModalFooter>
@@ -103,7 +107,11 @@ pub fn PageModal() -> impl IntoView {
 
             <P><Button on_press=move |_| set_show_staged_modal1.set(true)>"Show staged modal"</Button></P>
 
-            <Modal show_when=show_staged_modal1 on_escape=escape_staged_modal1>
+            <Modal
+                show_when=show_staged_modal1
+                on_escape=escape_staged_modal1
+                on_backdrop_interaction=escape_staged_modal1
+            >
                 <ModalHeader><ModalTitle>"Sure?"</ModalTitle></ModalHeader>
                 <ModalBody>"This ia a test modal."</ModalBody>
                 <ModalFooter>
@@ -114,7 +122,11 @@ pub fn PageModal() -> impl IntoView {
                 </ModalFooter>
             </Modal>
 
-            <Modal show_when=show_staged_modal2 on_escape=escape_staged_modal2>
+            <Modal
+                show_when=show_staged_modal2
+                on_escape=escape_staged_modal2
+                on_backdrop_interaction=escape_staged_modal2
+            >
                 <ModalHeader><ModalTitle>"Next one"</ModalTitle></ModalHeader>
                 <ModalBody>"This overlays..."</ModalBody>
                 <ModalFooter>
@@ -208,8 +220,8 @@ pub fn PageModal() -> impl IntoView {
             />
 
             <H2 id="escape" class="anchor">
-                "Escape"
-                <AnchorLink href="#escape" description="Direct link to section: Escape"/>
+                "Handling escape and backdrop interactions "
+                <AnchorLink href="#escape" description="Direct link to section: Escape and backdrop interactions"/>
             </H2>
 
             <P>"Closing a modal through a press on " <KbdKey key=Key::Escape/> " or closing it through a click outside its rendered content can be considered \"commonly expected behavior\" of modals."</P>
@@ -228,12 +240,22 @@ pub fn PageModal() -> impl IntoView {
             </P>
 
             <P>
+                "The " <Code inline=true>"Modal"</Code> "'s " <Code inline=true>"on_backdrop_interaction"</Code> " callback property allows you to handle user interactions with the backdrop. "
+                "In the current implementation, pressing the backdrop triggers the callback. "
+                "This gives you explicit control over the effect this should have."
+            </P>
+
+            <P>
                 "We snuck this in for all example modals (even the staged one). For our first example, it simply looks like this."
             </P>
 
             <Code>
                 {indoc!(r#"
-                    <Modal show_when=show_simple_modal on_escape=move || set_show_simple_modal.set(false)>
+                    <Modal
+                        show_when=show_simple_modal
+                        on_escape=move || set_show_simple_modal.set(false)
+                        on_backdrop_interaction=move || set_show_simple_modal.set(false)
+                    >
                         <ModalHeader><ModalTitle>"Hello"</ModalTitle></ModalHeader>
                         <ModalBody>"This ia a simple modal."</ModalBody>
                         <ModalFooter>
