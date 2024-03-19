@@ -1,13 +1,16 @@
 use educe::Educe;
-use leptos_reactive::{MaybeSignal, Oco};
 use leptos::{html::ElementDescriptor, Attribute, IntoAttribute, NodeRef};
+use leptos_reactive::{MaybeSignal, Oco};
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::{aria::*, props::Attributes, signals::MaybeSignalExt};
 
 use super::{
-    focus::{use_focus, UseFocusInput},
-    prelude::{use_hover, use_press, UseHoverInput, UsePressInput},
+    focus::use_focus::{use_focus, UseFocusInput},
+    interactions::{
+        use_hover::{use_hover, UseHoverInput},
+        use_press::{use_press, UsePressInput},
+    },
 };
 
 #[derive(Clone, Copy, Educe)]

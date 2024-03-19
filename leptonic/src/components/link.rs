@@ -1,7 +1,10 @@
 use leptos::*;
 use leptos_router::*;
 
-use crate::{hooks::{prelude::{use_press, UsePressInput, UsePressReturn}, press::PressEvent}, OptMaybeSignal};
+use crate::{
+    hooks::{use_press, PressEvent, UsePressInput, UsePressReturn},
+    OptMaybeSignal,
+};
 
 #[component]
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
@@ -40,7 +43,10 @@ where
 
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
-    let UsePressReturn { is_pressed: _, props } = use_press(UsePressInput {
+    let UsePressReturn {
+        is_pressed: _,
+        props,
+    } = use_press(UsePressInput {
         // Links cannot be disabled (for now).
         disabled: false.into(),
         force_prevent_default: false,

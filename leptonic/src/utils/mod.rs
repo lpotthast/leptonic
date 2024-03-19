@@ -7,6 +7,7 @@ pub mod pointer_type;
 pub mod props;
 pub mod scroll_behavior;
 pub mod signals;
+pub(crate) mod text_selection;
 pub mod time;
 
 pub(crate) enum DomContainer {
@@ -30,6 +31,8 @@ pub(crate) trait ElementExt {
     fn is_link(&self) -> bool;
     fn has_link_role(&self) -> bool;
     fn is_anchor_link(&self) -> bool;
+    fn disable_text_selection(&self);
+    fn restore_text_selection(&self);
 }
 
 impl ElementExt for web_sys::Element {
@@ -46,6 +49,14 @@ impl ElementExt for web_sys::Element {
     /// True for any element of type `<a href=[...]>`.
     fn is_anchor_link(&self) -> bool {
         self.tag_name().as_str() == "A" && self.has_attribute("href")
+    }
+
+    fn disable_text_selection(&self) {
+        text_selection::disable_text_selection(self);
+    }
+
+    fn restore_text_selection(&self) {
+        text_selection::restore_text_selection(self);
     }
 }
 

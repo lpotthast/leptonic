@@ -3,10 +3,7 @@ use leptos::{
     *,
 };
 
-use crate::hooks::{
-    hover::{HoverEndEvent, HoverStartEvent},
-    prelude::{use_hover, UseHoverInput, UseHoverReturn},
-};
+use crate::hooks::{use_hover, HoverEndEvent, HoverStartEvent, UseHoverInput, UseHoverReturn};
 
 #[component]
 pub fn Hoverable(

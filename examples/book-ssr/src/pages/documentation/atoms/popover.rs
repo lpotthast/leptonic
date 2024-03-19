@@ -4,7 +4,7 @@ use leptonic::atoms::hoverable::Hoverable;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger};
 use leptonic::components::typography::{Code, H1, P};
-use leptonic::hooks::overlay::{PlacementX, PlacementY};
+use leptonic::hooks::{PlacementX, PlacementY};
 use leptonic::utils::locale::WritingDirection;
 use leptos::*;
 

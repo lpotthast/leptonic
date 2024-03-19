@@ -14,8 +14,6 @@ use crate::utils::{
     EventExt, EventModifiers, EventTargetExt, Modifiers,
 };
 
-use super::{disable_text_selection, restore_text_selection};
-
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
 
 #[derive(Debug)]
@@ -395,7 +393,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
                 if let Some(target) = e.target() {
                     if let Some(target) = target.as_element() {
-                        restore_text_selection(target);
+                        target.restore_text_selection();
                     }
                 }
                 s.cleanup_event_handlers();
@@ -411,7 +409,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 trigger_press_end(s, EventRef::Pointer(&e));
                 if let Some(target) = e.target() {
                     if let Some(target) = target.as_element() {
-                        restore_text_selection(target);
+                        target.restore_text_selection();
                     }
                 }
                 s.cleanup_event_handlers();
@@ -440,7 +438,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
         if let Some(target) = target.as_ref() {
             if let Some(target) = target.as_element() {
-                disable_text_selection(target);
+                target.disable_text_selection();
             }
         }
 

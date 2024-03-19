@@ -2,62 +2,57 @@ pub mod anchor_link;
 pub mod button;
 pub mod calendar;
 pub mod focus;
-pub mod hover;
+pub mod interactions;
 pub mod menu;
-pub mod r#move;
 pub mod overlay;
 pub mod popover;
-pub mod press;
-pub mod scroll;
 pub mod tooltip;
 
-pub mod prelude {
-    pub use super::anchor_link::use_anchor_link;
-    pub use super::anchor_link::UseAnchorLinkInput;
-    pub use super::anchor_link::UseAnchorLinkReturn;
-    pub use super::button::use_button;
-    pub use super::button::UseButtonInput;
-    pub use super::button::UseButtonReturn;
-    pub use super::focus::use_focus;
-    pub use super::focus::UseFocusInput;
-    pub use super::focus::UseFocusReturn;
-    pub use super::hover::use_hover;
-    pub use super::hover::UseHoverInput;
-    pub use super::hover::UseHoverReturn;
-    pub use super::overlay::use_overlay;
-    pub use super::overlay::use_overlay_position;
-    pub use super::overlay::use_overlay_trigger;
-    pub use super::overlay::UseOverlayInput;
-    pub use super::overlay::UseOverlayPositionInput;
-    pub use super::overlay::UseOverlayPositionReturn;
-    pub use super::overlay::UseOverlayReturn;
-    pub use super::overlay::UseOverlayTriggerInput;
-    pub use super::overlay::UseOverlayTriggerReturn;
-    pub use super::press::use_press;
-    pub use super::press::UsePressInput;
-    pub use super::press::UsePressReturn;
-    pub use super::r#move::use_move;
-    pub use super::r#move::UseMoveInput;
-    pub use super::r#move::UseMoveReturn;
-}
-
-fn disable_text_selection(element: web_sys::Element) {
-    match element.set_attribute("data-disable-user-select", "true") {
-        Ok(_ok) => {}
-        Err(err) => {
-            tracing::warn!(?err, "Could not set 'data-disable-user-select' attribute.");
-        }
-    }
-}
-
-fn restore_text_selection(element: web_sys::Element) {
-    match element.remove_attribute("data-disable-user-select") {
-        Ok(_ok) => {}
-        Err(err) => {
-            tracing::warn!(
-                ?err,
-                "Could not remove 'data-disable-user-select' attribute."
-            );
-        }
-    }
-}
+pub use anchor_link::use_anchor_link;
+pub use anchor_link::UseAnchorLinkInput;
+pub use anchor_link::UseAnchorLinkProps;
+pub use anchor_link::UseAnchorLinkReturn;
+pub use button::use_button;
+pub use button::UseButtonInput;
+pub use button::UseButtonProps;
+pub use button::UseButtonReturn;
+pub use focus::use_focus::use_focus;
+pub use focus::use_focus::UseFocusInput;
+pub use focus::use_focus::UseFocusProps;
+pub use focus::use_focus::UseFocusReturn;
+pub use interactions::use_hover::use_hover;
+pub use interactions::use_hover::HoverEndEvent;
+pub use interactions::use_hover::HoverStartEvent;
+pub use interactions::use_hover::UseHoverInput;
+pub use interactions::use_hover::UseHoverProps;
+pub use interactions::use_hover::UseHoverReturn;
+pub use interactions::use_move::use_move;
+pub use interactions::use_move::MoveEndEvent;
+pub use interactions::use_move::MoveEvent;
+pub use interactions::use_move::MoveStartEvent;
+pub use interactions::use_move::UseMoveInput;
+pub use interactions::use_move::UseMoveProps;
+pub use interactions::use_move::UseMoveReturn;
+pub use interactions::use_press::use_press;
+pub use interactions::use_press::PressEvent;
+pub use interactions::use_press::UsePressInput;
+pub use interactions::use_press::UsePressProps;
+pub use interactions::use_press::UsePressReturn;
+pub use interactions::use_prevent_scroll::use_prevent_scroll;
+pub use interactions::use_prevent_scroll::UsePreventScrollInput;
+pub use interactions::use_prevent_scroll::UsePreventScrollProps;
+pub use interactions::use_prevent_scroll::UsePreventScrollReturn;
+pub use overlay::use_overlay::use_overlay;
+pub use overlay::use_overlay::UseOverlayInput;
+pub use overlay::use_overlay::UseOverlayProps;
+pub use overlay::use_overlay::UseOverlayReturn;
+pub use overlay::use_overlay_position::use_overlay_position;
+pub use overlay::use_overlay_position::PlacementX;
+pub use overlay::use_overlay_position::PlacementY;
+pub use overlay::use_overlay_position::UseOverlayPositionInput;
+pub use overlay::use_overlay_position::UseOverlayPositionProps;
+pub use overlay::use_overlay_position::UseOverlayPositionReturn;
+pub use overlay::use_overlay_trigger::use_overlay_trigger;
+pub use overlay::use_overlay_trigger::UseOverlayTriggerInput;
+pub use overlay::use_overlay_trigger::UseOverlayTriggerProps;
+pub use overlay::use_overlay_trigger::UseOverlayTriggerReturn;

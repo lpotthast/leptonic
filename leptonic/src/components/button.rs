@@ -9,8 +9,8 @@ use leptos_router::{State, ToHref};
 use crate::{
     atoms,
     hooks::{
-        hover::{HoverEndEvent, HoverStartEvent},
-        press::PressEvent,
+        interactions::use_hover::{HoverEndEvent, HoverStartEvent},
+        interactions::use_press::PressEvent,
     },
     utils::aria::{AriaExpanded, AriaHasPopup},
     OptMaybeSignal,

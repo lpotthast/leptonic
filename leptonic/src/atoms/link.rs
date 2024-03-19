@@ -2,8 +2,7 @@ use leptos::*;
 
 use crate::{
     hooks::{
-        anchor_link::{use_anchor_link, Href, UseAnchorLinkReturn},
-        prelude::{UseAnchorLinkInput, UsePressInput},
+        anchor_link::Href, use_anchor_link, UseAnchorLinkInput, UseAnchorLinkReturn, UsePressInput,
     },
     ScrollBehavior,
 };

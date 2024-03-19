@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::anchor_link::Href;
-use leptonic::hooks::prelude::*;
+use leptonic::hooks::*;
 use leptonic::ScrollBehavior;
 use leptos::*;
 

@@ -4,8 +4,7 @@ use leptonic::components::prelude::*;
 use leptonic::contexts::global_pointer_event::{
     GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent, GlobalPointerUpEvent,
 };
-use leptonic::hooks::prelude::*;
-use leptonic::hooks::r#move::{MoveEndEvent, MoveEvent, MoveStartEvent};
+use leptonic::hooks::*;
 use leptos::*;
 use leptos_use::use_element_bounding;
 use ringbuf::{HeapRb, Rb};

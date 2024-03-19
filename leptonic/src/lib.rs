@@ -11,21 +11,6 @@ pub mod hooks;
 pub mod utils;
 
 #[derive(Debug, Clone)]
-pub struct OptionalSignal<T: 'static>(Option<Signal<T>>);
-
-impl<T> Default for OptionalSignal<T> {
-    fn default() -> Self {
-        Self(None)
-    }
-}
-
-impl<T: 'static, I: Into<Signal<T>>> From<I> for OptionalSignal<T> {
-    fn from(value: I) -> Self {
-        Self(Some(value.into()))
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct OptMaybeSignal<T: 'static>(Option<MaybeSignal<T>>);
 
 impl<T: Clone> OptMaybeSignal<T> {
@@ -149,7 +134,6 @@ pub mod prelude {
     pub use super::Mount;
     pub use super::OptMaybeSignal;
     pub use super::OptionDeref;
-    pub use super::OptionalSignal;
     pub use super::Out;
     pub use super::Size;
     pub use super::Width;

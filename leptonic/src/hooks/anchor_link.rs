@@ -5,9 +5,11 @@ use leptos_use::{use_document, use_window};
 use wasm_bindgen::JsValue;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent, ScrollIntoViewOptions};
 
-use crate::utils::{aria::*, props::Attributes, signals::MaybeSignalExt, scroll_behavior::ScrollBehavior};
+use crate::utils::{
+    aria::*, props::Attributes, scroll_behavior::ScrollBehavior, signals::MaybeSignalExt,
+};
 
-use super::prelude::{use_press, UsePressInput};
+use super::{use_press, UsePressInput};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Href(Oco<'static, str>);
@@ -91,10 +93,13 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
                     let el_id = href.0.replace('#', "");
                     if let Some(el) = document.get_element_by_id(el_id.as_str()) {
                         el.scroll_into_view_with_scroll_into_view_options(
-                            ScrollIntoViewOptions::new().behavior(web_sys::ScrollBehavior::from(scroll_behavior)),
+                            ScrollIntoViewOptions::new()
+                                .behavior(web_sys::ScrollBehavior::from(scroll_behavior)),
                         );
                     } else {
-                        tracing::warn!("AnchorLink could not find anchor (element) with id '{el_id}'.")
+                        tracing::warn!(
+                            "AnchorLink could not find anchor (element) with id '{el_id}'."
+                        )
                     }
                 }
             }

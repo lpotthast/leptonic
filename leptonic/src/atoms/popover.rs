@@ -1,5 +1,5 @@
 use crate::{
-    hooks::overlay::{
+    hooks::{
         use_overlay, use_overlay_position, use_overlay_trigger, PlacementX, PlacementY,
         UseOverlayInput, UseOverlayPositionInput, UseOverlayPositionReturn, UseOverlayProps,
         UseOverlayReturn, UseOverlayTriggerInput, UseOverlayTriggerReturn,

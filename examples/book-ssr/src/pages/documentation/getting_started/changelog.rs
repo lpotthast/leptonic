@@ -18,6 +18,12 @@ pub fn PageChangelog() -> impl IntoView {
                 <AnchorLink href="#v0.6.0" description="Direct link to section: v0.6.0"/>
             </H2>
 
+            <H3>"Overview"</H3>
+
+            <P>
+                ""
+            </P>
+
             <H3>"Added:"</H3>
             <ul>
                 <li>"`Checkbox` component, styling and documentation."</li>
@@ -32,6 +38,7 @@ pub fn PageChangelog() -> impl IntoView {
             <H3>"Removed:"</H3>
             <ul>
                 <li>"Buttons no longer support `variations`. They resulted in non compliant code."</li>
+                <li>"The `OptionalSignal` prop type, which was never used in our public API. You may want to use `OptMaybeSignal` instead."</li>
             </ul>
 
             <H2 id="v0.5.0" class="anchor">
@@ -226,7 +233,7 @@ pub fn PageChangelog() -> impl IntoView {
                 <li>"Transition components and styles"</li>
             </ul>
         </Article>
-        
+
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "Changelog", link: "#changelog" },
