@@ -2,11 +2,8 @@ use leptos::*;
 use leptos_router::AProps;
 
 use crate::{
-    hooks::{
-        use_button, HoverEndEvent, HoverStartEvent, PressEvent, UseButtonInput, UseButtonReturn,
-        UseFocusInput, UseHoverInput, UsePressInput,
-    },
-    utils::aria::{AriaExpanded, AriaHasPopup},
+    hooks::*,
+    utils::{aria::{AriaExpanded, AriaHasPopup}, attributes::Attributes},
     OptMaybeSignal,
 };
 
@@ -30,7 +27,7 @@ pub fn Button(
 ) -> impl IntoView {
     let el: NodeRef<html::Button> = create_node_ref();
 
-    let UseButtonReturn { props } = use_button(UseButtonInput {
+    let btn = use_button(UseButtonInput {
         node_ref: el,
         disabled: disabled.or(false),
         aria_haspopup: aria_haspopup.or_default(),
@@ -59,22 +56,17 @@ pub fn Button(
         },
     });
 
+    let attributes = btn.props.attrs.merge(attributes);
+
     view! {
         <button
-            {..props.attrs}
-            {..attributes}
-            node_ref=el
             id=id
             class=class
             class:leptonic-btn=true
             style=style
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
-            on:pointerenter=props.on_pointer_enter
-            on:pointerleave=props.on_pointer_leave
-            on:focus=props.on_focus
-            on:blur=props.on_blur
+            node_ref=el
+            use:attrs=attributes
+            use:handlers=btn.props.handlers
         >
             { children() }
         </button>
@@ -111,7 +103,7 @@ pub fn LinkButton<H>(
 where
     H: leptos_router::ToHref + 'static,
 {
-    let UseButtonReturn { mut props } = use_button(UseButtonInput {
+    let UseButtonReturn { props } = use_button(UseButtonInput {
         node_ref: NodeRef::<html::Custom>::new(),
         disabled: disabled.or(false),
         aria_haspopup: aria_haspopup.or_default(),
@@ -137,9 +129,9 @@ where
         },
     });
 
-    props.attrs.merge(attributes);
+    let mut attrs = props.attrs.merge(attributes);
     if let Some(style) = style {
-        props.attrs.insert("style", style.into_attribute_boxed());
+        attrs = attrs.insert("style", style.into_attribute_boxed());
     }
 
     let default_class = "leptonic-btn";
@@ -163,15 +155,11 @@ where
         replace,
         class,
         id,
-        attributes: props.attrs.map.into_iter().collect::<Vec<_>>(),
+        attributes: attrs.map.into_iter().collect::<Vec<_>>(),
         children,
     })
     .into_view()
-    .on(ev::keydown, props.on_key_down)
-    .on(ev::click, props.on_click)
-    .on(ev::pointerdown, props.on_pointer_down)
-    .on(ev::focus, props.on_focus)
-    .on(ev::blur, props.on_blur)
+    .directive(handlers, props.handlers)
 }
 
 #[component]

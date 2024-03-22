@@ -1,10 +1,7 @@
 use leptos::*;
 use leptos_router::*;
 
-use crate::{
-    hooks::{use_press, PressEvent, UsePressInput, UsePressReturn},
-    OptMaybeSignal,
-};
+use crate::{hooks::*, OptMaybeSignal};
 
 #[component]
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
@@ -62,10 +59,8 @@ where
 
     view! {
         <leptonic-link
-            {..props.attrs}
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
+            //use:attrs=props.attrs
+            //use:handlers=props.handlers
             _ref=el
             id=id
             class=class

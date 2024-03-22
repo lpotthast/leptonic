@@ -3,10 +3,11 @@ use leptos::{Attribute, Callable, Callback, IntoAttribute, SignalGet};
 use leptos_reactive::{MaybeSignal, Oco};
 use leptos_use::{use_document, use_window};
 use wasm_bindgen::JsValue;
-use web_sys::{KeyboardEvent, MouseEvent, PointerEvent, ScrollIntoViewOptions};
+use web_sys::ScrollIntoViewOptions;
 
 use crate::utils::{
-    aria::*, props::Attributes, scroll_behavior::ScrollBehavior, signals::MaybeSignalExt,
+    aria::*, attributes::Attributes, event_handlers::EventHandlers,
+    scroll_behavior::ScrollBehavior, signals::MaybeSignalExt,
 };
 
 use super::{use_press, UsePressInput};
@@ -54,17 +55,10 @@ pub struct UseAnchorLinkReturn {
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct UseAnchorLinkProps {
+    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
     pub attrs: Attributes,
-
-    /// This handler must be attached to the target element: `<foo on:keydown=on_key_down />`
-    #[educe(Debug(ignore))]
-    pub on_key_down: Box<dyn Fn(KeyboardEvent)>,
-    /// This handler must be attached to the target element: `<foo on:click=on_click />`
-    #[educe(Debug(ignore))]
-    pub on_click: Box<dyn Fn(MouseEvent)>,
-    /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
-    #[educe(Debug(ignore))]
-    pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
+    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    pub handlers: EventHandlers,
 }
 
 // TODO: Add proper focus behavior!
@@ -111,11 +105,11 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
     let press = use_press(press_input);
 
     let href: Href = input.href;
-    let mut attrs = Attributes::new();
-    attrs.insert("role", AriaRole::Link);
-    attrs.insert("href", Attribute::String(href.0));
+    let mut attrs = Attributes::new()
+        .insert("role", AriaRole::Link)
+        .insert("href", Attribute::String(href.0));
     if let Some(description) = input.description {
-        attrs.insert("aria-label", Attribute::String(description));
+        attrs = attrs.insert("aria-label", Attribute::String(description)); // TODO: Use aria-description instead?
     }
     /*attrs.insert(
         "tabindex",
@@ -128,31 +122,23 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             .into_attribute(),
     );
     attrs.insert("disabled", input.disabled.into_attribute());*/
-    attrs.insert(
-        "aria-disabled",
-        input
-            .disabled
-            .map(|it| match it {
-                true => "true",
-                false => "false",
-            })
-            .into_attribute(),
-    );
-
-    // Merge attributes
-    attrs.merge(press.props.attrs);
-
-    // Merge event handlers
-    let on_key_down = press.props.on_key_down;
-    let on_click = press.props.on_click;
-    let on_pointer_down = press.props.on_pointer_down;
+    attrs = attrs
+        .insert(
+            "aria-disabled",
+            input
+                .disabled
+                .map(|it| match it {
+                    true => "true",
+                    false => "false",
+                })
+                .into_attribute(),
+        )
+        .merge(press.props.attrs);
 
     UseAnchorLinkReturn {
         props: UseAnchorLinkProps {
             attrs,
-            on_key_down,
-            on_click,
-            on_pointer_down,
+            handlers: press.props.handlers,
         },
     }
 }

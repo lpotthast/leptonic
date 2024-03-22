@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::{cell::RefCell, rc::Rc};
 
 use educe::Educe;
 use leptos_reactive::{
@@ -10,8 +10,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::{
-    current_target_contains_target, pointer_type::PointerType, props::Attributes, ElementExt,
-    EventExt, EventModifiers, EventTargetExt, Modifiers,
+    attributes::Attributes, current_target_contains_target, event_handlers::EventHandlers,
+    pointer_type::PointerType, ElementExt, EventExt, EventModifiers, EventTargetExt, Modifiers,
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
@@ -24,7 +24,7 @@ pub enum PressEvents {
     Press(PressEvent),
 }
 
-#[derive(Educe)]
+#[derive(Educe, Clone)]
 #[educe(Debug)]
 pub struct PressEvent {
     /// The pointer type that triggered the press event.
@@ -40,12 +40,12 @@ pub struct PressEvent {
     /// In cases where a handler decides not to handle a specific event,
     /// it can call `continuePropagation()` to allow a parent to handle it.
     #[educe(Debug(ignore))]
-    pub continue_propagation: Box<dyn FnOnce()>,
+    pub continue_propagation: Rc<dyn Fn()>,
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct UsePressInput {
-    /// Wether the targeted element is currently disabled.
+    /// Wether presses on the element should be disabled.
     pub disabled: MaybeSignal<bool>,
 
     /// Set this to true if you want controlled press behavior
@@ -53,26 +53,17 @@ pub struct UsePressInput {
     pub force_prevent_default: bool,
 
     pub on_press: Callback<PressEvent>,
-    pub on_press_up: Option<Callback<PressEvent>>,
+    pub on_press_up: Option<Callback<PressEvent>>, // TODO: Call this
     pub on_press_start: Option<Callback<PressEvent>>,
     pub on_press_end: Option<Callback<PressEvent>>,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct UsePressProps {
-    /// These attributes must be spread onto the target element: `<foo {..attrs} />`
+    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
     pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_key_down: Box<dyn Fn(KeyboardEvent)>,
-
-    /// This handler must be attached to the target element: `<foo on:click=on_click />`
-    #[educe(Debug(ignore))]
-    pub on_click: Box<dyn Fn(MouseEvent)>,
-
-    #[educe(Debug(ignore))]
-    pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
+    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    pub handlers: EventHandlers,
 }
 
 #[derive(Debug)]
@@ -81,7 +72,7 @@ pub struct UsePressReturn {
     pub is_pressed: Signal<bool>,
 }
 
-enum EventHandlers {
+enum GlobalEventHandlers {
     PointerEvents {
         global_on_pointer_move_cleanup: Box<dyn Fn()>,
         global_on_pointer_up_cleanup: Box<dyn Fn()>,
@@ -98,13 +89,13 @@ struct PressState {
     target: Option<web_sys::EventTarget>,
     is_over_target: bool,
 
-    event_handlers: EventHandlers,
+    event_handlers: GlobalEventHandlers,
 }
 
 impl PressState {
     fn cleanup_event_handlers(&self) {
         match &self.event_handlers {
-            EventHandlers::PointerEvents {
+            GlobalEventHandlers::PointerEvents {
                 global_on_pointer_move_cleanup,
                 global_on_pointer_up_cleanup,
                 global_on_pointer_cancel_cleanup,
@@ -113,7 +104,7 @@ impl PressState {
                 global_on_pointer_up_cleanup();
                 global_on_pointer_cancel_cleanup();
             }
-            EventHandlers::KeyboardEvents {
+            GlobalEventHandlers::KeyboardEvents {
                 global_on_key_up_cleanup,
             } => {
                 global_on_key_up_cleanup();
@@ -122,11 +113,11 @@ impl PressState {
     }
 }
 
-fn use_continue_propagation() -> (RefCell<bool>, Box<dyn FnOnce()>) {
+fn use_continue_propagation() -> (RefCell<bool>, Rc<dyn Fn()>) {
     let continue_propagation_state = RefCell::new(false);
     let state_clone = continue_propagation_state.clone();
-    let continue_propagation = Box::new(move || {
-        state_clone.replace(false);
+    let continue_propagation = Rc::new(move || {
+        state_clone.replace(true);
     });
     (continue_propagation_state, continue_propagation)
 }
@@ -144,7 +135,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     let state = store_value::<Option<PressState>>(None);
 
-    let initialize_press_state = move |e: EventRef<'_>, event_handlers: EventHandlers| {
+    let initialize_press_state = move |e: EventRef<'_>, event_handlers: GlobalEventHandlers| {
         debug_assert_eq!(state.with_value(|s| s.is_none()), true, "Implicit cleanup ist not supported. Forgot to call cleanup() before initializing a new PressState?");
 
         state.set_value(Some(PressState {
@@ -290,7 +281,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     });
 
-    let on_key_down = Box::new(move |e: KeyboardEvent| {
+    let on_key_down = Rc::new(move |e: KeyboardEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
         {
@@ -314,7 +305,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         {
             initialize_press_state(
                 EventRef::Keyboard(&e),
-                EventHandlers::KeyboardEvents {
+                GlobalEventHandlers::KeyboardEvents {
                     global_on_key_up_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         leptos::ev::keyup,
@@ -331,7 +322,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     });
 
-    let on_click = Box::new(move |e: MouseEvent| {
+    let on_click = Rc::new(move |e: MouseEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
         {
@@ -346,7 +337,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     });
 
     // Reset press state.
-    let on_pointer_move = Box::new(move |e: PointerEvent| {
+    let on_pointer_move = Rc::new(move |e: PointerEvent| {
         // Re-emit a "start" event, when we have a state.
         // This means: The user already started an interaction but let the pointer leave the target and let it re-enter.
         state.update_value(|s| {
@@ -369,7 +360,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     });
 
     // Finish a press.
-    let on_pointer_up = Box::new(move |e: PointerEvent| {
+    let on_pointer_up = Rc::new(move |e: PointerEvent| {
         if !e.current_target_contains_target() {
             return;
         }
@@ -403,7 +394,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     });
 
     // Cancel the ongoing press.
-    let on_pointer_cancel = Box::new(move |e: PointerEvent| {
+    let on_pointer_cancel = Rc::new(move |e: PointerEvent| {
         state.with_value(|s| {
             if let Some(s) = s.as_ref() {
                 trigger_press_end(s, EventRef::Pointer(&e));
@@ -419,7 +410,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     });
 
     // Start a press.
-    let on_pointer_down = Box::new(move |e: PointerEvent| {
+    let on_pointer_down = Rc::new(move |e: PointerEvent| {
         if e.button() != 0 {
             return;
         }
@@ -445,21 +436,21 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if !input.disabled.get_untracked() {
             initialize_press_state(
                 EventRef::Pointer(&e),
-                EventHandlers::PointerEvents {
+                GlobalEventHandlers::PointerEvents {
                     global_on_pointer_move_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         leptos::ev::pointermove,
-                        on_pointer_move.clone(),
+                        *on_pointer_move,
                     )),
                     global_on_pointer_up_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         leptos::ev::pointerup,
-                        on_pointer_up.clone(),
+                        *on_pointer_up,
                     )),
                     global_on_pointer_cancel_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         leptos::ev::pointercancel,
-                        on_pointer_cancel.clone(),
+                        *on_pointer_cancel,
                     )),
                 },
             );
@@ -475,9 +466,11 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     UsePressReturn {
         props: UsePressProps {
             attrs,
-            on_key_down,
-            on_click,
-            on_pointer_down,
+            handlers: EventHandlers::builder()
+                .on_click(on_click)
+                .on_pointer_down(on_pointer_down)
+                .on_key_down(on_key_down)
+                .build(),
         },
         is_pressed: is_pressed.into(),
     }

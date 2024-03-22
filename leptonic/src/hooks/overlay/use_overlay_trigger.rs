@@ -8,7 +8,7 @@ use crate::{
     prelude::{AriaExpanded, AriaHasPopup},
     utils::{
         aria::{AriaAttribute, AriaControls, GenericAttribute},
-        props::Attributes,
+        attributes::Attributes,
     },
 };
 
@@ -64,19 +64,19 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
 
     let overlay_id = input.overlay_id;
 
-    let mut trigger_attrs = Attributes::new();
-    trigger_attrs.insert_entry(AriaAttribute::HasPopup(GenericAttribute::Static(
-        aria_has_popup,
-    )));
-    trigger_attrs.insert_entry(AriaAttribute::Expanded(GenericAttribute::Fn(Rc::new(
-        move || AriaExpanded::from(input.show.get()),
-    ))));
-    trigger_attrs.insert_entry(AriaAttribute::Controls(GenericAttribute::Fn(Rc::new(
-        move || match input.show.get() {
-            true => AriaControls::Id(vec![overlay_id.to_string()]),
-            false => AriaControls::Undefined,
-        },
-    ))));
+    let trigger_attrs = Attributes::new()
+        .insert_entry(AriaAttribute::HasPopup(GenericAttribute::Static(
+            aria_has_popup,
+        )))
+        .insert_entry(AriaAttribute::Expanded(GenericAttribute::Fn(Rc::new(
+            move || AriaExpanded::from(input.show.get()),
+        ))))
+        .insert_entry(AriaAttribute::Controls(GenericAttribute::Fn(Rc::new(
+            move || match input.show.get() {
+                true => AriaControls::Id(vec![overlay_id.to_string()]),
+                false => AriaControls::Undefined,
+            },
+        ))));
 
     UseOverlayTriggerReturn {
         props: UseOverlayTriggerProps {

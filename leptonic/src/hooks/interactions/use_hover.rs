@@ -1,11 +1,12 @@
-use educe::Educe;
+use std::rc::Rc;
+
 use leptos_reactive::{
     create_effect, create_signal, on_cleanup, store_value, Callable, Callback, MaybeSignal, Signal,
     SignalDispose, SignalGet, SignalGetUntracked, SignalSet,
 };
 use web_sys::PointerEvent;
 
-use crate::utils::{pointer_type::PointerType, props::Attributes, EventExt};
+use crate::utils::{attributes::Attributes, event_handlers::EventHandlers, pointer_type::PointerType, EventExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useHover.ts
 
@@ -37,15 +38,12 @@ pub struct UseHoverInput {
     pub on_hover_end: Option<Callback<HoverEndEvent>>,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct UseHoverProps {
+    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
     pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_pointer_enter: Box<dyn Fn(PointerEvent)>,
-    #[educe(Debug(ignore))]
-    pub on_pointer_leave: Box<dyn Fn(PointerEvent)>,
+    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    pub handlers: EventHandlers,
 }
 
 #[derive(Debug)]
@@ -110,7 +108,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         state.set_value(None);
     };
 
-    let on_pointer_enter = Box::new(move |e: PointerEvent| {
+    let on_pointer_enter = Rc::new(move |e: PointerEvent| {
         if input.disabled.get_untracked() {
             return;
         }
@@ -118,7 +116,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         trigger_hover_start(PointerType::from(e.pointer_type()), e.current_target());
     });
 
-    let on_pointer_leave = Box::new(move |e: PointerEvent| {
+    let on_pointer_leave = Rc::new(move |e: PointerEvent| {
         if input.disabled.get_untracked()
             || state.with_value(|s| s.is_none())
             || !e.current_target_contains_target()
@@ -144,8 +142,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     UseHoverReturn {
         props: UseHoverProps {
             attrs: Attributes::new(),
-            on_pointer_enter,
-            on_pointer_leave,
+            handlers: EventHandlers::builder()
+                .on_pointer_enter(on_pointer_enter)
+                .on_pointer_leave(on_pointer_leave)
+                .build()
         },
         is_hovered: is_hovered.into(),
     }

@@ -1,10 +1,6 @@
 use leptos::*;
 
-use crate::{
-    components::form_control::FormControlContext,
-    hooks::{use_press, UsePressInput, UsePressReturn},
-    OptMaybeSignal,
-};
+use crate::{components::form_control::FormControlContext, hooks::*, OptMaybeSignal};
 
 /// Interactive label usable in forms. Automatically registers with the parent `FormControl` to control a sibling input.
 #[component]
@@ -40,10 +36,8 @@ pub fn Label(
 
     view! {
         <leptonic-label
-            {..props.attrs}
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
+            //use:attrs=props.attrs
+            //use:handlers=props.handlers
             id=id
             class=class
             style=style

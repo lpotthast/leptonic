@@ -45,10 +45,8 @@ pub fn PageUseAnchorLink() -> impl IntoView {
             <Code>
                 {indoc!(r##"
                     <a
-                        {..props.attrs}
-                        on:keydown=props.on_key_down
-                        on:click=props.on_click
-                        on:pointerdown=props.on_pointer_down
+                        use:attrs=props.attrs
+                        use:handlers=props.handlers
                         class="leptonic-anchor-link"
                         target="_self"
                     >
@@ -58,10 +56,8 @@ pub fn PageUseAnchorLink() -> impl IntoView {
             </Code>
 
             <a
-                {..props.attrs}
-                on:keydown=props.on_key_down
-                on:click=props.on_click
-                on:pointerdown=props.on_pointer_down
+                use:attrs=props.attrs
+                use:handlers=props.handlers
                 class="leptonic-anchor-link"
                 target="_self"
             >

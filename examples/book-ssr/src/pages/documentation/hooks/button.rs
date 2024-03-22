@@ -84,13 +84,9 @@ pub fn PageUseButton() -> impl IntoView {
 
                     view! {
                         <div
-                            {..props.attrs}
+                            use:attrs=props.attrs
+                            use:handlers=props.handlers
                             node_ref=el
-                            on:keydown=props.on_key_down
-                            on:click=props.on_click
-                            on:pointerdown=props.on_pointer_down
-                            on:focus=props.on_focus
-                            on:blur=props.on_blur
                             style="
                                 display: inline-flex;
                                 border: 0.1em solid green;
@@ -105,13 +101,9 @@ pub fn PageUseButton() -> impl IntoView {
             </Code>
 
             <div
-                {..props.attrs}
+                use:attrs=props.attrs
+                use:handlers=props.handlers
                 node_ref=el
-                on:keydown=props.on_key_down
-                on:click=props.on_click
-                on:pointerdown=props.on_pointer_down
-                on:focus=props.on_focus
-                on:blur=props.on_blur
                 style="
                     display: inline-flex;
                     border: 0.1em solid green;

@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::hooks::interactions::use_press::{use_press, PressEvent, UsePressInput, UsePressReturn};
+use crate::hooks::*;
 
 #[component]
 pub fn Pressable(
@@ -22,10 +22,8 @@ pub fn Pressable(
 
     view! {
         <leptonic-pressable
-            {..props.attrs}
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
+            //use:attrs=props.attrs
+            //use:handlers=props.handlers
             style="display: contents"
         >
             { children() }

@@ -5,7 +5,7 @@ use leptos::on_cleanup;
 use leptos_reactive::{create_effect, MaybeSignal, SignalGet};
 use leptos_use::{use_document, use_window};
 
-use crate::utils::props::Attributes;
+use crate::utils::attributes::Attributes;
 
 static PREVENT_SCROLL_COUNT: AtomicIsize = AtomicIsize::new(0);
 
@@ -22,7 +22,7 @@ pub struct UsePreventScrollReturn {
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct UsePreventScrollProps {
-    /// These attributes must be spread onto the target element: `<foo {..attrs} />`
+    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
     pub attrs: Attributes,
 }
 

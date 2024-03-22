@@ -1,9 +1,6 @@
-use leptos::{
-    ev::{pointerenter, pointerleave},
-    *,
-};
+use leptos::*;
 
-use crate::hooks::{use_hover, HoverEndEvent, HoverStartEvent, UseHoverInput, UseHoverReturn};
+use crate::hooks::*;
 
 #[component]
 pub fn Hoverable(
@@ -21,8 +18,5 @@ pub fn Hoverable(
         on_hover_end,
     });
 
-    children()
-        .into_view()
-        .on(pointerenter, props.on_pointer_enter)
-        .on(pointerleave, props.on_pointer_leave)
+    children().into_view().directive(handlers, props.handlers)
 }

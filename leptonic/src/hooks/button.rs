@@ -1,9 +1,10 @@
 use educe::Educe;
 use leptos::{html::ElementDescriptor, Attribute, IntoAttribute, NodeRef};
 use leptos_reactive::{MaybeSignal, Oco};
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
-use crate::utils::{aria::*, props::Attributes, signals::MaybeSignalExt};
+use crate::utils::{
+    aria::*, attributes::Attributes, event_handlers::EventHandlers, signals::MaybeSignalExt,
+};
 
 use super::{
     focus::use_focus::{use_focus, UseFocusInput},
@@ -36,29 +37,10 @@ pub struct UseButtonReturn {
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct UseButtonProps {
+    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
     pub attrs: Attributes,
-
-    /// This handler must be attached to the target element: `<foo on:keydown=on_key_down />`
-    #[educe(Debug(ignore))]
-    pub on_key_down: Box<dyn Fn(KeyboardEvent)>,
-    /// This handler must be attached to the target element: `<foo on:click=on_click />`
-    #[educe(Debug(ignore))]
-    pub on_click: Box<dyn Fn(MouseEvent)>,
-    /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
-    #[educe(Debug(ignore))]
-    pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
-    /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
-    #[educe(Debug(ignore))]
-    pub on_pointer_enter: Box<dyn Fn(PointerEvent)>,
-    /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
-    #[educe(Debug(ignore))]
-    pub on_pointer_leave: Box<dyn Fn(PointerEvent)>,
-    /// This handler must be attached to the target element: `<foo on:focus=on_focus />`
-    #[educe(Debug(ignore))]
-    pub on_focus: Box<dyn Fn(FocusEvent)>,
-    /// This handler must be attached to the target element: `<foo on:blur=on_blur />`
-    #[educe(Debug(ignore))]
-    pub on_blur: Box<dyn Fn(FocusEvent)>,
+    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    pub handlers: EventHandlers,
 }
 
 pub fn use_button<E: ElementDescriptor + 'static>(input: UseButtonInput<E>) -> UseButtonReturn {
@@ -68,67 +50,52 @@ pub fn use_button<E: ElementDescriptor + 'static>(input: UseButtonInput<E>) -> U
 
     let focus = use_focus(input.use_focus_input);
 
-    let mut attrs = Attributes::new();
-    attrs.insert("role", Attribute::String(Oco::Borrowed("button")));
-    attrs.insert(
-        "tabindex",
-        input
-            .disabled
-            .map(|it| match it {
-                true => Attribute::Option(None),
-                false => Attribute::String(Oco::Borrowed("0")),
-            })
-            .into_attribute(),
-    );
-    attrs.insert("disabled", input.disabled.into_attribute());
-    attrs.insert(
-        "aria-disabled",
-        input
-            .disabled
-            .map(|it| match it {
-                true => "true",
-                false => "false",
-            })
-            .into_attribute(),
-    );
-    attrs.insert("aria-haspopup", input.aria_haspopup.into_attribute());
-
-    // From https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded
-    // A button that opens a widget should have aria-controls set to the id of the expandable widget and aria-expanded set to the current state of the widget.
-
-    attrs.insert("aria-expanded", input.aria_expanded.into_attribute());
-    //props.insert(
-    //    "aria-controls",
-    //    initial_props.aria_controls.into_attribute(),
-    //);
-    //props.insert(
-    //    "aria-pressed",
-    //    initial_props.aria_pressed.into_attribute(),
-    //);
-
-    // Merge attributes
-    attrs.merge(press.props.attrs);
-    attrs.merge(focus.props.attrs);
-
-    // Merge event handlers
-    let on_key_down = press.props.on_key_down;
-    let on_click = press.props.on_click;
-    let on_pointer_down = press.props.on_pointer_down;
-    let on_pointer_enter = hover.props.on_pointer_enter;
-    let on_pointer_leave = hover.props.on_pointer_leave;
-    let on_focus = focus.props.on_focus;
-    let on_blur = focus.props.on_blur;
+    let attrs = Attributes::new()
+        .insert("role", Attribute::String(Oco::Borrowed("button")))
+        .insert(
+            "tabindex",
+            input
+                .disabled
+                .map(|it| match it {
+                    true => Attribute::Option(None),
+                    false => Attribute::String(Oco::Borrowed("0")),
+                })
+                .into_attribute(),
+        )
+        .insert("disabled", input.disabled.into_attribute())
+        .insert(
+            "aria-disabled",
+            input
+                .disabled
+                .map(|it| match it {
+                    true => "true",
+                    false => "false",
+                })
+                .into_attribute(),
+        )
+        .insert("aria-haspopup", input.aria_haspopup.into_attribute())
+        // From https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded
+        // A button that opens a widget should have aria-controls set to the id of the expandable widget and aria-expanded set to the current state of the widget.
+        .insert("aria-expanded", input.aria_expanded.into_attribute())
+        //props.insert(
+        //    "aria-controls",
+        //    initial_props.aria_controls.into_attribute(),
+        //);
+        //props.insert(
+        //    "aria-pressed",
+        //    initial_props.aria_pressed.into_attribute(),
+        //);
+        // Merge attributes
+        .merge(press.props.attrs)
+        .merge(focus.props.attrs);
 
     UseButtonReturn {
         props: UseButtonProps {
             attrs,
-            on_key_down,
-            on_click,
-            on_pointer_down,
-            on_pointer_enter,
-            on_pointer_leave,
-            on_focus,
-            on_blur,
+            handlers: EventHandlers::new()
+                .merge(press.props.handlers)
+                .merge(hover.props.handlers)
+                .merge(focus.props.handlers),
         },
     }
 }

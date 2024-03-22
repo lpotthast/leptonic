@@ -5,7 +5,7 @@ use leptos::{html::ElementDescriptor, Attribute, NodeRef, Oco};
 use leptos_reactive::{create_memo, MaybeSignal, SignalGet};
 use leptos_use::{use_document, use_element_bounding};
 
-use crate::utils::{locale::WritingDirection, props::Attributes};
+use crate::utils::{attributes::Attributes, locale::WritingDirection};
 
 // TODO: Serialize, Deserialize, Display, FormStr ???
 
@@ -189,8 +189,7 @@ where
         PhysicalPlacementX::OuterRight => target_bounding.right.get(),
     });
 
-    let mut attrs = Attributes::new();
-    attrs.insert(
+    let attrs = Attributes::new().insert(
         "style",
         Attribute::Fn(Rc::new(move || {
             let top = top.get();

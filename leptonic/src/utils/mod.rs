@@ -1,10 +1,11 @@
 pub mod aria;
+pub mod attributes;
 pub mod callback;
 pub mod color;
+pub mod event_handlers;
 pub mod locale;
 pub mod math;
 pub mod pointer_type;
-pub mod props;
 pub mod scroll_behavior;
 pub mod signals;
 pub(crate) mod text_selection;

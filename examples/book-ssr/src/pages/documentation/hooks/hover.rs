@@ -61,9 +61,8 @@ pub fn PageUseHover() -> impl IntoView {
             </Code>
 
             <div
-                {..hover.props.attrs}
-                on:pointerenter=hover.props.on_pointer_enter
-                on:pointerleave=hover.props.on_pointer_leave
+                use:attrs=hover.props.attrs
+                use:handlers=hover.props.handlers
                 style="display: inline-flex;
                 border: 0.1em solid green;
                 padding: 0.5em 1em;"

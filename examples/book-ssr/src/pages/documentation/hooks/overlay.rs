@@ -159,12 +159,8 @@ pub fn PageUseOverlay() -> impl IntoView {
                 <div
                     {..trigger_props.attrs}
                     {..btn_props.attrs}
+                    use:handlers=btn_props.handlers
                     node_ref=trigger_el
-                    on:keydown=btn_props.on_key_down
-                    on:click=btn_props.on_click
-                    on:pointerdown=btn_props.on_pointer_down
-                    on:focus=btn_props.on_focus
-                    on:blur=btn_props.on_blur
                     style="
                         display: inline-flex;
                         border: 0.1em solid green;

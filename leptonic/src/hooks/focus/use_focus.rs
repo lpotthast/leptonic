@@ -1,8 +1,9 @@
-use educe::Educe;
+use std::rc::Rc;
+
 use leptos::{ev::FocusEvent, Callable, Callback, MaybeSignal, SignalGet};
 use leptos_use::use_document;
 
-use crate::utils::{props::Attributes, EventTargetExt};
+use crate::utils::{attributes::Attributes, event_handlers::EventHandlers, EventTargetExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocus.ts
 
@@ -21,20 +22,16 @@ pub struct UseFocusReturn {
     pub props: UseFocusProps,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct UseFocusProps {
-    /// These attributes must be spread onto the target element: `<foo {..attrs} />`
+    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
     pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_focus: Box<dyn Fn(FocusEvent)>,
-    #[educe(Debug(ignore))]
-    pub on_blur: Box<dyn Fn(FocusEvent)>,
+    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    pub handlers: EventHandlers,
 }
 
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
-    let on_focus = Box::new(move |e: FocusEvent| {
+    let on_focus = Rc::new(move |e: FocusEvent| {
         // Double check that document.activeElement actually matches e.target in case a previously chained
         // focus handler already moved focus somewhere else.
         if e.target() == e.current_target()
@@ -51,7 +48,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         }
     });
 
-    let on_blur = Box::new(move |e: FocusEvent| {
+    let on_blur = Rc::new(move |e: FocusEvent| {
         if e.target() == e.current_target() && !input.disabled.get() {
             if let Some(on_blur) = input.on_blur {
                 Callable::call(&on_blur, e);
@@ -66,8 +63,10 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     UseFocusReturn {
         props: UseFocusProps {
             attrs: Attributes::new(),
-            on_focus,
-            on_blur,
+            handlers: EventHandlers::builder()
+                .on_focus(on_focus)
+                .on_blur(on_blur)
+                .build(),
         },
     }
 }

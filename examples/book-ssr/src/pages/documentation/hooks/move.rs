@@ -114,9 +114,9 @@ pub fn PageUseMove() -> impl IntoView {
                 color: var(--typography-code-color);
             ">
                 <div
-                    {..mov.props.attrs}
                     node_ref=draggable
-                    on:pointerdown=mov.props.on_pointer_down
+                    use:attrs=mov.props.attrs
+                    use:handlers=mov.props.handlers
                     style=move || format!("
                         border: 0.1em solid green;
                         padding: 0.5em 1em;

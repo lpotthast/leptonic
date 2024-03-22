@@ -1,10 +1,11 @@
-use educe::Educe;
+use std::rc::Rc;
+
 use leptos_reactive::{
     create_effect, on_cleanup, store_value, Callable, Callback, Signal, SignalDispose, SignalGet,
 };
 use web_sys::PointerEvent;
 
-use crate::utils::props::Attributes;
+use crate::utils::{attributes::Attributes, event_handlers::EventHandlers};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useMove.ts
 
@@ -32,13 +33,12 @@ pub struct UseMoveInput {
     pub global_pointer_move: Signal<Option<PointerEvent>>,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct UseMoveProps {
+    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
     pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
+    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    pub handlers: EventHandlers,
 }
 
 #[derive(Debug)]
@@ -61,7 +61,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     let state = store_value(Option::<MoveState>::None);
     let active = store_value(false);
 
-    let on_pointer_down = Box::new(move |e: PointerEvent| {
+    let on_pointer_down = Rc::new(move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         if e.button() == 0 && state.get_value().is_none() {
@@ -167,7 +167,9 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     UseMoveReturn {
         props: UseMoveProps {
             attrs: Attributes::new(),
-            on_pointer_down,
+            handlers: EventHandlers::builder()
+                .on_pointer_down(on_pointer_down)
+                .build(),
         },
     }
 }

@@ -3,7 +3,7 @@ use std::{rc::Rc, str::FromStr};
 use educe::Educe;
 use leptos::*;
 
-use super::props::IntoAttributeName;
+use super::attributes::IntoAttributeName;
 
 #[derive(Debug, Clone)]
 pub enum AriaAttribute {

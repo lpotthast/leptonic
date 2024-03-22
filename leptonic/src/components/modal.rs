@@ -3,7 +3,7 @@ use std::rc::Rc;
 use uuid::Uuid;
 
 use crate::{
-    hooks::{use_press, use_prevent_scroll, UsePressInput, UsePressReturn, UsePreventScrollInput},
+    hooks::*,
     prelude::{GlobalKeyboardEvent, Producer},
     OptMaybeSignal,
 };
@@ -89,10 +89,8 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
 
         <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
             <leptonic-modal-backdrop
-                {..props.attrs}
-                on:keydown=props.on_key_down
-                on:click=props.on_click
-                on:pointerdown=props.on_pointer_down
+                //use:attrs=props.attrs
+                //use:handlers=props.handlers
             />
 
             <leptonic-modals>
