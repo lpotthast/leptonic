@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::{components::form_control::FormControlContext, hooks::*, OptMaybeSignal};
+use crate::{components::form_control::FormControlContext, hooks::*, OptMaybeSignal, Transparent};
 
 /// Interactive label usable in forms. Automatically registers with the parent `FormControl` to control a sibling input.
 #[component]
@@ -35,14 +35,16 @@ pub fn Label(
     });
 
     view! {
-        <leptonic-label
-            //use:attrs=props.attrs
-            //use:handlers=props.handlers
-            id=id
-            class=class
-            style=style
-        >
-            { children() }
-        </leptonic-label>
+        <Transparent>
+            <leptonic-label
+                {..props.attrs}
+                {..props.handlers}
+                id=id
+                class=class
+                style=style
+            >
+                { children() }
+            </leptonic-label>
+        </Transparent>
     }
 }

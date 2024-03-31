@@ -1,13 +1,10 @@
-use leptos::{ev::DOMEventResponder, *};
+use leptos::*;
 use leptos_router::AProps;
 
 use crate::{
     hooks::*,
-    utils::{
-        aria::{AriaExpanded, AriaHasPopup},
-        attributes::Attributes,
-    },
-    OptMaybeSignal,
+    utils::aria::{AriaExpanded, AriaHasPopup},
+    OptMaybeSignal, Transparent,
 };
 
 use super::AttributeExt;
@@ -62,15 +59,19 @@ pub fn Button(
     let attributes = btn.props.attrs.merge(attributes);
 
     view! {
-        <button
-            id=id
-            class=class
-            class:leptonic-btn=true
-            style=style
-            node_ref=el
-        >
-            { children() }
-        </button>
+        <Transparent>
+            <button
+                {..attributes}
+                {..btn.props.handlers}
+                node_ref=el
+                id=id
+                class=class
+                class:leptonic-btn=true
+                style=style
+            >
+                { children() }
+            </button>
+        </Transparent>
     }
 }
 
