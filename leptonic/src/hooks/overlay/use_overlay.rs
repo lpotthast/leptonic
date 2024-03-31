@@ -1,12 +1,14 @@
 use educe::Educe;
 use leptos::{IntoAttribute, Oco};
 use leptos_reactive::{create_signal, MaybeSignal, ReadSignal, WriteSignal};
+use typed_builder::TypedBuilder;
 
 use crate::utils::attributes::Attributes;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, TypedBuilder)]
 pub struct UseOverlayInput {
     /// Disables the handling overlay events when true.
+    #[builder(setter(into))]
     pub disabled: MaybeSignal<bool>,
 }
 

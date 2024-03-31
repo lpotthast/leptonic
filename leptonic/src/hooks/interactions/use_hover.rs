@@ -1,12 +1,13 @@
-use std::rc::Rc;
-
 use leptos_reactive::{
     create_effect, create_signal, on_cleanup, store_value, Callable, Callback, MaybeSignal, Signal,
     SignalDispose, SignalGet, SignalGetUntracked, SignalSet,
 };
+use typed_builder::TypedBuilder;
 use web_sys::PointerEvent;
 
-use crate::utils::{attributes::Attributes, event_handlers::EventHandlers, pointer_type::PointerType, EventExt};
+use crate::utils::{
+    attributes::Attributes, event_handlers::EventHandlers, pointer_type::PointerType, EventExt,
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useHover.ts
 
@@ -22,27 +23,30 @@ pub struct HoverEndEvent {
     pub current_target: Option<web_sys::EventTarget>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, TypedBuilder)]
 pub struct UseHoverInput {
     /// Whether hover callbacks should be disabled.
     /// When true, both `on_hover_start` and `on_hover_end` are no longer called.
     /// When the element is currently hovered when this switches to `true`,
     /// a programmatic `on_hover_end` is triggered and `is_hovered` transitions to `false`.
-    pub disabled: MaybeSignal<bool>,
+    #[builder(setter(into))]
+    pub(crate) disabled: MaybeSignal<bool>,
 
     /// Called whenever a pointer starts hovering the element.
-    pub on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_hover_start: Option<Callback<HoverStartEvent>>,
 
     /// Called whenever a pointer stops hovering the element
     /// or when the element is hovered and `disabled` transitions to `true`.
-    pub on_hover_end: Option<Callback<HoverEndEvent>>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_hover_end: Option<Callback<HoverEndEvent>>,
 }
 
 #[derive(Debug)]
 pub struct UseHoverProps {
-    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
     pub handlers: EventHandlers,
 }
 
@@ -80,7 +84,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                     HoverStartEvent {
                         pointer_type: pointer_type.clone(),
                         current_target,
-                    }
+                    },
                 );
             }
 
@@ -100,7 +104,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 HoverEndEvent {
                     pointer_type: s.pointer_type,
                     current_target,
-                }
+                },
             );
         }
 
@@ -108,7 +112,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         state.set_value(None);
     };
 
-    let on_pointer_enter = Rc::new(move |e: PointerEvent| {
+    let on_pointer_enter = Box::new(move |e: PointerEvent| {
         if input.disabled.get_untracked() {
             return;
         }
@@ -116,7 +120,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         trigger_hover_start(PointerType::from(e.pointer_type()), e.current_target());
     });
 
-    let on_pointer_leave = Rc::new(move |e: PointerEvent| {
+    let on_pointer_leave = Box::new(move |e: PointerEvent| {
         if input.disabled.get_untracked()
             || state.with_value(|s| s.is_none())
             || !e.current_target_contains_target()
@@ -145,7 +149,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             handlers: EventHandlers::builder()
                 .on_pointer_enter(on_pointer_enter)
                 .on_pointer_leave(on_pointer_leave)
-                .build()
+                .build(),
         },
         is_hovered: is_hovered.into(),
     }

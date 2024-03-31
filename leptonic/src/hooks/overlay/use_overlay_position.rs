@@ -4,6 +4,7 @@ use educe::Educe;
 use leptos::{html::ElementDescriptor, Attribute, NodeRef, Oco};
 use leptos_reactive::{create_memo, MaybeSignal, SignalGet};
 use leptos_use::{use_document, use_element_bounding};
+use typed_builder::TypedBuilder;
 
 use crate::utils::{attributes::Attributes, locale::WritingDirection};
 
@@ -68,7 +69,7 @@ impl PlacementX {
     }
 }
 
-#[derive(Clone, Copy, Educe)]
+#[derive(Clone, Copy, Educe, TypedBuilder)]
 #[educe(Debug)]
 pub struct UseOverlayPositionInput<OverlayRef, TargetRef>
 where
@@ -77,16 +78,20 @@ where
 {
     /// Element that resembles the overlay content.
     #[educe(Debug(ignore))]
-    pub overlay_ref: NodeRef<OverlayRef>,
+    pub(crate) overlay_ref: NodeRef<OverlayRef>,
 
     /// Element to which the overlay should be positioned relative to.
     #[educe(Debug(ignore))]
-    pub target_ref: NodeRef<TargetRef>,
+    pub(crate) target_ref: NodeRef<TargetRef>,
 
-    pub placement_x: MaybeSignal<PlacementX>,
-    pub placement_y: MaybeSignal<PlacementY>,
+    #[builder(setter(into))]
+    pub(crate) placement_x: MaybeSignal<PlacementX>,
 
-    pub writing_direction: MaybeSignal<WritingDirection>,
+    #[builder(setter(into))]
+    pub(crate) placement_y: MaybeSignal<PlacementY>,
+
+    #[builder(setter(into))]
+    pub(crate) writing_direction: MaybeSignal<WritingDirection>,
 }
 
 #[derive(Debug)]

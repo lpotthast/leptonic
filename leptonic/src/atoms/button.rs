@@ -1,9 +1,12 @@
-use leptos::*;
+use leptos::{ev::DOMEventResponder, *};
 use leptos_router::AProps;
 
 use crate::{
     hooks::*,
-    utils::{aria::{AriaExpanded, AriaHasPopup}, attributes::Attributes},
+    utils::{
+        aria::{AriaExpanded, AriaHasPopup},
+        attributes::Attributes,
+    },
     OptMaybeSignal,
 };
 
@@ -65,8 +68,6 @@ pub fn Button(
             class:leptonic-btn=true
             style=style
             node_ref=el
-            use:attrs=attributes
-            use:handlers=btn.props.handlers
         >
             { children() }
         </button>
@@ -159,7 +160,8 @@ where
         children,
     })
     .into_view()
-    .directive(handlers, props.handlers)
+    // TODO(handlers)
+    //.bindings(props.handlers)
 }
 
 #[component]

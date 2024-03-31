@@ -31,19 +31,21 @@ pub fn PageUseHover() -> impl IntoView {
         })
     });
 
-    let hover = use_hover(UseHoverInput {
-        disabled: disabled.into(),
-        on_hover_start: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("HoverStart: {e:?}")));
-            });
-        })),
-        on_hover_end: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("HoverEnd: {e:?}")));
-            });
-        })),
-    });
+    let hover = use_hover(
+        UseHoverInput::builder()
+            .disabled(disabled)
+            .on_hover_start(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("HoverStart: {e:?}")));
+                });
+            })
+            .on_hover_end(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("HoverEnd: {e:?}")));
+                });
+            })
+            .build(),
+    );
 
     view! {
         <Article>
@@ -61,8 +63,8 @@ pub fn PageUseHover() -> impl IntoView {
             </Code>
 
             <div
-                use:attrs=hover.props.attrs
-                use:handlers=hover.props.handlers
+                {..hover.props.attrs}
+                {..hover.props.handlers}
                 style="display: inline-flex;
                 border: 0.1em solid green;
                 padding: 0.5em 1em;"

@@ -3,6 +3,7 @@ use std::rc::Rc;
 use educe::Educe;
 use leptos::Oco;
 use leptos_reactive::{Signal, SignalGet};
+use typed_builder::TypedBuilder;
 
 use crate::{
     prelude::{AriaExpanded, AriaHasPopup},
@@ -12,17 +13,20 @@ use crate::{
     },
 };
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, TypedBuilder)]
 pub struct UseOverlayTriggerInput {
     /// Whether the overlay is currently shown.
-    pub show: Signal<bool>,
+    #[builder(setter(into))]
+    pub(crate) show: Signal<bool>,
 
-    pub overlay_id: Oco<'static, str>,
+    #[builder(setter(into))]
+    pub(crate) overlay_id: Oco<'static, str>,
 
     /// The type of overlay opened by this trigger.
     /// Using the variants `False` or `True` will result in a runtime warning on debug builds!
     /// Prefer `AriaHasPopup::Menu` if you are unsure what to use otherwise.
-    pub overlay_type: AriaHasPopup,
+    #[builder(default = AriaHasPopup::Menu, setter(into))]
+    pub(crate) overlay_type: AriaHasPopup,
 }
 
 #[derive(Debug)]

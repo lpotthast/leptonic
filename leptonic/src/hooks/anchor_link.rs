@@ -2,6 +2,7 @@ use educe::Educe;
 use leptos::{Attribute, Callable, Callback, IntoAttribute, SignalGet};
 use leptos_reactive::{MaybeSignal, Oco};
 use leptos_use::{use_document, use_window};
+use typed_builder::TypedBuilder;
 use wasm_bindgen::JsValue;
 use web_sys::ScrollIntoViewOptions;
 
@@ -24,26 +25,29 @@ impl Href {
     }
 }
 
-#[derive(Clone, Educe)]
+#[derive(Clone, Educe, TypedBuilder)]
 #[educe(Debug)]
 pub struct UseAnchorLinkInput {
     /// The anchor link. For example: "#my-anchor". Known to be of the aforementioned format, always starting with a '#'.
-    pub href: Href,
+    pub(crate) href: Href,
 
     /// How the browser should scroll to the referenced anchor element. Doe not perform any scrolling when set to None.
-    pub scroll_behavior: Option<ScrollBehavior>,
+    #[builder(default = Some(ScrollBehavior::Smooth))]
+    pub(crate) scroll_behavior: Option<ScrollBehavior>,
 
     /// Wether the link is disabled.
-    pub disabled: MaybeSignal<bool>,
+    #[builder(setter(into))]
+    pub(crate) disabled: MaybeSignal<bool>,
 
     /// Description of this anchor for accessibility.
     /// If text is provided in children, this could be omitted.
     /// If no children are provided, this component renders a single `#`,
     /// which should be described using this field.
-    pub description: Option<Oco<'static, str>>,
+    #[builder(default = None)]
+    pub(crate) description: Option<Oco<'static, str>>,
 
     /// Links are enforced to have the "press" behavior.
-    pub use_press_input: UsePressInput,
+    pub(crate) use_press_input: UsePressInput,
 }
 
 #[derive(Debug)]
@@ -55,9 +59,9 @@ pub struct UseAnchorLinkReturn {
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct UseAnchorLinkProps {
-    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
     pub handlers: EventHandlers,
 }
 

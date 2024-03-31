@@ -36,46 +36,48 @@ pub fn PageUseMove() -> impl IntoView {
     let draggable: NodeRef<html::Div> = create_node_ref();
     let draggable_bounding = use_element_bounding(draggable);
 
-    let mov: UseMoveReturn = use_move(UseMoveInput {
-        on_move_start: Callback::new(move |_e| {
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Borrowed("MoveStart"));
-            });
-        }),
-        on_move: Callback::new(move |e: MoveEvent| {
-            set_left.update(move |l| *l += e.delta_x);
-            set_top.update(move |l| *l += e.delta_y);
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Move {{ dx: {}, dy: {} }}",
-                    e.delta_x, e.delta_y
-                )));
-            });
-        }),
-        on_move_end: Callback::new(move |_e| {
-            set_left.update(move |l| {
-                *l = (*l).clamp(
-                    0.0,
-                    container_bounding.width.get_untracked()
-                        - draggable_bounding.width.get_untracked(),
-                )
-            });
-            set_top.update(move |t| {
-                *t = (*t).clamp(
-                    0.0,
-                    container_bounding.height.get_untracked()
-                        - draggable_bounding.height.get_untracked(),
-                )
-            });
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Borrowed("MoveEnd"));
-            });
-        }),
-        global_pointer_up: global_pointer_up.into(),
-        global_pointer_down: global_pointer_down.into(),
-        global_pointer_cancel: global_pointer_cancel.into(),
-        global_pointer_move: global_pointer_move.into(),
-    });
+    let mov: UseMoveReturn = use_move(
+        UseMoveInput::builder()
+            .on_move_start(move |_e| {
+                set_events.update(move |events| {
+                    events.push_overwrite(Oco::Borrowed("MoveStart"));
+                });
+            })
+            .on_move(move |e: MoveEvent| {
+                set_left.update(move |l| *l += e.delta_x);
+                set_top.update(move |l| *l += e.delta_y);
+                set_events.update(move |events| {
+                    events.push_overwrite(Oco::Owned(format!(
+                        "Move {{ dx: {}, dy: {} }}",
+                        e.delta_x, e.delta_y
+                    )));
+                });
+            })
+            .on_move_end(move |_e| {
+                set_left.update(move |l| {
+                    *l = (*l).clamp(
+                        0.0,
+                        container_bounding.width.get_untracked()
+                            - draggable_bounding.width.get_untracked(),
+                    )
+                });
+                set_top.update(move |t| {
+                    *t = (*t).clamp(
+                        0.0,
+                        container_bounding.height.get_untracked()
+                            - draggable_bounding.height.get_untracked(),
+                    )
+                });
+                set_events.update(move |events| {
+                    events.push_overwrite(Oco::Borrowed("MoveEnd"));
+                });
+            })
+            .global_pointer_up(global_pointer_up)
+            .global_pointer_down(global_pointer_down)
+            .global_pointer_cancel(global_pointer_cancel)
+            .global_pointer_move(global_pointer_move)
+            .build(),
+    );
 
     let string = create_memo(move |_| {
         events.with(|events| {
@@ -114,9 +116,9 @@ pub fn PageUseMove() -> impl IntoView {
                 color: var(--typography-code-color);
             ">
                 <div
+                    {..mov.props.attrs}
+                    {..mov.props.handlers}
                     node_ref=draggable
-                    use:attrs=mov.props.attrs
-                    use:handlers=mov.props.handlers
                     style=move || format!("
                         border: 0.1em solid green;
                         padding: 0.5em 1em;

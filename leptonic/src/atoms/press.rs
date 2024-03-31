@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::hooks::*;
+use crate::{hooks::*, Transparent};
 
 #[component]
 pub fn Pressable(
@@ -21,13 +21,15 @@ pub fn Pressable(
     });
 
     view! {
-        <leptonic-pressable
-            //use:attrs=props.attrs
-            //use:handlers=props.handlers
-            style="display: contents"
-        >
-            { children() }
-        </leptonic-pressable>
+        <Transparent>
+            <leptonic-pressable
+                {..props.attrs}
+                {..props.handlers}
+                style="display: contents"
+            >
+                { children() }
+            </leptonic-pressable>
+        </Transparent>
     }
 }
 

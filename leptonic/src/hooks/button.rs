@@ -1,6 +1,7 @@
 use educe::Educe;
 use leptos::{html::ElementDescriptor, Attribute, IntoAttribute, NodeRef};
 use leptos_reactive::{MaybeSignal, Oco};
+use typed_builder::TypedBuilder;
 
 use crate::utils::{
     aria::*, attributes::Attributes, event_handlers::EventHandlers, signals::MaybeSignalExt,
@@ -14,18 +15,22 @@ use super::{
     },
 };
 
-#[derive(Clone, Copy, Educe)]
+#[derive(Clone, Copy, Educe, TypedBuilder)]
 #[educe(Debug)]
 pub struct UseButtonInput<E: ElementDescriptor + 'static> {
     #[educe(Debug(ignore))]
-    pub node_ref: NodeRef<E>,
-    pub disabled: MaybeSignal<bool>,
-    pub aria_haspopup: MaybeSignal<AriaHasPopup>,
-    pub aria_expanded: MaybeSignal<AriaExpanded>,
+    pub(crate) node_ref: NodeRef<E>,
+    #[builder(setter(into))]
+    pub(crate) disabled: MaybeSignal<bool>,
 
-    pub use_press_input: UsePressInput,
-    pub use_hover_input: UseHoverInput,
-    pub use_focus_input: UseFocusInput,
+    #[builder(default = AriaHasPopup::default().into(), setter(into))]
+    pub(crate) aria_haspopup: MaybeSignal<AriaHasPopup>,
+    #[builder(default = AriaExpanded::default().into(), setter(into))]
+    pub(crate) aria_expanded: MaybeSignal<AriaExpanded>,
+
+    pub(crate) use_press_input: UsePressInput,
+    pub(crate) use_hover_input: UseHoverInput,
+    pub(crate) use_focus_input: UseFocusInput,
 }
 
 #[derive(Debug)]
@@ -37,9 +42,9 @@ pub struct UseButtonReturn {
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct UseButtonProps {
-    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
     pub handlers: EventHandlers,
 }
 
@@ -92,7 +97,7 @@ pub fn use_button<E: ElementDescriptor + 'static>(input: UseButtonInput<E>) -> U
     UseButtonReturn {
         props: UseButtonProps {
             attrs,
-            handlers: EventHandlers::new()
+            handlers: EventHandlers::builder().build()
                 .merge(press.props.handlers)
                 .merge(hover.props.handlers)
                 .merge(focus.props.handlers),

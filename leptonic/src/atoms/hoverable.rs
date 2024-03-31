@@ -18,5 +18,7 @@ pub fn Hoverable(
         on_hover_end,
     });
 
-    children().into_view().directive(handlers, props.handlers)
+    children().into_view()
+    // TODO(handlers)
+    //.directive(handlers, props.handlers)
 }

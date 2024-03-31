@@ -15,7 +15,7 @@ http = "1.0.0"
 indoc = "2.0.4"
 #leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["clipboard", "tiptap"] }
 leptonic = { path = "../../leptonic", features = ["full"] }
-leptos = { version = "0.6.9", features = ["csr"] }
+leptos = { version = "0.6.9", features = [] }
 leptos-use = "0.10.5"
 leptos_axum = { version = "0.6.9", optional = true }
 leptos_meta = { version = "0.6.9", features = [] }
@@ -28,7 +28,10 @@ serde_json = "1.0.113"
 strum = { version = "0.26.1", features = ["derive"] }
 thiserror = "1.0.56"
 time = { version = "0.3.34", features = ["wasm-bindgen"] }
-tokio = { version = "1.36.0", features = ["rt-multi-thread", "signal"], optional = true }
+tokio = { version = "1.36.0", features = [
+    "rt-multi-thread",
+    "signal",
+], optional = true }
 tower = { version = "0.4.13", optional = true }
 tower-http = { version = "0.5.1", features = ["full"], optional = true }
 tracing = "0.1.40"
@@ -36,6 +39,14 @@ tracing-subscriber = "0.3.18"
 tracing-wasm = "0.2.1"
 uuid = { version = "1.7.0", features = ["js", "v4", "serde"] }
 wasm-bindgen = "0.2.91"
+
+[patch.crates-io]
+leptos = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
+leptos_reactive = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
+leptos_dom = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
+leptos_axum = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
+leptos_meta = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
+leptos_router = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
 
 [features]
 hydrate = [

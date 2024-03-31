@@ -1,7 +1,6 @@
 pub mod anchor_link;
 pub mod button;
 pub mod calendar;
-pub mod directives;
 pub mod focus;
 pub mod interactions;
 pub mod menu;
@@ -62,5 +61,3 @@ pub use overlay::use_overlay_trigger::use_overlay_trigger;
 pub use overlay::use_overlay_trigger::UseOverlayTriggerInput;
 pub use overlay::use_overlay_trigger::UseOverlayTriggerProps;
 pub use overlay::use_overlay_trigger::UseOverlayTriggerReturn;
-pub use directives::attrs;
-pub use directives::handlers;

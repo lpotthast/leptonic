@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
-use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};
+use leptonic::utils::aria::AriaHasPopup;
 use leptonic::utils::locale::WritingDirection;
 use leptos::*;
 
@@ -19,60 +19,54 @@ pub fn PageUseOverlay() -> impl IntoView {
 
     let (overlay_content, set_overlay_content) = create_signal(String::from("overlay"));
 
+    let disabled = false;
+
     let UseOverlayReturn {
         props: overlay_props,
         id,
         state,
         set_state,
-    } = use_overlay(UseOverlayInput {
-        disabled: false.into(),
-    });
+    } = use_overlay(UseOverlayInput::builder().disabled(disabled).build());
 
     let UseOverlayTriggerReturn {
         props: trigger_props,
-    } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: state.into(),
-        overlay_id: id,
-        overlay_type: AriaHasPopup::Menu,
-    });
+    } = use_overlay_trigger(
+        UseOverlayTriggerInput::builder()
+            .show(state)
+            .overlay_id(id)
+            .overlay_type(AriaHasPopup::Menu)
+            .build(),
+    );
 
     let UseOverlayPositionReturn {
         props: overlay_pos_props,
-    } = use_overlay_position(UseOverlayPositionInput {
-        overlay_ref: overlay_el,
-        target_ref: trigger_el,
-        placement_y: selected_placement_y.into(),
-        placement_x: selected_placement_x.into(),
-        writing_direction: WritingDirection::Ltr.into(),
-    });
+    } = use_overlay_position(
+        UseOverlayPositionInput::builder()
+            .overlay_ref(overlay_el)
+            .target_ref(trigger_el)
+            .placement_y(selected_placement_y)
+            .placement_x(selected_placement_x)
+            .writing_direction(WritingDirection::Ltr)
+            .build(),
+    );
 
-    let UseButtonReturn { props: btn_props } = use_button(UseButtonInput {
-        node_ref: trigger_el,
-        disabled: false.into(),
-        aria_haspopup: AriaHasPopup::default().into(),
-        aria_expanded: AriaExpanded::default().into(),
-        use_press_input: UsePressInput {
-            disabled: false.into(),
-            force_prevent_default: false,
-            on_press: Callback::new(move |_e| {
-                set_state.set(!state.get_untracked());
-            }),
-            on_press_up: None,
-            on_press_start: None,
-            on_press_end: None,
-        },
-        use_hover_input: UseHoverInput {
-            disabled: false.into(),
-            on_hover_start: None,
-            on_hover_end: None,
-        },
-        use_focus_input: UseFocusInput {
-            disabled: false.into(),
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-        },
-    });
+    let UseButtonReturn { props: btn_props } = use_button(
+        UseButtonInput::builder()
+            .node_ref(trigger_el)
+            .disabled(disabled)
+            .use_press_input(
+                UsePressInput::builder()
+                    .disabled(disabled)
+                    .on_press(Callback::new(move |_e| {
+                        set_state.set(!state.get_untracked());
+                    }))
+                    .build(),
+            )
+            .use_hover_input(UseHoverInput::builder().disabled(disabled).build())
+            .use_focus_input(UseFocusInput::builder().disabled(disabled).build())
+            .build(),
+    );
+
     view! {
         <Article>
             <H1 id="use_overlay" class="anchor">
@@ -159,7 +153,7 @@ pub fn PageUseOverlay() -> impl IntoView {
                 <div
                     {..trigger_props.attrs}
                     {..btn_props.attrs}
-                    use:handlers=btn_props.handlers
+                    {..btn_props.handlers}
                     node_ref=trigger_el
                     style="
                         display: inline-flex;

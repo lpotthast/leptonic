@@ -511,3 +511,11 @@ impl<F: Fn() + Clone> From<UseElementBoundingReturn<F>> for UseElementBoundingRe
         }
     }
 }
+
+/// In rare cases, compile errors arise when using Leptos's `view!` macro,
+/// where wrapping the failing code in this component fixes the errors...
+/// This component simply renders the provided children without adding any additional markup.
+#[component(transparent)]
+pub(crate) fn Transparent(children: Children) -> impl IntoView {
+    children()
+}

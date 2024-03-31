@@ -1,8 +1,7 @@
-use std::rc::Rc;
-
 use leptos_reactive::{
     create_effect, on_cleanup, store_value, Callable, Callback, Signal, SignalDispose, SignalGet,
 };
+use typed_builder::TypedBuilder;
 use web_sys::PointerEvent;
 
 use crate::utils::{attributes::Attributes, event_handlers::EventHandlers};
@@ -21,23 +20,30 @@ pub struct MoveEvent {
 #[derive(Debug, Clone, Copy)]
 pub struct MoveEndEvent {}
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, TypedBuilder)]
 pub struct UseMoveInput {
-    pub on_move_start: Callback<MoveStartEvent>,
-    pub on_move: Callback<MoveEvent>,
-    pub on_move_end: Callback<MoveEndEvent>,
+    #[builder(setter(into))]
+    pub(crate) on_move_start: Callback<MoveStartEvent>,
+    #[builder(setter(into))]
+    pub(crate) on_move: Callback<MoveEvent>,
+    #[builder(setter(into))]
+    pub(crate) on_move_end: Callback<MoveEndEvent>,
 
-    pub global_pointer_up: Signal<Option<PointerEvent>>,
-    pub global_pointer_down: Signal<Option<PointerEvent>>,
-    pub global_pointer_cancel: Signal<Option<PointerEvent>>,
-    pub global_pointer_move: Signal<Option<PointerEvent>>,
+    #[builder(setter(into))]
+    pub(crate) global_pointer_up: Signal<Option<PointerEvent>>,
+    #[builder(setter(into))]
+    pub(crate) global_pointer_down: Signal<Option<PointerEvent>>,
+    #[builder(setter(into))]
+    pub(crate) global_pointer_cancel: Signal<Option<PointerEvent>>,
+    #[builder(setter(into))]
+    pub(crate) global_pointer_move: Signal<Option<PointerEvent>>,
 }
 
 #[derive(Debug)]
 pub struct UseMoveProps {
-    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
     pub handlers: EventHandlers,
 }
 
@@ -61,7 +67,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     let state = store_value(Option::<MoveState>::None);
     let active = store_value(false);
 
-    let on_pointer_down = Rc::new(move |e: PointerEvent| {
+    let on_pointer_down = Box::new(move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         if e.button() == 0 && state.get_value().is_none() {

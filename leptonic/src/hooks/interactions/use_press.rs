@@ -6,6 +6,7 @@ use leptos_reactive::{
     SignalSet,
 };
 use leptos_use::use_event_listener;
+use typed_builder::TypedBuilder;
 use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
@@ -43,26 +44,32 @@ pub struct PressEvent {
     pub continue_propagation: Rc<dyn Fn()>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, TypedBuilder)]
 pub struct UsePressInput {
     /// Wether presses on the element should be disabled.
-    pub disabled: MaybeSignal<bool>,
+    #[builder(setter(into))]
+    pub(crate) disabled: MaybeSignal<bool>,
 
     /// Set this to true if you want controlled press behavior
     /// with the guarantee of no browser-specific behavior happening on user interactions.
-    pub force_prevent_default: bool,
+    #[builder(default = false)]
+    pub(crate) force_prevent_default: bool,
 
-    pub on_press: Callback<PressEvent>,
-    pub on_press_up: Option<Callback<PressEvent>>, // TODO: Call this
-    pub on_press_start: Option<Callback<PressEvent>>,
-    pub on_press_end: Option<Callback<PressEvent>>,
+    #[builder(setter(into))]
+    pub(crate) on_press: Callback<PressEvent>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_press_up: Option<Callback<PressEvent>>, // TODO: Call this
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_press_start: Option<Callback<PressEvent>>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_press_end: Option<Callback<PressEvent>>,
 }
 
 #[derive(Debug)]
 pub struct UsePressProps {
-    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
     pub handlers: EventHandlers,
 }
 
@@ -281,7 +288,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     });
 
-    let on_key_down = Rc::new(move |e: KeyboardEvent| {
+    let on_key_down = Box::new(move |e: KeyboardEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
         {
@@ -322,7 +329,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     });
 
-    let on_click = Rc::new(move |e: MouseEvent| {
+    let on_click = Box::new(move |e: MouseEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
         {
@@ -410,7 +417,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     });
 
     // Start a press.
-    let on_pointer_down = Rc::new(move |e: PointerEvent| {
+    let on_pointer_down = Box::new(move |e: PointerEvent| {
         if e.button() != 0 {
             return;
         }

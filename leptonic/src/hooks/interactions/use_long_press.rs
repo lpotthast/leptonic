@@ -6,6 +6,7 @@ use leptos::{
 };
 use leptos_reactive::{Callback, MaybeSignal};
 use leptos_use::{use_event_listener_with_options, use_window, UseEventListenerOptions};
+use typed_builder::TypedBuilder;
 
 use crate::{
     hooks::{use_press, PressEvent, UsePressInput, UsePressReturn},
@@ -44,33 +45,38 @@ impl From<PressEvent> for LongPressEvent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, TypedBuilder)]
 pub struct UseLongPressInput {
     /// Whether long press events should be disabled.
-    pub disabled: MaybeSignal<bool>,
+    #[builder(setter(into))]
+    pub(crate) disabled: MaybeSignal<bool>,
 
     /// Set this to true if you want controlled press behavior
     /// with the guarantee of no browser-specific behavior happening on user interactions.
-    pub force_prevent_default: bool,
+    #[builder(default = false)]
+    pub(crate) force_prevent_default: bool,
 
     /// Handler that is called when a long press interaction starts.
-    pub on_long_press_start: Option<Callback<LongPressEvent>>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_long_press_start: Option<Callback<LongPressEvent>>,
 
     /// Handler that is called when a long press interaction ends, either
     /// over the target or when the pointer leaves the target.
-    pub on_long_press_end: Option<Callback<LongPressEvent>>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_long_press_end: Option<Callback<LongPressEvent>>,
 
     /// Handler that is called when the threshold time is met while
     /// the press is over the target.
-    pub on_long_press: Callback<LongPressEvent>,
+    #[builder(setter(into))]
+    pub(crate) on_long_press: Callback<LongPressEvent>,
 
     /// The amount of time to wait before triggering a long press.
     /// Default is 500ms.
-    pub threshold: Duration,
+    pub(crate) threshold: Duration,
 
     /// A description for assistive technology users indicating that a long press
     /// action is available, e.g. "Long press to open menu".
-    pub accessibility_description: Oco<'static, str>,
+    pub(crate) accessibility_description: Oco<'static, str>,
 }
 
 #[derive(Debug)]
@@ -80,9 +86,9 @@ pub struct UseLongPressReturn {
 
 #[derive(Debug)]
 pub struct UseLongPressProps {
-    /// These attributes must be spread onto the target element: `<foo use:attrs=props.attrs />`
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-    /// These handlers must be spread onto the target element: `<foo use:handlers=props.handlers />`
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
     pub handlers: EventHandlers,
 }
 
@@ -187,7 +193,7 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
                 .merge(press_props.attrs)
                 // TODO: react-aria uses dynamically created dom nodes, populated with the description string and referenced with aria-describedby. We could also do that instead...
                 .insert("aria-description", input.accessibility_description),
-            handlers: EventHandlers::new().merge(press_props.handlers),
+            handlers: EventHandlers::builder().build().merge(press_props.handlers),
         },
     }
 }

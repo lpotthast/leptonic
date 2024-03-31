@@ -27,28 +27,29 @@ pub fn PageUseLongPress() -> impl IntoView {
         })
     });
 
-    let long_press = use_long_press(UseLongPressInput {
-        disabled: disabled.into(),
-        force_prevent_default: false,
-        on_long_press_start: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("LongPressStart: {e:?}")));
-            });
-        })),
-        on_long_press_end: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("LongPressEnd: {e:?}")));
-            });
-        })),
-        on_long_press: Callback::new(move |e| {
-            set_count.update(|c| *c += 1);
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("LongPress: {e:?}")));
-            });
-        }),
-        threshold: Duration::from_millis(500),
-        accessibility_description: Oco::Borrowed("A button to press"),
-    });
+    let long_press = use_long_press(
+        UseLongPressInput::builder()
+            .disabled(disabled)
+            .on_long_press_start(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("LongPressStart: {e:?}")));
+                });
+            })
+            .on_long_press_end(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("LongPressEnd: {e:?}")));
+                });
+            })
+            .on_long_press(move |e| {
+                set_count.update(|c| *c += 1);
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("LongPress: {e:?}")));
+                });
+            })
+            .threshold(Duration::from_millis(500))
+            .accessibility_description(Oco::Borrowed("A button to press"))
+            .build(),
+    );
 
     view! {
         <Article>
@@ -66,8 +67,8 @@ pub fn PageUseLongPress() -> impl IntoView {
             </Code>
 
             <button
-                use:attrs=long_press.props.attrs
-                use:handlers=long_press.props.handlers
+                {..long_press.props.attrs}
+                {..long_press.props.handlers}
             >
                 "Press me for 500ms"
             </button>
