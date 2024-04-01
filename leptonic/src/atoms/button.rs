@@ -1,5 +1,6 @@
 use leptos::*;
 use leptos_router::AProps;
+use web_sys::FocusEvent;
 
 use crate::{
     hooks::*,
@@ -14,47 +15,78 @@ pub fn Button(
     #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
     #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
+    #[prop(into, optional)] on_focus_change: Option<Callback<bool>>,
+    #[prop(into, optional)] on_focus: Option<Callback<FocusEvent>>,
+    #[prop(into, optional)] on_blur: Option<Callback<FocusEvent>>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
-    /// Arbitrary additional attributes.
+    /// Arbitrary additional attributes. Can be declared using the `attr:` syntax.
     #[prop(attrs)]
     attributes: Vec<(&'static str, Attribute)>,
     children: Children,
 ) -> impl IntoView {
     let el: NodeRef<html::Button> = create_node_ref();
 
-    let btn = use_button(UseButtonInput {
-        node_ref: el,
-        disabled: disabled.or(false),
-        aria_haspopup: aria_haspopup.or_default(),
-        aria_expanded: aria_expanded.or_default(),
-        use_press_input: UsePressInput {
-            disabled: disabled.or(false),
-            force_prevent_default: false,
-            on_press: Callback::new(move |e| match on_press {
-                Some(on_press) => Callback::call(&on_press, e),
-                None => {}
-            }),
-            on_press_up: None,
-            on_press_start: None,
-            on_press_end: None,
-        },
-        use_hover_input: UseHoverInput {
-            disabled: disabled.or(false),
-            on_hover_start,
-            on_hover_end,
-        },
-        use_focus_input: UseFocusInput {
-            disabled: disabled.or(false),
-            on_focus: None,
-            on_blur: None,
-            on_focus_change: None,
-        },
-    });
+    // TODO: This is extremely ugly, bu necessary when using `strip_option` on our builder.
+    // His could be changed when https://github.com/idanarye/rust-typed-builder/issues/117 is resolved.
+    let focus_input = UseFocusInput::builder();
+    let focus_input = focus_input.disabled(disabled.or(false));
+    let focus_input = if let Some(on_focus) = on_focus {
+        let focus_input = focus_input.on_focus(on_focus);
+        if let Some(on_blur) = on_blur {
+            let focus_input = focus_input.on_blur(on_blur);
+            if let Some(on_focus_change) = on_focus_change {
+                let focus_input = focus_input.on_focus_change(on_focus_change);
+                focus_input.build()
+            } else {
+                focus_input.build()
+            }
+        } else {
+            focus_input.build()
+        }
+    } else {
+        focus_input.build()
+    };
+
+    // TODO: This is extremely ugly, bu necessary when using `strip_option` on our builder.
+    // His could be changed when https://github.com/idanarye/rust-typed-builder/issues/117 is resolved.
+    let hover_input = UseHoverInput::builder();
+    let hover_input = hover_input.disabled(disabled.or(false));
+    let hover_input = if let Some(on_hover_start) = on_hover_start {
+        let hover_input = hover_input.on_hover_start(on_hover_start);
+        if let Some(on_hover_end) = on_hover_end {
+            let hover_input = hover_input.on_hover_end(on_hover_end);
+            hover_input.build()
+        } else {
+            hover_input.build()
+        }
+    } else {
+        hover_input.build()
+    };
+
+    let btn = use_button(
+        UseButtonInput::builder()
+            .node_ref(el)
+            .disabled(disabled.or(false))
+            .aria_haspopup(aria_haspopup.or_default())
+            .aria_expanded(aria_expanded.or_default())
+            .use_press_input(
+                UsePressInput::builder()
+                    .disabled(disabled.or(false))
+                    .on_press(move |e| match on_press {
+                        Some(on_press) => Callback::call(&on_press, e),
+                        None => {}
+                    })
+                    .build(),
+            )
+            .use_focus_input(focus_input)
+            .use_hover_input(hover_input)
+            .build(),
+    );
 
     let attributes = btn.props.attrs.merge(attributes);
 
@@ -118,17 +150,17 @@ where
             on_press_start: None,
             on_press_end: None,
         },
-        use_hover_input: UseHoverInput {
+        use_hover_input: Some(UseHoverInput {
             disabled: disabled.or(false),
             on_hover_start,
             on_hover_end,
-        },
-        use_focus_input: UseFocusInput {
+        }),
+        use_focus_input: Some(UseFocusInput {
             disabled: disabled.or(false),
             on_focus: None,
             on_blur: None,
             on_focus_change: None,
-        },
+        }),
     });
 
     let mut attrs = props.attrs.merge(attributes);

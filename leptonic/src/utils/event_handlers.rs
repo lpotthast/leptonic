@@ -55,6 +55,14 @@ impl EventHandlers {
         self.on_blur = merge(self.on_blur, other.on_blur);
         self
     }
+
+    pub fn merge_opt(mut self, other: Option<EventHandlers>) -> Self {
+        if let Some(handlers) = other {
+            self.merge(handlers)
+        } else {
+            self
+        }
+    }
 }
 
 fn merge<E: Clone + 'static>(

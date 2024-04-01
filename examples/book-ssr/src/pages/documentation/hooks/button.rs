@@ -27,8 +27,6 @@ pub fn PageUseButton() -> impl IntoView {
                     }))
                     .build(),
             )
-            .use_hover_input(UseHoverInput::builder().disabled(disabled).build())
-            .use_focus_input(UseFocusInput::builder().disabled(disabled).build())
             .build(),
     );
 
