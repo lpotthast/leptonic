@@ -56,7 +56,7 @@ impl EventHandlers {
         self
     }
 
-    pub fn merge_opt(mut self, other: Option<EventHandlers>) -> Self {
+    pub fn merge_opt(self, other: Option<EventHandlers>) -> Self {
         if let Some(handlers) = other {
             self.merge(handlers)
         } else {

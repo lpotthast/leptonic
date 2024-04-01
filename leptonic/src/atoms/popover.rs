@@ -72,13 +72,15 @@ pub fn PopoverContent(
 
     let UseOverlayPositionReturn {
         props: overlay_pos_props,
-    } = use_overlay_position(UseOverlayPositionInput {
-        overlay_ref: overlay_el,
-        target_ref: ctx.trigger_el.get_untracked().expect("trigger present"),
-        placement_x,
-        placement_y,
-        writing_direction,
-    });
+    } = use_overlay_position(UseOverlayPositionInput::builder()
+        .overlay_ref(overlay_el)
+        .target_ref(ctx.trigger_el.get_untracked().expect("trigger present"))
+        .container_ref(Option::<NodeRef<leptos::html::Custom>>::None)
+        .placement_x(placement_x)
+        .placement_y(placement_y)
+        .writing_direction(writing_direction)
+        .build()
+    );
 
     view! {
         <Portal>

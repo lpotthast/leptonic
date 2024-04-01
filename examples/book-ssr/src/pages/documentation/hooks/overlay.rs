@@ -44,6 +44,7 @@ pub fn PageUseOverlay() -> impl IntoView {
         UseOverlayPositionInput::builder()
             .overlay_ref(overlay_el)
             .target_ref(trigger_el)
+            .container_ref(Option::<NodeRef<leptos::html::Custom>>::None)
             .placement_y(selected_placement_y)
             .placement_x(selected_placement_x)
             .writing_direction(WritingDirection::Ltr)
