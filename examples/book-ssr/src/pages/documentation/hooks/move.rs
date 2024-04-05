@@ -26,8 +26,6 @@ pub fn PageUseMove() -> impl IntoView {
     let (top, set_top) = create_signal(0.0);
 
     let global_pointer_up = expect_context::<GlobalPointerUpEvent>().read_signal;
-    let global_pointer_down = expect_context::<GlobalPointerDownEvent>().read_signal;
-    let global_pointer_cancel = expect_context::<GlobalPointerCancelEvent>().read_signal;
     let global_pointer_move = expect_context::<GlobalPointerMoveEvent>().read_signal;
 
     let container: NodeRef<html::Div> = create_node_ref();
@@ -73,8 +71,6 @@ pub fn PageUseMove() -> impl IntoView {
                 });
             })
             .global_pointer_up(global_pointer_up)
-            .global_pointer_down(global_pointer_down)
-            .global_pointer_cancel(global_pointer_cancel)
             .global_pointer_move(global_pointer_move)
             .build(),
     );

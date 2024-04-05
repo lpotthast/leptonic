@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
@@ -9,7 +11,7 @@ use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
 #[component]
-pub fn PageUseHover() -> impl IntoView {
+pub fn PageUseLongHover() -> impl IntoView {
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = create_signal(false);
 
@@ -24,30 +26,32 @@ pub fn PageUseHover() -> impl IntoView {
         })
     });
 
-    let hover = use_hover(
-        UseHoverInput::builder()
+    let long_hover = use_long_hover(
+        UseLongHoverInput::builder()
             .disabled(disabled)
-            .on_hover_start(move |e| {
+            .on_long_hover_start(move |e| {
                 set_events.update(|events| {
                     events.push_overwrite(Oco::Owned(format!("HoverStart: {e:?}")));
                 });
             })
-            .on_hover_end(move |e| {
+            .on_long_hover_end(move |e| {
                 set_events.update(|events| {
                     events.push_overwrite(Oco::Owned(format!("HoverEnd: {e:?}")));
                 });
             })
+            .threshold(Duration::from_millis(500))
+            .accessibility_description(Oco::Borrowed("Long hover to show tooltip."))
             .build(),
     );
 
     view! {
         <Article>
-            <H1 id="use-hover" class="anchor">
-                "use_hover"
-                <AnchorLink href="#use-hover" description="Direct link to section: use_hover"/>
+            <H1 id="use-long-hover" class="anchor">
+                "use_long_hover"
+                <AnchorLink href="#use-hover" description="Direct link to section: use_long_hover"/>
             </H1>
 
-            <P>"Track element hover."</P>
+            <P>"Track element long hover."</P>
 
             <Code>
                 {indoc!(r"
@@ -56,8 +60,8 @@ pub fn PageUseHover() -> impl IntoView {
             </Code>
 
             <div
-                {..hover.props.attrs}
-                {..hover.props.handlers}
+                {..long_hover.props.attrs}
+                {..long_hover.props.handlers}
                 style="display: inline-flex;
                 border: 0.1em solid green;
                 padding: 0.5em 1em;"
@@ -70,7 +74,7 @@ pub fn PageUseHover() -> impl IntoView {
                 <Label>"Disabled"</Label>
             </FormControl>
 
-            <P>"Is hovered: " { move || hover.is_hovered.get() }</P>
+            <P>"Is hovered: " { move || long_hover.is_hovered.get() }</P>
 
             <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
 
@@ -90,7 +94,7 @@ pub fn PageUseHover() -> impl IntoView {
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_hover", link: "#use-hover" },
+                Toc::Leaf { title: "use_long_hover", link: "#use-long-hover" },
             ]
         }/>
     }

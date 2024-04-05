@@ -13,13 +13,21 @@ use crate::utils::{
 
 #[derive(Debug, Clone)]
 pub struct HoverStartEvent {
+    /// The pointer type that triggered the hover event.
+    /// This can only be either `PointerType::Mouse` or `PointerType::Pen`.
     pub pointer_type: PointerType,
+
+    /// The target element.
     pub current_target: Option<web_sys::EventTarget>,
 }
 
 #[derive(Debug, Clone)]
 pub struct HoverEndEvent {
+    /// The pointer type that triggered the hover event.
+    /// This can only be either `PointerType::Mouse` or `PointerType::Pen`.
     pub pointer_type: PointerType,
+
+    /// The target element.
     pub current_target: Option<web_sys::EventTarget>,
 }
 
@@ -33,11 +41,15 @@ pub struct UseHoverInput {
     pub(crate) disabled: MaybeSignal<bool>,
 
     /// Called whenever a pointer starts hovering the element.
+    /// This is optional, as `UseHoverReturn` also gives access to the `is_hovered` `Signal`.
+    /// When using that signal alone, you may not need to react to this event.
     #[builder(default, setter(into, strip_option))]
     pub(crate) on_hover_start: Option<Callback<HoverStartEvent>>,
 
     /// Called whenever a pointer stops hovering the element
     /// or when the element is hovered and `disabled` transitions to `true`.
+    /// This is optional, as `UseHoverReturn` also gives access to the `is_hovered` `Signal`.
+    /// When using that signal alone, you may not need to react to this event.
     #[builder(default, setter(into, strip_option))]
     pub(crate) on_hover_end: Option<Callback<HoverEndEvent>>,
 }
@@ -46,6 +58,7 @@ pub struct UseHoverInput {
 pub struct UseHoverProps {
     /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
+
     /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
     pub handlers: EventHandlers,
 }

@@ -132,7 +132,7 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
                             },
                             input.threshold,
                         )
-                        .expect("set_timeout to not fail"),
+                        .expect("set_timeout_with_handle to not fail"),
                     ));
                     if let Some(prev) = prev {
                         prev.clear();

@@ -5,4 +5,5 @@ pub mod hover;
 pub mod r#move;
 pub mod overlay;
 pub mod press;
+pub mod use_long_hover;
 pub mod use_long_press;

@@ -29,12 +29,11 @@ pub struct UseMoveInput {
     #[builder(setter(into))]
     pub(crate) on_move_end: Callback<MoveEndEvent>,
 
+    // TODO: Remove this
     #[builder(setter(into))]
     pub(crate) global_pointer_up: Signal<Option<PointerEvent>>,
-    #[builder(setter(into))]
-    pub(crate) global_pointer_down: Signal<Option<PointerEvent>>,
-    #[builder(setter(into))]
-    pub(crate) global_pointer_cancel: Signal<Option<PointerEvent>>,
+
+    // TODO: Remove this
     #[builder(setter(into))]
     pub(crate) global_pointer_move: Signal<Option<PointerEvent>>,
 }

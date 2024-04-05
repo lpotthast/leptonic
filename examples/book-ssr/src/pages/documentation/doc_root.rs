@@ -49,6 +49,7 @@ use crate::pages::documentation::hooks::hover::PageUseHover;
 use crate::pages::documentation::hooks::overlay::PageUseOverlay;
 use crate::pages::documentation::hooks::press::PageUsePress;
 use crate::pages::documentation::hooks::r#move::PageUseMove;
+use crate::pages::documentation::hooks::use_long_hover::PageUseLongHover;
 use crate::pages::documentation::hooks::use_long_press::PageUseLongPress;
 
 #[derive(Debug, Copy, Clone)]
@@ -64,6 +65,7 @@ pub enum DocRoutes {
     UseLongPress,
     UseMove,
     UseHover,
+    UseLongHover,
     UseButton,
     UseOverlay,
     UseAnchorLink,
@@ -130,6 +132,7 @@ impl DocRoutes {
             Self::UseLongPress => "hooks/use-long-press",
             Self::UseMove => "hooks/use-move",
             Self::UseHover => "hooks/use-hover",
+            Self::UseLongHover => "hooks/use-long-hover",
             Self::UseButton => "hooks/use-button",
             Self::UseOverlay => "hooks/use-overlay",
             Self::UseAnchorLink => "hooks/use-anchor-link",
@@ -208,6 +211,7 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::UseLongPress view=|| view! { <PageUseLongPress/> }/>
             <Route path=DocRoutes::UseMove view=|| view! { <PageUseMove/> }/>
             <Route path=DocRoutes::UseHover view=|| view! { <PageUseHover/> }/>
+            <Route path=DocRoutes::UseLongHover view=|| view! { <PageUseLongHover/> }/>
             <Route path=DocRoutes::UseButton view=|| view! { <PageUseButton/> }/>
             <Route path=DocRoutes::UseOverlay view=|| view! { <PageUseOverlay/> }/>
             <Route path=DocRoutes::UseAnchorLink view=|| view! { <PageUseAnchorLink/> }/>
@@ -293,6 +297,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=DocRoutes::UseLongPress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_long_press"</Link>
                 <Link href=DocRoutes::UseMove class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
                 <Link href=DocRoutes::UseHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
+                <Link href=DocRoutes::UseLongHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_long_hover"</Link>
                 <Link href=DocRoutes::UseButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
                 <Link href=DocRoutes::UseOverlay class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
                 <Link href=DocRoutes::UseAnchorLink class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_anchor_link"</Link>

@@ -173,6 +173,7 @@ pub fn PageUseOverlay() -> impl IntoView {
 
             <Portal>
                 {
+                    // TODO: Merge attributes?
                     let overlay_props_attrs = overlay_props.attrs.clone();
                     let overlay_pos_props_attrs = overlay_pos_props.attrs.clone();
                     view! {
