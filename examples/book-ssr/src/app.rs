@@ -209,7 +209,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     let is_medium = use_media_query("(max-width: 1200px)");
 
     let router_context = use_context::<RouterContext>();
-    
+
     let is_doc = create_memo(move |_| {
         router_context
             .as_ref()
@@ -371,8 +371,8 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
             </div>
         </AppBar>
 
-        <Box 
-            id="content" 
+        <Box
+            id="content"
             attr:aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
         >
             {
@@ -388,7 +388,14 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                 }
             }
 
-            <Drawer id="main-drawer" shown=Signal::derive(move || !main_drawer_closed.get()) side=DrawerSide::Right style=format!("top: {APP_BAR_HEIGHT}")>
+            <Drawer
+                id="main-drawer"
+                shown=Signal::derive(move || !main_drawer_closed.get())
+                side=DrawerSide::Right
+                style=format!("top: {APP_BAR_HEIGHT}")
+                disable_interact_outside_tracking_when=Signal::derive(move || main_drawer_closed.get() || !is_small.get())
+                on_interact_outside=move |_e| { set_main_drawer_closed.set(true) }
+            >
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) class="menu">
 
                     <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank style="font-size: 3em;">

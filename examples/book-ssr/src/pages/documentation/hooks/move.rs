@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::contexts::global_pointer_event::{
-    GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent, GlobalPointerUpEvent,
+    GlobalPointerMoveEvent, GlobalPointerUpEvent,
 };
 use leptonic::hooks::*;
 use leptos::*;

@@ -21,6 +21,8 @@ pub struct EventHandlers {
     pub on_focus: Option<Box<dyn FnMut(FocusEvent)>>,
     #[builder(default, setter(strip_option))]
     pub on_blur: Option<Box<dyn FnMut(FocusEvent)>>,
+    #[builder(default, setter(strip_option))]
+    pub on_wheel: Option<Box<dyn FnMut(WheelEvent)>>,
 }
 
 impl std::fmt::Debug for EventHandlers {
@@ -35,6 +37,7 @@ impl std::fmt::Debug for EventHandlers {
             .field("on_pointer_leave", dbg(self.on_pointer_leave.as_ref()))
             .field("on_focus", dbg(self.on_focus.as_ref()))
             .field("on_blur", dbg(self.on_blur.as_ref()))
+            .field("on_wheel", dbg(self.on_wheel.as_ref()))
             .finish()
     }
 }
@@ -53,6 +56,7 @@ impl EventHandlers {
         self.on_pointer_leave = merge(self.on_pointer_leave, other.on_pointer_leave);
         self.on_focus = merge(self.on_focus, other.on_focus);
         self.on_blur = merge(self.on_blur, other.on_blur);
+        self.on_wheel = merge(self.on_wheel, other.on_wheel);
         self
     }
 
@@ -100,6 +104,7 @@ impl IntoIterator for EventHandlers {
                     .map(|it| EventHandlerFn::Pointerleave(it)),
                 self.on_focus.map(|it| EventHandlerFn::Focus(it)),
                 self.on_blur.map(|it| EventHandlerFn::Blur(it)),
+                self.on_wheel.map(|it| EventHandlerFn::Wheel(it)),
             ],
             index: 0,
         }
@@ -108,7 +113,7 @@ impl IntoIterator for EventHandlers {
 
 #[allow(missing_debug_implementations)]
 pub struct EventHandlersIterator {
-    handlers: [Option<EventHandlerFn>; 9],
+    handlers: [Option<EventHandlerFn>; 10],
     index: usize,
 }
 

@@ -1,9 +1,9 @@
-use std::sync::atomic::{AtomicIsize, Ordering::SeqCst};
+use std::sync::atomic::{AtomicIsize, Ordering};
 
 use educe::Educe;
 use leptos::on_cleanup;
-use leptos_reactive::{create_effect, MaybeSignal, SignalGet};
-use leptos_use::{use_document, use_window};
+use leptos_reactive::{create_effect, MaybeSignal, SignalGet, SignalGetUntracked};
+use leptos_use::{core::ElementMaybeSignal, use_document, use_window};
 use typed_builder::TypedBuilder;
 
 use crate::utils::attributes::Attributes;
@@ -28,34 +28,54 @@ pub struct UsePreventScrollProps {
     pub attrs: Attributes,
 }
 
-pub fn use_prevent_scroll(input: UsePreventScrollInput) -> UsePreventScrollReturn {
-    let style = move |window: &web_sys::Window, root: &web_sys::Element| {
+pub fn use_prevent_scroll<El, T>(
+    el: Option<El>,
+    input: UsePreventScrollInput,
+) -> UsePreventScrollReturn
+where
+    El: Into<ElementMaybeSignal<T, web_sys::Element>> + 'static,
+    T: Into<web_sys::Element> + Clone + 'static,
+{
+    // TODO: Use create_effect to access el reactively?
+    if let Some(el) = el {
+        if let Some(el) = el.into().get_untracked() {
+            let el: web_sys::Element = el.into();
+        }
+    }
+
+    let style = move |width_with_scrollbar: f64, width_without_scrollbar: f64| {
         format!(
             "overflow: hidden; padding-right: {}px;",
-            window
-                .inner_width()
-                .map(|it| it.as_f64().unwrap_or(0.0))
-                .unwrap_or(0.0)
-                - root.client_width() as f64
+            width_with_scrollbar - width_without_scrollbar
         )
     };
 
     let register = move || {
-        PREVENT_SCROLL_COUNT.fetch_add(1, SeqCst);
+        PREVENT_SCROLL_COUNT.fetch_add(1, Ordering::Release);
 
         if let Some(window) = use_window().as_ref() {
             if let Some(doc) = window.document() {
                 if let Some(root) = doc.document_element() {
-                    root.set_attribute("style", style(window, &root).as_str())
-                        .expect("Being able to set style attribute.");
+                    root.set_attribute(
+                        "style",
+                        style(
+                            window
+                                .inner_width()
+                                .map(|it| it.as_f64().unwrap_or(0.0))
+                                .unwrap_or(0.0),
+                            root.client_width() as f64,
+                        )
+                        .as_str(),
+                    )
+                    .expect("Being able to set style attribute.");
                 }
             }
         }
     };
 
     let cleanup = || {
-        let _prev = PREVENT_SCROLL_COUNT.fetch_sub(1, SeqCst);
-        let remaining = PREVENT_SCROLL_COUNT.load(SeqCst);
+        let _prev = PREVENT_SCROLL_COUNT.fetch_sub(1, Ordering::Release);
+        let remaining = PREVENT_SCROLL_COUNT.load(Ordering::Acquire);
         if remaining == 0 {
             if let Some(window) = use_window().as_ref() {
                 if let Some(doc) = window.document() {

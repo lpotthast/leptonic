@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
@@ -11,7 +9,7 @@ use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
 #[component]
-pub fn PageUseLongHover() -> impl IntoView {
+pub fn PageUseScrollWheel() -> impl IntoView {
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = create_signal(false);
 
@@ -26,32 +24,27 @@ pub fn PageUseLongHover() -> impl IntoView {
         })
     });
 
-    let long_hover = use_long_hover(
-        UseLongHoverInput::builder()
+    let el = create_node_ref();
+    let scroll = use_scroll_wheel(
+        el,
+        UseScrollWheelInput::builder()
             .disabled(disabled)
-            .on_long_hover_start(move |e: LongHoverStartEvent| {
+            .on_scroll(move |e| {
                 set_events.update(|events| {
                     events.push_overwrite(Oco::Owned(format!("{e:?}")));
                 });
             })
-            .on_long_hover_end(move |e: LongHoverEndEvent| {
-                set_events.update(|events| {
-                    events.push_overwrite(Oco::Owned(format!("{e:?}")));
-                });
-            })
-            .threshold(Duration::from_millis(500))
-            .accessibility_description(Oco::Borrowed("Long hover to show tooltip."))
             .build(),
     );
 
     view! {
         <Article>
-            <H1 id="use-long-hover" class="anchor">
-                "use_long_hover"
-                <AnchorLink href="#use-hover" description="Direct link to section: use_long_hover"/>
+            <H1 id="use-scroll-wheel" class="anchor">
+                "use_scroll_wheel"
+                <AnchorLink href="#use-scroll-wheel" description="Direct link to section: use_scroll_wheel"/>
             </H1>
 
-            <P>"Track element long hover."</P>
+            <P>"Track scroll wheel events."</P>
 
             <Code>
                 {indoc!(r"
@@ -60,21 +53,20 @@ pub fn PageUseLongHover() -> impl IntoView {
             </Code>
 
             <div
-                {..long_hover.props.attrs}
-                {..long_hover.props.handlers}
+                {..scroll.props.attrs}
+                {..scroll.props.handlers}
+                ref=el
                 style="display: inline-flex;
                 border: 0.1em solid green;
                 padding: 0.5em 1em;"
             >
-                "Hover me"
+                "Scroll me"
             </div>
 
             <FormControl style="flex-direction: row; align-items: center; gap: 0.5em;">
                 <Checkbox checked=disabled set_checked=set_disabled />
                 <Label>"Disabled"</Label>
             </FormControl>
-
-            <P>"Is hovered: " { move || long_hover.is_hovered.get() }</P>
 
             <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
 
@@ -94,7 +86,7 @@ pub fn PageUseLongHover() -> impl IntoView {
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_long_hover", link: "#use-long-hover" },
+                Toc::Leaf { title: "use_scroll_wheel", link: "#use-scroll-wheel" },
             ]
         }/>
     }

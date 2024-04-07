@@ -1,6 +1,8 @@
 use leptos::*;
 use leptos_use::{use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
 
+use crate::{hooks::*, Transparent};
+
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DrawerSide {
     #[default]
@@ -30,6 +32,8 @@ enum DrawerAnimationState {
 pub fn Drawer(
     side: DrawerSide,
     #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
+    #[prop(into, optional)] disable_interact_outside_tracking_when: MaybeSignal<bool>,
+    #[prop(into, optional)] on_interact_outside: Option<Callback<InteractOutsideEvent>>,
     #[prop(into, optional)] id: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
@@ -97,18 +101,32 @@ pub fn Drawer(
         }
     });
 
+    let el: NodeRef<leptos::html::Custom> = create_node_ref();
+    let interact_outside = use_interact_outside(
+        el,
+        UseInteractOutsideInput::builder()
+            .disabled(disable_interact_outside_tracking_when)
+            .on_interact_outside(on_interact_outside.unwrap_or_else(|| Callback::new(|_e| {})))
+            .build(),
+    );
+
     view! {
-        <leptonic-drawer
-            id=id
-            class=class
-            class:shown=move || anim_state.get() == DrawerAnimationState::Shown
-            class:showing=move || anim_state.get() == DrawerAnimationState::Showing
-            class:hiding=move || anim_state.get() == DrawerAnimationState::Hiding
-            class:hidden=move || anim_state.get() == DrawerAnimationState::Hidden
-            style=style
-            data-side=side.to_str()
-        >
-            { children() }
-        </leptonic-drawer>
+        <Transparent>
+            <leptonic-drawer
+                {..interact_outside.props.attrs}
+                {..interact_outside.props.handlers}
+                ref=el
+                id=id
+                class=class
+                class:shown=move || anim_state.get() == DrawerAnimationState::Shown
+                class:showing=move || anim_state.get() == DrawerAnimationState::Showing
+                class:hiding=move || anim_state.get() == DrawerAnimationState::Hiding
+                class:hidden=move || anim_state.get() == DrawerAnimationState::Hidden
+                style=style
+                data-side=side.to_str()
+            >
+                { children() }
+            </leptonic-drawer>
+        </Transparent>
     }
 }

@@ -20,6 +20,15 @@ Component library for the [Leptos](https://github.com/leptos-rs/leptos) framewor
 
 Visit [leptonic.dev](https://leptonic.dev) for installation instructions, component-guides, theming instructions and more. leptonic.dev is the deployed `book` example and itself build with leptonic.
 
+## Browser compatibility
+
+We expect pointer events to be supported by devices executing Leptonic code
+and currently do not provide alternative code-paths for devices that doesn't.
+See [https://caniuse.com/pointer](https://caniuse.com/pointer) for general availability
+(currently at >97%).
+
+No guarantees are made to be compatible with any Internet Explorer release.
+
 ## Leptos compatibility
 
 | Crate version | Compatible Leptos version |
@@ -28,7 +37,7 @@ Visit [leptonic.dev](https://leptonic.dev) for installation instructions, compon
 | 0.2         | 0.4                     |
 | 0.3.0-rc1   | 0.5.0-rc1               |
 | 0.3, 0.4    | 0.5                     |
-| 0.5         | 0.6                     |
+| 0.5, 0.6    | 0.6                     |
 
 ## MSRV
 

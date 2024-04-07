@@ -1,6 +1,6 @@
 use leptos::*;
 
-use crate::{hooks::{anchor_link::Href, *}, ScrollBehavior};
+use crate::{hooks::{anchor_link::Href, *}, ScrollBehavior, Transparent};
 
 #[component]
 pub fn AnchorLink(
@@ -46,19 +46,21 @@ pub fn AnchorLink(
     });
 
     view! {
-        <a
-            //use:attrs=props.attrs
-            //use:handlers=props.handlers
-            id=id
-            class=class
-            style=style
-            class="leptonic-anchor-link"
-            target="_self"
-        >
-            { match children {
-                Some(children) => children().into_view(),
-                None => "#".into_view(),
-            } }
-        </a>
+        <Transparent>
+            <a
+                {..props.attrs}
+                {..props.handlers}
+                id=id
+                class=class
+                style=style
+                class="leptonic-anchor-link"
+                target="_self"
+            >
+                { match children {
+                    Some(children) => children().into_view(),
+                    None => "#".into_view(),
+                } }
+            </a>
+        </Transparent>
     }
 }

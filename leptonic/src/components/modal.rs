@@ -5,7 +5,7 @@ use uuid::Uuid;
 use crate::{
     hooks::*,
     prelude::{GlobalKeyboardEvent, Producer},
-    OptMaybeSignal,
+    OptMaybeSignal, Transparent,
 };
 
 #[derive(Clone)]
@@ -62,9 +62,12 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
 
     let disable_prevent_scroll = Signal::derive(move || !has_modals.get());
 
-    let _ = use_prevent_scroll(UsePreventScrollInput {
-        disabled: disable_prevent_scroll.into(),
-    });
+    let _ = use_prevent_scroll(
+        Option::<web_sys::Element>::None,
+        UsePreventScrollInput {
+            disabled: disable_prevent_scroll.into(),
+        },
+    );
 
     let UsePressReturn {
         props,
@@ -85,22 +88,25 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     });
 
     view! {
-        { children() }
+        // TODO: Remove this usage of <Transparent>!
+        <Transparent>
+            { children() }
 
-        <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
-            <leptonic-modal-backdrop
-                //use:attrs=props.attrs
-                //use:handlers=props.handlers
-            />
-
-            <leptonic-modals>
-                <For
-                    each=move || ctx.shown_modals.get()
-                    key=|it| it.key
-                    children=|it| view! { {(it.children)()} }
+            <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
+                <leptonic-modal-backdrop
+                    {..props.attrs}
+                    {..props.handlers}
                 />
-            </leptonic-modals>
-        </leptonic-modal-host>
+
+                <leptonic-modals>
+                    <For
+                        each=move || ctx.shown_modals.get()
+                        key=|it| it.key
+                        children=|it| view! { {(it.children)()} }
+                    />
+                </leptonic-modals>
+            </leptonic-modal-host>
+        </Transparent>
     }
 }
 

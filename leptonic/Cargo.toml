@@ -67,11 +67,11 @@ wasm-bindgen-test = "0.3.41"
 web-sys = "0.3.68"
 
 [patch.crates-io]
-leptos = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
-leptos_reactive = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
-leptos_dom = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
-leptos_meta = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
-leptos_router = { git = 'https://github.com/lpotthast/leptos', branch = "spread-event-handlers" }
+leptos = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+leptos_reactive = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+leptos_dom = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+leptos_meta = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+leptos_router = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
 
 [features]
 default = ["hooks"]

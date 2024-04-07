@@ -27,14 +27,14 @@ pub fn PageUseHover() -> impl IntoView {
     let hover = use_hover(
         UseHoverInput::builder()
             .disabled(disabled)
-            .on_hover_start(move |e| {
+            .on_hover_start(move |e: HoverStartEvent| {
                 set_events.update(|events| {
-                    events.push_overwrite(Oco::Owned(format!("HoverStart: {e:?}")));
+                    events.push_overwrite(Oco::Owned(format!("{e:?}")));
                 });
             })
-            .on_hover_end(move |e| {
+            .on_hover_end(move |e: HoverEndEvent| {
                 set_events.update(|events| {
-                    events.push_overwrite(Oco::Owned(format!("HoverEnd: {e:?}")));
+                    events.push_overwrite(Oco::Owned(format!("{e:?}")));
                 });
             })
             .build(),

@@ -1,9 +1,12 @@
 pub mod anchor_link;
 pub mod button;
 pub mod focus;
-pub mod hover;
 pub mod r#move;
 pub mod overlay;
 pub mod press;
+pub mod use_hover;
+pub mod use_interact_outside;
 pub mod use_long_hover;
 pub mod use_long_press;
+pub mod use_prevent_scroll;
+pub mod use_scroll_wheel;
