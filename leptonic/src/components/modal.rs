@@ -69,19 +69,21 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
         },
     );
 
+    // TODO: Use builder pattern
     let UsePressReturn {
         props,
         is_pressed: _,
+        press_responder: _,
     } = use_press(UsePressInput {
         disabled: false.into(),
         force_prevent_default: true,
-        on_press: Callback::new(move |_| {
+        on_press: Some(Callback::new(move |_| {
             if let Some(modal_on_top) = shown_modals.get_untracked().into_iter().rev().next() {
                 if let Some(on_backdrop_interaction) = modal_on_top.on_backdrop_interaction {
                     on_backdrop_interaction.call(());
                 }
             }
-        }),
+        })),
         on_press_up: None,
         on_press_start: None,
         on_press_end: None,

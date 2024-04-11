@@ -126,6 +126,7 @@ where
     );
 
     on_cleanup(move || {
+        // TODO: Fix this. Do we leak listeners when not doing this? This implementation would currently lead to panics when an interaction outside triggers a route change.
         // Clean up our last listeners, if any exist.
         /*e.with_value_mut(|prev| {
             if let Some(prev) = prev {

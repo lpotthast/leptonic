@@ -1,12 +1,14 @@
 use std::rc::Rc;
 
 use educe::Educe;
-use leptos::Oco;
-use leptos_reactive::{Signal, SignalGet};
+use leptos::{Callback, Oco};
+use leptos_reactive::SignalGet;
 use typed_builder::TypedBuilder;
 
 use crate::{
+    hooks::{interactions::use_press::PressResponder, PressEvent},
     prelude::{AriaExpanded, AriaHasPopup},
+    state::overlay::OverlayTriggerState,
     utils::{
         aria::{AriaAttribute, AriaControls, GenericAttribute},
         attributes::Attributes,
@@ -15,10 +17,6 @@ use crate::{
 
 #[derive(Debug, Clone, TypedBuilder)]
 pub struct UseOverlayTriggerInput {
-    /// Whether the overlay is currently shown.
-    #[builder(setter(into))]
-    pub(crate) show: Signal<bool>,
-
     #[builder(setter(into))]
     pub(crate) overlay_id: Oco<'static, str>,
 
@@ -49,7 +47,14 @@ pub struct UseOverlayTriggerOverlayProps {
     pub attrs: Attributes,
 }
 
-pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerReturn {
+pub fn use_overlay_trigger(
+    state: OverlayTriggerState,
+
+    // This hook only functions with a press hook being present. Use the value returned from `use_press`.
+    press_responder: PressResponder,
+
+    input: UseOverlayTriggerInput,
+) -> UseOverlayTriggerReturn {
     #[cfg(debug_assertions)]
     fn get_overlay_type(input: &UseOverlayTriggerInput) -> AriaHasPopup {
         match input.overlay_type {
@@ -73,14 +78,18 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
             aria_has_popup,
         )))
         .insert_entry(AriaAttribute::Expanded(GenericAttribute::Fn(Rc::new(
-            move || AriaExpanded::from(input.show.get()),
+            move || AriaExpanded::from(state.show.get()),
         ))))
         .insert_entry(AriaAttribute::Controls(GenericAttribute::Fn(Rc::new(
-            move || match input.show.get() {
+            move || match state.show.get() {
                 true => AriaControls::Id(vec![overlay_id.to_string()]),
                 false => AriaControls::Undefined,
             },
         ))));
+
+    press_responder.add(Callback::new(move |_e: PressEvent| {
+        state.toggle();
+    }));
 
     UseOverlayTriggerReturn {
         props: UseOverlayTriggerProps {

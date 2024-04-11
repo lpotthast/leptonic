@@ -102,10 +102,11 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
     let UsePressReturn {
         props: press_props,
         is_pressed: _,
+        press_responder: _,
     } = use_press(UsePressInput {
         disabled: input.disabled,
         force_prevent_default: input.force_prevent_default,
-        on_press: Callback::new(|_| {}),
+        on_press: None,
         on_press_up: None,
         on_press_start: Some(Callback::new(move |e: PressEvent| {
             (e.continue_propagation)();

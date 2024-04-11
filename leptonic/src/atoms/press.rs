@@ -11,10 +11,11 @@ pub fn Pressable(
     let UsePressReturn {
         props,
         is_pressed: _,
+        press_responder: _,
     } = use_press(UsePressInput {
         disabled,
         force_prevent_default: false,
-        on_press,
+        on_press: Some(on_press),
         on_press_up: None,
         on_press_start: None,
         on_press_end: None,

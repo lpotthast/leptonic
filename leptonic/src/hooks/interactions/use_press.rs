@@ -1,6 +1,7 @@
 use std::{cell::RefCell, rc::Rc};
 
 use educe::Educe;
+use leptos::StoredValue;
 use leptos_reactive::{
     create_signal, store_value, Callable, Callback, MaybeSignal, Signal, SignalGetUntracked,
     SignalSet,
@@ -16,6 +17,25 @@ use crate::utils::{
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
+
+#[derive(Debug, Clone, Copy)]
+pub struct PressResponder {
+    handlers: StoredValue<Vec<Callback<PressEvent>>>,
+}
+
+impl PressResponder {
+    pub(crate) fn new() -> Self {
+        PressResponder {
+            handlers: store_value(Vec::new()),
+        }
+    }
+
+    pub fn add(&self, handler: Callback<PressEvent>) {
+        self.handlers.update_value(move |handlers| {
+            handlers.push(handler);
+        });
+    }
+}
 
 #[derive(Debug)]
 pub enum PressEvents {
@@ -55,8 +75,8 @@ pub struct UsePressInput {
     #[builder(default = false)]
     pub(crate) force_prevent_default: bool,
 
-    #[builder(setter(into))]
-    pub(crate) on_press: Callback<PressEvent>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_press: Option<Callback<PressEvent>>,
     #[builder(default, setter(into, strip_option))]
     pub(crate) on_press_up: Option<Callback<PressEvent>>, // TODO: Call this
     #[builder(default, setter(into, strip_option))]
@@ -77,6 +97,7 @@ pub struct UsePressProps {
 pub struct UsePressReturn {
     pub props: UsePressProps,
     pub is_pressed: Signal<bool>,
+    pub press_responder: PressResponder,
 }
 
 enum GlobalEventHandlers {
@@ -232,23 +253,25 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             "Only call trigger_press after triggering a trigger_press_end!"
         );
 
-        let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-        Callable::call(
-            &input.on_press,
-            PressEvent {
-                pointer_type: s.pointer_type.clone(),
-                target: s.target.clone(),
-                modifiers: match e {
-                    EventRef::Pointer(e) => e.modifiers(),
-                    EventRef::Keyboard(e) => e.modifiers(),
+        if let Some(on_press) = input.on_press {
+            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+            Callable::call(
+                &on_press,
+                PressEvent {
+                    pointer_type: s.pointer_type.clone(),
+                    target: s.target.clone(),
+                    modifiers: match e {
+                        EventRef::Pointer(e) => e.modifiers(),
+                        EventRef::Keyboard(e) => e.modifiers(),
+                    },
+                    continue_propagation,
                 },
-                continue_propagation,
-            },
-        );
-        if !continue_propagation_state.into_inner() {
-            match e {
-                EventRef::Pointer(e) => e.stop_propagation(),
-                EventRef::Keyboard(e) => e.stop_propagation(),
+            );
+            if !continue_propagation_state.into_inner() {
+                match e {
+                    EventRef::Pointer(e) => e.stop_propagation(),
+                    EventRef::Keyboard(e) => e.stop_propagation(),
+                }
             }
         }
     };
@@ -480,6 +503,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 .build(),
         },
         is_pressed: is_pressed.into(),
+        press_responder: PressResponder::new(),
     }
 }
 

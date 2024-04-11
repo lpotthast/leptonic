@@ -52,7 +52,7 @@ pub fn Button(
         focus_input.build()
     };
 
-    // TODO: This is extremely ugly, bu necessary when using `strip_option` on our builder.
+    // TODO: This is extremely ugly, but necessary when using `strip_option` on our builder.
     // His could be changed when https://github.com/idanarye/rust-typed-builder/issues/117 is resolved.
     let hover_input = UseHoverInput::builder();
     let hover_input = hover_input.disabled(disabled.or(false));
@@ -68,21 +68,23 @@ pub fn Button(
         hover_input.build()
     };
 
+    // TODO: This is extremely ugly, but necessary when using `strip_option` on our builder.
+    // His could be changed when https://github.com/idanarye/rust-typed-builder/issues/117 is resolved.
+    let press_input = UsePressInput::builder();
+    let press_input = press_input.disabled(disabled.or(false));
+    let press_input = if let Some(on_press) = on_press {
+        press_input.on_press(on_press).build()
+    } else {
+        press_input.build()
+    };
+
     let btn = use_button(
         UseButtonInput::builder()
             .node_ref(el)
             .disabled(disabled.or(false))
             .aria_haspopup(aria_haspopup.or_default())
             .aria_expanded(aria_expanded.or_default())
-            .use_press_input(
-                UsePressInput::builder()
-                    .disabled(disabled.or(false))
-                    .on_press(move |e| match on_press {
-                        Some(on_press) => Callback::call(&on_press, e),
-                        None => {}
-                    })
-                    .build(),
-            )
+            .use_press_input(press_input)
             .use_focus_input(focus_input)
             .use_hover_input(hover_input)
             .build(),
@@ -137,7 +139,10 @@ pub fn LinkButton<H>(
 where
     H: leptos_router::ToHref + 'static,
 {
-    let UseButtonReturn { props } = use_button(UseButtonInput {
+    let UseButtonReturn {
+        props,
+        press_responder: _,
+    } = use_button(UseButtonInput {
         node_ref: NodeRef::<html::Custom>::new(),
         disabled: disabled.or(false),
         aria_haspopup: aria_haspopup.or_default(),
@@ -145,7 +150,7 @@ where
         use_press_input: UsePressInput {
             disabled: disabled.or(false),
             force_prevent_default: false,
-            on_press: Callback::new(move |_e| {}),
+            on_press: None,
             on_press_up: None,
             on_press_start: None,
             on_press_end: None,

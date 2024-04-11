@@ -11,7 +11,7 @@ use super::{
     focus::use_focus::{use_focus, UseFocusInput},
     interactions::{
         use_hover::{use_hover, UseHoverInput},
-        use_press::{use_press, UsePressInput},
+        use_press::{use_press, PressResponder, UsePressInput},
     },
 };
 
@@ -47,6 +47,7 @@ pub struct UseButtonInput<E: ElementDescriptor + 'static> {
 pub struct UseButtonReturn {
     /// Spread these props onto your button using the spread syntax: `<button {..props}>...`
     pub props: UseButtonProps,
+    pub press_responder: PressResponder,
 }
 
 #[derive(Educe)]
@@ -117,5 +118,6 @@ pub fn use_button<E: ElementDescriptor + 'static>(input: UseButtonInput<E>) -> U
                 .merge(focus.props.handlers)
                 .merge_opt(hover.map(|it| it.props.handlers)),
         },
+        press_responder: press.press_responder,
     }
 }

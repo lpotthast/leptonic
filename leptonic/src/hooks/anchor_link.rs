@@ -84,7 +84,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
 
     let href: Href = input.href.clone();
     let original_on_press = press_input.on_press;
-    press_input.on_press = Callback::new(move |e| {
+    press_input.on_press = Some(Callback::new(move |e| {
         if !input.disabled.get() {
             if let Some(scroll_behavior) = input.scroll_behavior {
                 if let Some(document) = use_document().as_ref() {
@@ -103,8 +103,10 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             }
             update_url(&href);
         }
-        Callback::call(&original_on_press, e);
-    });
+        if let Some(original_on_press) = &original_on_press {
+            Callback::call(original_on_press, e);
+        }
+    }));
 
     let press = use_press(press_input);
 

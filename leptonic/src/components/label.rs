@@ -13,13 +13,15 @@ pub fn Label(
 ) -> impl IntoView {
     let fc_ctx = use_context::<FormControlContext>();
 
+    // TODO: Use builder pattern
     let UsePressReturn {
         is_pressed: _,
         props,
+        press_responder: _,
     } = use_press(UsePressInput {
         disabled: disabled.0.unwrap_or(false.into()),
         force_prevent_default: false,
-        on_press: Callback::new(move |_| {
+        on_press: Some(Callback::new(move |_| {
             if let Some(fc_ctx) = &fc_ctx {
                 fc_ctx.input.with_untracked(move |input| match input {
                     Some(input) => {
@@ -28,7 +30,7 @@ pub fn Label(
                     None => {}
                 });
             }
-        }),
+        })),
         on_press_up: None,
         on_press_start: None,
         on_press_end: None,

@@ -8,6 +8,7 @@ pub mod atoms;
 pub mod components;
 pub mod contexts;
 pub mod hooks;
+pub mod state;
 pub mod utils;
 
 #[derive(Debug, Clone)]

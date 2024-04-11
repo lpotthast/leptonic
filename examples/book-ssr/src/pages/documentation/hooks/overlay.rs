@@ -2,6 +2,7 @@ use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
+use leptonic::state::overlay::OverlayTriggerState;
 use leptonic::utils::aria::AriaHasPopup;
 use leptonic::utils::locale::WritingDirection;
 use leptos::*;
@@ -28,11 +29,31 @@ pub fn PageUseOverlay() -> impl IntoView {
         set_state,
     } = use_overlay(UseOverlayInput::builder().disabled(disabled).build());
 
+    let UseButtonReturn { props: btn_props, press_responder } = use_button(
+        UseButtonInput::builder()
+            .node_ref(trigger_el)
+            .disabled(disabled)
+            .use_press_input(
+                UsePressInput::builder()
+                    .disabled(disabled)
+                    .build(),
+            )
+            .use_hover_input(UseHoverInput::builder().disabled(disabled).build())
+            .use_focus_input(UseFocusInput::builder().disabled(disabled).build())
+            .build(),
+    );
+
+    let trigger_state = OverlayTriggerState {
+        show: state,
+        set_show: set_state,
+    };
+
     let UseOverlayTriggerReturn {
         props: trigger_props,
     } = use_overlay_trigger(
+        trigger_state,
+        press_responder,
         UseOverlayTriggerInput::builder()
-            .show(state)
             .overlay_id(id)
             .overlay_type(AriaHasPopup::Menu)
             .build(),
@@ -48,23 +69,6 @@ pub fn PageUseOverlay() -> impl IntoView {
             .placement_y(selected_placement_y)
             .placement_x(selected_placement_x)
             .writing_direction(WritingDirection::Ltr)
-            .build(),
-    );
-
-    let UseButtonReturn { props: btn_props } = use_button(
-        UseButtonInput::builder()
-            .node_ref(trigger_el)
-            .disabled(disabled)
-            .use_press_input(
-                UsePressInput::builder()
-                    .disabled(disabled)
-                    .on_press(Callback::new(move |_e| {
-                        set_state.set(!state.get_untracked());
-                    }))
-                    .build(),
-            )
-            .use_hover_input(UseHoverInput::builder().disabled(disabled).build())
-            .use_focus_input(UseFocusInput::builder().disabled(disabled).build())
             .build(),
     );
 
