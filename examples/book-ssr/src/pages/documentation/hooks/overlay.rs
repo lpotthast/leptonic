@@ -52,7 +52,7 @@ pub fn PageUseOverlay() -> impl IntoView {
         props: trigger_props,
     } = use_overlay_trigger(
         trigger_state,
-        press_responder,
+        Some(press_responder),
         UseOverlayTriggerInput::builder()
             .overlay_id(id)
             .overlay_type(AriaHasPopup::Menu)

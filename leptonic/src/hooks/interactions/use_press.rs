@@ -20,20 +20,50 @@ use crate::utils::{
 
 #[derive(Debug, Clone, Copy)]
 pub struct PressResponder {
-    handlers: StoredValue<Vec<Callback<PressEvent>>>,
+    on_press_start_handlers: StoredValue<Vec<Callback<PressEvent>>>,
+    on_press_handlers: StoredValue<Vec<Callback<PressEvent>>>,
+    has_delay: bool,
 }
 
 impl PressResponder {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(has_delay: bool) -> Self {
         PressResponder {
-            handlers: store_value(Vec::new()),
+            on_press_start_handlers: store_value(Vec::new()),
+            on_press_handlers: store_value(Vec::new()),
+            has_delay,
         }
     }
 
-    pub fn add(&self, handler: Callback<PressEvent>) {
-        self.handlers.update_value(move |handlers| {
+    pub(crate) fn invoke_on_press_start(&self, e: PressEvent) {
+        self.on_press_start_handlers.with_value(move |handlers| {
+            for h in handlers {
+                h.call(e.clone());
+            }
+        });
+    }
+
+    pub(crate) fn invoke_on_press(&self, e: PressEvent) {
+        self.on_press_handlers.with_value(move |handlers| {
+            for h in handlers {
+                h.call(e.clone());
+            }
+        });
+    }
+
+    pub fn add_on_press_start(&self, handler: Callback<PressEvent>) {
+        self.on_press_start_handlers.update_value(move |handlers| {
             handlers.push(handler);
         });
+    }
+
+    pub fn add_on_press(&self, handler: Callback<PressEvent>) {
+        self.on_press_handlers.update_value(move |handlers| {
+            handlers.push(handler);
+        });
+    }
+
+    pub fn has_delay(&self) -> bool {
+        self.has_delay
     }
 }
 
@@ -163,6 +193,8 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     let state = store_value::<Option<PressState>>(None);
 
+    let press_responder = PressResponder::new(false);
+
     let initialize_press_state = move |e: EventRef<'_>, event_handlers: GlobalEventHandlers| {
         debug_assert_eq!(state.with_value(|s| s.is_none()), true, "Implicit cleanup ist not supported. Forgot to call cleanup() before initializing a new PressState?");
 
@@ -253,20 +285,19 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             "Only call trigger_press after triggering a trigger_press_end!"
         );
 
+        let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+        let press_event = PressEvent {
+            pointer_type: s.pointer_type.clone(),
+            target: s.target.clone(),
+            modifiers: match e {
+                EventRef::Pointer(e) => e.modifiers(),
+                EventRef::Keyboard(e) => e.modifiers(),
+            },
+            continue_propagation,
+        };
+        press_responder.invoke_on_press(press_event.clone());
         if let Some(on_press) = input.on_press {
-            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-            Callable::call(
-                &on_press,
-                PressEvent {
-                    pointer_type: s.pointer_type.clone(),
-                    target: s.target.clone(),
-                    modifiers: match e {
-                        EventRef::Pointer(e) => e.modifiers(),
-                        EventRef::Keyboard(e) => e.modifiers(),
-                    },
-                    continue_propagation,
-                },
-            );
+            Callable::call(&on_press, press_event);
             if !continue_propagation_state.into_inner() {
                 match e {
                     EventRef::Pointer(e) => e.stop_propagation(),
@@ -503,7 +534,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 .build(),
         },
         is_pressed: is_pressed.into(),
-        press_responder: PressResponder::new(),
+        press_responder,
     }
 }
 

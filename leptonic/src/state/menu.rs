@@ -1,16 +1,21 @@
 use leptos::{ReadSignal, WriteSignal};
 
+pub(crate) enum OnOpen {
+    First,
+    Last,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub struct MenuTriggerState {
     /// Whether the menu is open.
-    open: ReadSignal<bool>,
+    pub(crate) open: ReadSignal<bool>,
 
     /// Setter for the `open` property.
-    set_open: WriteSignal<bool>,
+    pub(crate) set_open: WriteSignal<bool>,
 }
 
 impl MenuTriggerState {
-    pub fn open(&self, elem: &str) {
+    pub fn open(&self, on_open: Option<OnOpen>) {
         todo!();
     }
 
@@ -18,7 +23,7 @@ impl MenuTriggerState {
         todo!();
     }
 
-    pub fn toggle(&self) {
+    pub fn toggle(&self, on_open: OnOpen) {
         todo!();
     }
 }

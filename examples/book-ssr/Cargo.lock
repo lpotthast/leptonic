@@ -1439,9 +1439,9 @@ checksum = "34344ffac31f60ebe96de99dff5e9b3371f63c50186f7e065032b11660bab944"
 
 [[package]]
 name = "leptos-use"
-version = "0.10.6"
+version = "0.10.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "15ed5b0068731f9506d0f4cc9fd280ea424cb1f3e56d8d4c66efc1b8abae25e8"
+checksum = "9d6be6f1d02c3277f03a55c4a05ee5a069ea75ec5323c4415f6efed69cb5acea"
 dependencies = [
  "async-trait",
  "cfg-if",
@@ -2633,9 +2633,9 @@ dependencies = [
 
 [[package]]
 name = "time"
-version = "0.3.35"
+version = "0.3.36"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ef89ece63debf11bc32d1ed8d078ac870cbeb44da02afb02a9ff135ae7ca0582"
+checksum = "5dfd88e563464686c916c7e46e623e520ddc6d79fa6641390f2e3fa86e83e885"
 dependencies = [
  "deranged",
  "itoa",

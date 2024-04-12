@@ -1,7 +1,8 @@
 use crate::{
     hooks::*,
     state::overlay::OverlayTriggerState,
-    utils::{aria::AriaHasPopup, locale::WritingDirection}, Transparent,
+    utils::{aria::AriaHasPopup, locale::WritingDirection},
+    Transparent,
 };
 use leptos::*;
 
@@ -48,7 +49,11 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
         set_show: ctx.set_state,
     };
 
-    let UsePressReturn { props: press_props, is_pressed: _, press_responder } = use_press(
+    let UsePressReturn {
+        props: press_props,
+        is_pressed: _,
+        press_responder,
+    } = use_press(
         UsePressInput::builder()
             .disabled(ctx.disabled)
             .on_press(|_| {})
@@ -59,7 +64,7 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
         props: trigger_props,
     } = use_overlay_trigger(
         state,
-        press_responder,
+        Some(press_responder),
         UseOverlayTriggerInput {
             overlay_id: ctx.id,
             overlay_type: AriaHasPopup::Menu,

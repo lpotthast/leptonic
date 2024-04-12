@@ -15,6 +15,7 @@ use crate::{
     },
 };
 
+// TODO: This does not support a `disabled` signal. Why?
 #[derive(Debug, Clone, TypedBuilder)]
 pub struct UseOverlayTriggerInput {
     #[builder(setter(into))]
@@ -50,8 +51,9 @@ pub struct UseOverlayTriggerOverlayProps {
 pub fn use_overlay_trigger(
     state: OverlayTriggerState,
 
-    // This hook only functions with a press hook being present. Use the value returned from `use_press`.
-    press_responder: PressResponder,
+    // If present, adds logic for toggling the overlay on press interactions.
+    // Pass `None` if you want to handle this logic by yourself.
+    press_responder: Option<PressResponder>,
 
     input: UseOverlayTriggerInput,
 ) -> UseOverlayTriggerReturn {
@@ -87,9 +89,11 @@ pub fn use_overlay_trigger(
             },
         ))));
 
-    press_responder.add(Callback::new(move |_e: PressEvent| {
-        state.toggle();
-    }));
+    if let Some(press_responder) = press_responder {
+        press_responder.add_on_press(Callback::new(move |_e: PressEvent| {
+            state.toggle();
+        }));
+    }
 
     UseOverlayTriggerReturn {
         props: UseOverlayTriggerProps {

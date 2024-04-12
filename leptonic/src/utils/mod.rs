@@ -10,6 +10,7 @@ pub mod scroll_behavior;
 pub mod signals;
 pub(crate) mod text_selection;
 pub mod time;
+//pub mod event_handler;
 
 pub(crate) enum DomContainer {
     Node(web_sys::Node),
