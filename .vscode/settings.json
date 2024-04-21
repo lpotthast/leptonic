@@ -62,6 +62,7 @@
         "touchend",
         "touchmove",
         "touchstart",
+        "typeahead",
         "uuid"
     ],
     "rust-analyzer.linkedProjects": [

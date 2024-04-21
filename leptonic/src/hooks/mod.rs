@@ -6,6 +6,7 @@ pub mod interactions;
 pub mod menu;
 pub mod overlay;
 pub mod popover;
+pub mod selection;
 pub mod tooltip;
 
 pub use anchor_link::use_anchor_link;

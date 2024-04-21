@@ -13,6 +13,14 @@ pub struct OverlayTriggerState {
 }
 
 impl OverlayTriggerState {
+    pub fn show(&self) {
+        self.set_show.set(true);
+    }
+
+    pub fn hide(&self) {
+        self.set_show.set(false);
+    }
+
     pub fn toggle(&self) {
         self.set_show.set(!self.show.get_untracked());
     }

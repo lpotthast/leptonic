@@ -5,6 +5,7 @@ pub mod color;
 pub mod event_handlers;
 pub mod locale;
 pub mod math;
+pub mod platform;
 pub mod pointer_type;
 pub mod scroll_behavior;
 pub mod signals;
@@ -68,7 +69,7 @@ pub(crate) trait EventTargetExt {
     fn as_node(&self) -> Option<web_sys::Node>;
     fn as_container(&self) -> Option<DomContainer>;
     fn get_owner_document(&self) -> web_sys::Document;
-    fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool;
+    fn is_over(&self, e: &impl PointerEventExt, element: web_sys::Element) -> bool;
 }
 
 impl EventTargetExt for web_sys::EventTarget {
@@ -104,7 +105,7 @@ impl EventTargetExt for web_sys::EventTarget {
             .unwrap_or_else(|| leptos::document())
     }
 
-    fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool {
+    fn is_over(&self, e: &impl PointerEventExt, element: web_sys::Element) -> bool {
         let el_rect = element.get_bounding_client_rect().into();
         let point_rect = e.get_client_interaction_rect();
         overlapping(el_rect, point_rect)
@@ -193,6 +194,12 @@ pub trait EventModifiers {
 pub trait EventExt {
     fn current_target_contains_target(&self) -> bool;
 
+    /// A MacOS aware replacement for `ctrl_key()`. On mac, "Command" must be pressed instead.
+    /// TODO: Rename this function.
+    fn is_ctrl_key_pressed(&self) -> bool;
+}
+
+pub trait PointerEventExt {
     fn get_client_interaction_rect(&self) -> RectPrecise;
 }
 
@@ -240,12 +247,7 @@ impl EventModifiers for web_sys::PointerEvent {
     }
 }
 
-impl EventExt for web_sys::PointerEvent {
-    fn current_target_contains_target(&self) -> bool {
-        current_target_contains_target(self.current_target().as_ref(), self.target().as_ref())
-            .unwrap_or(true)
-    }
-
+impl PointerEventExt for web_sys::PointerEvent {
     fn get_client_interaction_rect(&self) -> RectPrecise {
         let offset_x = self.width() as f64 / 2.0;
         let offset_y = self.height() as f64 / 2.0;
@@ -254,6 +256,51 @@ impl EventExt for web_sys::PointerEvent {
             right: self.client_x() as f64 + offset_x,
             bottom: self.client_y() as f64 + offset_y,
             left: self.client_x() as f64 - offset_x,
+        }
+    }
+}
+
+impl EventExt for web_sys::PointerEvent {
+    fn current_target_contains_target(&self) -> bool {
+        current_target_contains_target(self.current_target().as_ref(), self.target().as_ref())
+            .unwrap_or(true)
+    }
+
+    fn is_ctrl_key_pressed(&self) -> bool {
+        if platform::is_mac() {
+            self.meta_key()
+        } else {
+            self.ctrl_key()
+        }
+    }
+}
+
+impl EventExt for web_sys::KeyboardEvent {
+    fn current_target_contains_target(&self) -> bool {
+        current_target_contains_target(self.current_target().as_ref(), self.target().as_ref())
+            .unwrap_or(true)
+    }
+
+    fn is_ctrl_key_pressed(&self) -> bool {
+        if platform::is_mac() {
+            self.meta_key() // On Macintosh keyboards, this is the "⌘ Command" key.
+        } else {
+            self.ctrl_key()
+        }
+    }
+}
+
+impl EventExt for web_sys::WheelEvent {
+    fn current_target_contains_target(&self) -> bool {
+        current_target_contains_target(self.current_target().as_ref(), self.target().as_ref())
+            .unwrap_or(true)
+    }
+
+    fn is_ctrl_key_pressed(&self) -> bool {
+        if platform::is_mac() {
+            self.meta_key() // On Macintosh keyboards, this is the "⌘ Command" key.
+        } else {
+            self.ctrl_key()
         }
     }
 }

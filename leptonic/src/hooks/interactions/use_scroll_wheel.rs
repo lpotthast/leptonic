@@ -4,7 +4,7 @@ use leptos_reactive::{Callable, Callback, MaybeSignal, SignalGetUntracked};
 use leptos_use::{core::ElementMaybeSignal, use_event_listener_with_options, UseEventListenerOptions};
 use typed_builder::TypedBuilder;
 
-use crate::utils::{attributes::Attributes, event_handlers::EventHandlers};
+use crate::utils::{attributes::Attributes, event_handlers::EventHandlers, EventExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useScrollWheel.ts
 
@@ -80,7 +80,7 @@ where
             }
 
             // If the ctrlKey is pressed, this is a zoom event, which we should not interfere with.
-            if e.ctrl_key() {
+            if e.is_ctrl_key_pressed() {
                 return;
             }
 
