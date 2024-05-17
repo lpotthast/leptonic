@@ -1,10 +1,12 @@
+use std::rc::Rc;
+
 use leptos::*;
 use leptos_router::AProps;
 use web_sys::FocusEvent;
 
 use crate::{
     hooks::*,
-    utils::aria::{AriaExpanded, AriaHasPopup},
+    utils::aria::{AriaAccessibleName, AriaExpanded, AriaHasPopup},
     OptMaybeSignal, Transparent,
 };
 
@@ -24,6 +26,7 @@ pub fn Button(
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
+    #[prop(into, optional)] aria_label: OptMaybeSignal<Oco<'static, str>>,
     /// Arbitrary additional attributes. Can be declared using the `attr:` syntax.
     #[prop(attrs)]
     attributes: Vec<(&'static str, Attribute)>,
@@ -97,6 +100,7 @@ pub fn Button(
             <button
                 {..attributes}
                 {..btn.props.handlers}
+                aria-label=aria_label.get()
                 node_ref=el
                 id=id
                 class=class
@@ -120,6 +124,7 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
+    #[prop(into, optional)] accessible_name: OptMaybeSignal<AriaAccessibleName>, // TODO: Does this really need to be a signal???
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
@@ -171,6 +176,9 @@ where
     let mut attrs = props.attrs.merge(attributes);
     if let Some(style) = style {
         attrs = attrs.insert("style", style.into_attribute_boxed());
+    }
+    if let Some(sig) = accessible_name.0 {
+        attrs = attrs.insert("aria-label", Attribute::Fn(Rc::new(move || sig.get().into_attribute())));
     }
 
     let default_class = "leptonic-btn";

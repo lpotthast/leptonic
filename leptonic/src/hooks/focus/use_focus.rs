@@ -33,6 +33,8 @@ pub struct UseFocusProps {
     pub handlers: EventHandlers,
 }
 
+/// Handles focus events for the immediate target.
+/// Focus events on child elements will be ignored.
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     let on_focus = Box::new(move |e: FocusEvent| {
         // Double check that document.activeElement actually matches e.target in case a previously chained

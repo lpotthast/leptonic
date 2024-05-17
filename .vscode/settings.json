@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
+        "beforeunload",
         "bindgen",
         "blazingly",
         "collapsibles",
@@ -19,6 +20,7 @@
         "haspopup",
         "hoverable",
         "icondata",
+        "iframe",
         "indoc",
         "inplace",
         "interactable",
@@ -26,6 +28,7 @@
         "jobspec",
         "keydown",
         "keyup",
+        "labelledby",
         "leptos",
         "listbox",
         "mousedown",

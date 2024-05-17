@@ -12,6 +12,7 @@ pub fn Hoverable(
     let UseHoverReturn {
         props,
         is_hovered: _,
+        hover_responder: _,
     } = use_hover(UseHoverInput {
         disabled: disabled.unwrap_or(false.into()),
         on_hover_start,

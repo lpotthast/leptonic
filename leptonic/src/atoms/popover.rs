@@ -11,12 +11,12 @@ pub struct PopoverContext {
     pub state: ReadSignal<bool>,
     pub set_state: WriteSignal<bool>,
 
-    id: Oco<'static, str>,
-    overlay_props: UseOverlayProps, // TODO: Rc?
-    trigger_el: ReadSignal<Option<NodeRef<html::Custom>>>,
-    set_trigger_el: WriteSignal<Option<NodeRef<html::Custom>>>,
+    pub(crate) id: Oco<'static, str>,
+    pub(crate) overlay_props: UseOverlayProps, // TODO: Rc?
+    pub(crate) trigger_el: ReadSignal<Option<NodeRef<html::Custom>>>,
+    pub(crate) set_trigger_el: WriteSignal<Option<NodeRef<html::Custom>>>,
 
-    disabled: MaybeSignal<bool>,
+    pub(crate) disabled: MaybeSignal<bool>,
 }
 
 #[component]

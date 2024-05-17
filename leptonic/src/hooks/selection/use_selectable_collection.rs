@@ -35,7 +35,7 @@ pub struct UseSelectableCollectionInput {
     #[builder(default = None)]
     auto_focus: Option<CollectionFocusStrategy>,
 
-    /// Whether focus should wrap around when the end/start is reached. Defaults to false.
+    /// Whether focus should wrap around when the end/start is reached / keyboard navigation is circular. Defaults to false.
     #[builder(default = false)]
     should_focus_wrap: bool,
 

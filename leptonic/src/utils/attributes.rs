@@ -2,6 +2,10 @@ use std::collections::HashMap;
 
 use leptos::{Attribute, IntoAttribute};
 
+pub trait StaticAttributeName {
+    fn static_attribute_name() -> &'static str;
+}
+
 pub trait IntoAttributeName {
     fn to_attribute_name(&self) -> &'static str;
 }
@@ -9,6 +13,12 @@ pub trait IntoAttributeName {
 impl IntoAttributeName for &'static str {
     fn to_attribute_name(&self) -> &'static str {
         self
+    }
+}
+
+impl<T: StaticAttributeName> IntoAttributeName for T {
+    fn to_attribute_name(&self) -> &'static str {
+        Self::static_attribute_name()
     }
 }
 

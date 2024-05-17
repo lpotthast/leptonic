@@ -36,7 +36,7 @@ impl PressResponder {
 
     pub(crate) fn invoke_on_press_start(&self, e: PressEvent) {
         self.on_press_start_handlers.with_value(move |handlers| {
-            for h in handlers {
+            for h in handlers { 
                 h.call(e.clone());
             }
         });
@@ -50,12 +50,14 @@ impl PressResponder {
         });
     }
 
+    /// Adds an event handler to the end of the handler chain.
     pub fn add_on_press_start(&self, handler: Callback<PressEvent>) {
         self.on_press_start_handlers.update_value(move |handlers| {
             handlers.push(handler);
         });
     }
 
+    /// Adds an event handler to the end of the handler chain.
     pub fn add_on_press(&self, handler: Callback<PressEvent>) {
         self.on_press_handlers.update_value(move |handlers| {
             handlers.push(handler);
@@ -225,19 +227,21 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     // Has no effect if press is already started. Calling this multiple times only executes the effect once.
     let trigger_press_start = move |s: &PressState, e: EventRef<'_>| {
         if !is_pressed.get_untracked() {
+            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+            let press_event = PressEvent {
+                pointer_type: s.pointer_type.clone(),
+                target: s.target.clone(),
+                modifiers: match e {
+                    EventRef::Pointer(e) => e.modifiers(),
+                    EventRef::Keyboard(e) => e.modifiers(),
+                },
+                continue_propagation,
+            };
+            press_responder.invoke_on_press_start(press_event.clone());
             if let Some(on_press_start) = input.on_press_start {
-                let (continue_propagation_state, continue_propagation) = use_continue_propagation();
                 Callable::call(
                     &on_press_start,
-                    PressEvent {
-                        pointer_type: s.pointer_type.clone(),
-                        target: s.target.clone(),
-                        modifiers: match e {
-                            EventRef::Pointer(e) => e.modifiers(),
-                            EventRef::Keyboard(e) => e.modifiers(),
-                        },
-                        continue_propagation,
-                    },
+                    press_event,
                 );
                 if !continue_propagation_state.into_inner() {
                     match e {

@@ -12,6 +12,12 @@ pub enum Key {
     U64(u64),
 }
 
+impl From<&'static str> for Key {
+    fn from(value: &'static str) -> Self {
+        Self::String(Oco::Borrowed(value))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum CollectionFocusStrategy {
     FocusCollection,

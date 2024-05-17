@@ -1,3 +1,4 @@
+use leptos::StoredValue;
 use leptos_reactive::{
     create_effect, create_signal, on_cleanup, store_value, Callable, Callback, MaybeSignal, Signal,
     SignalDispose, SignalGet, SignalGetUntracked, SignalSet,
@@ -70,6 +71,53 @@ pub struct UseHoverReturn {
 
     /// Whether the element is currently hovered.
     pub is_hovered: Signal<bool>,
+
+    pub hover_responder: HoverResponder,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct HoverResponder {
+    on_hover_start_handlers: StoredValue<Vec<Callback<HoverStartEvent>>>,
+    on_hover_end_handlers: StoredValue<Vec<Callback<HoverEndEvent>>>,
+}
+
+impl HoverResponder {
+    pub(crate) fn new() -> Self {
+        HoverResponder {
+            on_hover_start_handlers: store_value(Vec::new()),
+            on_hover_end_handlers: store_value(Vec::new()),
+        }
+    }
+
+    pub(crate) fn invoke_on_hover_start(&self, e: HoverStartEvent) {
+        self.on_hover_start_handlers.with_value(move |handlers| {
+            for h in handlers {
+                h.call(e.clone());
+            }
+        });
+    }
+
+    pub(crate) fn invoke_on_hover_end(&self, e: HoverEndEvent) {
+        self.on_hover_end_handlers.with_value(move |handlers| {
+            for h in handlers {
+                h.call(e.clone());
+            }
+        });
+    }
+
+    /// Adds an event handler to the end of the handler chain.
+    pub fn add_on_hover_start(&self, handler: Callback<HoverStartEvent>) {
+        self.on_hover_start_handlers.update_value(move |handlers| {
+            handlers.push(handler);
+        });
+    }
+
+    /// Adds an event handler to the end of the handler chain.
+    pub fn add_on_hover_end(&self, handler: Callback<HoverEndEvent>) {
+        self.on_hover_end_handlers.update_value(move |handlers| {
+            handlers.push(handler);
+        });
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -81,6 +129,8 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     let state = store_value(Option::<HoverState>::None);
     let (is_hovered, set_is_hovered) = create_signal(false);
 
+    let hover_responder = HoverResponder::new();
+
     let trigger_hover_start =
         move |pointer_type: PointerType, current_target: Option<web_sys::EventTarget>| {
             if is_hovered.get_untracked() {
@@ -91,14 +141,14 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 return;
             }
 
+            let hover_start_event = HoverStartEvent {
+                pointer_type: pointer_type.clone(),
+                current_target,
+            };
+
+            hover_responder.invoke_on_hover_start(hover_start_event.clone());
             if let Some(on_hover_start) = input.on_hover_start {
-                Callable::call(
-                    &on_hover_start,
-                    HoverStartEvent {
-                        pointer_type: pointer_type.clone(),
-                        current_target,
-                    },
-                );
+                Callable::call(&on_hover_start, hover_start_event);
             }
 
             set_is_hovered.set(true);
@@ -110,15 +160,15 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             return;
         }
 
-        let s = state.get_value().expect("present");
+        let hover_state = state.get_value().expect("present");
+        let hover_end_event = HoverEndEvent {
+            pointer_type: hover_state.pointer_type,
+            current_target,
+        };
+
+        hover_responder.invoke_on_hover_end(hover_end_event.clone());
         if let Some(on_hover_end) = input.on_hover_end {
-            Callable::call(
-                &on_hover_end,
-                HoverEndEvent {
-                    pointer_type: s.pointer_type,
-                    current_target,
-                },
-            );
+            Callable::call(&on_hover_end, hover_end_event);
         }
 
         set_is_hovered.set(false);
@@ -165,5 +215,6 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 .build(),
         },
         is_hovered: is_hovered.into(),
+        hover_responder,
     }
 }

@@ -103,6 +103,7 @@ pub fn use_long_hover(input: UseLongHoverInput) -> UseLongHoverReturn {
     let UseHoverReturn {
         props: hover_props,
         is_hovered: _,
+        hover_responder: _,
     } = use_hover(UseHoverInput {
         disabled: input.disabled,
         on_hover_start: Some(Callback::new(move |e: HoverStartEvent| {

@@ -8,6 +8,7 @@ use crate::app::APP_BAR_HEIGHT;
 use crate::app::{AppLayoutContext, AppRoutes};
 use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
 use crate::pages::documentation::atoms::button::PageAtomButton;
+use crate::pages::documentation::atoms::menu::PageAtomMenu;
 use crate::pages::documentation::atoms::popover::PageAtomPopover;
 use crate::pages::documentation::components::feedback::alert::PageAlert;
 use crate::pages::documentation::components::feedback::chip::PageChip;
@@ -79,6 +80,7 @@ pub enum DocRoutes {
     // Atoms
     AtomButton,
     AtomPopover,
+    AtomMenu,
     AtomAnchorLink,
 
     // Layout
@@ -148,6 +150,7 @@ impl DocRoutes {
 
             Self::AtomButton => "atoms/button",
             Self::AtomPopover => "atoms/popover",
+            Self::AtomMenu => "atoms/menu",
             Self::AtomAnchorLink => "atoms/anchor-link",
 
             Self::Stack => "components/stack",
@@ -230,6 +233,7 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
 
             <Route path=DocRoutes::AtomButton view=|| view! { <PageAtomButton/> }/>
             <Route path=DocRoutes::AtomPopover view=|| view! { <PageAtomPopover/> }/>
+            <Route path=DocRoutes::AtomMenu view=|| view! { <PageAtomMenu/> }/>
             <Route path=DocRoutes::AtomAnchorLink view=|| view! { <PageAtomAnchorLink/> }/>
 
             <Route path=DocRoutes::Stack view=|| view! { <PageStack/> }/>
@@ -325,6 +329,7 @@ pub fn DocLayout() -> impl IntoView {
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::AtomButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
                 <Link href=DocRoutes::AtomPopover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
+                <Link href=DocRoutes::AtomMenu class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Menu"</Link>
                 <Link href=DocRoutes::AtomAnchorLink class="item" on:click=move |_| close_doc_drawer_on_mobile()>"AnchorLink"</Link>
             </Stack>
         </DrawerSection>
