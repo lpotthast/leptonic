@@ -41,8 +41,8 @@ pub trait Theme:
 
 #[derive(Debug, Clone, Copy)]
 pub struct ThemeContext<T: Theme + 'static> {
-    theme: ReadSignal<T>,
-    set_theme: WriteSignal<T>,
+    pub theme: ReadSignal<T>,
+    pub set_theme: WriteSignal<T>,
 }
 
 #[component]
