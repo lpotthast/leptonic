@@ -119,6 +119,7 @@ pub mod prelude {
 
     // Reexport
     pub use icondata;
+    pub use uuid;
 
     pub use super::utils::aria::AriaExpanded;
     pub use super::utils::aria::AriaHasPopup;
