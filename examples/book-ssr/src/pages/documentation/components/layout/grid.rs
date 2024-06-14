@@ -15,7 +15,7 @@ pub fn PageGrid() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    <Grid spacing=Size::Em(0.6)>
+                    <Grid gap=Size::Em(0.6)>
                         <Row>
                             <Col md=3 sm=4 xs=6>
                                 <Skeleton animated=false>"Item 1"</Skeleton>
