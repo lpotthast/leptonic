@@ -86,6 +86,7 @@ pub fn Select<O>(
     #[prop(into)] set_selected: Out<O>,
     #[prop(into)] search_text_provider: Consumer<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
+    #[prop(into, optional)] render_selected_option: Option<ViewCallback<O>>,
     #[prop(into, optional)] search_filter_provider: Option<Consumer<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
@@ -103,6 +104,8 @@ where
 
     let autofocus_search =
         autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
+
+    let render_selected_option = render_selected_option.unwrap_or(render_option);
 
     let search_should_be_focused =
         Signal::derive(move || show_options.get() && autofocus_search.get());
@@ -235,12 +238,11 @@ where
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
-                    { move || render_option.render(selected.get()) }
-
+                    {move || render_selected_option.render(selected.get())}
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
-                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
+                            true => view! { <Icon icon=icondata::BsCaretUpFill/> },
+                            false => view! { <Icon icon=icondata::BsCaretDownFill/> },
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
