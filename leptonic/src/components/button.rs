@@ -102,6 +102,7 @@ pub fn Button(
     #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] type_: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
@@ -110,18 +111,19 @@ pub fn Button(
 ) -> impl IntoView {
     view! {
         <atoms::button::Button
-            on_press=on_press
-            disabled=disabled
-            aria_haspopup=aria_haspopup
-            aria_expanded=aria_expanded
-            id=id
-            class=class
-            style=style
+            on_press
+            disabled
+            aria_haspopup
+            aria_expanded
+            id
+            type_
+            class
+            style
             attr:data-variant=move || variant.get().as_str()
             attr:data-color=move || color.get().as_str()
             attr:data-size=move || size.get().as_str()
         >
-            { children() }
+            {children()}
         </atoms::button::Button>
     }
 }
@@ -129,18 +131,14 @@ pub fn Button(
 #[component]
 pub fn ButtonGroup(children: Children) -> impl IntoView {
     view! {
-        <leptonic-btn-group>
-            { children() }
-        </leptonic-btn-group>
+        <leptonic-btn-group>{children()}</leptonic-btn-group>
     }
 }
 
 #[component]
 pub fn ButtonWrapper(children: Children) -> impl IntoView {
     view! {
-        <leptonic-btn-wrapper>
-            { children() }
-        </leptonic-btn-wrapper>
+        <leptonic-btn-wrapper>{children()}</leptonic-btn-wrapper>
     }
 }
 
