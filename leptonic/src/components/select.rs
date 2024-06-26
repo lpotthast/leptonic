@@ -91,6 +91,7 @@ pub fn Select<O>(
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
@@ -221,7 +222,6 @@ where
     });
 
     view! {
-        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
         <div
             node_ref=wrapper
             class="leptonic-select-wrapper"
@@ -244,66 +244,80 @@ where
                             true => view! { <Icon icon=icondata::BsCaretUpFill/> },
                             false => view! { <Icon icon=icondata::BsCaretDownFill/> },
                         }}
+
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
 
-                <leptonic-select-options class:shown=move || show_options.get()>
+                <leptonic-select-options class:shown=move || {
+                    show_options.get()
+                }>
                     <TextInput
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
                         on_focus_change=move |focused| {
-                            // We only update our state as long as show_options is true.
-                            // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
-                            // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
-                            // When storing the received `false` in `search_is_focused` before our effect above, resetting focus on our wrapper may, runs,
-                            // that create_effect will not be able to set the focus. We accept not setting `search_is_focused` all the time
-                            // for the create_effect above to work reliably.
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
                         }
+
                         class="search"
                     />
 
-                    <Show
-                        when=move || show_options.get()
-                        fallback=move || ()
-                    >
+                    <Show when=move || show_options.get() fallback=move || ()>
                         // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                        { filtered_options.get().into_iter().map(|option| {
-                            let clone1 = option.clone();
-                            let clone2 = option.clone();
-                            let clone3 = option.clone();
-                            let clone4 = option.clone();
-                            let clone5 = option.clone();
-                            view! {
-                                <leptonic-select-option
-                                    class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
-                                    class:selected=move || is_selected(&clone4)
-                                    class:disabled=move || is_disabled(&clone5)
-                                    on:mouseenter=move |_e| {
-                                        set_preselected.set(Some(clone3.clone()));
-                                    }
-                                    on:click=move |_e| {
-                                        if !is_disabled_untracked(&clone2) {
-                                            select.consume(clone2.clone());
+                        {filtered_options
+                            .get()
+                            .into_iter()
+                            .map(|option| {
+                                let clone1 = option.clone();
+                                let clone2 = option.clone();
+                                let clone3 = option.clone();
+                                let clone4 = option.clone();
+                                let clone5 = option.clone();
+                                view! {
+                                    <leptonic-select-option
+                                        class:preselected=move || {
+                                            memoized_preselected
+                                                .with(|preselected| preselected.as_ref() == Some(&option))
                                         }
-                                    }
-                                >
-                                    { render_option.render(clone1) }
-                                </leptonic-select-option>
-                            }
-                        }).collect_view() }
 
-                        { move || match has_options.get() {
+                                        class:selected=move || is_selected(&clone4)
+                                        class:disabled=move || is_disabled(&clone5)
+                                        on:mouseenter=move |_e| {
+                                            set_preselected.set(Some(clone3.clone()));
+                                        }
+
+                                        on:click=move |_e| {
+                                            if !is_disabled_untracked(&clone2) {
+                                                select.consume(clone2.clone());
+                                            }
+                                        }
+                                    >
+
+                                        {render_option.render(clone1)}
+                                    </leptonic-select-option>
+                                }
+                            })
+                            .collect_view()}
+
+                        {move || match has_options.get() {
                             true => ().into_view(),
-                            false => view! {
-                                <leptonic-select-no-search-results>
-                                    "No options..."
-                                </leptonic-select-no-search-results>
-                            }.into_view(),
-                        } }
+                            false => {
+                                view! {
+                                    <leptonic-select-no-search-results>
+                                        {no_options
+                                            .map_or_else(
+                                                || "No options...".into_view(),
+                                                |x| x.render(search.get()),
+                                            )}
+
+                                    </leptonic-select-no-search-results>
+                                }
+                                    .into_view()
+                            }
+                        }}
+
                     </Show>
                 </leptonic-select-options>
             </leptonic-select>
@@ -324,6 +338,7 @@ pub fn OptionalSelect<O>(
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
@@ -456,7 +471,6 @@ where
     });
 
     view! {
-        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
         <div
             node_ref=wrapper
             class="leptonic-select-wrapper"
@@ -472,33 +486,32 @@ where
                 style=style
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
-                    { move || match selected.get() {
+                    {move || match selected.get() {
                         Some(selected) => view! {
-                            <leptonic-select-option>
-                                { render_option.render(selected) }
-                            </leptonic-select-option>
+                                <leptonic-select-option>
+                                    {render_option.render(selected)}
+                                </leptonic-select-option>
                         }.into_view(),
                         None => ().into_view(),
                     }}
-
-                    { match allow_deselect.get() {
+                    {match allow_deselect.get() {
                         false => ().into_view(),
                         true => view! {
-                            <leptonic-select-deselect-trigger on:click=move |e| {
-                                e.prevent_default();
-                                e.stop_propagation();
-                                deselect();
-                            }>
-                                <Icon icon=icondata::BsXCircleFill/>
-                            </leptonic-select-deselect-trigger>
+                                <leptonic-select-deselect-trigger on:click=move |e| {
+                                    e.prevent_default();
+                                    e.stop_propagation();
+                                    deselect();
+                                }>
+                                    <Icon icon=icondata::BsXCircleFill/>
+                                </leptonic-select-deselect-trigger>
                         }.into_view(),
                     }}
-
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
-                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
+                            true => view! { <Icon icon=icondata::BsCaretUpFill/> },
+                            false => view! { <Icon icon=icondata::BsCaretDownFill/> },
                         }}
+
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
 
@@ -518,47 +531,64 @@ where
                                 set_search_is_focused.set(focused);
                             }
                         }
+
                         class="search"
                     />
 
-                    <Show
-                        when=move || show_options.get()
-                        fallback=move || ()
-                    >
+                    <Show when=move || show_options.get() fallback=move || ()>
                         // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                        { filtered_options.get().into_iter().map(|option| {
-                            let clone1 = option.clone();
-                            let clone2 = option.clone();
-                            let clone3 = option.clone();
-                            let clone4 = option.clone();
-                            let clone5 = option.clone();
-                            view! {
-                                <leptonic-select-option
-                                    class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
-                                    class:selected=move || is_selected(&clone4)
-                                    class:disabled=move || is_disabled(&clone5)
-                                    on:mouseenter=move |_e| {
-                                        set_preselected.set(Some(clone3.clone()));
-                                    }
-                                    on:click=move |_e| {
-                                        if !is_disabled_untracked(&clone2) {
-                                            select.consume(clone2.clone());
+                        {filtered_options
+                            .get()
+                            .into_iter()
+                            .map(|option| {
+                                let clone1 = option.clone();
+                                let clone2 = option.clone();
+                                let clone3 = option.clone();
+                                let clone4 = option.clone();
+                                let clone5 = option.clone();
+                                view! {
+                                    <leptonic-select-option
+                                        class:preselected=move || {
+                                            memoized_preselected
+                                                .with(|preselected| preselected.as_ref() == Some(&option))
                                         }
-                                    }
-                                >
-                                    { render_option.render(clone1) }
-                                </leptonic-select-option>
-                            }
-                        }).collect_view() }
 
-                        { move || match has_options.get() {
+                                        class:selected=move || is_selected(&clone4)
+                                        class:disabled=move || is_disabled(&clone5)
+                                        on:mouseenter=move |_e| {
+                                            set_preselected.set(Some(clone3.clone()));
+                                        }
+
+                                        on:click=move |_e| {
+                                            if !is_disabled_untracked(&clone2) {
+                                                select.consume(clone2.clone());
+                                            }
+                                        }
+                                    >
+
+                                        {render_option.render(clone1)}
+                                    </leptonic-select-option>
+                                }
+                            })
+                            .collect_view()}
+
+                        {move || match has_options.get() {
                             true => ().into_view(),
-                            false => view! {
-                                <div class="option">
-                                    "No options..."
-                                </div>
-                            }.into_view(),
-                        } }
+                            false => {
+                                view! {
+                                    <leptonic-select-no-search-results>
+                                        {no_options
+                                            .map_or_else(
+                                                || "No options...".into_view(),
+                                                |x| x.render(search.get()),
+                                            )}
+
+                                    </leptonic-select-no-search-results>
+                                }
+                                    .into_view()
+                            }
+                        }}
+
                     </Show>
                 </leptonic-select-options>
             </leptonic-select>
@@ -579,6 +609,8 @@ pub fn Multiselect<O>(
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
+    #[prop(into, optional)] hide_disabled: bool,
 ) -> impl IntoView
 where
     O: SelectOption + PartialOrd + Ord + 'static,
@@ -727,7 +759,6 @@ where
     });
 
     view! {
-        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
         <div
             node_ref=wrapper
             class="leptonic-select-wrapper"
@@ -744,34 +775,45 @@ where
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
                     // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                    { move || selected.get().into_iter().map(|selected| {
-                        let clone = selected.clone();
-                        view! {
-                            <leptonic-select-option>
-                                <Chip
-                                    color=ChipColor::Secondary
-                                    on:click=move |e| {
-                                        e.stop_propagation();
-                                    }
-                                    dismissible=move |e: MouseEvent| {
-                                        e.stop_propagation();
-                                        deselect.consume(clone.clone());
-                                    }>
-                                    { render_option.render(selected) }
-                                </Chip>
-                            </leptonic-select-option>
-                        }}).collect_view()
-                    }
+                    {move || {
+                        selected
+                            .get()
+                            .into_iter()
+                            .map(|selected| {
+                                let clone = selected.clone();
+                                view! {
+                                    <leptonic-select-option>
+                                        <Chip
+                                            color=ChipColor::Secondary
+                                            on:click=move |e| {
+                                                e.stop_propagation();
+                                            }
 
+                                            dismissible=move |e: MouseEvent| {
+                                                e.stop_propagation();
+                                                deselect.consume(clone.clone());
+                                            }
+                                        >
+
+                                            {render_option.render(selected)}
+                                        </Chip>
+                                    </leptonic-select-option>
+                                }
+                            })
+                            .collect_view()
+                    }}
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
-                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
-                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
+                            true => view! { <Icon icon=icondata::BsCaretUpFill/> },
+                            false => view! { <Icon icon=icondata::BsCaretDownFill/> },
                         }}
+
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
 
-                <leptonic-select-options class:shown=move || show_options.get()>
+                <leptonic-select-options class:shown=move || {
+                    show_options.get()
+                }>
                     <TextInput
                         get=search
                         set=set_search
@@ -787,47 +829,66 @@ where
                                 set_search_is_focused.set(focused);
                             }
                         }
+
                         class="search"
                     />
 
-                    <Show
-                        when=move || show_options.get()
-                        fallback=move || ()
-                    >
+                    <Show when=move || show_options.get() fallback=move || ()>
                         // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                        { filtered_options.get().into_iter().map(|option| {
-                            let clone1 = option.clone();
-                            let clone2 = option.clone();
-                            let clone3 = option.clone();
-                            let clone4 = option.clone();
-                            let clone5 = option.clone();
-                            view! {
-                                <leptonic-select-option
-                                    class:preselected=move || memoized_preselected.with(|preselected| preselected.as_ref() == Some(&option))
-                                    class:selected=move || is_selected(&clone4)
-                                    class:disabled=move || is_disabled(&clone5)
-                                    on:mouseenter=move |_e| {
-                                        set_preselected.set(Some(clone3.clone()));
-                                    }
-                                    on:click=move |_e| {
-                                        if !is_disabled_untracked(&clone2) {
-                                            select.consume(clone2.clone());
+                        {filtered_options
+                            .get()
+                            .into_iter()
+                            .map(|option| {
+                                let clone1 = option.clone();
+                                let clone2 = option.clone();
+                                let clone3 = option.clone();
+                                let clone4 = option.clone();
+                                let clone5 = option.clone();
+                                let clone6 = option.clone();
+                                view! {
+                                    <leptonic-select-option
+                                        class:preselected=move || {
+                                            memoized_preselected
+                                                .with(|preselected| preselected.as_ref() == Some(&option))
                                         }
-                                    }
-                                >
-                                    { render_option.render(clone1) }
-                                </leptonic-select-option>
-                            }
-                        }).collect_view() }
 
-                        { move || match has_options.get() {
+                                        class:selected=move || is_selected(&clone4)
+                                        class:disabled=move || is_disabled(&clone5)
+                                        class:hidden=move || is_disabled(&clone6) && hide_disabled
+                                        on:mouseenter=move |_e| {
+                                            set_preselected.set(Some(clone3.clone()));
+                                        }
+
+                                        on:click=move |_e| {
+                                            if !is_disabled_untracked(&clone2) {
+                                                select.consume(clone2.clone());
+                                            }
+                                        }
+                                    >
+
+                                        {render_option.render(clone1)}
+                                    </leptonic-select-option>
+                                }
+                            })
+                            .collect_view()}
+
+                        {move || match has_options.get() {
                             true => ().into_view(),
-                            false => view! {
-                                <div class="option">
-                                    "No options..."
-                                </div>
-                            }.into_view(),
-                        } }
+                            false => {
+                                view! {
+                                    <leptonic-select-no-search-results>
+                                        {no_options
+                                            .map_or_else(
+                                                || "No options...".into_view(),
+                                                |x| x.render(search.get()),
+                                            )}
+
+                                    </leptonic-select-no-search-results>
+                                }
+                                    .into_view()
+                            }
+                        }}
+
                     </Show>
                 </leptonic-select-options>
             </leptonic-select>
