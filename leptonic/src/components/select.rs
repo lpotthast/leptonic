@@ -1,6 +1,6 @@
-use std::fmt::Debug;
-
 use leptos::*;
+use std::fmt::Debug;
+use std::hash::Hash;
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
 use crate::{
@@ -92,7 +92,8 @@ pub fn Select<O>(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
-    #[prop(into, optional)] no_options_preselect: Option<Consumer<String, O>>,
+    #[prop(into, optional)] new_option_when_no_options: Option<Consumer<String, O>>,
+    #[prop(into, optional)] hide_disabled: bool,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
@@ -222,14 +223,6 @@ where
         }
     });
 
-    if let Some(no_options_preselect) = no_options_preselect {
-        create_effect(move |_| {
-            let s = search.get();
-            if !has_options.get() {
-                set_preselected.set(Some(no_options_preselect.consume(s)));
-            }
-        });
-    }
     view! {
         <div
             node_ref=wrapper
@@ -313,20 +306,57 @@ where
                         {move || match has_options.get() {
                             true => ().into_view(),
                             false => {
-                                view! {
-                                    {no_options
-                                        .map_or_else(
-                                            || {
-                                                view! {
-                                                    <leptonic-select-no-search-results>
-                                                        "No options..."
-                                                    </leptonic-select-no-search-results>
-                                                }
-                                                    .into_view()
-                                            },
-                                            |x| x.render(search.get()).into_view(),
-                                        )}
-                                }
+                                new_option_when_no_options
+                                    .map_or_else(
+                                        move || {
+                                            view! {
+                                                <leptonic-select-no-search-results>
+                                                    {no_options
+                                                        .map_or_else(
+                                                            || { "No options...".into_view() },
+                                                            |x| x.render(search.get()).into_view(),
+                                                        )}
+
+                                                </leptonic-select-no-search-results>
+                                            }
+                                                .into_view()
+                                        },
+                                        move |x| {
+                                            let option = x.consume(search.get());
+                                            set_preselected.set(Some(option.clone()));
+                                            let clone1 = option.clone();
+                                            let clone2 = option.clone();
+                                            let clone3 = option.clone();
+                                            let clone4 = option.clone();
+                                            let clone5 = option.clone();
+                                            let clone6 = option.clone();
+                                            view! {
+                                                <leptonic-select-option
+                                                    class:preselected=move || {
+                                                        memoized_preselected
+                                                            .with(|preselected| preselected.as_ref() == Some(&option))
+                                                    }
+
+                                                    class:selected=move || is_selected(&clone4)
+                                                    class:disabled=move || is_disabled(&clone5)
+                                                    class:hidden=move || is_disabled(&clone6) && hide_disabled
+                                                    on:mouseenter=move |_e| {
+                                                        set_preselected.set(Some(clone3.clone()));
+                                                    }
+
+                                                    on:click=move |_e| {
+                                                        if !is_disabled_untracked(&clone2) {
+                                                            select.consume(clone2.clone());
+                                                        }
+                                                    }
+                                                >
+
+                                                    {render_option.render(clone1)}
+                                                </leptonic-select-option>
+                                            }
+                                                .into_view()
+                                        },
+                                    )
                             }
                         }}
 
@@ -351,7 +381,8 @@ pub fn OptionalSelect<O>(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
-    #[prop(into, optional)] no_options_preselect: Option<Consumer<String, O>>,
+    #[prop(into, optional)] new_option_when_no_options: Option<Consumer<String, O>>,
+    #[prop(into, optional)] hide_disabled: bool,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
@@ -483,14 +514,6 @@ where
         }
     });
 
-    if let Some(no_options_preselect) = no_options_preselect {
-        create_effect(move |_| {
-            let s = search.get();
-            if !has_options.get() {
-                set_preselected.set(Some(no_options_preselect.consume(s)));
-            }
-        });
-    }
     view! {
         <div
             node_ref=wrapper
@@ -598,20 +621,57 @@ where
                         {move || match has_options.get() {
                             true => ().into_view(),
                             false => {
-                                view! {
-                                    {no_options
-                                        .map_or_else(
-                                            || {
-                                                view! {
-                                                    <leptonic-select-no-search-results>
-                                                        "No options..."
-                                                    </leptonic-select-no-search-results>
-                                                }
-                                                    .into_view()
-                                            },
-                                            |x| x.render(search.get()).into_view(),
-                                        )}
-                                }
+                                new_option_when_no_options
+                                    .map_or_else(
+                                        move || {
+                                            view! {
+                                                <leptonic-select-no-search-results>
+                                                    {no_options
+                                                        .map_or_else(
+                                                            || { "No options...".into_view() },
+                                                            |x| x.render(search.get()).into_view(),
+                                                        )}
+
+                                                </leptonic-select-no-search-results>
+                                            }
+                                                .into_view()
+                                        },
+                                        move |x| {
+                                            let option = x.consume(search.get());
+                                            set_preselected.set(Some(option.clone()));
+                                            let clone1 = option.clone();
+                                            let clone2 = option.clone();
+                                            let clone3 = option.clone();
+                                            let clone4 = option.clone();
+                                            let clone5 = option.clone();
+                                            let clone6 = option.clone();
+                                            view! {
+                                                <leptonic-select-option
+                                                    class:preselected=move || {
+                                                        memoized_preselected
+                                                            .with(|preselected| preselected.as_ref() == Some(&option))
+                                                    }
+
+                                                    class:selected=move || is_selected(&clone4)
+                                                    class:disabled=move || is_disabled(&clone5)
+                                                    class:hidden=move || is_disabled(&clone6) && hide_disabled
+                                                    on:mouseenter=move |_e| {
+                                                        set_preselected.set(Some(clone3.clone()));
+                                                    }
+
+                                                    on:click=move |_e| {
+                                                        if !is_disabled_untracked(&clone2) {
+                                                            select.consume(clone2.clone());
+                                                        }
+                                                    }
+                                                >
+
+                                                    {render_option.render(clone1)}
+                                                </leptonic-select-option>
+                                            }
+                                                .into_view()
+                                        },
+                                    )
                             }
                         }}
 
@@ -635,11 +695,11 @@ pub fn Multiselect<O>(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
-    #[prop(into, optional)] no_options_preselect: Option<Consumer<String, O>>,
+    #[prop(into, optional)] new_option_when_no_options: Option<Consumer<String, O>>,
     #[prop(into, optional)] hide_disabled: bool,
 ) -> impl IntoView
 where
-    O: SelectOption + PartialOrd + Ord + 'static,
+    O: SelectOption + PartialOrd + Ord + 'static + Hash,
 {
     let id: uuid::Uuid = uuid::Uuid::new_v4();
     let id_string = format!("s-{id}");
@@ -784,14 +844,6 @@ where
         }
     });
 
-    if let Some(no_options_preselect) = no_options_preselect {
-        create_effect(move |_| {
-            let s = search.get();
-            if !has_options.get() {
-                set_preselected.set(Some(no_options_preselect.consume(s)));
-            }
-        });
-    }
     view! {
         <div
             node_ref=wrapper
@@ -845,9 +897,8 @@ where
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
 
-                <leptonic-select-options class:shown=move || {
-                    show_options.get()
-                }>
+                <leptonic-select-options class:shown=show_options>
+
                     <TextInput
                         get=search
                         set=set_search
@@ -862,11 +913,13 @@ where
                     />
 
                     <Show when=move || show_options.get() fallback=move || ()>
-                        // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                        {filtered_options
-                            .get()
-                            .into_iter()
-                            .map(|option| {
+                        <For
+                            each=filtered_options
+                            key=|option| option.clone()
+                            let:option
+                        >
+
+                            {
                                 let clone1 = option.clone();
                                 let clone2 = option.clone();
                                 let clone3 = option.clone();
@@ -897,26 +950,64 @@ where
                                         {render_option.render(clone1)}
                                     </leptonic-select-option>
                                 }
-                            })
-                            .collect_view()}
+                            }
+
+                        </For>
 
                         {move || match has_options.get() {
                             true => ().into_view(),
                             false => {
-                                view! {
-                                    {no_options
-                                        .map_or_else(
-                                            || {
-                                                view! {
-                                                    <leptonic-select-no-search-results>
-                                                        "No options..."
-                                                    </leptonic-select-no-search-results>
-                                                }
-                                                    .into_view()
-                                            },
-                                            |x| x.render(search.get()).into_view(),
-                                        )}
-                                }
+                                new_option_when_no_options
+                                    .map_or_else(
+                                        move || {
+                                            view! {
+                                                <leptonic-select-no-search-results>
+                                                    {no_options
+                                                        .map_or_else(
+                                                            || { "No options...".into_view() },
+                                                            |x| x.render(search.get()).into_view(),
+                                                        )}
+
+                                                </leptonic-select-no-search-results>
+                                            }
+                                                .into_view()
+                                        },
+                                        move |x| {
+                                            let option = x.consume(search.get());
+                                            set_preselected.set(Some(option.clone()));
+                                            let clone1 = option.clone();
+                                            let clone2 = option.clone();
+                                            let clone3 = option.clone();
+                                            let clone4 = option.clone();
+                                            let clone5 = option.clone();
+                                            let clone6 = option.clone();
+                                            view! {
+                                                <leptonic-select-option
+                                                    class:preselected=move || {
+                                                        memoized_preselected
+                                                            .with(|preselected| preselected.as_ref() == Some(&option))
+                                                    }
+
+                                                    class:selected=move || is_selected(&clone4)
+                                                    class:disabled=move || is_disabled(&clone5)
+                                                    class:hidden=move || is_disabled(&clone6) && hide_disabled
+                                                    on:mouseenter=move |_e| {
+                                                        set_preselected.set(Some(clone3.clone()));
+                                                    }
+
+                                                    on:click=move |_e| {
+                                                        if !is_disabled_untracked(&clone2) {
+                                                            select.consume(clone2.clone());
+                                                        }
+                                                    }
+                                                >
+
+                                                    {render_option.render(clone1)}
+                                                </leptonic-select-option>
+                                            }
+                                                .into_view()
+                                        },
+                                    )
                             }
                         }}
 
