@@ -697,6 +697,7 @@ pub fn Multiselect<O>(
     #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
     #[prop(into, optional)] new_option_when_no_options: Option<Consumer<String, O>>,
     #[prop(into, optional)] hide_disabled: bool,
+    #[prop(into, optional)] set_search_text: Option<WriteSignal<String>>,
 ) -> impl IntoView
 where
     O: SelectOption + PartialOrd + Ord + 'static + Hash,
@@ -720,6 +721,12 @@ where
     let memoized_preselected = create_memo(move |_| preselected.get());
 
     let (search, set_search) = create_signal(String::new());
+
+    if let Some(x) = set_search_text {
+        create_effect(move |_| {
+            x.set(search.get());
+        });
+    }
 
     let search_filter_provider =
         search_filter_provider.unwrap_or(Consumer::new(move |(s, o): (String, Vec<O>)| {
