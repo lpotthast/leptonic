@@ -92,6 +92,7 @@ pub fn Select<O>(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
+    #[prop(into, optional)] no_options_preselect: Option<Consumer<String, O>>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
@@ -221,6 +222,14 @@ where
         }
     });
 
+    if let Some(no_options_preselect) = no_options_preselect {
+        create_effect(move |_| {
+            let s = search.get();
+            if !has_options.get() {
+                set_preselected.set(Some(no_options_preselect.consume(s)));
+            }
+        });
+    }
     view! {
         <div
             node_ref=wrapper
@@ -305,16 +314,19 @@ where
                             true => ().into_view(),
                             false => {
                                 view! {
-                                    <leptonic-select-no-search-results>
-                                        {no_options
-                                            .map_or_else(
-                                                || "No options...".into_view(),
-                                                |x| x.render(search.get()),
-                                            )}
-
-                                    </leptonic-select-no-search-results>
+                                    {no_options
+                                        .map_or_else(
+                                            || {
+                                                view! {
+                                                    <leptonic-select-no-search-results>
+                                                        "No options..."
+                                                    </leptonic-select-no-search-results>
+                                                }
+                                                    .into_view()
+                                            },
+                                            |x| x.render(search.get()).into_view(),
+                                        )}
                                 }
-                                    .into_view()
                             }
                         }}
 
@@ -339,6 +351,7 @@ pub fn OptionalSelect<O>(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
+    #[prop(into, optional)] no_options_preselect: Option<Consumer<String, O>>,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
@@ -470,6 +483,14 @@ where
         }
     });
 
+    if let Some(no_options_preselect) = no_options_preselect {
+        create_effect(move |_| {
+            let s = search.get();
+            if !has_options.get() {
+                set_preselected.set(Some(no_options_preselect.consume(s)));
+            }
+        });
+    }
     view! {
         <div
             node_ref=wrapper
@@ -487,16 +508,20 @@ where
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
                     {move || match selected.get() {
-                        Some(selected) => view! {
+                        Some(selected) => {
+                            view! {
                                 <leptonic-select-option>
                                     {render_option.render(selected)}
                                 </leptonic-select-option>
-                        }.into_view(),
+                            }
+                                .into_view()
+                        }
                         None => ().into_view(),
                     }}
                     {match allow_deselect.get() {
                         false => ().into_view(),
-                        true => view! {
+                        true => {
+                            view! {
                                 <leptonic-select-deselect-trigger on:click=move |e| {
                                     e.prevent_default();
                                     e.stop_propagation();
@@ -504,7 +529,9 @@ where
                                 }>
                                     <Icon icon=icondata::BsXCircleFill/>
                                 </leptonic-select-deselect-trigger>
-                        }.into_view(),
+                            }
+                                .into_view()
+                        }
                     }}
                     <leptonic-select-show-trigger>
                         {move || match show_options.get() {
@@ -515,18 +542,14 @@ where
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
 
-                <leptonic-select-options class:shown=move || show_options.get()>
+                <leptonic-select-options class:shown=move || {
+                    show_options.get()
+                }>
                     <TextInput
                         get=search
                         set=set_search
                         should_be_focused=search_should_be_focused
                         on_focus_change=move |focused| {
-                            // We only update our state as long as show_options is true.
-                            // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
-                            // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
-                            // When storing the received `false` in `search_is_focused` before our effect above, resetting focus on our wrapper may, runs,
-                            // that create_effect will not be able to set the focus. We accept not setting `search_is_focused` all the time
-                            // for the create_effect above to work reliably.
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
@@ -576,16 +599,19 @@ where
                             true => ().into_view(),
                             false => {
                                 view! {
-                                    <leptonic-select-no-search-results>
-                                        {no_options
-                                            .map_or_else(
-                                                || "No options...".into_view(),
-                                                |x| x.render(search.get()),
-                                            )}
-
-                                    </leptonic-select-no-search-results>
+                                    {no_options
+                                        .map_or_else(
+                                            || {
+                                                view! {
+                                                    <leptonic-select-no-search-results>
+                                                        "No options..."
+                                                    </leptonic-select-no-search-results>
+                                                }
+                                                    .into_view()
+                                            },
+                                            |x| x.render(search.get()).into_view(),
+                                        )}
                                 }
-                                    .into_view()
                             }
                         }}
 
@@ -595,7 +621,6 @@ where
         </div>
     }
 }
-
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn Multiselect<O>(
@@ -610,6 +635,7 @@ pub fn Multiselect<O>(
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] no_options: Option<ViewCallback<String>>,
+    #[prop(into, optional)] no_options_preselect: Option<Consumer<String, O>>,
     #[prop(into, optional)] hide_disabled: bool,
 ) -> impl IntoView
 where
@@ -758,6 +784,14 @@ where
         }
     });
 
+    if let Some(no_options_preselect) = no_options_preselect {
+        create_effect(move |_| {
+            let s = search.get();
+            if !has_options.get() {
+                set_preselected.set(Some(no_options_preselect.consume(s)));
+            }
+        });
+    }
     view! {
         <div
             node_ref=wrapper
@@ -819,12 +853,6 @@ where
                         set=set_search
                         should_be_focused=search_should_be_focused
                         on_focus_change=move |focused| {
-                            // We only update our state as long as show_options is true.
-                            // It it is no longer true, the dropdown is no longer shown through a CSS rule (display: none).
-                            // This will automatically de-focus the search input if it had focus, resulting in a call of this callback.
-                            // When storing the received `false` in `search_is_focused` before our effect above, resetting focus on our wrapper may, runs,
-                            // that create_effect will not be able to set the focus. We accept not setting `search_is_focused` all the time
-                            // for the create_effect above to work reliably.
                             if show_options.get_untracked() {
                                 set_search_is_focused.set(focused);
                             }
@@ -876,16 +904,19 @@ where
                             true => ().into_view(),
                             false => {
                                 view! {
-                                    <leptonic-select-no-search-results>
-                                        {no_options
-                                            .map_or_else(
-                                                || "No options...".into_view(),
-                                                |x| x.render(search.get()),
-                                            )}
-
-                                    </leptonic-select-no-search-results>
+                                    {no_options
+                                        .map_or_else(
+                                            || {
+                                                view! {
+                                                    <leptonic-select-no-search-results>
+                                                        "No options..."
+                                                    </leptonic-select-no-search-results>
+                                                }
+                                                    .into_view()
+                                            },
+                                            |x| x.render(search.get()).into_view(),
+                                        )}
                                 }
-                                    .into_view()
                             }
                         }}
 
