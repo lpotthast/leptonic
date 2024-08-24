@@ -30,7 +30,7 @@ js-sys = "0.3.68"
 leptos = "0.6.5"
 leptos_reactive = "0.6.5"
 leptos-tiptap = { version = "0.7.0", optional = true }
-leptos-use = { version = "0.10.2", features = ["math"] }
+leptos-use = { version = "0.12.0", features = ["math"] }
 icondata = { version = "0.3.0" }
 leptos_meta = { version = "0.6.5", features = [] }
 leptos_router = "0.6.5"
@@ -38,11 +38,11 @@ serde = "1.0.196"
 serde-wasm-bindgen = "0.6.3"
 serde_json = "1.0.113"
 strum = { version = "0.26.1", features = ["derive"] }
-time = { version = "0.3.34", features = [
-    "wasm-bindgen",
-    "macros",
-    "serde",
-    "serde-well-known",
+time = { version = "0.3.36", features = [
+  "wasm-bindgen",
+  "macros",
+  "serde",
+  "serde-well-known",
 ] }
 tracing = "0.1.40"
 uuid = { version = "1.7.0", features = ["v4", "v7", "js", "serde"] }
@@ -50,13 +50,13 @@ wasm-bindgen = "0.2.91"
 wasm-bindgen-futures = "0.4.41"
 # TODO: What of all below is really required?
 web-sys = { version = "0.3.68", features = [
-    "DomRect",
-    "Event",
-    "EventTarget",
-    "ScrollIntoViewOptions",
-    "HtmlFormElement",
-    "HtmlInputElement",
-    "Storage",
+  "DomRect",
+  "Event",
+  "EventTarget",
+  "ScrollIntoViewOptions",
+  "HtmlFormElement",
+  "HtmlInputElement",
+  "Storage",
 ] }
 educe = "0.5.11"
 
