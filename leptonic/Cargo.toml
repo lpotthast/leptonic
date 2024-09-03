@@ -37,7 +37,7 @@ serde = "1.0.196"
 serde-wasm-bindgen = "0.6.3"
 serde_json = "1.0.113"
 strum = { version = "0.26.1", features = ["derive"] }
-time = { version = "=0.3.31", features = [
+time = { version = "0.3.31", features = [
     "wasm-bindgen",
     "macros",
     "serde",
