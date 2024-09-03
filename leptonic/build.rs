@@ -98,7 +98,7 @@ fn copy_tiptap_files(js_dir: &PathBuf) {
 /// Parse the Cargo.toml file! Abort if the Cargo.toml has no config.
 fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMetadata>> {
     let cargo_toml: Manifest<Value> =
-        cargo_toml::Manifest::from_path_with_metadata(&cargo_toml_path).with_context(|| {
+        Manifest::from_path_with_metadata(&cargo_toml_path).with_context(|| {
             format!(
                 "Could not parse Cargo.toml at '{}'",
                 cargo_toml_path.display()

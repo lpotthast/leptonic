@@ -102,8 +102,8 @@ pub fn DateTimeInput(
                 id=id
                 class=class
                 placeholder=move || match &label.0 {
-                    Some(label) => leptos::Oco::from(label.get()),
-                    None => leptos::Oco::from(""),
+                    Some(label) => Oco::from(label.get()),
+                    None => Oco::from(""),
                 }
                 tabindex="0"
                 type="text"
