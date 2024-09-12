@@ -30,7 +30,7 @@ js-sys = "0.3.68"
 leptos = "0.6.5"
 leptos_reactive = "0.6.5"
 leptos-tiptap = { version = "0.7.0", optional = true }
-leptos-use = { version = "0.10.2", features = ["math"] }
+leptos-use = { version = "0.13.4", features = ["math"] }
 icondata = { version = "0.3.0" }
 leptos_meta = { version = "0.6.5", features = [] }
 leptos_router = "0.6.5"
