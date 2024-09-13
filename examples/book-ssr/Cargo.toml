@@ -16,7 +16,7 @@ indoc = "2.0.4"
 #leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["clipboard", "tiptap"] }
 leptonic = { path = "../../leptonic", features = ["full"] }
 leptos = { version = "0.6.9", features = [] }
-leptos-use = "0.10.5"
+leptos-use = "0.13.4"
 leptos_axum = { version = "0.6.9", optional = true }
 leptos_meta = { version = "0.6.9", features = [] }
 leptos_router = { version = "0.6.9", features = [] }
@@ -105,10 +105,10 @@ style-file = "style/main.scss"
 assets-dir = "public"
 
 # The IP and port (ex: 127.0.0.1:3000) where the server serves the content. Use it in your server setup.
-site-addr = "127.0.0.1:3000"
+site-addr = "127.0.0.1:3001"
 
 # The port to use for automatic reload monitoring
-reload-port = 3001
+reload-port = 3002
 
 # [Optional] Command to use when running end2end tests. It will run in the end2end dir.
 #   [Windows] for non-WSL use "npx.cmd playwright test"
