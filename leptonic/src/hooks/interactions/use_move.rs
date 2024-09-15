@@ -1,10 +1,10 @@
-use educe::Educe;
 use leptos_reactive::{
     create_effect, on_cleanup, store_value, Callable, Callback, Signal, SignalDispose, SignalGet,
 };
+use typed_builder::TypedBuilder;
 use web_sys::PointerEvent;
 
-use crate::utils::props::Attributes;
+use crate::utils::{attributes::Attributes, event_handlers::EventHandlers};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useMove.ts
 
@@ -20,25 +20,30 @@ pub struct MoveEvent {
 #[derive(Debug, Clone, Copy)]
 pub struct MoveEndEvent {}
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, TypedBuilder)]
 pub struct UseMoveInput {
-    pub on_move_start: Callback<MoveStartEvent>,
-    pub on_move: Callback<MoveEvent>,
-    pub on_move_end: Callback<MoveEndEvent>,
+    #[builder(setter(into))]
+    pub(crate) on_move_start: Callback<MoveStartEvent>,
+    #[builder(setter(into))]
+    pub(crate) on_move: Callback<MoveEvent>,
+    #[builder(setter(into))]
+    pub(crate) on_move_end: Callback<MoveEndEvent>,
 
-    pub global_pointer_up: Signal<Option<PointerEvent>>,
-    pub global_pointer_down: Signal<Option<PointerEvent>>,
-    pub global_pointer_cancel: Signal<Option<PointerEvent>>,
-    pub global_pointer_move: Signal<Option<PointerEvent>>,
+    // TODO: Remove this
+    #[builder(setter(into))]
+    pub(crate) global_pointer_up: Signal<Option<PointerEvent>>,
+
+    // TODO: Remove this
+    #[builder(setter(into))]
+    pub(crate) global_pointer_move: Signal<Option<PointerEvent>>,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct UseMoveProps {
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
+    pub handlers: EventHandlers,
 }
 
 #[derive(Debug)]
@@ -167,7 +172,9 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     UseMoveReturn {
         props: UseMoveProps {
             attrs: Attributes::new(),
-            on_pointer_down,
+            handlers: EventHandlers::builder()
+                .on_pointer_down(on_pointer_down)
+                .build(),
         },
     }
 }

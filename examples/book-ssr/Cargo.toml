@@ -13,13 +13,13 @@ cfg-if = "1.0.0"
 console_error_panic_hook = "0.1.7"
 http = "1.0.0"
 indoc = "2.0.4"
-leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["clipboard", "tiptap"] }
-#leptonic = { path = "../../leptonic", features = ["full"] }
-leptos = { version = "0.6.5", features = [] }
-leptos-use = "0.10.3"
-leptos_axum = { version = "0.6.5", optional = true }
-leptos_meta = { version = "0.6.5", features = [] }
-leptos_router = { version = "0.6.5", features = [] }
+#leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["clipboard", "tiptap"] }
+leptonic = { path = "../../leptonic", features = ["full"] }
+leptos = { version = "0.6.9", features = [] }
+leptos-use = "0.13.4"
+leptos_axum = { version = "0.6.9", optional = true }
+leptos_meta = { version = "0.6.9", features = [] }
+leptos_router = { version = "0.6.9", features = [] }
 ordered-float = "4.2.0"
 ringbuf = "0.3.3"
 serde = "1.0.196"
@@ -28,7 +28,10 @@ serde_json = "1.0.113"
 strum = { version = "0.26.1", features = ["derive"] }
 thiserror = "1.0.56"
 time = { version = "0.3.34", features = ["wasm-bindgen"] }
-tokio = { version = "1.36.0", features = ["rt-multi-thread", "signal"], optional = true }
+tokio = { version = "1.36.0", features = [
+    "rt-multi-thread",
+    "signal",
+], optional = true }
 tower = { version = "0.4.13", optional = true }
 tower-http = { version = "0.5.1", features = ["full"], optional = true }
 tracing = "0.1.40"
@@ -36,6 +39,14 @@ tracing-subscriber = "0.3.18"
 tracing-wasm = "0.2.1"
 uuid = { version = "1.7.0", features = ["js", "v4", "serde"] }
 wasm-bindgen = "0.2.91"
+
+#[patch.crates-io]
+#leptos = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_reactive = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_dom = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_axum = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_meta = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_router = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
 
 [features]
 hydrate = [
@@ -94,10 +105,10 @@ style-file = "style/main.scss"
 assets-dir = "public"
 
 # The IP and port (ex: 127.0.0.1:3000) where the server serves the content. Use it in your server setup.
-site-addr = "127.0.0.1:3000"
+site-addr = "127.0.0.1:3001"
 
 # The port to use for automatic reload monitoring
-reload-port = 3001
+reload-port = 3002
 
 # [Optional] Command to use when running end2end tests. It will run in the end2end dir.
 #   [Windows] for non-WSL use "npx.cmd playwright test"

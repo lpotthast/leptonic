@@ -27,13 +27,13 @@ indexmap = "2.2.2"
 indoc = "2.0.4"
 itertools = "0.12.1"
 js-sys = "0.3.68"
-leptos = "0.6.5"
-leptos_reactive = "0.6.5"
+leptos = "0.6.9"
+leptos_reactive = "0.6.9"
 leptos-tiptap = { version = "0.7.0", optional = true }
-leptos-use = { version = "0.10.2", features = ["math"] }
+leptos-use = { version = "0.13.4", features = ["math"] }
 icondata = { version = "0.3.0" }
-leptos_meta = { version = "0.6.5", features = [] }
-leptos_router = "0.6.5"
+leptos_meta = { version = "0.6.9", features = [] }
+leptos_router = "0.6.9"
 serde = "1.0.196"
 serde-wasm-bindgen = "0.6.3"
 serde_json = "1.0.113"
@@ -59,11 +59,19 @@ web-sys = { version = "0.3.68", features = [
     "Storage",
 ] }
 educe = "0.5.11"
+typed-builder = "0.18.1"
 
 [dev-dependencies]
 wasm-bindgen = "0.2.91"
 wasm-bindgen-test = "0.3.41"
 web-sys = "0.3.68"
+
+#[patch.crates-io]
+#leptos = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_reactive = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_dom = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_meta = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
+#leptos_router = { git = 'https://github.com/leptos-rs/leptos', branch = "main" }
 
 [features]
 default = ["hooks"]

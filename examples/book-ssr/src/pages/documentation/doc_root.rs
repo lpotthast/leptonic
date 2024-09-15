@@ -8,6 +8,7 @@ use crate::app::APP_BAR_HEIGHT;
 use crate::app::{AppLayoutContext, AppRoutes};
 use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
 use crate::pages::documentation::atoms::button::PageAtomButton;
+use crate::pages::documentation::atoms::menu::PageAtomMenu;
 use crate::pages::documentation::atoms::popover::PageAtomPopover;
 use crate::pages::documentation::components::feedback::alert::PageAlert;
 use crate::pages::documentation::components::feedback::chip::PageChip;
@@ -45,10 +46,15 @@ use crate::pages::documentation::getting_started::overview::PageOverview;
 use crate::pages::documentation::getting_started::themes::PageThemes;
 use crate::pages::documentation::hooks::anchor_link::PageUseAnchorLink;
 use crate::pages::documentation::hooks::button::PageUseButton;
-use crate::pages::documentation::hooks::hover::PageUseHover;
+use crate::pages::documentation::hooks::use_hover::PageUseHover;
 use crate::pages::documentation::hooks::overlay::PageUseOverlay;
 use crate::pages::documentation::hooks::press::PageUsePress;
 use crate::pages::documentation::hooks::r#move::PageUseMove;
+use crate::pages::documentation::hooks::use_interact_outside::PageUseInteractOutside;
+use crate::pages::documentation::hooks::use_long_hover::PageUseLongHover;
+use crate::pages::documentation::hooks::use_long_press::PageUseLongPress;
+use crate::pages::documentation::hooks::use_prevent_scroll::PageUsePreventScroll;
+use crate::pages::documentation::hooks::use_scroll_wheel::PageUseScrollWheel;
 
 #[derive(Debug, Copy, Clone)]
 pub enum DocRoutes {
@@ -60,8 +66,13 @@ pub enum DocRoutes {
 
     // Hooks
     UsePress,
+    UseLongPress,
     UseMove,
     UseHover,
+    UseLongHover,
+    UsePreventScroll,
+    UseScrollWheel,
+    UseInteractOutside,
     UseButton,
     UseOverlay,
     UseAnchorLink,
@@ -69,6 +80,7 @@ pub enum DocRoutes {
     // Atoms
     AtomButton,
     AtomPopover,
+    AtomMenu,
     AtomAnchorLink,
 
     // Layout
@@ -125,14 +137,20 @@ impl DocRoutes {
             Self::Changelog => "changelog",
 
             Self::UsePress => "hooks/use-press",
+            Self::UseLongPress => "hooks/use-long-press",
             Self::UseMove => "hooks/use-move",
             Self::UseHover => "hooks/use-hover",
+            Self::UseLongHover => "hooks/use-long-hover",
+            Self::UsePreventScroll => "hooks/use-prevent-scroll",
+            Self::UseScrollWheel => "hooks/use-scroll-wheel",
+            Self::UseInteractOutside => "hooks/use-interact-outside",
             Self::UseButton => "hooks/use-button",
             Self::UseOverlay => "hooks/use-overlay",
             Self::UseAnchorLink => "hooks/use-anchor-link",
 
             Self::AtomButton => "atoms/button",
             Self::AtomPopover => "atoms/popover",
+            Self::AtomMenu => "atoms/menu",
             Self::AtomAnchorLink => "atoms/anchor-link",
 
             Self::Stack => "components/stack",
@@ -202,14 +220,20 @@ pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
             <Route path=DocRoutes::Changelog view=|| view! { <PageChangelog/> }/>
 
             <Route path=DocRoutes::UsePress view=|| view! { <PageUsePress/> }/>
+            <Route path=DocRoutes::UseLongPress view=|| view! { <PageUseLongPress/> }/>
             <Route path=DocRoutes::UseMove view=|| view! { <PageUseMove/> }/>
             <Route path=DocRoutes::UseHover view=|| view! { <PageUseHover/> }/>
+            <Route path=DocRoutes::UseLongHover view=|| view! { <PageUseLongHover/> }/>
+            <Route path=DocRoutes::UsePreventScroll view=|| view! { <PageUsePreventScroll/> }/>
+            <Route path=DocRoutes::UseScrollWheel view=|| view! { <PageUseScrollWheel/> }/>
+            <Route path=DocRoutes::UseInteractOutside view=|| view! { <PageUseInteractOutside/> }/>
             <Route path=DocRoutes::UseButton view=|| view! { <PageUseButton/> }/>
             <Route path=DocRoutes::UseOverlay view=|| view! { <PageUseOverlay/> }/>
             <Route path=DocRoutes::UseAnchorLink view=|| view! { <PageUseAnchorLink/> }/>
 
             <Route path=DocRoutes::AtomButton view=|| view! { <PageAtomButton/> }/>
             <Route path=DocRoutes::AtomPopover view=|| view! { <PageAtomPopover/> }/>
+            <Route path=DocRoutes::AtomMenu view=|| view! { <PageAtomMenu/> }/>
             <Route path=DocRoutes::AtomAnchorLink view=|| view! { <PageAtomAnchorLink/> }/>
 
             <Route path=DocRoutes::Stack view=|| view! { <PageStack/> }/>
@@ -286,8 +310,13 @@ pub fn DocLayout() -> impl IntoView {
         }>
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::UsePress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
+                <Link href=DocRoutes::UseLongPress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_long_press"</Link>
                 <Link href=DocRoutes::UseMove class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
                 <Link href=DocRoutes::UseHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
+                <Link href=DocRoutes::UseLongHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_long_hover"</Link>
+                <Link href=DocRoutes::UsePreventScroll class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_prevent_scroll"</Link>
+                <Link href=DocRoutes::UseScrollWheel class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_scroll_wheel"</Link>
+                <Link href=DocRoutes::UseInteractOutside class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_interact_outside"</Link>
                 <Link href=DocRoutes::UseButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
                 <Link href=DocRoutes::UseOverlay class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
                 <Link href=DocRoutes::UseAnchorLink class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_anchor_link"</Link>
@@ -300,6 +329,7 @@ pub fn DocLayout() -> impl IntoView {
             <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
                 <Link href=DocRoutes::AtomButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
                 <Link href=DocRoutes::AtomPopover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
+                <Link href=DocRoutes::AtomMenu class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Menu"</Link>
                 <Link href=DocRoutes::AtomAnchorLink class="item" on:click=move |_| close_doc_drawer_on_mobile()>"AnchorLink"</Link>
             </Stack>
         </DrawerSection>
@@ -393,6 +423,8 @@ pub fn DocLayout() -> impl IntoView {
                 shown=Signal::derive(move || !app_layout_context.doc_drawer_closed.get())
                 class=drawer_class
                 style=format!("position: fixed; left: 0; top: {APP_BAR_HEIGHT}; bottom: 0;")
+                disable_interact_outside_tracking_when=Signal::derive(move || app_layout_context.doc_drawer_closed.get() || !app_layout_context.is_small.get())
+                on_interact_outside=move |_e| { app_layout_context.close_doc_drawer() }
             >
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
                     { drawer_content }

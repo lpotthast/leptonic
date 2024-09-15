@@ -1,12 +1,14 @@
 use educe::Educe;
 use leptos::{IntoAttribute, Oco};
 use leptos_reactive::{create_signal, MaybeSignal, ReadSignal, WriteSignal};
+use typed_builder::TypedBuilder;
 
-use crate::utils::props::Attributes;
+use crate::utils::attributes::Attributes;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, TypedBuilder)]
 pub struct UseOverlayInput {
     /// Disables the handling overlay events when true.
+    #[builder(setter(into))]
     pub disabled: MaybeSignal<bool>,
 }
 
@@ -32,8 +34,7 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
     let (state, set_state) = create_signal(false);
     let id = uuid::Uuid::new_v4();
 
-    let mut attrs = Attributes::new();
-    attrs.insert("id", id.to_string().into_attribute());
+    let attrs = Attributes::new().insert("id", id.to_string().into_attribute());
 
     UseOverlayReturn {
         props: UseOverlayProps { attrs },

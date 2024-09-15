@@ -1,12 +1,16 @@
 {
     "cSpell.words": [
+        "beforeunload",
         "bindgen",
         "blazingly",
         "collapsibles",
+        "contextmenu",
         "darkgrey",
         "datetime",
         "Deque",
+        "describedby",
         "dind",
+        "dispatchable",
         "dotenv",
         "dotenvy",
         "fileserv",
@@ -16,6 +20,7 @@
         "haspopup",
         "hoverable",
         "icondata",
+        "iframe",
         "indoc",
         "inplace",
         "interactable",
@@ -23,6 +28,7 @@
         "jobspec",
         "keydown",
         "keyup",
+        "labelledby",
         "leptos",
         "listbox",
         "mousedown",
@@ -59,6 +65,7 @@
         "touchend",
         "touchmove",
         "touchstart",
+        "typeahead",
         "uuid"
     ],
     "rust-analyzer.linkedProjects": [

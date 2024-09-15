@@ -201,25 +201,18 @@ fn copy_to_clipboard<T: AsRef<str>, S: Fn() + 'static, E: Fn() + 'static>(
 ) {
     match leptos_use::use_window().navigator() {
         Some(navigator) => {
-            match navigator.clipboard() {
-                Some(clipboard) => {
-                    let promise = clipboard.write_text(text.as_ref());
-                    let future = wasm_bindgen_futures::JsFuture::from(promise);
-                    wasm_bindgen_futures::spawn_local(async move {
-                        match future.await {
-                            Ok(_result) => {
-                                on_success();
-                            }
-                            Err(_err) => {
-                                on_err();
-                            }
-                        }
-                    });
+            let promise = navigator.clipboard().write_text(text.as_ref());
+            let future = wasm_bindgen_futures::JsFuture::from(promise);
+            wasm_bindgen_futures::spawn_local(async move {
+                match future.await {
+                    Ok(_result) => {
+                        on_success();
+                    }
+                    Err(_err) => {
+                        on_err();
+                    }
                 }
-                None => {
-                    on_err();
-                }
-            };
+            });
         }
         None => {
             on_err();
