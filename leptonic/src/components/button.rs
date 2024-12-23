@@ -8,11 +8,11 @@ use leptos_router::{State, ToHref};
 
 use crate::{
     atoms,
-    hooks::{
-        interactions::use_hover::{HoverEndEvent, HoverStartEvent},
-        interactions::use_press::PressEvent,
+    hooks::interactions::{
+        use_hover::{HoverEndEvent, HoverStartEvent},
+        use_press::PressEvent,
     },
-    utils::aria::{AriaExpanded, AriaHasPopup},
+    utils::aria::{AriaAccessibleName, AriaExpanded, AriaHasPopup},
     OptMaybeSignal,
 };
 
@@ -160,6 +160,7 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
+    #[prop(into, optional)] accessible_name: OptMaybeSignal<AriaAccessibleName>, // TODO: Does this really need to be a signal???
     #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
     #[prop(into, optional)]
     title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
@@ -216,6 +217,7 @@ where
         children,
         on_hover_start,
         on_hover_end,
+        accessible_name,
     })
     .into_view()
 }

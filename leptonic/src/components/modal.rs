@@ -3,9 +3,9 @@ use std::rc::Rc;
 use uuid::Uuid;
 
 use crate::{
-    hooks::{use_press, use_prevent_scroll, UsePressInput, UsePressReturn, UsePreventScrollInput},
+    hooks::*,
     prelude::{GlobalKeyboardEvent, Producer},
-    OptMaybeSignal,
+    OptMaybeSignal, Transparent,
 };
 
 #[derive(Clone)]
@@ -62,47 +62,53 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
 
     let disable_prevent_scroll = Signal::derive(move || !has_modals.get());
 
-    let _ = use_prevent_scroll(UsePreventScrollInput {
-        disabled: disable_prevent_scroll.into(),
-    });
+    let _ = use_prevent_scroll(
+        Option::<web_sys::Element>::None,
+        UsePreventScrollInput {
+            disabled: disable_prevent_scroll.into(),
+        },
+    );
 
+    // TODO: Use builder pattern
     let UsePressReturn {
         props,
         is_pressed: _,
+        press_responder: _,
     } = use_press(UsePressInput {
         disabled: false.into(),
         force_prevent_default: true,
-        on_press: Callback::new(move |_| {
+        on_press: Some(Callback::new(move |_| {
             if let Some(modal_on_top) = shown_modals.get_untracked().into_iter().rev().next() {
                 if let Some(on_backdrop_interaction) = modal_on_top.on_backdrop_interaction {
                     on_backdrop_interaction.call(());
                 }
             }
-        }),
+        })),
         on_press_up: None,
         on_press_start: None,
         on_press_end: None,
     });
 
     view! {
-        { children() }
+        // TODO: Remove this usage of <Transparent>!
+        <Transparent>
+            { children() }
 
-        <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
-            <leptonic-modal-backdrop
-                {..props.attrs}
-                on:keydown=props.on_key_down
-                on:click=props.on_click
-                on:pointerdown=props.on_pointer_down
-            />
-
-            <leptonic-modals>
-                <For
-                    each=move || ctx.shown_modals.get()
-                    key=|it| it.key
-                    children=|it| view! { {(it.children)()} }
+            <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
+                <leptonic-modal-backdrop
+                    {..props.attrs}
+                    {..props.handlers}
                 />
-            </leptonic-modals>
-        </leptonic-modal-host>
+
+                <leptonic-modals>
+                    <For
+                        each=move || ctx.shown_modals.get()
+                        key=|it| it.key
+                        children=|it| view! { {(it.children)()} }
+                    />
+                </leptonic-modals>
+            </leptonic-modal-host>
+        </Transparent>
     }
 }
 

@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
@@ -8,15 +10,9 @@ use ringbuf::{HeapRb, Rb};
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
-#[derive(Clone)]
-pub enum Event {
-    MoveStart(MoveStartEvent),
-    Move(MoveEvent),
-    MoveEnd(MoveEndEvent),
-}
-
 #[component]
-pub fn PageUseHover() -> impl IntoView {
+pub fn PageUseLongPress() -> impl IntoView {
+    let (count, set_count) = create_signal(0);
     let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = create_signal(false);
 
@@ -31,28 +27,38 @@ pub fn PageUseHover() -> impl IntoView {
         })
     });
 
-    let hover = use_hover(UseHoverInput {
-        disabled: disabled.into(),
-        on_hover_start: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("HoverStart: {e:?}")));
-            });
-        })),
-        on_hover_end: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("HoverEnd: {e:?}")));
-            });
-        })),
-    });
+    let long_press = use_long_press(
+        UseLongPressInput::builder()
+            .disabled(disabled)
+            .on_long_press_start(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("LongPressStart: {e:?}")));
+                });
+            })
+            .on_long_press_end(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("LongPressEnd: {e:?}")));
+                });
+            })
+            .on_long_press(move |e| {
+                set_count.update(|c| *c += 1);
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("LongPress: {e:?}")));
+                });
+            })
+            .threshold(Duration::from_millis(500))
+            .accessibility_description(Oco::Borrowed("A button to press"))
+            .build(),
+    );
 
     view! {
         <Article>
-            <H1 id="use-hover" class="anchor">
-                "use_hover"
-                <AnchorLink href="#use-hover" description="Direct link to section: use_hover"/>
+            <H1 id="use-long-press" class="anchor">
+                "use_long_press"
+                <AnchorLink href="#use-long-press" description="Direct link to article header"/>
             </H1>
 
-            <P>"Track element hover."</P>
+            <P>"Track element long press."</P>
 
             <Code>
                 {indoc!(r"
@@ -60,23 +66,22 @@ pub fn PageUseHover() -> impl IntoView {
                 ")}
             </Code>
 
-            <div
-                {..hover.props.attrs}
-                on:pointerenter=hover.props.on_pointer_enter
-                on:pointerleave=hover.props.on_pointer_leave
-                style="display: inline-flex;
-                border: 0.1em solid green;
-                padding: 0.5em 1em;"
+            <button
+                {..long_press.props.attrs}
+                {..long_press.props.handlers}
             >
-                "Hover me"
-            </div>
+                "Press me for 500ms"
+            </button>
 
             <FormControl style="flex-direction: row; align-items: center; gap: 0.5em;">
                 <Checkbox checked=disabled set_checked=set_disabled />
                 <Label>"Disabled"</Label>
             </FormControl>
 
-            <P>"Is hovered: " { move || hover.is_hovered.get() }</P>
+            <P>"Was pressed: " { move || count.get() } { move || match count.get() {
+                1 => " time",
+                _ => " times",
+            } }</P>
 
             <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
 
@@ -96,7 +101,7 @@ pub fn PageUseHover() -> impl IntoView {
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_hover", link: "#use-hover" },
+                Toc::Leaf { title: "use_long_press", link: "#use-long-press" },
             ]
         }/>
     }

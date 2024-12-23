@@ -15,23 +15,24 @@ pub fn PageUseAnchorLink() -> impl IntoView {
 
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
-    let UseAnchorLinkReturn { props } = use_anchor_link(UseAnchorLinkInput {
-        href: Href::from_str(Oco::Borrowed("#my-anchor-element")).expect("valid href"),
-        scroll_behavior: Some(ScrollBehavior::Smooth),
-        disabled: disabled.into(),
-        description: None,
-        use_press_input: UsePressInput {
-            // Links cannot be disabled (for now).
-            disabled: false.into(),
-            // We are using an <a> tag and want the custom scrolling behavior from `use_anchor_link`.
-            // If we would not enforce prevention of default behavior, automatic browser scroll-jumps would occur.
-            force_prevent_default: true,
-            on_press: Callback::new(move |_| {}),
-            on_press_up: None,
-            on_press_start: None,
-            on_press_end: None,
-        },
-    });
+    let UseAnchorLinkReturn { props } = use_anchor_link(
+        UseAnchorLinkInput::builder()
+            .href(Href::from_str(Oco::Borrowed("#my-anchor-element")).expect("valid href"))
+            .scroll_behavior(Some(ScrollBehavior::Smooth))
+            .disabled(disabled)
+            .description(None)
+            .use_press_input(
+                UsePressInput::builder()
+                    // Links cannot be disabled (for now).
+                    .disabled(false)
+                    // We are using an <a> tag and want the custom scrolling behavior from `use_anchor_link`.
+                    // If we would not enforce prevention of default behavior, automatic browser scroll-jumps would occur.
+                    .force_prevent_default(true)
+                    .on_press(move |_| {})
+                    .build(),
+            )
+            .build(),
+    );
 
     view! {
         <Article>
@@ -45,10 +46,8 @@ pub fn PageUseAnchorLink() -> impl IntoView {
             <Code>
                 {indoc!(r##"
                     <a
-                        {..props.attrs}
-                        on:keydown=props.on_key_down
-                        on:click=props.on_click
-                        on:pointerdown=props.on_pointer_down
+                        use:attrs=props.attrs
+                        use:handlers=props.handlers
                         class="leptonic-anchor-link"
                         target="_self"
                     >
@@ -59,9 +58,7 @@ pub fn PageUseAnchorLink() -> impl IntoView {
 
             <a
                 {..props.attrs}
-                on:keydown=props.on_key_down
-                on:click=props.on_click
-                on:pointerdown=props.on_pointer_down
+                {..props.handlers}
                 class="leptonic-anchor-link"
                 target="_self"
             >

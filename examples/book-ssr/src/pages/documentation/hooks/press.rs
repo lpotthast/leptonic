@@ -8,13 +8,6 @@ use ringbuf::{HeapRb, Rb};
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
-#[derive(Clone)]
-pub enum Event {
-    MoveStart(MoveStartEvent),
-    Move(MoveEvent),
-    MoveEnd(MoveEndEvent),
-}
-
 #[component]
 pub fn PageUsePress() -> impl IntoView {
     let (count, set_count) = create_signal(0);
@@ -32,31 +25,33 @@ pub fn PageUsePress() -> impl IntoView {
         })
     });
 
-    let press = use_press(UsePressInput {
-        disabled: disabled.into(),
-        force_prevent_default: false,
-        on_press: Callback::new(move |e| {
-            set_count.update(|c| *c += 1);
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Press: {e:?}")));
-            });
-        }),
-        on_press_up: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressUp: {e:?}")));
-            });
-        })),
-        on_press_start: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressStart: {e:?}")));
-            });
-        })),
-        on_press_end: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressEnd: {e:?}")));
-            });
-        })),
-    });
+    let press = use_press(
+        UsePressInput::builder()
+            .disabled(disabled)
+            .force_prevent_default(false)
+            .on_press(move |e| {
+                set_count.update(|c| *c += 1);
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("Press: {e:?}")));
+                });
+            })
+            .on_press_up(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("PressUp: {e:?}")));
+                });
+            })
+            .on_press_start(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("PressStart: {e:?}")));
+                });
+            })
+            .on_press_end(move |e| {
+                set_events.update(|events| {
+                    events.push_overwrite(Oco::Owned(format!("PressEnd: {e:?}")));
+                });
+            })
+            .build(),
+    );
 
     view! {
         <Article>
@@ -75,9 +70,7 @@ pub fn PageUsePress() -> impl IntoView {
 
             <button
                 {..press.props.attrs}
-                on:keydown=press.props.on_key_down
-                on:click=press.props.on_click
-                on:pointerdown=press.props.on_pointer_down
+                {..press.props.handlers}
             >
                 "Press me"
             </button>

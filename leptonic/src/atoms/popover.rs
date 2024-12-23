@@ -1,10 +1,8 @@
 use crate::{
-    hooks::{
-        use_overlay, use_overlay_position, use_overlay_trigger, PlacementX, PlacementY,
-        UseOverlayInput, UseOverlayPositionInput, UseOverlayPositionReturn, UseOverlayProps,
-        UseOverlayReturn, UseOverlayTriggerInput, UseOverlayTriggerReturn,
-    },
+    hooks::*,
+    state::overlay::OverlayTriggerState,
     utils::{aria::AriaHasPopup, locale::WritingDirection},
+    Transparent,
 };
 use leptos::*;
 
@@ -13,10 +11,12 @@ pub struct PopoverContext {
     pub state: ReadSignal<bool>,
     pub set_state: WriteSignal<bool>,
 
-    id: Oco<'static, str>,
-    overlay_props: UseOverlayProps, // TODO: Rc?
-    trigger_el: ReadSignal<Option<NodeRef<html::Custom>>>,
-    set_trigger_el: WriteSignal<Option<NodeRef<html::Custom>>>,
+    pub(crate) id: Oco<'static, str>,
+    pub(crate) overlay_props: UseOverlayProps, // TODO: Rc?
+    pub(crate) trigger_el: ReadSignal<Option<NodeRef<html::Custom>>>,
+    pub(crate) set_trigger_el: WriteSignal<Option<NodeRef<html::Custom>>>,
+
+    pub(crate) disabled: MaybeSignal<bool>,
 }
 
 #[component]
@@ -31,7 +31,7 @@ pub fn Popover(#[prop(into)] disabled: MaybeSignal<bool>, children: Children) ->
     let (trigger_el, set_trigger_el) = create_signal(None);
 
     view! {
-        <Provider value=PopoverContext { id, overlay_props, state, set_state, trigger_el, set_trigger_el }>
+        <Provider value=PopoverContext { id, overlay_props, state, set_state, trigger_el, set_trigger_el, disabled }>
             { children() }
         </Provider>
     }
@@ -44,18 +44,42 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
     let trigger_el: NodeRef<html::Custom> = create_node_ref();
     ctx.set_trigger_el.set(Some(trigger_el));
 
+    let state = OverlayTriggerState {
+        show: ctx.state,
+        set_show: ctx.set_state,
+    };
+
+    let UsePressReturn {
+        props: press_props,
+        is_pressed: _,
+        press_responder,
+    } = use_press(
+        UsePressInput::builder()
+            .disabled(ctx.disabled)
+            .on_press(|_| {})
+            .build(),
+    );
+
     let UseOverlayTriggerReturn {
         props: trigger_props,
-    } = use_overlay_trigger(UseOverlayTriggerInput {
-        show: ctx.state.into(),
-        overlay_id: ctx.id,
-        overlay_type: AriaHasPopup::Menu,
-    });
+    } = use_overlay_trigger(
+        state,
+        Some(press_responder),
+        UseOverlayTriggerInput {
+            overlay_id: ctx.id,
+            overlay_type: AriaHasPopup::Menu,
+        },
+    );
+
+    let attrs = press_props.attrs.merge(trigger_props.attrs);
+    let handlers = press_props.handlers;
 
     view! {
-        <leptonic-popover-trigger {..trigger_props.attrs} node_ref=trigger_el>
-            { children() }
-        </leptonic-popover-trigger>
+        <Transparent>
+            <leptonic-popover-trigger {..attrs} {..handlers} node_ref=trigger_el>
+                { children() }
+            </leptonic-popover-trigger>
+        </Transparent>
     }
 }
 
@@ -72,13 +96,16 @@ pub fn PopoverContent(
 
     let UseOverlayPositionReturn {
         props: overlay_pos_props,
-    } = use_overlay_position(UseOverlayPositionInput {
-        overlay_ref: overlay_el,
-        target_ref: ctx.trigger_el.get_untracked().expect("trigger present"),
-        placement_x,
-        placement_y,
-        writing_direction,
-    });
+    } = use_overlay_position(
+        UseOverlayPositionInput::builder()
+            .overlay_ref(overlay_el)
+            .target_ref(ctx.trigger_el.get_untracked().expect("trigger present"))
+            .container_ref(Option::<NodeRef<html::Custom>>::None)
+            .placement_x(placement_x)
+            .placement_y(placement_y)
+            .writing_direction(writing_direction)
+            .build(),
+    );
 
     view! {
         <Portal>

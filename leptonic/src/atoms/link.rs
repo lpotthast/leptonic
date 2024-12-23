@@ -1,11 +1,6 @@
 use leptos::*;
 
-use crate::{
-    hooks::{
-        anchor_link::Href, use_anchor_link, UseAnchorLinkInput, UseAnchorLinkReturn, UsePressInput,
-    },
-    ScrollBehavior,
-};
+use crate::{hooks::{anchor_link::Href, *}, ScrollBehavior, Transparent};
 
 #[component]
 pub fn AnchorLink(
@@ -43,7 +38,7 @@ pub fn AnchorLink(
             // We are using an <a> tag and want the custom scrolling behavior from `use_anchor_link`.
             // If we would not enforce prevention of default behavior, automatic browser scroll-jumps would occur.
             force_prevent_default: true,
-            on_press: Callback::new(move |_| {}),
+            on_press: None,
             on_press_up: None,
             on_press_start: None,
             on_press_end: None,
@@ -51,21 +46,21 @@ pub fn AnchorLink(
     });
 
     view! {
-        <a
-            {..props.attrs}
-            id=id
-            class=class
-            style=style
-            class="leptonic-anchor-link"
-            target="_self"
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
-        >
-            { match children {
-                Some(children) => children().into_view(),
-                None => "#".into_view(),
-            } }
-        </a>
+        <Transparent>
+            <a
+                {..props.attrs}
+                {..props.handlers}
+                id=id
+                class=class
+                style=style
+                class="leptonic-anchor-link"
+                target="_self"
+            >
+                { match children {
+                    Some(children) => children().into_view(),
+                    None => "#".into_view(),
+                } }
+            </a>
+        </Transparent>
     }
 }

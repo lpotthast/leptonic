@@ -38,7 +38,8 @@ install-tools:
   cargo install cargo-whatfeatures # Inspect features made available by a specific crate.
   cargo install just # Tool to execute the recepies of this Justfile.
   cargo install tokei # Count your code, line counts, quickly.
-  cargo install trunk # Build, watch, server WASM frontends.
+  cargo install trunk # Build, watch, serve WASM frontends.
+  cargo install cargo-leptos # Build, watch, serve Leptos applications.
   cargo install twiggy # Inspect WASM bundles.
   cargo install create-tauri-app # Create new Tauri application.
   cargo install tauri-cli@2.0.0-beta.8 # Run tauri applications.

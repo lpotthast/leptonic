@@ -3,7 +3,7 @@ use std::{rc::Rc, str::FromStr};
 use educe::Educe;
 use leptos::*;
 
-use super::props::IntoAttributeName;
+use super::attributes::{IntoAttributeName, StaticAttributeName};
 
 #[derive(Debug, Clone)]
 pub enum AriaAttribute {
@@ -15,6 +15,7 @@ pub enum AriaAttribute {
     HasPopup(GenericAttribute<AriaHasPopup>),
     /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded>
     Expanded(GenericAttribute<AriaExpanded>),
+    AccessibleName(GenericAttribute<AriaAccessibleName>),
 }
 
 impl From<AriaAttribute> for (&'static str, Attribute) {
@@ -25,6 +26,7 @@ impl From<AriaAttribute> for (&'static str, Attribute) {
             AriaAttribute::Controls(val) => (attr_name, val.into_attribute()),
             AriaAttribute::HasPopup(val) => (attr_name, val.into_attribute()),
             AriaAttribute::Expanded(val) => (attr_name, val.into_attribute()),
+            AriaAttribute::AccessibleName(val) => (attr_name, val.into_attribute()),
         }
     }
 }
@@ -32,10 +34,11 @@ impl From<AriaAttribute> for (&'static str, Attribute) {
 impl IntoAttributeName for AriaAttribute {
     fn to_attribute_name(&self) -> &'static str {
         match self {
-            Self::Role(_) => "role",
-            Self::Controls(_) => "aria-controls",
-            Self::HasPopup(_) => "aria-haspopup",
-            Self::Expanded(_) => "aria-expanded",
+            Self::Role(a) => a.to_attribute_name(),
+            Self::Controls(a) => a.to_attribute_name(),
+            Self::HasPopup(a) => a.to_attribute_name(),
+            Self::Expanded(a) => a.to_attribute_name(),
+            Self::AccessibleName(a) => a.to_attribute_name(),
         }
     }
 }
@@ -50,41 +53,138 @@ impl std::fmt::Display for AriaAttribute {
 
 #[derive(Clone, Educe)]
 #[educe(Debug)]
-pub enum GenericAttribute<T: IntoAttribute + 'static> {
+pub enum GenericAttribute<T: IntoAttributeName + IntoAttribute + 'static> {
     /// A plain value.
     Static(T),
     /// A (presumably reactive) function, which will be run inside an effect to do targeted updates to the attribute.
     Fn(#[educe(Debug(ignore))] Rc<dyn Fn() -> T>),
-    /// An optional value, which sets the attribute to the value if `Some` and removes the attribute if `None`.
-    Option(Option<T>),
-    /// A boolean attribute, which sets the attribute if `true` and removes the attribute if `false`.
-    Bool(bool),
+    // An optional value, which sets the attribute to the value if `Some` and removes the attribute if `None`.
+    // Option(Option<T>),
+    // A boolean attribute, which sets the attribute if `true` and removes the attribute if `false`.
+    // Bool(bool),
 }
 
-impl<T: IntoAttribute + Clone + 'static, F: Fn() -> T + 'static> From<F> for GenericAttribute<T> {
+impl<T: IntoAttributeName + IntoAttribute + Clone + 'static, F: Fn() -> T + 'static> From<F> for GenericAttribute<T> {
     fn from(f: F) -> Self {
         Self::Fn(Rc::new(f))
     }
 }
 
 #[cfg(not(feature = "nightly"))]
-impl<T: IntoAttribute + Clone + 'static> From<Signal<T>> for GenericAttribute<T> {
+impl<T: IntoAttributeName + IntoAttribute + Clone + 'static> From<Signal<T>> for GenericAttribute<T> {
     fn from(signal: Signal<T>) -> Self {
         Self::Fn(Rc::new(move || signal.get()))
     }
 }
 
-impl<T: IntoAttribute + 'static> IntoAttribute for GenericAttribute<T> {
+impl<T: IntoAttributeName + IntoAttribute + 'static> IntoAttributeName for GenericAttribute<T> {
+    fn to_attribute_name(&self) -> &'static str {
+        match self {
+            GenericAttribute::Static(v) => v.to_attribute_name(),
+            GenericAttribute::Fn(v) => v().to_attribute_name(),
+            //GenericAttribute::Option(v) => match v {
+            //    Some(t) => t.to_attribute_name(),
+            //    None => None,
+            //},
+            // GenericAttribute::Bool(v) => Attribute::Bool(v),
+        }
+    }
+}
+
+impl<T: IntoAttributeName + IntoAttribute + 'static> IntoAttribute for GenericAttribute<T> {
     fn into_attribute(self) -> Attribute {
         match self {
             GenericAttribute::Static(v) => v.into_attribute(),
             GenericAttribute::Fn(v) => Attribute::Fn(Rc::new(move || v().into_attribute())),
-            GenericAttribute::Option(v) => match v {
-                Some(t) => t.into_attribute(),
-                None => Attribute::Option(None),
-            },
-            GenericAttribute::Bool(v) => Attribute::Bool(v),
+            //GenericAttribute::Option(v) => match v {
+            //    Some(t) => t.into_attribute(),
+            //    None => Attribute::Option(None),
+            //},
+            //GenericAttribute::Bool(v) => Attribute::Bool(v),
         }
+    }
+
+    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
+        self.into_attribute()
+    }
+}
+
+// ----------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum AriaAccessibleName {
+    AriaLabel(AriaLabel),
+    AriaLabelledby(AriaLabelledby),
+}
+
+impl AriaAccessibleName {
+    pub fn label(l: impl Into<Oco<'static, str>>) -> Self {
+        Self::AriaLabel(AriaLabel(l.into()))
+    }
+
+    pub fn labelledby(l: impl Into<Oco<'static, str>>) -> Self {
+        Self::AriaLabelledby(AriaLabelledby(l.into()))
+    }
+}
+
+impl IntoAttributeName for AriaAccessibleName {
+    fn to_attribute_name(&self) -> &'static str {
+        match self {
+            AriaAccessibleName::AriaLabel(_) => AriaLabel::static_attribute_name(),
+            AriaAccessibleName::AriaLabelledby(_) => AriaLabelledby::static_attribute_name(),
+        }
+    }
+}
+
+impl IntoAttribute for AriaAccessibleName {
+    fn into_attribute(self) -> Attribute {
+        match self {
+            AriaAccessibleName::AriaLabel(label) => label.into_attribute(),
+            AriaAccessibleName::AriaLabelledby(labelledby) => labelledby.into_attribute(),
+        }
+    }
+
+    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
+        self.into_attribute()
+    }
+}
+
+// ----------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AriaLabel(Oco<'static, str>);
+
+impl StaticAttributeName for AriaLabel {
+    fn static_attribute_name() -> &'static str {
+        "aria-label"
+    }
+}
+
+impl IntoAttribute for AriaLabel {
+    fn into_attribute(self) -> Attribute {
+        Attribute::String(self.0)
+    }
+
+    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
+        self.into_attribute()
+    }
+}
+
+// ----------------------------------------------------------------------------------
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+/// See: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-labelledby>
+pub struct AriaLabelledby(Oco<'static, str>);
+
+impl StaticAttributeName for AriaLabelledby {
+    fn static_attribute_name() -> &'static str {
+        "aria-labelledby"
+    }
+}
+
+impl IntoAttribute for AriaLabelledby {
+    fn into_attribute(self) -> Attribute {
+        Attribute::String(self.0)
     }
 
     fn into_attribute_boxed(self: Box<Self>) -> Attribute {
@@ -98,12 +198,21 @@ impl<T: IntoAttribute + 'static> IntoAttribute for GenericAttribute<T> {
 pub enum AriaRole {
     /// See: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles/link_role>
     Link,
+    /// See: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles/menuitem_role>
+    MenuItem,
+}
+
+impl StaticAttributeName for AriaRole {
+    fn static_attribute_name() -> &'static str {
+        "role"
+    }
 }
 
 impl IntoAttribute for AriaRole {
     fn into_attribute(self) -> Attribute {
         match self {
             Self::Link => Attribute::String(Oco::Borrowed("link")),
+            Self::MenuItem => Attribute::String(Oco::Borrowed("menuitem")),
         }
     }
 
@@ -119,6 +228,12 @@ pub enum AriaControls {
     // A space-separated list of one or more ID values referencing the elements being controlled by the current element.
     Id(Vec<String>),
     Undefined,
+}
+
+impl StaticAttributeName for AriaControls {
+    fn static_attribute_name() -> &'static str {
+        "aria-controls"
+    }
 }
 
 impl IntoAttribute for AriaControls {
@@ -172,6 +287,12 @@ impl AriaHasPopup {
             Self::Grid => "grid",
             Self::Dialog => "dialog",
         }
+    }
+}
+
+impl StaticAttributeName for AriaHasPopup {
+    fn static_attribute_name() -> &'static str {
+        "aria-haspopup"
     }
 }
 
@@ -241,6 +362,12 @@ impl From<Option<bool>> for AriaExpanded {
             Some(value) => Self::from(value),
             None => Self::Undefined,
         }
+    }
+}
+
+impl StaticAttributeName for AriaExpanded {
+    fn static_attribute_name() -> &'static str {
+        "aria-expanded"
     }
 }
 

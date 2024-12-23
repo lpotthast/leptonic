@@ -8,10 +8,11 @@ pub mod atoms;
 pub mod components;
 pub mod contexts;
 pub mod hooks;
+pub mod state;
 pub mod utils;
 
 #[derive(Debug, Clone)]
-pub struct OptMaybeSignal<T: 'static>(Option<MaybeSignal<T>>);
+pub struct OptMaybeSignal<T: 'static>(pub(crate) Option<MaybeSignal<T>>);
 
 impl<T: Clone> OptMaybeSignal<T> {
     pub fn or<D: Into<MaybeSignal<T>>>(self, default: D) -> MaybeSignal<T> {
@@ -510,4 +511,12 @@ impl<F: Fn() + Clone> From<UseElementBoundingReturn<F>> for UseElementBoundingRe
             y: value.y,
         }
     }
+}
+
+/// In rare cases, compile errors arise when using Leptos's `view!` macro,
+/// where wrapping the failing code in this component fixes the errors...
+/// This component simply renders the provided children without adding any additional markup.
+#[component(transparent)]
+pub(crate) fn Transparent(children: Children) -> impl IntoView {
+    children()
 }

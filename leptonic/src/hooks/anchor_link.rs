@@ -2,11 +2,13 @@ use educe::Educe;
 use leptos::{Attribute, Callable, Callback, IntoAttribute, SignalGet};
 use leptos_reactive::{MaybeSignal, Oco};
 use leptos_use::{use_document, use_window};
+use typed_builder::TypedBuilder;
 use wasm_bindgen::JsValue;
-use web_sys::{KeyboardEvent, MouseEvent, PointerEvent, ScrollIntoViewOptions};
+use web_sys::ScrollIntoViewOptions;
 
 use crate::utils::{
-    aria::*, props::Attributes, scroll_behavior::ScrollBehavior, signals::MaybeSignalExt,
+    aria::*, attributes::Attributes, event_handlers::EventHandlers,
+    scroll_behavior::ScrollBehavior, signals::MaybeSignalExt,
 };
 
 use super::{use_press, UsePressInput};
@@ -23,26 +25,29 @@ impl Href {
     }
 }
 
-#[derive(Clone, Educe)]
+#[derive(Clone, Educe, TypedBuilder)]
 #[educe(Debug)]
 pub struct UseAnchorLinkInput {
     /// The anchor link. For example: "#my-anchor". Known to be of the aforementioned format, always starting with a '#'.
-    pub href: Href,
+    pub(crate) href: Href,
 
     /// How the browser should scroll to the referenced anchor element. Doe not perform any scrolling when set to None.
-    pub scroll_behavior: Option<ScrollBehavior>,
+    #[builder(default = Some(ScrollBehavior::Smooth))]
+    pub(crate) scroll_behavior: Option<ScrollBehavior>,
 
     /// Wether the link is disabled.
-    pub disabled: MaybeSignal<bool>,
+    #[builder(setter(into))]
+    pub(crate) disabled: MaybeSignal<bool>,
 
     /// Description of this anchor for accessibility.
     /// If text is provided in children, this could be omitted.
     /// If no children are provided, this component renders a single `#`,
     /// which should be described using this field.
-    pub description: Option<Oco<'static, str>>,
+    #[builder(default = None)]
+    pub(crate) description: Option<Oco<'static, str>>,
 
     /// Links are enforced to have the "press" behavior.
-    pub use_press_input: UsePressInput,
+    pub(crate) use_press_input: UsePressInput,
 }
 
 #[derive(Debug)]
@@ -54,17 +59,10 @@ pub struct UseAnchorLinkReturn {
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct UseAnchorLinkProps {
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-
-    /// This handler must be attached to the target element: `<foo on:keydown=on_key_down />`
-    #[educe(Debug(ignore))]
-    pub on_key_down: Box<dyn Fn(KeyboardEvent)>,
-    /// This handler must be attached to the target element: `<foo on:click=on_click />`
-    #[educe(Debug(ignore))]
-    pub on_click: Box<dyn Fn(MouseEvent)>,
-    /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
-    #[educe(Debug(ignore))]
-    pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
+    pub handlers: EventHandlers,
 }
 
 // TODO: Add proper focus behavior!
@@ -86,7 +84,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
 
     let href: Href = input.href.clone();
     let original_on_press = press_input.on_press;
-    press_input.on_press = Callback::new(move |e| {
+    press_input.on_press = Some(Callback::new(move |e| {
         if !input.disabled.get() {
             if let Some(scroll_behavior) = input.scroll_behavior {
                 if let Some(document) = use_document().as_ref() {
@@ -105,17 +103,19 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             }
             update_url(&href);
         }
-        Callback::call(&original_on_press, e);
-    });
+        if let Some(original_on_press) = &original_on_press {
+            Callback::call(original_on_press, e);
+        }
+    }));
 
     let press = use_press(press_input);
 
     let href: Href = input.href;
-    let mut attrs = Attributes::new();
-    attrs.insert("role", AriaRole::Link);
-    attrs.insert("href", Attribute::String(href.0));
+    let mut attrs = Attributes::new()
+        .insert("role", AriaRole::Link)
+        .insert("href", Attribute::String(href.0));
     if let Some(description) = input.description {
-        attrs.insert("aria-label", Attribute::String(description));
+        attrs = attrs.insert("aria-label", Attribute::String(description)); // TODO: Use aria-description instead?
     }
     /*attrs.insert(
         "tabindex",
@@ -128,31 +128,23 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             .into_attribute(),
     );
     attrs.insert("disabled", input.disabled.into_attribute());*/
-    attrs.insert(
-        "aria-disabled",
-        input
-            .disabled
-            .map(|it| match it {
-                true => "true",
-                false => "false",
-            })
-            .into_attribute(),
-    );
-
-    // Merge attributes
-    attrs.merge(press.props.attrs);
-
-    // Merge event handlers
-    let on_key_down = press.props.on_key_down;
-    let on_click = press.props.on_click;
-    let on_pointer_down = press.props.on_pointer_down;
+    attrs = attrs
+        .insert(
+            "aria-disabled",
+            input
+                .disabled
+                .map(|it| match it {
+                    true => "true",
+                    false => "false",
+                })
+                .into_attribute(),
+        )
+        .merge(press.props.attrs);
 
     UseAnchorLinkReturn {
         props: UseAnchorLinkProps {
             attrs,
-            on_key_down,
-            on_click,
-            on_pointer_down,
+            handlers: press.props.handlers,
         },
     }
 }

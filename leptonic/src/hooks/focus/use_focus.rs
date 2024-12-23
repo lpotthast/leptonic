@@ -1,19 +1,23 @@
-use educe::Educe;
 use leptos::{ev::FocusEvent, Callable, Callback, MaybeSignal, SignalGet};
 use leptos_use::use_document;
+use typed_builder::TypedBuilder;
 
-use crate::utils::{props::Attributes, EventTargetExt};
+use crate::utils::{attributes::Attributes, event_handlers::EventHandlers, EventTargetExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocus.ts
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, TypedBuilder)]
 pub struct UseFocusInput {
     /// Disables the handling focus events when true.
-    pub disabled: MaybeSignal<bool>,
+    #[builder(setter(into))]
+    pub(crate) disabled: MaybeSignal<bool>,
 
-    pub on_focus: Option<Callback<FocusEvent>>,
-    pub on_blur: Option<Callback<FocusEvent>>,
-    pub on_focus_change: Option<Callback<bool>>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_focus: Option<Callback<FocusEvent>>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_blur: Option<Callback<FocusEvent>>,
+    #[builder(default, setter(into, strip_option))]
+    pub(crate) on_focus_change: Option<Callback<bool>>,
 }
 
 #[derive(Debug)]
@@ -21,18 +25,16 @@ pub struct UseFocusReturn {
     pub props: UseFocusProps,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct UseFocusProps {
-    /// These attributes must be spread onto the target element: `<foo {..attrs} />`
+    /// These attributes must be spread onto the target element: `<foo {..props.attrs} />`
     pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_focus: Box<dyn Fn(FocusEvent)>,
-    #[educe(Debug(ignore))]
-    pub on_blur: Box<dyn Fn(FocusEvent)>,
+    /// These handlers must be spread onto the target element: `<foo {..props.handlers} />`
+    pub handlers: EventHandlers,
 }
 
+/// Handles focus events for the immediate target.
+/// Focus events on child elements will be ignored.
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     let on_focus = Box::new(move |e: FocusEvent| {
         // Double check that document.activeElement actually matches e.target in case a previously chained
@@ -66,8 +68,10 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     UseFocusReturn {
         props: UseFocusProps {
             attrs: Attributes::new(),
-            on_focus,
-            on_blur,
+            handlers: EventHandlers::builder()
+                .on_focus(on_focus)
+                .on_blur(on_blur)
+                .build(),
         },
     }
 }

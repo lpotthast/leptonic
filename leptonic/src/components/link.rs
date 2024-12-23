@@ -1,10 +1,7 @@
 use leptos::*;
 use leptos_router::*;
 
-use crate::{
-    hooks::{use_press, PressEvent, UsePressInput, UsePressReturn},
-    OptMaybeSignal,
-};
+use crate::{hooks::*, OptMaybeSignal};
 
 #[component]
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
@@ -43,18 +40,20 @@ where
 
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
+    // TODO: Use builder pattern
     let UsePressReturn {
         is_pressed: _,
         props,
+        press_responder: _,
     } = use_press(UsePressInput {
         // Links cannot be disabled (for now).
         disabled: false.into(),
         force_prevent_default: false,
-        on_press: Callback::new(move |e| {
+        on_press: Some(Callback::new(move |e| {
             if let Some(on_press) = on_press {
                 on_press.call((e, el));
             }
-        }),
+        })),
         on_press_up: None,
         on_press_start: None,
         on_press_end: None,
@@ -62,10 +61,8 @@ where
 
     view! {
         <leptonic-link
-            {..props.attrs}
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
+            //use:attrs=props.attrs
+            //use:handlers=props.handlers
             _ref=el
             id=id
             class=class

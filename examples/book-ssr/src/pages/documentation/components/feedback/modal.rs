@@ -329,7 +329,11 @@ where
     };
 
     view! {
-        <Modal show_when=show_when on_escape=move || (on_cancel)()>
+        <Modal
+            show_when=show_when
+            on_escape=move || (on_cancel)()
+            on_backdrop_interaction=move || (on_cancel)()
+        >
             <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
             <ModalBody>
                 "Please enter \""{required.get_value()}"\" to confirm."

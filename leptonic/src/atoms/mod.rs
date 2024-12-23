@@ -7,8 +7,9 @@ pub mod button;
 pub mod button_group;
 pub mod hoverable;
 pub mod link;
-pub mod press;
+pub mod menu;
 pub mod popover;
+pub mod press;
 
 pub mod prelude {
     pub use super::button::Button;

@@ -1,9 +1,6 @@
-use leptos::{
-    ev::{pointerenter, pointerleave},
-    *,
-};
+use leptos::*;
 
-use crate::hooks::{use_hover, HoverEndEvent, HoverStartEvent, UseHoverInput, UseHoverReturn};
+use crate::hooks::*;
 
 #[component]
 pub fn Hoverable(
@@ -15,14 +12,14 @@ pub fn Hoverable(
     let UseHoverReturn {
         props,
         is_hovered: _,
+        hover_responder: _,
     } = use_hover(UseHoverInput {
         disabled: disabled.unwrap_or(false.into()),
         on_hover_start,
         on_hover_end,
     });
 
-    children()
-        .into_view()
-        .on(pointerenter, props.on_pointer_enter)
-        .on(pointerleave, props.on_pointer_leave)
+    children().into_view()
+    // TODO(handlers)
+    //.directive(handlers, props.handlers)
 }
