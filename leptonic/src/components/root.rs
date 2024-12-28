@@ -8,7 +8,8 @@ use web_sys::{Event, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
     components::{
-        modal::ModalRoot, popover::PopoverRoot, prelude::ToastRoot, theme::ThemeProvider,
+        modal::ModalRoot,
+        popover::PopoverRoot, prelude::ToastRoot, theme::Theme, theme::ThemeProvider,
     },
     contexts::{
         global_click_event::GlobalClickEvent,
@@ -24,12 +25,10 @@ use crate::{
     signal_ls,
 };
 
-use super::theme::Theme;
-
 /// Leptonic's root context. Always available in components under <Root>.
 #[derive(Debug, Clone, Copy)]
 pub struct Leptonic {
-    /// Whether or not the users device should be considered 'mobile'.
+    /// Whether the users device should be considered 'mobile'.
     /// Please read: <https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent>
     /// and prefer other detection methods for selective functionality or styling.
     pub is_mobile_device: Signal<bool>,
@@ -61,8 +60,6 @@ where
     let win = use_window();
     let doc = use_document();
 
-    // TODO (new): Find out how global events can be shared as web_sys types.
-
     // KEY DOWN
     let (g_keyboard_event, set_g_keyboard_event) = signal_local::<Option<KeyboardEvent>>(None);
     let mut onkeydown = None;
@@ -73,13 +70,12 @@ where
         doc.set_onkeydown(Some(closure.as_ref().unchecked_ref()));
         onkeydown = Some(Arc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(onkeydown);
     provide_context(GlobalKeyboardEvent::new(
-        onkeydown,
         g_keyboard_event,
         set_g_keyboard_event,
     ));
-    */
 
     // POINTER DOWN
     let (g_pointer_down_event, set_g_pointer_down_event) =
@@ -92,13 +88,12 @@ where
         doc.set_onpointerdown(Some(closure.as_ref().unchecked_ref()));
         on_pointer_down = Some(Rc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(on_pointer_down);
     provide_context(GlobalPointerDownEvent::new(
-        on_pointer_down,
         g_pointer_down_event,
         set_g_pointer_down_event,
     ));
-    */
 
     // POINTER UP
     let (g_pointer_up_event, set_g_pointer_up_event) = signal_local::<Option<PointerEvent>>(None);
@@ -110,13 +105,12 @@ where
         doc.set_onpointerup(Some(closure.as_ref().unchecked_ref()));
         on_pointer_up = Some(Rc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(on_pointer_up);
     provide_context(GlobalPointerUpEvent::new(
-        on_pointer_up,
         g_pointer_up_event,
         set_g_pointer_up_event,
     ));
-    */
 
     // POINTER CANCEL
     let (g_pointer_cancel_event, set_g_pointer_cancel_event) =
@@ -129,13 +123,12 @@ where
         doc.set_onpointercancel(Some(closure.as_ref().unchecked_ref()));
         on_pointer_cancel = Some(Rc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(on_pointer_cancel);
     provide_context(GlobalPointerCancelEvent::new(
-        on_pointer_cancel,
         g_pointer_cancel_event,
         set_g_pointer_cancel_event,
     ));
-    */
 
     // POINTER MOVE
     let (g_pointer_move_event, set_g_pointer_move_event) =
@@ -148,13 +141,12 @@ where
         doc.set_onpointermove(Some(closure.as_ref().unchecked_ref()));
         on_pointer_move = Some(Rc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(on_pointer_move);
     provide_context(GlobalPointerMoveEvent::new(
-        on_pointer_move,
         g_pointer_move_event,
         set_g_pointer_move_event,
     ));
-    */
 
     // CLICK
     let (g_click_event, set_g_click_event) = signal_local::<Option<MouseEvent>>(None);
@@ -165,13 +157,12 @@ where
         doc.set_onclick(Some(closure.as_ref().unchecked_ref()));
         onclick = Some(Rc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(onclick);
     provide_context(GlobalClickEvent::new(
-        onclick,
         g_click_event,
         set_g_click_event,
     ));
-    */
 
     // MOUSE UP - data currently not needed
     let (g_mouseup_event, set_g_mouseup_event) = signal_local::<Option<MouseEvent>>(None);
@@ -182,13 +173,12 @@ where
         doc.set_onmouseup(Some(closure.as_ref().unchecked_ref()));
         onmouseup = Some(Rc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(onmouseup);
     provide_context(GlobalMouseupEvent::new(
-        onmouseup,
         g_mouseup_event,
         set_g_mouseup_event,
     ));
-    */
 
     // RESIZE
     let (g_resize_event, set_g_resize_event) = signal_local::<Option<Event>>(None);
@@ -199,13 +189,12 @@ where
         win.set_onresize(Some(closure.as_ref().unchecked_ref()));
         onresize = Some(Rc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(onresize);
     provide_context(GlobalResizeEvent::new(
-        onresize,
         g_resize_event,
         set_g_resize_event,
     ));
-    */
 
     // SCROLL
     let (g_scroll_event, set_g_scroll_event) = signal_local::<Option<Event>>(None);
@@ -216,13 +205,12 @@ where
         doc.set_onscroll(Some(closure.as_ref().unchecked_ref()));
         onscroll = Some(Rc::new(Box::new(closure)));
     }
-    /*
+
+    StoredValue::new_local(onscroll);
     provide_context(GlobalScrollEvent::new(
-        onscroll,
         g_scroll_event,
         set_g_scroll_event,
     ));
-    */
 
     let update_vh = move || {
         #[derive(Debug)]

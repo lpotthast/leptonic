@@ -73,7 +73,7 @@ fn QuicksearchModal(
                 <TextInput
                     get=input
                     set=set_input
-                    placeholder="Search"
+                    placeholder=Oco::Borrowed("Search")
                     should_be_focused=show_when
                     attr:class="search-input"
                 />

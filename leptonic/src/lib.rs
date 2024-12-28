@@ -1,8 +1,6 @@
 use std::fmt::Display;
 
-use leptos::attr::Attribute;
 use leptos::prelude::*;
-use leptos_reactive::{SignalGet, SignalGetUntracked};
 use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::{use_window, UseElementBoundingReturn};
 
@@ -11,103 +9,6 @@ pub mod components;
 pub mod contexts;
 pub mod hooks;
 pub mod utils;
-
-#[derive(Debug, Clone)]
-#[deprecated(
-    since = "0.6.0",
-    note = "`OptMaybeSignal<T>` is deprecated in favour of `Option<Signal<T>>`, \
-                as `Signal` shall now be used in favor of `MaybeSignal` and has more support for non-reactive data out of leptos itself."
-)]
-pub struct OptMaybeSignal<T: Send + Sync + 'static>(Option<Signal<T>>);
-
-impl<T: Send + Sync + Clone> OptMaybeSignal<T> {
-    pub fn or<D: Into<Signal<T>>>(self, default: D) -> Signal<T> {
-        match self.0 {
-            Some(signal) => signal,
-            None => default.into(),
-        }
-    }
-
-    pub fn or_default(self) -> Signal<T>
-    where
-        T: Default,
-    {
-        match self.0 {
-            Some(maybe_signal) => maybe_signal,
-            None => Signal::from(T::default()),
-        }
-    }
-
-    pub fn map<U: Send + Sync + 'static, F: Fn(T) -> U + Send + Sync + 'static>(self, map: F) -> OptMaybeSignal<U> {
-        match self.0 {
-            Some(signal) => {
-                Signal::derive(move || map(signal.get())).into()
-            },
-            None => OptMaybeSignal(None),
-        }
-    }
-}
-
-impl<T: Send + Sync + Copy> Copy for OptMaybeSignal<T> {}
-
-impl<T: Send + Sync> Default for OptMaybeSignal<T> {
-    fn default() -> Self {
-        Self(None)
-    }
-}
-
-impl<T: Send + Sync + 'static, I: Into<Signal<T>>> From<I> for OptMaybeSignal<T> {
-    fn from(value: I) -> Self {
-        Self(Some(value.into()))
-    }
-}
-
-impl<T: Send + Sync + Clone + Default> SignalGet for OptMaybeSignal<T> {
-    type Value = T;
-
-    fn get(&self) -> T {
-        match &self.0 {
-            Some(signal) => signal.get(),
-            None => T::default(),
-        }
-    }
-
-    fn try_get(&self) -> Option<T> {
-        match &self.0 {
-            Some(signal) => signal.try_get(),
-            None => Some(T::default()),
-        }
-    }
-}
-
-impl<T: Send + Sync + Clone + Default> SignalGetUntracked for OptMaybeSignal<T> {
-    type Value = T;
-
-    fn get_untracked(&self) -> T {
-        match &self.0 {
-            Some(signal) => signal.get_untracked(),
-            None => T::default(),
-        }
-    }
-
-    fn try_get_untracked(&self) -> Option<T> {
-        match &self.0 {
-            Some(signal) => signal.try_get_untracked(),
-            None => Some(T::default()),
-        }
-    }
-}
-
-impl<T: Send + Sync + IntoAttributeValue + Clone> IntoAttributeValue for OptMaybeSignal<T> {
-    type Output = Option<T::Output>;
-
-    fn into_attribute_value(self) -> Self::Output {
-        match self.0 {
-            Some(t) => Some(t.get().into_attribute_value()),
-            None => None,
-        }
-    }
-}
 
 // Let's make some types of our public API more easily accessible.
 pub use crate::utils::scroll_behavior::ScrollBehavior;
@@ -127,7 +28,6 @@ pub mod prelude {
     pub use super::Height;
     pub use super::Margin;
     pub use super::Mount;
-    pub use super::OptMaybeSignal;
     pub use super::OptionDeref;
     pub use super::Out;
     pub use super::Size;
@@ -155,6 +55,7 @@ pub enum Language {
 /// or use a closure (which will be converted to a Callback).
 #[derive(Debug)]
 pub enum Out<O: 'static, S = SyncStorage> {
+    Fn(fn(O) -> ()),
     Callback(Callback<O, ()>),
     WriteSignal(WriteSignal<O, S>),
     RwSignal(RwSignal<O, S>),
@@ -168,16 +69,30 @@ impl<O: 'static, S> Clone for Out<O, S> {
     }
 }
 
+impl<O: 'static, S> Default for Out<O, S> {
+    fn default() -> Self {
+        Self::new_fn(|_| {
+            // intentional noop
+        })
+    }
+}
+
 impl<O: 'static, S> Out<O, S> {
+    /// Creates a new `Out` from the given function pointer.
+    pub fn new_fn(f: fn(O) -> ()) -> Self {
+        Self::Fn(f)
+    }
+
     /// Creates a new `Out` from the given function.
-    pub fn new_callback(fun: impl Fn(O) + Send + Sync + 'static) -> Self {
-        Self::Callback(Callback::new(fun))
+    pub fn new_callback(f: impl Fn(O) + Send + Sync + 'static) -> Self {
+        Self::Callback(Callback::new(f))
     }
 }
 
 impl<O: 'static> Out<O, LocalStorage> {
     pub fn set(&self, new_value: O) {
         match self {
+            Self::Fn(f) => f(new_value),
             Self::Callback(callback) => Callable::run(callback, new_value),
             Self::WriteSignal(write_signal) => write_signal.set(new_value),
             Self::RwSignal(rw_signal) => rw_signal.set(new_value),
@@ -188,6 +103,7 @@ impl<O: 'static> Out<O, LocalStorage> {
 impl<O: Send + Sync + 'static> Out<O, SyncStorage> {
     pub fn set(&self, new_value: O) {
         match self {
+            Self::Fn(f) => f(new_value),
             Self::Callback(callback) => Callable::run(callback, new_value),
             Self::WriteSignal(write_signal) => write_signal.set(new_value),
             Self::RwSignal(rw_signal) => rw_signal.set(new_value),
@@ -235,6 +151,9 @@ pub enum Mount {
     WhenShown,
 }
 
+/// Create a read-write signal pair that automatically syncs the stored value in the browsers
+/// LocalStorage. When called, the value is read back from storage.
+/// When the value is not found, `initial` is set.
 pub fn signal_ls<T: Send + Sync + Clone + serde::Serialize + serde::de::DeserializeOwned +  'static>(
     key: &'static str,
     initial: T,

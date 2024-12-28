@@ -1,24 +1,18 @@
 use leptos::prelude::*;
 use web_sys::Event;
 
-use super::WasmClosure;
-
 #[derive(Debug, Clone)]
 pub struct GlobalScrollEvent {
-    _closure: WasmClosure<Event>,
-    pub read_signal: ReadSignal<Option<Event>>,
-    pub write_signal: WriteSignal<Option<Event>>,
+    pub read_signal: ReadSignal<Option<Event>, LocalStorage>,
+    pub write_signal: WriteSignal<Option<Event>, LocalStorage>,
 }
 
 impl GlobalScrollEvent {
-    #[allow(clippy::used_underscore_binding)]
     pub fn new(
-        _closure: WasmClosure<Event>,
-        read_signal: ReadSignal<Option<Event>>,
-        write_signal: WriteSignal<Option<Event>>,
+        read_signal: ReadSignal<Option<Event>, LocalStorage>,
+        write_signal: WriteSignal<Option<Event>, LocalStorage>,
     ) -> Self {
         Self {
-            _closure,
             read_signal,
             write_signal,
         }

@@ -7,7 +7,7 @@ use web_sys::{HtmlElement, HtmlInputElement};
 
 use crate::{
     components::form_control::{FormControlContext, FormInput},
-    OptMaybeSignal, Out,
+    Out,
 };
 
 fn prepare_autofocus<T>(
@@ -83,13 +83,13 @@ impl FormInput for TextInputContext {
 // TODO: id and class were previously placed on inner input. This is no longer possible with a spread id class.
 #[component]
 pub fn TextInput(
-    #[prop(into)] get: MaybeSignal<String>,
+    #[prop(into)] get: Signal<String>,
     #[prop(into, optional)] set: Option<Out<String>>,
-    #[prop(optional, into)] placeholder: OptMaybeSignal<String>,
-    #[prop(optional, into)] append: ViewFn,
+    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] placeholder: Signal<Oco<'static, str>>,
+    #[prop(into, optional)] append: ViewFn,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
+    #[prop(into, optional)] on_focus_change: Out<bool>,
     #[prop(into, optional)] autofocus: bool,
 ) -> impl IntoView {
     let node_ref: NodeRef<html::Input> = NodeRef::new();
@@ -114,17 +114,14 @@ pub fn TextInput(
         <leptonic-input>
             <input
                 node_ref=node_ref
-                placeholder=move || match &placeholder.0 {
-                    Some(label) => Oco::from(label.get()),
-                    None => Oco::from(""),
-                }
+                placeholder=placeholder
                 type="text"
                 prop:disabled=move || disabled.get()
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
                 on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
+                on:blur=move |_e| { on_focus_change.set(false); }
+                on:focus=move |_e| { on_focus_change.set(true); }
             />
             { append.run() }
         </leptonic-input>
@@ -134,13 +131,13 @@ pub fn TextInput(
 // TODO: id and class were previously placed on inner input. This is no longer possible with a spread id class.
 #[component]
 pub fn PasswordInput(
-    #[prop(into)] get: MaybeSignal<String>,
+    #[prop(into)] get: Signal<String>,
     #[prop(into, optional)] set: Option<Out<String>>,
     #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] placeholder: Signal<Oco<'static, str>>,
     #[prop(optional, into)] append: ViewFn,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
+    #[prop(into, optional)] on_focus_change: Out<bool>,
     #[prop(into, optional)] autofocus: bool,
 ) -> impl IntoView {
     let node_ref: NodeRef<html::Input> = NodeRef::new();
@@ -163,8 +160,8 @@ pub fn PasswordInput(
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
                 on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
+                on:blur=move |_e| { on_focus_change.set(false); }
+                on:focus=move |_e| { on_focus_change.set(true); }
             />
             { append.run() }
         </leptonic-input>
@@ -182,7 +179,7 @@ pub fn NumberInput(
     #[prop(into, optional)] append: ViewFn,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
-    #[prop(into, optional)] on_focus_change: Option<Out<bool>>,
+    #[prop(into, optional)] on_focus_change: Out<bool>,
     #[prop(into, optional)] autofocus: bool,
 ) -> impl IntoView {
     let node_ref: NodeRef<html::Input> = NodeRef::new();
@@ -217,8 +214,8 @@ pub fn NumberInput(
                 prop:value=move || get.get()
                 on:change=move |e| { if let Some(set_value) = &set_value { set_value(event_target::<HtmlInputElement>(&e).value()) } }
                 on:keyup=move |e| { if let Some(set_value) = &set_value { set_value(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { if let Some(cb) = &on_focus_change { cb.set(false) }; }
-                on:focus=move |_e| { if let Some(cb) = &on_focus_change { cb.set(true) }; }
+                on:blur=move |_e| { on_focus_change.set(false); }
+                on:focus=move |_e| { on_focus_change.set(true); }
             />
             { append.run() }
         </leptonic-input>

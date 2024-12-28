@@ -5,13 +5,13 @@ use web_sys::KeyboardEvent;
 use crate::{
     components::date_selector::{DateSelector, DateSelectorProps},
     utils::time::{GuideMode, Type},
-    Margin, OptMaybeSignal, Out,
+    Margin, Out,
 };
 
 #[component]
 pub fn DateTimeInput(
-    #[prop(optional, into)] label: OptMaybeSignal<String>,
-    #[prop(into)] get: MaybeSignal<Option<time::OffsetDateTime>>,
+    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] label: Signal<Oco<'static, str>>,
+    #[prop(into)] get: Signal<Option<time::OffsetDateTime>>,
     #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
     #[prop(into, optional)] prepend: ViewFn,
     #[prop(into, optional)] id: Option<Oco<'static, str>>,
@@ -93,10 +93,7 @@ pub fn DateTimeInput(
             <input
                 id=id
                 class=class
-                placeholder=move || match &label.0 {
-                    Some(label) => Oco::from(label.get()),
-                    None => Oco::from(""),
-                }
+                placeholder=label
                 tabindex="0"
                 type="text"
                 prop:disabled=move || disabled.get()
