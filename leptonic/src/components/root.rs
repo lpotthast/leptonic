@@ -2,10 +2,10 @@ use leptos::ev;
 use leptos::prelude::*;
 use leptos_use::{use_document, use_event_listener, use_window};
 use std::rc::Rc;
-use std::sync::Arc;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{Event, KeyboardEvent, MouseEvent, PointerEvent};
 
+use crate::contexts::WasmClosure;
 use crate::{
     components::{
         modal::ModalRoot,
@@ -62,13 +62,13 @@ where
 
     // KEY DOWN
     let (g_keyboard_event, set_g_keyboard_event) = signal_local::<Option<KeyboardEvent>>(None);
-    let mut onkeydown = None;
+    let mut onkeydown: WasmClosure<KeyboardEvent> = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(KeyboardEvent)> =
             Box::new(move |e| set_g_keyboard_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
         doc.set_onkeydown(Some(closure.as_ref().unchecked_ref()));
-        onkeydown = Some(Arc::new(Box::new(closure)));
+        onkeydown = Some(Rc::new(Box::new(closure)));
     }
 
     StoredValue::new_local(onkeydown);
@@ -80,7 +80,7 @@ where
     // POINTER DOWN
     let (g_pointer_down_event, set_g_pointer_down_event) =
         signal_local::<Option<PointerEvent>>(None);
-    let mut on_pointer_down = None;
+    let mut on_pointer_down: WasmClosure<PointerEvent> = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(PointerEvent)> =
             Box::new(move |e| set_g_pointer_down_event.set(Some(e)));
@@ -97,7 +97,7 @@ where
 
     // POINTER UP
     let (g_pointer_up_event, set_g_pointer_up_event) = signal_local::<Option<PointerEvent>>(None);
-    let mut on_pointer_up = None;
+    let mut on_pointer_up: WasmClosure<PointerEvent> = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(PointerEvent)> =
             Box::new(move |e| set_g_pointer_up_event.set(Some(e)));
@@ -115,7 +115,7 @@ where
     // POINTER CANCEL
     let (g_pointer_cancel_event, set_g_pointer_cancel_event) =
         signal_local::<Option<PointerEvent>>(None);
-    let mut on_pointer_cancel = None;
+    let mut on_pointer_cancel: WasmClosure<PointerEvent> = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(PointerEvent)> =
             Box::new(move |e| set_g_pointer_cancel_event.set(Some(e)));
@@ -133,7 +133,7 @@ where
     // POINTER MOVE
     let (g_pointer_move_event, set_g_pointer_move_event) =
         signal_local::<Option<PointerEvent>>(None);
-    let mut on_pointer_move = None;
+    let mut on_pointer_move: WasmClosure<PointerEvent> = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(PointerEvent)> =
             Box::new(move |e| set_g_pointer_move_event.set(Some(e)));
@@ -150,7 +150,7 @@ where
 
     // CLICK
     let (g_click_event, set_g_click_event) = signal_local::<Option<MouseEvent>>(None);
-    let mut onclick = None;
+    let mut onclick: WasmClosure<MouseEvent> = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(MouseEvent)> = Box::new(move |e| set_g_click_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
@@ -166,7 +166,7 @@ where
 
     // MOUSE UP - data currently not needed
     let (g_mouseup_event, set_g_mouseup_event) = signal_local::<Option<MouseEvent>>(None);
-    let mut onmouseup = None;
+    let mut onmouseup: WasmClosure<MouseEvent> = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(MouseEvent)> = Box::new(move |e| set_g_mouseup_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
@@ -182,7 +182,7 @@ where
 
     // RESIZE
     let (g_resize_event, set_g_resize_event) = signal_local::<Option<Event>>(None);
-    let mut onresize = None;
+    let mut onresize: WasmClosure<Event> = None;
     if let Some(win) = &*win {
         let boxed: Box<dyn FnMut(Event)> = Box::new(move |e| set_g_resize_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
@@ -198,7 +198,7 @@ where
 
     // SCROLL
     let (g_scroll_event, set_g_scroll_event) = signal_local::<Option<Event>>(None);
-    let mut onscroll = None;
+    let mut onscroll: WasmClosure<Event> = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(Event)> = Box::new(move |e| set_g_scroll_event.set(Some(e)));
         let closure = Closure::wrap(boxed);

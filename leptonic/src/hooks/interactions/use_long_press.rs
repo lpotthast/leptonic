@@ -3,6 +3,8 @@ use leptos_reactive::{Callback, MaybeSignal};
 
 pub struct LongPressEvent {}
 
+// TODO: remove?
+#[derive(Debug)]
 pub struct UseLongPressInput {
     /// Whether long press events should be disabled.
     disabled: MaybeSignal<bool>,

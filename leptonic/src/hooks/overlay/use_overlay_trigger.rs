@@ -36,11 +36,13 @@ pub type UseOverlayTriggerAttrs = (
 );
 
 #[derive(Educe)]
-#[educe(Debug)]
+#[educe(Debug, Clone, Copy)]
 pub struct UseOverlayTriggerOverlayProps {
     /// These attributes must be spread onto the target element: `<foo {..attrs} />`
-    pub attrs: (),
+    pub attrs:UseOverlayTriggerOverlayAttrs,
 }
+
+pub type UseOverlayTriggerOverlayAttrs = ();
 
 pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerReturn {
     #[cfg(debug_assertions)]

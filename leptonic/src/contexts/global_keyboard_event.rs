@@ -1,9 +1,7 @@
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
-use super::WasmClosure;
-
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct GlobalKeyboardEvent {
     //_closure: WasmClosure<KeyboardEvent>,
     pub read_signal: ReadSignal<Option<KeyboardEvent>, LocalStorage>,

@@ -17,7 +17,7 @@ pub struct MoveEvent {
 #[derive(Debug, Clone, Copy)]
 pub struct MoveEndEvent {}
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct UseMoveInput {
     pub on_move_start: Callback<MoveStartEvent>,
     pub on_move: Callback<MoveEvent>,

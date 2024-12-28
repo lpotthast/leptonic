@@ -10,7 +10,7 @@ pub struct UsePreventScrollInput {
     pub disabled: Signal<bool>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct UsePreventScrollReturn {
     pub attrs: UsePreventScrollAttrs,
 }

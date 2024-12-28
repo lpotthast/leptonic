@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use web_sys::PointerEvent;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct GlobalPointerUpEvent {
     pub read_signal: ReadSignal<Option<PointerEvent>, LocalStorage>,
     pub write_signal: WriteSignal<Option<PointerEvent>, LocalStorage>,
@@ -19,7 +19,7 @@ impl GlobalPointerUpEvent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct GlobalPointerDownEvent {
     pub read_signal: ReadSignal<Option<PointerEvent>, LocalStorage>,
     pub write_signal: WriteSignal<Option<PointerEvent>, LocalStorage>,
@@ -37,7 +37,7 @@ impl GlobalPointerDownEvent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct GlobalPointerCancelEvent {
     pub read_signal: ReadSignal<Option<PointerEvent>, LocalStorage>,
     pub write_signal: WriteSignal<Option<PointerEvent>, LocalStorage>,
@@ -55,14 +55,13 @@ impl GlobalPointerCancelEvent {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct GlobalPointerMoveEvent {
     pub read_signal: ReadSignal<Option<PointerEvent>, LocalStorage>,
     pub write_signal: WriteSignal<Option<PointerEvent>, LocalStorage>,
 }
 
 impl GlobalPointerMoveEvent {
-    #[allow(clippy::used_underscore_binding)]
     pub fn new(
         read_signal: ReadSignal<Option<PointerEvent>, LocalStorage>,
         write_signal: WriteSignal<Option<PointerEvent>, LocalStorage>,

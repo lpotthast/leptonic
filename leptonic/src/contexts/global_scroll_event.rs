@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use web_sys::Event;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct GlobalScrollEvent {
     pub read_signal: ReadSignal<Option<Event>, LocalStorage>,
     pub write_signal: WriteSignal<Option<Event>, LocalStorage>,
