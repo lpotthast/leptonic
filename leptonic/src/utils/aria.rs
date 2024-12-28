@@ -1,119 +1,27 @@
-use std::{rc::Rc, str::FromStr};
+use leptos::attr::AttributeKey;
+use leptos::prelude::*;
+use std::str::FromStr;
 
-use educe::Educe;
-use leptos::*;
-
-use super::props::IntoAttributeName;
-
-#[derive(Debug, Clone)]
-pub enum AriaAttribute {
-    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles>
-    Role(GenericAttribute<AriaRole>),
-    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-controls>
-    Controls(GenericAttribute<AriaControls>),
-    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-haspopup>
-    HasPopup(GenericAttribute<AriaHasPopup>),
-    /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded>
-    Expanded(GenericAttribute<AriaExpanded>),
-}
-
-impl From<AriaAttribute> for (&'static str, Attribute) {
-    fn from(value: AriaAttribute) -> Self {
-        let attr_name = value.to_attribute_name();
-        match value {
-            AriaAttribute::Role(val) => (attr_name, val.into_attribute()),
-            AriaAttribute::Controls(val) => (attr_name, val.into_attribute()),
-            AriaAttribute::HasPopup(val) => (attr_name, val.into_attribute()),
-            AriaAttribute::Expanded(val) => (attr_name, val.into_attribute()),
-        }
-    }
-}
-
-impl IntoAttributeName for AriaAttribute {
-    fn to_attribute_name(&self) -> &'static str {
-        match self {
-            Self::Role(_) => "role",
-            Self::Controls(_) => "aria-controls",
-            Self::HasPopup(_) => "aria-haspopup",
-            Self::Expanded(_) => "aria-expanded",
-        }
-    }
-}
-
-impl std::fmt::Display for AriaAttribute {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.to_attribute_name())
-    }
-}
-
-// ----------------------------------------------------------------------------------
-
-#[derive(Clone, Educe)]
-#[educe(Debug)]
-pub enum GenericAttribute<T: IntoAttribute + 'static> {
-    /// A plain value.
-    Static(T),
-    /// A (presumably reactive) function, which will be run inside an effect to do targeted updates to the attribute.
-    Fn(#[educe(Debug(ignore))] Rc<dyn Fn() -> T>),
-    /// An optional value, which sets the attribute to the value if `Some` and removes the attribute if `None`.
-    Option(Option<T>),
-    /// A boolean attribute, which sets the attribute if `true` and removes the attribute if `false`.
-    Bool(bool),
-}
-
-impl<T: IntoAttribute + Clone + 'static, F: Fn() -> T + 'static> From<F> for GenericAttribute<T> {
-    fn from(f: F) -> Self {
-        Self::Fn(Rc::new(f))
-    }
-}
-
-#[cfg(not(feature = "nightly"))]
-impl<T: IntoAttribute + Clone + 'static> From<Signal<T>> for GenericAttribute<T> {
-    fn from(signal: Signal<T>) -> Self {
-        Self::Fn(Rc::new(move || signal.get()))
-    }
-}
-
-impl<T: IntoAttribute + 'static> IntoAttribute for GenericAttribute<T> {
-    fn into_attribute(self) -> Attribute {
-        match self {
-            GenericAttribute::Static(v) => v.into_attribute(),
-            GenericAttribute::Fn(v) => Attribute::Fn(Rc::new(move || v().into_attribute())),
-            GenericAttribute::Option(v) => match v {
-                Some(t) => t.into_attribute(),
-                None => Attribute::Option(None),
-            },
-            GenericAttribute::Bool(v) => Attribute::Bool(v),
-        }
-    }
-
-    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
-        self.into_attribute()
-    }
-}
-
-// ----------------------------------------------------------------------------------
-
+/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles>
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaRole {
     /// See: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles/link_role>
     Link,
 }
 
-impl IntoAttribute for AriaRole {
-    fn into_attribute(self) -> Attribute {
-        match self {
-            Self::Link => Attribute::String(Oco::Borrowed("link")),
-        }
-    }
+impl IntoAttributeValue for AriaRole {
+    type Output = &'static str;
 
-    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
-        self.into_attribute()
+    fn into_attribute_value(self) -> Self::Output {
+        match self {
+            Self::Link => "link",
+        }
     }
 }
 
 // ----------------------------------------------------------------------------------
 
+/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-controls>
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AriaControls {
     // A space-separated list of one or more ID values referencing the elements being controlled by the current element.
@@ -121,21 +29,20 @@ pub enum AriaControls {
     Undefined,
 }
 
-impl IntoAttribute for AriaControls {
-    fn into_attribute(self) -> Attribute {
-        match self {
-            Self::Id(ids) => Attribute::String(Oco::Owned(ids.join(" "))),
-            Self::Undefined => Attribute::Option(None),
-        }
-    }
+impl IntoAttributeValue for AriaControls {
+    type Output = Option<String>;
 
-    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
-        self.into_attribute()
+    fn into_attribute_value(self) -> Self::Output {
+        match self {
+            Self::Id(ids) => Some(ids.join(" ")),
+            Self::Undefined => None,
+        }
     }
 }
 
 // ----------------------------------------------------------------------------------
 
+/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-haspopup>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaHasPopup {
     // The element does not have a popup.
@@ -175,18 +82,23 @@ impl AriaHasPopup {
     }
 }
 
-impl IntoAttribute for AriaHasPopup {
-    fn into_attribute(self) -> Attribute {
-        Attribute::String(self.into_str().into())
+impl AsRef<str> for AriaHasPopup {
+    fn as_ref(&self) -> &'static str {
+        leptos::attr::AriaHaspopup::KEY
     }
+}
 
-    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
-        self.into_attribute()
+impl IntoAttributeValue for AriaHasPopup {
+    type Output = &'static str;
+
+    fn into_attribute_value(self) -> Self::Output {
+        self.into_str()
     }
 }
 
 // ----------------------------------------------------------------------------------
 
+/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaExpanded {
     // The element does not own or control a grouping element that is expandable.
@@ -244,13 +156,11 @@ impl From<Option<bool>> for AriaExpanded {
     }
 }
 
-impl IntoAttribute for AriaExpanded {
-    fn into_attribute(self) -> Attribute {
-        Attribute::String(self.into_str().into())
-    }
+impl IntoAttributeValue for AriaExpanded {
+    type Output = &'static str;
 
-    fn into_attribute_boxed(self: Box<Self>) -> Attribute {
-        Attribute::String(self.into_str().into())
+    fn into_attribute_value(self) -> Self::Output {
+        self.into_str()
     }
 }
 

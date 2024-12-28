@@ -1,6 +1,6 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
@@ -36,10 +36,10 @@ impl std::fmt::Display for User {
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn PageSelect() -> impl IntoView {
-    let (selected, set_selected) = create_signal(Foo::A);
-    let (selected_opt, set_selected_opt) = create_signal(Option::<Foo>::None);
-    let (selected_multi, set_selected_multi) = create_signal(vec![Foo::A, Foo::B]);
-    let (selected_multi2, set_selected_multi2) = create_signal(vec![Foo::A]);
+    let (selected, set_selected) = signal(Foo::A);
+    let (selected_opt, set_selected_opt) = signal(Option::<Foo>::None);
+    let (selected_multi, set_selected_multi) = signal(vec![Foo::A, Foo::B]);
+    let (selected_multi2, set_selected_multi2) = signal(vec![Foo::A]);
 
     let selectable_users = vec![
         User {
@@ -52,7 +52,7 @@ pub fn PageSelect() -> impl IntoView {
         },
     ];
 
-    let (selected_user, set_selected_user) = create_signal(selectable_users[0].clone());
+    let (selected_user, set_selected_user) = signal(selectable_users[0].clone());
 
     view! {
         <Article>
@@ -92,7 +92,7 @@ pub fn PageSelect() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (selected, set_selected) = create_signal(Foo::A);
+                    let (selected, set_selected) = signal(Foo::A);
 
                     view! {
                         <Select
@@ -123,7 +123,7 @@ pub fn PageSelect() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (selected_opt, set_selected_opt) = create_signal(Option::<Foo>::None);
+                    let (selected_opt, set_selected_opt) = signal(Option::<Foo>::None);
 
                     view! {
                         <OptionalSelect
@@ -156,7 +156,7 @@ pub fn PageSelect() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (selected_multi, set_selected_multi) = create_signal(vec![Foo::A, Foo::B]);
+                    let (selected_multi, set_selected_multi) = signal(vec![Foo::A, Foo::B]);
 
                     view! {
                         <Multiselect
@@ -241,7 +241,7 @@ pub fn PageSelect() -> impl IntoView {
                         },
                     ];
 
-                    let (selected_user, set_selected_user) = create_signal(selectable_users[0].clone());
+                    let (selected_user, set_selected_user) = signal(selectable_users[0].clone());
 
                     view! {
                         <P>"Selected user is: " { move || selected_user.get().to_string() }</P>

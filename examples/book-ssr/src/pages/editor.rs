@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
 use leptonic::components::input::TextInput;
-use leptos::*;
+use leptos::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 enum EditMode {
@@ -53,7 +53,7 @@ impl Settings {
 
 #[component]
 pub fn ThemeEditor() -> impl IntoView {
-    let (settings, set_settings) = create_signal(Settings::new());
+    let (settings, set_settings) = signal(Settings::new());
 
     let style = Signal::derive(move || settings.with(|s| s.to_style()));
 
@@ -92,7 +92,7 @@ fn Components() -> impl IntoView {
 
 #[component]
 fn Preview(style: Signal<String>) -> impl IntoView {
-    let (t, set_t) = create_signal(String::from("Text Input"));
+    let (t, set_t) = signal(String::from("Text Input"));
 
     view! {
         <div style="padding-bottom: 1em; height: 50%; padding: 0.75em;">
@@ -115,7 +115,7 @@ fn Settings(children: Children) -> impl IntoView {
 
 #[component]
 fn Setting(setting: SettingSpec, set_settings: WriteSignal<Settings>) -> impl IntoView {
-    let (padding, set_padding) = create_signal(String::from("inherit")); // TODO: what default?
+    let (padding, set_padding) = signal(String::from("inherit")); // TODO: what default?
 
     let setter = move |v: String| {
         set_padding.set(v.clone());

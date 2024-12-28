@@ -1,9 +1,9 @@
 use std::fmt::{Display, Formatter};
 
-use leptos::*;
+use leptos::prelude::*;
 use web_sys::MouseEvent;
 
-use crate::{components::icon::Icon, OptMaybeSignal, Out};
+use crate::{components::icon::Icon, Out};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ChipColor {
@@ -37,21 +37,21 @@ impl Display for ChipColor {
 
 #[component]
 pub fn Chip(
-    #[prop(into, optional)] color: OptMaybeSignal<ChipColor>,
-    #[prop(into, optional)] dismissible: Option<Out<MouseEvent>>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] color: Option<Signal<ChipColor>>,
+    #[prop(into, optional)] dismissible: Option<Out<MouseEvent, LocalStorage>>,
     children: Children,
 ) -> impl IntoView {
+    let color = color.unwrap_or_default();
+
+    // TODO: use use_press instead of on:click.
     view! {
-        <leptonic-chip id=id class=class style=style data-color=move || color.0.as_ref().map_or_else(ChipColor::default, SignalGet::get).as_str()>
+        <leptonic-chip data-color=move || color.get().as_str()>
             { children() }
             { match dismissible {
                 Some(callback) => view! {
-                    <Icon class="dismiss" icon=icondata::BsXCircleFill on:click=move |e| callback.set(e) />
-                }.into_view(),
-                None => ().into_view(),
+                    <Icon attr:class="dismiss" icon=icondata::BsXCircleFill on:click=move |e| callback.set(e) />
+                }.into_any(),
+                None => ().into_any(),
             } }
         </leptonic-chip>
     }

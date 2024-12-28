@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use super::icon::Icon;
 
@@ -24,45 +24,21 @@ impl AlertVariant {
 #[slot]
 pub struct AlertPrepend {
     pub children: Children,
-    #[prop(into, optional)]
-    pub id: Option<AttributeValue>,
-    #[prop(into, optional)]
-    pub class: Option<AttributeValue>,
-    #[prop(into, optional)]
-    pub style: Option<AttributeValue>,
 }
 
 #[slot]
 pub struct AlertAppend {
     pub children: Children,
-    #[prop(into, optional)]
-    pub id: Option<AttributeValue>,
-    #[prop(into, optional)]
-    pub class: Option<AttributeValue>,
-    #[prop(into, optional)]
-    pub style: Option<AttributeValue>,
 }
 
 #[slot]
 pub struct AlertTitle {
     pub children: Children,
-    #[prop(into, optional)]
-    pub id: Option<AttributeValue>,
-    #[prop(into, optional)]
-    pub class: Option<AttributeValue>,
-    #[prop(into, optional)]
-    pub style: Option<AttributeValue>,
 }
 
 #[slot]
 pub struct AlertContent {
     pub children: Children,
-    #[prop(into, optional)]
-    pub id: Option<AttributeValue>,
-    #[prop(into, optional)]
-    pub class: Option<AttributeValue>,
-    #[prop(into, optional)]
-    pub style: Option<AttributeValue>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -78,6 +54,7 @@ impl Default for AlertIconSlot {
     }
 }
 
+// TODO (new): Is the usage of into_any() ok? Should we do this differently?
 #[component]
 pub fn Alert(
     variant: AlertVariant,
@@ -92,19 +69,19 @@ pub fn Alert(
             {
                 match alert_prepend {
                     Some(slot) => view! {
-                        <leptonic-alert-prepend id=slot.id class=slot.class style=slot.style>
+                        <leptonic-alert-prepend>
                             { (slot.children)() }
                         </leptonic-alert-prepend>
-                    }.into_view(),
+                    }.into_any(),
                     None => match default_icon_slot {
                         AlertIconSlot::Prepend => view! {
                             <leptonic-alert-prepend>
                                 <AlertIcon variant />
                             </leptonic-alert-prepend>
-                        }.into_view(),
+                        }.into_any(),
                         AlertIconSlot::Append | AlertIconSlot::None => view! {
                             <leptonic-alert-prepend />
-                        }.into_view(),
+                        }.into_any(),
                     },
                 }
             }
@@ -113,21 +90,21 @@ pub fn Alert(
                 {
                     match alert_title {
                         Some(slot) => view! {
-                            <leptonic-alert-title id=slot.id class=slot.class style=slot.style>
+                            <leptonic-alert-title>
                                 {(slot.children)()}
                             </leptonic-alert-title>
-                        }.into_view() ,
-                        None => ().into_view(),
+                        }.into_any() ,
+                        None => ().into_any(),
                     }
                 }
                 {
                     match alert_content {
                         Some(slot) => view! {
-                            <leptonic-alert-content id=slot.id class=slot.class style=slot.style>
+                            <leptonic-alert-content>
                                 {(slot.children)()}
                             </leptonic-alert-content>
-                        }.into_view() ,
-                        None => ().into_view(),
+                        }.into_any() ,
+                        None => ().into_any(),
                     }
                 }
             </leptonic-alert-center>
@@ -135,19 +112,19 @@ pub fn Alert(
             {
                 match alert_append {
                     Some(slot) => view! {
-                        <leptonic-alert-append id=slot.id class=slot.class style=slot.style>
+                        <leptonic-alert-append>
                             { (slot.children)() }
                         </leptonic-alert-append>
-                    }.into_view(),
+                    }.into_any(),
                     None => match default_icon_slot {
                         AlertIconSlot::Prepend | AlertIconSlot::None => view! {
                             <leptonic-alert-append />
-                        }.into_view(),
+                        }.into_any(),
                         AlertIconSlot::Append => view! {
                             <leptonic-alert-append>
                                 <AlertIcon variant />
                             </leptonic-alert-append>
-                        }.into_view(),
+                        }.into_any(),
                     },
                 }
             }
@@ -158,18 +135,15 @@ pub fn Alert(
 #[component]
 pub fn AlertIcon(
     variant: AlertVariant,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
     match variant {
-        AlertVariant::Success => view! { <Icon id=id class style icon=icondata::BsCheckCircleFill /> },
-        AlertVariant::Info => view! { <Icon id class style icon=icondata::BsInfoCircleFill /> },
+        AlertVariant::Success => view! { <Icon icon=icondata::BsCheckCircleFill /> },
+        AlertVariant::Info => view! { <Icon icon=icondata::BsInfoCircleFill /> },
         AlertVariant::Warn => {
-            view! { <Icon id class style icon=icondata::BsExclamationCircleFill /> }
+            view! { <Icon icon=icondata::BsExclamationCircleFill /> }
         }
         AlertVariant::Danger => {
-            view! { <Icon id class style icon=icondata::BsExclamationTriangleFill /> }
+            view! { <Icon icon=icondata::BsExclamationTriangleFill /> }
         }
     }
 }

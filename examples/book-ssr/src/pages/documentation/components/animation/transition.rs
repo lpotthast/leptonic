@@ -1,16 +1,16 @@
 use leptonic::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
 
 #[component]
 pub fn PageTransition() -> impl IntoView {
-    let (transition_collapse_h, set_transition_collapse_h) = create_signal(false);
-    let (transition_collapse_v, set_transition_collapse_v) = create_signal(false);
-    let (transition_fade, set_transition_fade) = create_signal(false);
-    //let (transition_grow, set_transition_grow) = create_signal(false);
-    //let (transition_slide, set_transition_slide) = create_signal(false);
-    //let (transition_zoom, set_transition_zoom) = create_signal(false);
+    let (transition_collapse_h, set_transition_collapse_h) = signal(false);
+    let (transition_collapse_v, set_transition_collapse_v) = signal(false);
+    let (transition_fade, set_transition_fade) = signal(false);
+    //let (transition_grow, set_transition_grow) = signal(false);
+    //let (transition_slide, set_transition_slide) = signal(false);
+    //let (transition_zoom, set_transition_zoom) = signal(false);
 
     view! {
         <Article>

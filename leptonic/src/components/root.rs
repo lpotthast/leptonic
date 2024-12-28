@@ -1,7 +1,8 @@
-use std::rc::Rc;
-
-use leptos::*;
+use leptos::ev;
+use leptos::prelude::*;
 use leptos_use::{use_document, use_event_listener, use_window};
+use std::rc::Rc;
+use std::sync::Arc;
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{Event, KeyboardEvent, MouseEvent, PointerEvent};
 
@@ -20,7 +21,7 @@ use crate::{
         global_resize_event::GlobalResizeEvent,
         global_scroll_event::GlobalScrollEvent,
     },
-    create_signal_ls,
+    signal_ls,
 };
 
 use super::theme::Theme;
@@ -60,25 +61,29 @@ where
     let win = use_window();
     let doc = use_document();
 
+    // TODO (new): Find out how global events can be shared as web_sys types.
+
     // KEY DOWN
-    let (g_keyboard_event, set_g_keyboard_event) = create_signal::<Option<KeyboardEvent>>(None);
+    let (g_keyboard_event, set_g_keyboard_event) = signal_local::<Option<KeyboardEvent>>(None);
     let mut onkeydown = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(KeyboardEvent)> =
             Box::new(move |e| set_g_keyboard_event.set(Some(e)));
         let closure = Closure::wrap(boxed);
         doc.set_onkeydown(Some(closure.as_ref().unchecked_ref()));
-        onkeydown = Some(Rc::new(Box::new(closure)));
+        onkeydown = Some(Arc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalKeyboardEvent::new(
         onkeydown,
         g_keyboard_event,
         set_g_keyboard_event,
     ));
+    */
 
     // POINTER DOWN
     let (g_pointer_down_event, set_g_pointer_down_event) =
-        create_signal::<Option<PointerEvent>>(None);
+        signal_local::<Option<PointerEvent>>(None);
     let mut on_pointer_down = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(PointerEvent)> =
@@ -87,14 +92,16 @@ where
         doc.set_onpointerdown(Some(closure.as_ref().unchecked_ref()));
         on_pointer_down = Some(Rc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalPointerDownEvent::new(
         on_pointer_down,
         g_pointer_down_event,
         set_g_pointer_down_event,
     ));
+    */
 
     // POINTER UP
-    let (g_pointer_up_event, set_g_pointer_up_event) = create_signal::<Option<PointerEvent>>(None);
+    let (g_pointer_up_event, set_g_pointer_up_event) = signal_local::<Option<PointerEvent>>(None);
     let mut on_pointer_up = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(PointerEvent)> =
@@ -103,15 +110,17 @@ where
         doc.set_onpointerup(Some(closure.as_ref().unchecked_ref()));
         on_pointer_up = Some(Rc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalPointerUpEvent::new(
         on_pointer_up,
         g_pointer_up_event,
         set_g_pointer_up_event,
     ));
+    */
 
     // POINTER CANCEL
     let (g_pointer_cancel_event, set_g_pointer_cancel_event) =
-        create_signal::<Option<PointerEvent>>(None);
+        signal_local::<Option<PointerEvent>>(None);
     let mut on_pointer_cancel = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(PointerEvent)> =
@@ -120,15 +129,17 @@ where
         doc.set_onpointercancel(Some(closure.as_ref().unchecked_ref()));
         on_pointer_cancel = Some(Rc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalPointerCancelEvent::new(
         on_pointer_cancel,
         g_pointer_cancel_event,
         set_g_pointer_cancel_event,
     ));
+    */
 
     // POINTER MOVE
     let (g_pointer_move_event, set_g_pointer_move_event) =
-        create_signal::<Option<PointerEvent>>(None);
+        signal_local::<Option<PointerEvent>>(None);
     let mut on_pointer_move = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(PointerEvent)> =
@@ -137,14 +148,16 @@ where
         doc.set_onpointermove(Some(closure.as_ref().unchecked_ref()));
         on_pointer_move = Some(Rc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalPointerMoveEvent::new(
         on_pointer_move,
         g_pointer_move_event,
         set_g_pointer_move_event,
     ));
+    */
 
     // CLICK
-    let (g_click_event, set_g_click_event) = create_signal::<Option<MouseEvent>>(None);
+    let (g_click_event, set_g_click_event) = signal_local::<Option<MouseEvent>>(None);
     let mut onclick = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(MouseEvent)> = Box::new(move |e| set_g_click_event.set(Some(e)));
@@ -152,14 +165,16 @@ where
         doc.set_onclick(Some(closure.as_ref().unchecked_ref()));
         onclick = Some(Rc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalClickEvent::new(
         onclick,
         g_click_event,
         set_g_click_event,
     ));
+    */
 
-    // MOUSE UP
-    let (g_mouseup_event, set_g_mouseup_event) = create_signal::<Option<MouseEvent>>(None);
+    // MOUSE UP - data currently not needed
+    let (g_mouseup_event, set_g_mouseup_event) = signal_local::<Option<MouseEvent>>(None);
     let mut onmouseup = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(MouseEvent)> = Box::new(move |e| set_g_mouseup_event.set(Some(e)));
@@ -167,14 +182,16 @@ where
         doc.set_onmouseup(Some(closure.as_ref().unchecked_ref()));
         onmouseup = Some(Rc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalMouseupEvent::new(
         onmouseup,
         g_mouseup_event,
         set_g_mouseup_event,
     ));
+    */
 
     // RESIZE
-    let (g_resize_event, set_g_resize_event) = create_signal::<Option<Event>>(None);
+    let (g_resize_event, set_g_resize_event) = signal_local::<Option<Event>>(None);
     let mut onresize = None;
     if let Some(win) = &*win {
         let boxed: Box<dyn FnMut(Event)> = Box::new(move |e| set_g_resize_event.set(Some(e)));
@@ -182,14 +199,16 @@ where
         win.set_onresize(Some(closure.as_ref().unchecked_ref()));
         onresize = Some(Rc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalResizeEvent::new(
         onresize,
         g_resize_event,
         set_g_resize_event,
     ));
+    */
 
     // SCROLL
-    let (g_scroll_event, set_g_scroll_event) = create_signal::<Option<Event>>(None);
+    let (g_scroll_event, set_g_scroll_event) = signal_local::<Option<Event>>(None);
     let mut onscroll = None;
     if let Some(doc) = &*doc {
         let boxed: Box<dyn FnMut(Event)> = Box::new(move |e| set_g_scroll_event.set(Some(e)));
@@ -197,11 +216,13 @@ where
         doc.set_onscroll(Some(closure.as_ref().unchecked_ref()));
         onscroll = Some(Rc::new(Box::new(closure)));
     }
+    /*
     provide_context(GlobalScrollEvent::new(
         onscroll,
         g_scroll_event,
         set_g_scroll_event,
     ));
+    */
 
     let update_vh = move || {
         #[derive(Debug)]
@@ -273,7 +294,7 @@ where
     view! {
         { tiptap_js_module_includes }
 
-        <ThemeProvider theme=create_signal_ls("theme", default_theme)>
+        <ThemeProvider theme=signal_ls("theme", default_theme)>
             <PopoverRoot>
                 <ToastRoot>
                     <ModalRoot>

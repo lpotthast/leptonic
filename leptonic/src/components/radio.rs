@@ -1,8 +1,8 @@
-use leptos::*;
+use leptos::context::Provider;
+use leptos::prelude::*;
 
 use crate::{
-    components::form_control::{FormControlContext, FormInput},
-    OptMaybeSignal, Out,
+    components::form_control::{FormControlContext, FormInput}, Out,
 };
 
 #[derive(Clone)]
@@ -71,15 +71,12 @@ impl RadioGroupContext {
 #[component]
 pub fn RadioGroup(
     children: Children,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
     let ctx = RadioGroupContext {
-        states: store_value(Vec::new()),
+        states: StoredValue::new(Vec::new()),
     };
     view! {
-        <leptonic-radio-group id=id class=class style=style role="radiogroup">
+        <leptonic-radio-group role="radiogroup">
             <Provider value=ctx>
                 { children() }
             </Provider>
@@ -109,10 +106,7 @@ impl FormInput for RadioContext {
 pub fn Radio(
     #[prop(into)] checked: Signal<bool>,
     #[prop(into)] set_checked: Out<bool>,
-    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] disabled: Option<Signal<bool>>,
 ) -> impl IntoView {
     let ctx = RadioContext {
         checked,
@@ -138,13 +132,10 @@ pub fn Radio(
         })
     }
 
-    let disabled = move || disabled.0.as_ref().map_or(false, SignalGet::get);
+    let disabled = move || disabled.get().unwrap_or(false);
 
     view! {
         <leptonic-radio
-            id=id
-            class=class
-            style=style
             role="radio"
             aria-disabled=move || match disabled() { true => "true", false => "false" }
             aria-checked=move || match checked.get() { true => "true", false => "false" }

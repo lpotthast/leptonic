@@ -1,18 +1,19 @@
-use leptos::*;
-use std::rc::Rc;
+use std::sync::Arc;
+
+use leptos::prelude::*;
+use leptos_reactive::create_isomorphic_effect;
 use uuid::Uuid;
 
 use crate::{
     hooks::{use_press, use_prevent_scroll, UsePressInput, UsePressReturn, UsePreventScrollInput},
-    prelude::{GlobalKeyboardEvent, Producer},
-    OptMaybeSignal,
+    prelude::GlobalKeyboardEvent,
 };
 
 #[derive(Clone)]
 struct ShownModalData {
     key: Uuid,
     children: ChildrenFn,
-    on_backdrop_interaction: Option<Producer<()>>,
+    on_backdrop_interaction: Option<Callback<(), ()>>,
 }
 
 #[derive(Copy, Clone)]
@@ -58,7 +59,7 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     };
     provide_context::<ModalRootContext>(ctx.clone());
 
-    let has_modals = create_memo(move |_| shown_modals.with(|modals| !modals.is_empty()));
+    let has_modals = Memo::new(move |_| shown_modals.with(|modals| !modals.is_empty()));
 
     let disable_prevent_scroll = Signal::derive(move || !has_modals.get());
 
@@ -67,7 +68,7 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     });
 
     let UsePressReturn {
-        props,
+        attrs,
         is_pressed: _,
     } = use_press(UsePressInput {
         disabled: false.into(),
@@ -75,7 +76,7 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
         on_press: Callback::new(move |_| {
             if let Some(modal_on_top) = shown_modals.get_untracked().into_iter().rev().next() {
                 if let Some(on_backdrop_interaction) = modal_on_top.on_backdrop_interaction {
-                    on_backdrop_interaction.call(());
+                    on_backdrop_interaction.run(());
                 }
             }
         }),
@@ -88,12 +89,7 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
         { children() }
 
         <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
-            <leptonic-modal-backdrop
-                {..props.attrs}
-                on:keydown=props.on_key_down
-                on:click=props.on_click
-                on:pointerdown=props.on_pointer_down
-            />
+            <leptonic-modal-backdrop {..attrs}/>
 
             <leptonic-modals>
                 <For
@@ -108,41 +104,39 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
 
 #[component]
 pub fn Modal(
-    #[prop(into)] show_when: MaybeSignal<bool>,
+    #[prop(into)] show_when: Signal<bool>,
     #[prop(into, optional)] id: Option<String>,
     #[prop(into, optional)] class: Option<String>,
-    #[prop(into, optional)] on_escape: Option<Producer<()>>,
-    #[prop(into, optional)] on_backdrop_interaction: Option<Producer<()>>,
+    #[prop(into, optional)] on_escape: Option<Callback<(), ()>>,
+    #[prop(into, optional)] on_backdrop_interaction: Option<Callback<(), ()>>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<ModalRootContext>();
 
     if let Some(on_escape) = on_escape {
         let g_keyboard_event = expect_context::<GlobalKeyboardEvent>();
-        create_effect(move |_| {
+        Effect::new(move |_| {
             if let Some(e) = g_keyboard_event.read_signal.get() {
                 if show_when.get_untracked() && e.key().as_str() == "Escape" {
-                    on_escape.produce();
+                    on_escape.run(());
                 }
             }
         });
     }
 
     let key = Uuid::now_v7();
-    let shown = create_memo(move |_| show_when.get());
+    let shown = Memo::new(move |_| show_when.get());
 
-    let id = store_value(id.unwrap_or_else(|| key.to_string()));
-    let class = store_value(class);
+    let id = StoredValue::new(id.unwrap_or_else(|| key.to_string()));
+    let class = StoredValue::new(class);
 
-    let modal = Rc::new(move || {
+    let modal = Arc::new(move || {
         view! {
             <leptonic-modal id=id.get_value() class=class.get_value()>
                 { children() }
             </leptonic-modal>
         }
-        .into_view()
-        .into()
-    });
+    }.into_any());
 
     create_isomorphic_effect(move |_| match shown.get() {
         true => ctx.push_shown(ShownModalData {
@@ -185,10 +179,9 @@ pub fn ModalTitle(children: Children) -> impl IntoView {
 #[component]
 pub fn ModalBody(
     children: Children,
-    #[prop(into, optional)] style: OptMaybeSignal<String>,
 ) -> impl IntoView {
     view! {
-        <leptonic-modal-body style=move || style.0.as_ref().map(SignalGet::get)>
+        <leptonic-modal-body>
             { children() }
         </leptonic-modal-body>
     }

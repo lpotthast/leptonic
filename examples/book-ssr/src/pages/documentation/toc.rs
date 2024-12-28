@@ -1,5 +1,5 @@
 use leptonic::atoms::link::AnchorLink;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::app::AppLayoutContext;
 

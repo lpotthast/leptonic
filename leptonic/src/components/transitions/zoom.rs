@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Zoom(inn: Signal<bool>, children: Children) -> impl IntoView {

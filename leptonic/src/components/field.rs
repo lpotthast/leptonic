@@ -1,14 +1,11 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Field(
     children: Children,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
     view! {
-        <leptonic-field id=id class=class style=style>
+        <leptonic-field>
             { children() }
         </leptonic-field>
     }
@@ -17,12 +14,9 @@ pub fn Field(
 #[component]
 pub fn FieldLabel(
     children: Children,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
     view! {
-        <leptonic-field-label id=id class=class style=style>
+        <leptonic-field-label>
             { children() }
         </leptonic-field-label>
     }

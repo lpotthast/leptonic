@@ -1,6 +1,6 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 use strum::IntoEnumIterator;
 use uuid::Uuid;
 
@@ -8,10 +8,10 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageToast() -> impl IntoView {
-    let (variant, set_variant) = create_signal(ToastVariant::Success);
-    let (timeout, set_timeout) = create_signal(ToastTimeout::DefaultDelay);
-    let (header, set_header) = create_signal("Header".to_owned());
-    let (body, set_body) = create_signal("Body".to_owned());
+    let (variant, set_variant) = signal(ToastVariant::Success);
+    let (timeout, set_timeout) = signal(ToastTimeout::DefaultDelay);
+    let (header, set_header) = signal("Header".to_owned());
+    let (body, set_body) = signal("Body".to_owned());
 
     let toasts = expect_context::<Toasts>();
 

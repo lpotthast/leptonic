@@ -1,12 +1,11 @@
-use std::borrow::Cow;
-
-use leptos::*;
+use leptos::html;
+use leptos::prelude::*;
 use leptos_use::{use_element_bounding, use_element_hover};
+use std::borrow::Cow;
 
 use crate::{
     components::popover::{Popover, PopoverContent},
     contexts::global_mouseup_event::GlobalMouseupEvent,
-    prelude::Consumer,
     utils::math::project_into_range,
     Out, RelativeMousePosition, Size, TrackedElementClientBoundingRect,
     UseElementBoundingReturnReadOnly,
@@ -68,9 +67,9 @@ fn create_marks(
     max: f64,
     step: Option<f64>,
     range: Memo<f64>,
-    in_range: Consumer<f64, Signal<bool>>,
+    in_range: Callback<f64, Signal<bool>>,
     marks: SliderMarks,
-    value_display: Option<Consumer<f64, String>>,
+    value_display: Option<Callback<f64, String>>,
 ) -> Signal<Vec<Mark>> {
     match marks {
         SliderMarks::None => Signal::derive(Vec::new),
@@ -93,10 +92,10 @@ fn create_marks(
                     }
                     marks_at.push(Mark {
                         percentage: crate::utils::math::percentage_in_range(min, max, current),
-                        in_range: in_range.consume(current),
+                        in_range: in_range.run(current),
                         name: match create_names {
                             true => Some(Cow::Owned(match &value_display {
-                                Some(callback) => callback.consume(current),
+                                Some(callback) => callback.run(current),
                                 None => format!("{current}"),
                             })),
                             false => None,
@@ -157,7 +156,7 @@ fn create_marks(
                             }
                             SliderMarkValue::Percentage(percentage) => percentage,
                         },
-                        in_range: in_range.consume(value),
+                        in_range: in_range.run(value),
                         name: mark.name.clone(),
                     }
                 })
@@ -181,8 +180,8 @@ fn Marks(marks: Signal<Vec<Mark>>) -> impl IntoView {
                                         <div class="title">
                                             {name.clone()}
                                         </div>
-                                    }.into_view(),
-                                    None => ().into_view()
+                                    }.into_any(),
+                                    None => ().into_any()
                                 } }
                             </div>
                         }
@@ -210,32 +209,32 @@ impl Default for SliderPopover {
 }
 
 impl SliderPopover {
-    fn to_maybe_signal(self, knob_el: NodeRef<html::Div>, knob: &KnobControl) -> MaybeSignal<bool> {
+    fn to_signal(self, knob_el: NodeRef<html::Div>, knob: &KnobControl) -> Signal<bool> {
         match self {
-            Self::Never => MaybeSignal::Static(false),
+            Self::Never => Signal::from(false),
             Self::When { hovered, dragged } => match (hovered, dragged) {
                 (true, true) => {
                     let knob_is_hovered = use_element_hover(knob_el);
                     let listening = knob.listening;
-                    MaybeSignal::Dynamic(Signal::derive(move || {
+                    Signal::derive(move || {
                         knob_is_hovered.get() || listening.get()
-                    }))
+                    })
                 }
                 (true, false) => {
                     let knob_is_hovered = use_element_hover(knob_el);
-                    MaybeSignal::Dynamic(knob_is_hovered)
+                    knob_is_hovered
                 }
-                (false, true) => MaybeSignal::Dynamic(knob.listening.into()),
-                (false, false) => MaybeSignal::Static(false),
+                (false, true) => knob.listening.into(),
+                (false, false) => Signal::from(false),
             },
-            Self::Always => MaybeSignal::Static(true),
+            Self::Always => Signal::from(true),
         }
     }
 }
 
 #[component]
 pub fn Slider(
-    #[prop(into)] value: MaybeSignal<f64>,
+    #[prop(into)] value: Signal<f64>,
     #[prop(into)] set_value: Out<f64>,
     min: f64,
     max: f64,
@@ -245,20 +244,17 @@ pub fn Slider(
     #[prop(optional)] active: bool,
     #[prop(optional)] disabled: bool,
     #[prop(optional)] marks: SliderMarks,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
-    #[prop(into, optional)] value_display: Option<Consumer<f64, String>>,
+    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView {
-    let range = create_memo(move |_| max - min);
+    let range = Memo::new(move |_| max - min);
 
-    let bar_el: NodeRef<html::Div> = create_node_ref();
+    let bar_el: NodeRef<html::Div> = NodeRef::new();
     let bar = TrackedElementClientBoundingRect::new(bar_el);
     let cursor = RelativeMousePosition::new(bar);
-    let knob_el: NodeRef<html::Div> = create_node_ref();
+    let knob_el: NodeRef<html::Div> = NodeRef::new();
     let bar_bounds = use_element_bounding(bar_el);
     let knob = KnobControl::new(min, max, step, value);
-    let show_popover = popover.to_maybe_signal(knob_el, &knob);
+    let show_popover = popover.to_signal(knob_el, &knob);
 
     let range_style = Signal::derive(move || {
         format!(
@@ -272,14 +268,14 @@ pub fn Slider(
         read_signal: mouse_up,
         ..
     } = expect_context();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if mouse_up.get().is_some() {
             knob.set_listening.set(false);
         }
     });
 
     // While this slider is "listening", project the relative cursor position into the sliders value range and propagate.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if knob.listening.get() {
             set_value.set(project_into_range(
                 cursor.rel_mouse_pos.get().0,
@@ -295,7 +291,7 @@ pub fn Slider(
         max,
         step,
         range,
-        Consumer::new(move |v| match max > min {
+        Callback::new(move |v| match max > min {
             true => Signal::derive(move || v <= value.get()),
             false => Signal::derive(move || v >= value.get()),
         }),
@@ -303,7 +299,7 @@ pub fn Slider(
         value_display,
     );
 
-    let pos_x = Consumer::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+    let pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
         format!(
             "calc({}px + {}px - {}px)",
             bar_bounds.x.get(),
@@ -314,12 +310,9 @@ pub fn Slider(
 
     view! {
         <leptonic-slider
-            id=id
             data-variant=variant.to_str()
-            class=class
             class:active=active
             class:disabled=disabled
-            style=style
             // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
             // as the user may click, drag and move the cursor outside of this element.
             on:mousedown=move |_e| {
@@ -349,7 +342,7 @@ pub fn Slider(
                                 {move || {
                                     let value = value.get();
                                     match &value_display {
-                                        Some(callback) => callback.consume(value),
+                                        Some(callback) => callback.run(value),
                                         None => format!("{value}"),
                                     }
                                 }}
@@ -371,8 +364,8 @@ pub fn Slider(
 #[allow(clippy::similar_names)]
 #[allow(clippy::too_many_lines)]
 pub fn RangeSlider(
-    #[prop(into)] value_a: MaybeSignal<f64>,
-    #[prop(into)] value_b: MaybeSignal<f64>,
+    #[prop(into)] value_a: Signal<f64>,
+    #[prop(into)] value_b: Signal<f64>,
     #[prop(into)] set_value_a: Out<f64>,
     #[prop(into)] set_value_b: Out<f64>,
     min: f64,
@@ -383,23 +376,20 @@ pub fn RangeSlider(
     #[prop(optional)] active: bool,
     #[prop(optional)] disabled: bool,
     #[prop(optional)] marks: SliderMarks,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
-    #[prop(into, optional)] value_display: Option<Consumer<f64, String>>,
+    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView {
-    let range = create_memo(move |_| max - min);
+    let range = Memo::new(move |_| max - min);
 
-    let bar_el: NodeRef<html::Div> = create_node_ref();
+    let bar_el: NodeRef<html::Div> = NodeRef::new();
     let bar = TrackedElementClientBoundingRect::new(bar_el);
     let bar_bounds = use_element_bounding(bar_el);
     let cursor = RelativeMousePosition::new(bar);
-    let knob_a_el: NodeRef<html::Div> = create_node_ref();
-    let knob_b_el: NodeRef<html::Div> = create_node_ref();
+    let knob_a_el: NodeRef<html::Div> = NodeRef::new();
+    let knob_b_el: NodeRef<html::Div> = NodeRef::new();
     let knob_a = KnobControl::new(min, max, step, value_a);
     let knob_b = KnobControl::new(min, max, step, value_b);
-    let show_a_popover = popover.to_maybe_signal(knob_a_el, &knob_a);
-    let show_b_popover = popover.to_maybe_signal(knob_b_el, &knob_b);
+    let show_a_popover = popover.to_signal(knob_a_el, &knob_a);
+    let show_b_popover = popover.to_signal(knob_b_el, &knob_b);
 
     let range_style = Signal::derive(move || {
         format!(
@@ -417,7 +407,7 @@ pub fn RangeSlider(
         read_signal: mouse_up,
         ..
     } = expect_context();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if mouse_up.get().is_some() {
             knob_a.set_listening.set(false);
             knob_b.set_listening.set(false);
@@ -425,12 +415,12 @@ pub fn RangeSlider(
     });
 
     // Project the relative cursor position into the sliders value range.
-    let projected_value_from_cursor = create_memo(move |_| {
+    let projected_value_from_cursor = Memo::new(move |_| {
         project_into_range(cursor.rel_mouse_pos.get().0, range.get(), min, step)
     });
 
     // While this slider is "listening", propagate the projected value.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if knob_a.listening.get() {
             let projected_value_from_cursor = projected_value_from_cursor.get();
             let b = value_b.get_untracked();
@@ -464,7 +454,7 @@ pub fn RangeSlider(
         max,
         step,
         range,
-        Consumer::new(move |v| match max > min {
+        Callback::new(move |v| match max > min {
             true => Signal::derive(move || v >= value_a.get() && v <= value_b.get()),
             false => Signal::derive(move || v <= value_a.get() && v >= value_b.get()),
         }),
@@ -475,7 +465,7 @@ pub fn RangeSlider(
     let value_display_a = value_display;
     let value_display_b = value_display;
 
-    let knob_a_pos_x = Consumer::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+    let knob_a_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
         format!(
             "calc({}px + {}px - {}px)",
             bar_bounds.x.get(),
@@ -483,7 +473,7 @@ pub fn RangeSlider(
             (pop_bounds.width.get() / 2.0)
         )
     });
-    let knob_b_pos_x = Consumer::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+    let knob_b_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
         format!(
             "calc({}px + {}px - {}px)",
             bar_bounds.x.get(),
@@ -494,12 +484,9 @@ pub fn RangeSlider(
 
     view! {
         <leptonic-slider
-            id=id
             data-variant=variant.to_str()
-            class=class
             class:active=active
             class:disabled=disabled
-            style=style
             // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
             // as the user may click, drag and move the cursor outside of this element.
             on:mousedown=move |_e| {
@@ -550,7 +537,7 @@ pub fn RangeSlider(
                                 {move || {
                                     let value = value_a.get();
                                     match &value_display_a {
-                                        Some(callback) => callback.consume(value),
+                                        Some(callback) => callback.run(value),
                                         None => format!("{value}"),
                                     }
                                 }}
@@ -566,7 +553,7 @@ pub fn RangeSlider(
                                 {move || {
                                     let value = value_b.get();
                                     match &value_display_b {
-                                        Some(callback) => callback.consume(value),
+                                        Some(callback) => callback.run(value),
                                         None => format!("{value}"),
                                     }
                                 }}
@@ -593,8 +580,8 @@ struct KnobControl {
 }
 
 impl KnobControl {
-    pub(crate) fn new(min: f64, max: f64, step: Option<f64>, value: MaybeSignal<f64>) -> Self {
-        let range = create_memo(move |_| max - min);
+    pub(crate) fn new(min: f64, max: f64, step: Option<f64>, value: Signal<f64>) -> Self {
+        let range = Memo::new(move |_| max - min);
         let clipped_value = Signal::derive(move || {
             let value = value.get();
             if !(min..=max).contains(&value) && !(max..=min).contains(&value) {
@@ -617,7 +604,7 @@ impl KnobControl {
             Signal::derive(move || ((min.abs() - clipped_value.get()) / range.get()).abs());
         let style =
             Signal::derive(move || format!("left: {}%", clipped_value_percent.get() * 100.0));
-        let (listening, set_listening) = create_signal(false);
+        let (listening, set_listening) = signal(false);
         Self {
             clipped_value,
             clipped_value_percent,

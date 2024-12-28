@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::Size;
 
@@ -22,17 +22,11 @@ impl StackOrientation {
 pub fn Stack(
     spacing: Size,
     #[prop(optional)] orientation: StackOrientation,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
         <leptonic-stack
-            id=id
-            class=class
             data-orientation=orientation.as_str()
-            style=style
             style=("--gap", format!("{spacing}"))
         >
             { children() }

@@ -7,7 +7,7 @@ use axum::{
 use axum::response::Response as AxumResponse;
 use tower::ServiceExt;
 use tower_http::services::ServeDir;
-use leptos::*;
+use leptos::prelude::*;
 use crate::app::App;
 
 pub async fn file_and_error_handler(uri: Uri, State(options): State<LeptosOptions>, req: Request<Body>) -> AxumResponse {

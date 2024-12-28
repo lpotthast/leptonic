@@ -4,14 +4,14 @@ use leptonic::components::prelude::*;
 use leptonic::hooks::anchor_link::Href;
 use leptonic::hooks::*;
 use leptonic::ScrollBehavior;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageUseAnchorLink() -> impl IntoView {
-    let (disabled, set_disabled) = create_signal(false);
+    let (disabled, set_disabled) = signal(false);
 
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.

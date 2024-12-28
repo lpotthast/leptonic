@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_tiptap::*;
 
 use crate::{
@@ -17,9 +17,9 @@ pub fn TiptapEditor(
     #[prop(into)] value: Signal<String>,
     #[prop(into, optional)] set_value: Option<Out<TiptapContent>>,
 ) -> impl IntoView {
-    let (msg, set_msg) = create_signal(TiptapInstanceMsg::Noop);
+    let (msg, set_msg) = signal(TiptapInstanceMsg::Noop);
 
-    let (selection_state, set_selection_state) = create_signal(TiptapSelectionState::default());
+    let (selection_state, set_selection_state) = signal(TiptapSelectionState::default());
 
     let instance_id = uuid::Uuid::now_v7();
 

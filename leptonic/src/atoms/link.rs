@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::{
     hooks::{
@@ -21,18 +21,13 @@ pub fn AnchorLink(
     /// which should be described using this field.
     #[prop(into, optional)]
     description: Option<Oco<'static, str>>,
-
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
-
     /// If no children are provided, this component renders a single `#` character.
     #[prop(optional)]
     children: Option<Children>,
 ) -> impl IntoView {
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
-    let UseAnchorLinkReturn { props } = use_anchor_link(UseAnchorLinkInput {
+    let UseAnchorLinkReturn { attrs, is_pressed: _ } = use_anchor_link(UseAnchorLinkInput {
         href: Href::from_str(href).expect("valid href"),
         scroll_behavior: scroll_behavior.or(Some(ScrollBehavior::default())),
         disabled: false.into(),
@@ -52,19 +47,13 @@ pub fn AnchorLink(
 
     view! {
         <a
-            {..props.attrs}
-            id=id
-            class=class
-            style=style
             class="leptonic-anchor-link"
             target="_self"
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
+            {..attrs}
         >
             { match children {
-                Some(children) => children().into_view(),
-                None => "#".into_view(),
+                Some(children) => children().into_any(),
+                None => "#".into_any(),
             } }
         </a>
     }

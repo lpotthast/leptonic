@@ -2,17 +2,17 @@ use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageModal() -> impl IntoView {
-    let (show_simple_modal, set_show_simple_modal) = create_signal(false);
+    let (show_simple_modal, set_show_simple_modal) = signal(false);
 
-    let (show_staged_modal1, set_show_staged_modal1) = create_signal(false);
-    let (show_staged_modal2, set_show_staged_modal2) = create_signal(false);
+    let (show_staged_modal1, set_show_staged_modal1) = signal(false);
+    let (show_staged_modal2, set_show_staged_modal2) = signal(false);
 
     let escape_staged_modal1 = Producer::new(move || set_show_staged_modal1.set(false));
     let escape_staged_modal2 = Producer::new(move || {
@@ -20,7 +20,7 @@ pub fn PageModal() -> impl IntoView {
         set_show_staged_modal1.set(true);
     });
 
-    let (show_confirm_modal, set_show_confirm_modal) = create_signal(false);
+    let (show_confirm_modal, set_show_confirm_modal) = signal(false);
 
     view! {
         <Article>
@@ -33,7 +33,7 @@ pub fn PageModal() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (show_simple_modal, set_show_simple_modal) = create_signal(false);
+                    let (show_simple_modal, set_show_simple_modal) = signal(false);
 
                     view! {
                         <P><Button on_press=move |_| set_show_simple_modal.set(true)>"Show simple modal"</Button></P>
@@ -75,8 +75,8 @@ pub fn PageModal() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (show_staged_modal1, set_show_staged_modal1) = create_signal(false);
-                    let (show_staged_modal2, set_show_staged_modal2) = create_signal(false);
+                    let (show_staged_modal1, set_show_staged_modal1) = signal(false);
+                    let (show_staged_modal2, set_show_staged_modal2) = signal(false);
 
                     view! {
                         <P><Button on_press=move |_| set_show_staged_modal1.set(true)>"Show staged modal"</Button></P>
@@ -145,7 +145,7 @@ pub fn PageModal() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (show_confirm_modal, set_show_confirm_modal) = create_signal(false);
+                    let (show_confirm_modal, set_show_confirm_modal) = signal(false);
 
                     view! {
                         <P><Button on_press=move |_| set_show_confirm_modal.set(true)>"Show confirmation modal"</Button></P>
@@ -175,9 +175,9 @@ pub fn PageModal() -> impl IntoView {
                         A: Fn() + Copy + 'static,
                         C: Fn() + Copy + 'static,
                     {
-                        let required = store_value(requires_confirmation_of);
+                        let required = StoredValue::new(requires_confirmation_of);
 
-                        let (input, set_input) = create_signal(String::new());
+                        let (input, set_input) = signal(String::new());
 
                         let confirmed = move || required.with_value(|r| input.with(|i| r == i));
                         let disabled = Signal::derive(move || !confirmed());
@@ -312,9 +312,9 @@ where
     A: Fn() + Copy + 'static,
     C: Fn() + Copy + 'static,
 {
-    let required = store_value(requires_confirmation_of);
+    let required = StoredValue::new(requires_confirmation_of);
 
-    let (input, set_input) = create_signal(String::new());
+    let (input, set_input) = signal(String::new());
 
     let confirmed = move || required.with_value(|r| input.with(|i| r == i));
     let disabled = Signal::derive(move || !confirmed());

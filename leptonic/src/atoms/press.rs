@@ -1,15 +1,15 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::hooks::interactions::use_press::{use_press, PressEvent, UsePressInput, UsePressReturn};
 
 #[component]
 pub fn Pressable(
-    #[prop(into)] disabled: MaybeSignal<bool>,
-    on_press: Callback<PressEvent>,
+    #[prop(into)] disabled: Signal<bool>,
+    on_press: Callback<(PressEvent,)>,
     children: Children,
 ) -> impl IntoView {
     let UsePressReturn {
-        props,
+        attrs,
         is_pressed: _,
     } = use_press(UsePressInput {
         disabled,
@@ -21,15 +21,12 @@ pub fn Pressable(
     });
 
     view! {
-        <leptonic-pressable
-            {..props.attrs}
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
+        <div
             style="display: contents"
+            {..attrs}
         >
             { children() }
-        </leptonic-pressable>
+        </div>
     }
 }
 

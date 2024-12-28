@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
-use leptos::*;
+use leptos::prelude::*;
 use ringbuf::{HeapRb, Rb};
 
 use crate::pages::documentation::article::Article;
@@ -17,11 +17,11 @@ pub enum Event {
 
 #[component]
 pub fn PageUsePress() -> impl IntoView {
-    let (count, set_count) = create_signal(0);
-    let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
-    let (disabled, set_disabled) = create_signal(false);
+    let (count, set_count) = signal(0);
+    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
+    let (disabled, set_disabled) = signal(false);
 
-    let string = create_memo(move |_| {
+    let string = Memo::new(move |_| {
         events.with(|events| {
             let mut result = String::new();
             for e in events.iter().rev() {

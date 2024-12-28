@@ -4,20 +4,20 @@ use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};
 use leptonic::utils::locale::WritingDirection;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageUseOverlay() -> impl IntoView {
-    let (selected_placement_x, set_selected_placement_x) = create_signal(PlacementX::Right);
-    let (selected_placement_y, set_selected_placement_y) = create_signal(PlacementY::Above);
+    let (selected_placement_x, set_selected_placement_x) = signal(PlacementX::Right);
+    let (selected_placement_y, set_selected_placement_y) = signal(PlacementY::Above);
 
-    let trigger_el: NodeRef<html::Div> = create_node_ref();
-    let overlay_el: NodeRef<html::Div> = create_node_ref();
+    let trigger_el: NodeRef<html::Div> = NodeRef::new();
+    let overlay_el: NodeRef<html::Div> = NodeRef::new();
 
-    let (overlay_content, set_overlay_content) = create_signal(String::from("overlay"));
+    let (overlay_content, set_overlay_content) = signal(String::from("overlay"));
 
     let UseOverlayReturn {
         props: overlay_props,

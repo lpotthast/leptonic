@@ -14,14 +14,12 @@ use crate::{
     RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 use indoc::formatdoc;
-use leptos::*;
+use leptos::html;
+use leptos::prelude::*;
 
 #[component]
 pub fn ColorPreview(
     #[prop(into)] rgb: Signal<RGB8>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
     let background_color = move || {
         let RGB8 { r, g, b } = rgb.get();
@@ -29,7 +27,7 @@ pub fn ColorPreview(
     };
 
     view! {
-        <leptonic-color-preview id=id class=class style=style style:background-color=background_color>
+        <leptonic-color-preview style:background-color=background_color>
         </leptonic-color-preview>
     }
 }
@@ -39,9 +37,6 @@ pub fn ColorPalette(
     #[prop(into)] hsv: Signal<HSV>,
     #[prop(into)] set_saturation: Out<f64>,
     #[prop(into)] set_value: Out<f64>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    //#[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
     let rgb_from_hue_only = Signal::derive(move || {
         let hsv = hsv.get();
@@ -74,10 +69,10 @@ pub fn ColorPalette(
         format!("rgb({r}, {g}, {b})")
     };
 
-    let palette_el: NodeRef<html::Div> = create_node_ref();
+    let palette_el: NodeRef<html::Div> = NodeRef::new();
     let palette = TrackedElementClientBoundingRect::new(palette_el);
     let cursor = RelativeMousePosition::new(palette);
-    let (knob_listening, set_knob_listening) = create_signal(false);
+    let (knob_listening, set_knob_listening) = signal(false);
 
     let knob_left = move || format!("{}%", hsv.get().saturation * 100.0);
     let knob_bottom = move || format!("{}%", hsv.get().value * 100.0);
@@ -87,7 +82,7 @@ pub fn ColorPalette(
         read_signal: mouse_up,
         ..
     } = expect_context();
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if mouse_up.get().is_some() {
             set_knob_listening.set(false);
         }
@@ -95,13 +90,13 @@ pub fn ColorPalette(
 
     // Project the relative cursor position into the sliders value range.
     let projected_value_from_cursor_x =
-        create_memo(move |_| project_into_range(cursor.rel_mouse_pos.get().0, 1.0, 0.0, None));
-    let projected_value_from_cursor_y = create_memo(move |_| {
+        Memo::new(move |_| project_into_range(cursor.rel_mouse_pos.get().0, 1.0, 0.0, None));
+    let projected_value_from_cursor_y = Memo::new(move |_| {
         1.0 - project_into_range(cursor.rel_mouse_pos.get().1, 1.0, 0.0, None)
     });
 
     // While this knob is "listening", propagate the projected values.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if knob_listening.get() {
             set_saturation.set(projected_value_from_cursor_x.get());
             set_value.set(projected_value_from_cursor_y.get());
@@ -111,8 +106,6 @@ pub fn ColorPalette(
     view! {
         <div class="leptonic-color-palette"
             node_ref=palette_el
-            id=id
-            style=style
             style:background=background_simple
             // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
             // as the user may click, drag and move the cursor outside of this element.
@@ -167,8 +160,8 @@ pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>
                 value=hue set_value=set_hue
                 marks=SliderMarks::None
                 popover=SliderPopover::Never
-                class="hue-slider"
-                style=style
+                attr:class="hue-slider"
+                attr:style=style
             />
         </leptonic-hue-slider>
     }
@@ -196,32 +189,32 @@ pub fn ColorPicker(
     view! {
         <leptonic-color-picker>
             <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; height: 20em;">
-                <ColorPreview rgb=rgb style="width: 20%; height: 100%;"/>
+                <ColorPreview rgb=rgb attr:style="width: 20%; height: 100%;"/>
                 <ColorPalette hsv=hsv
                     set_saturation=set_saturation
                     set_value=set_value
-                    style="width: 80%; height: 100%;"
+                    attr:style="width: 80%; height: 100%;"
                 />
             </div>
 
             <HueSlider hue=hue set_hue=set_hue/>
 
             <div style="display: flex; flex-direction: row;">
-                <Field style="width: 32%; margin-right: 2%;">
+                <Field attr:style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"Hue"</FieldLabel>
                     <NumberInput min=0.0 max=360.0 step=1.0
                         get=hue
                         set=set_hue
                     />
                 </Field>
-                <Field style="width: 32%; margin-right: 2%;">
+                <Field attr:style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"Saturation"</FieldLabel>
                     <NumberInput min=0.0 max=1.0 step=0.01
                         get=saturation
                         set=set_saturation
                     />
                 </Field>
-                <Field style="width: 32%; margin-right: 0%;">
+                <Field attr:style="width: 32%; margin-right: 0%;">
                     <FieldLabel>"Value"</FieldLabel>
                     <NumberInput min=0.0 max=1.0 step=0.01
                         get=value
@@ -231,19 +224,19 @@ pub fn ColorPicker(
             </div>
 
             <div style="display: flex; flex-direction: row;">
-                <Field style="width: 32%; margin-right: 2%;">
+                <Field attr:style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"R"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || f64::from(rgb.get().r))
                     />
                 </Field>
-                <Field style="width: 32%; margin-right: 2%;">
+                <Field attr:style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"G"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || f64::from(rgb.get().g))
                     />
                 </Field>
-                <Field style="width: 32%; margin-right: 0%;">
+                <Field attr:style="width: 32%; margin-right: 0%;">
                     <FieldLabel>"B"</FieldLabel>
                     <NumberInput min=0.0 max=255.0 step=1.0
                         get=Signal::derive(move || f64::from(rgb.get().b))

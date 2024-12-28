@@ -1,10 +1,11 @@
+use leptos::prelude::document;
+
 pub mod aria;
 pub mod callback;
 pub mod color;
 pub mod locale;
 pub mod math;
 pub mod pointer_type;
-pub mod props;
 pub mod scroll_behavior;
 pub mod signals;
 pub(crate) mod text_selection;
@@ -99,7 +100,7 @@ impl EventTargetExt for web_sys::EventTarget {
     fn get_owner_document(&self) -> web_sys::Document {
         self.as_element()
             .and_then(|el| el.owner_document())
-            .unwrap_or_else(|| leptos::document())
+            .unwrap_or_else(|| document())
     }
 
     fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool {

@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Fade(#[prop(into)] inn: Signal<bool>, children: Children) -> impl IntoView {

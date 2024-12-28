@@ -1,13 +1,13 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn PageTab() -> impl IntoView {
-    let (test_reactive_label_bool, set_test_reactive_label_bool) = create_signal(false);
+    let (test_reactive_label_bool, set_test_reactive_label_bool) = signal(false);
     view! {
         <Article>
             <H1 id="tab" class="anchor">
@@ -47,7 +47,7 @@ pub fn PageTab() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (bool, set_bool) = create_signal(false);
+                    let (bool, set_bool) = signal(false);
 
                     view! {
                         <Tabs mount=Mount::Once>

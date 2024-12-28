@@ -1,13 +1,13 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageDrawer() -> impl IntoView {
-    let (shown, set_shown) = create_signal(true);
-    let (shown2, set_shown2) = create_signal(true);
+    let (shown, set_shown) = signal(true);
+    let (shown2, set_shown2) = signal(true);
 
     view! {
         <Article>

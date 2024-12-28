@@ -1,6 +1,6 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, doc_root::DocRoutes, toc::Toc};
 
@@ -125,7 +125,7 @@ pub fn PageInstallation() -> impl IntoView {
 
                     #[component]
                     pub fn App() -> impl IntoView {
-                        let (count, set_count) = create_signal(0);
+                        let (count, set_count) = signal(0);
                         view! {
                             <Root default_theme=LeptonicTheme::default()>
                                 <Box style="display: flex; flex-direction: column; align-items: center; padding: 1em; min-height: 100%; min-width: 100%">

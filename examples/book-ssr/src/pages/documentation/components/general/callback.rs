@@ -1,6 +1,6 @@
 use indoc::indoc;
 use leptonic::components::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
@@ -50,7 +50,7 @@ pub fn PageCallback() -> impl IntoView {
 
             <P>
                 "If you, as a component author, need to move a callback into more places, you can put it inside a call to "
-                <Code inline=true>"store_value"</Code>" to get an easily copyable and therefore moveable value. "
+                <Code inline=true>"StoredValue::new"</Code>" to get an easily copyable and therefore moveable value. "
                 "Using a generic "<Code inline=true>"Fn"</Code>" in the non-optional case or a "<Code inline=true>"Box<dyn Fn>"</Code>" in "
                 "case the prop is optional and always storing it boxed in a "<Code inline=true>"StoredValue"</Code>" is good solution. "
                 "Arguments could be made that "

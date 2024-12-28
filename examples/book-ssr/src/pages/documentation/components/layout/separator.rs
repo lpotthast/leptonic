@@ -1,6 +1,6 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 

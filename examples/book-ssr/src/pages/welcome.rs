@@ -1,5 +1,5 @@
 use leptonic::components::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::doc_root::DocRoutes;
 

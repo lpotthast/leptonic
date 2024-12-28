@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::Size;
 
@@ -6,19 +6,13 @@ use crate::Size;
 #[component]
 pub fn Grid(
     gap: Size,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
         <leptonic-grid-container
-            id=id
-            class=class
-            style=style
             style=("--leptonic-grid-gap", format!("{gap}"))
         >
-            {children()}
+            { children() }
         </leptonic-grid-container>
     }
 }
@@ -27,19 +21,13 @@ pub fn Grid(
 #[component]
 pub fn Row(
     #[prop(into, optional)] gap: Option<Size>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
         <leptonic-grid-row
-            id=id
-            class=class
-            style=style
-            style=("--leptonic-grid-gap", gap.map(|gap| format!("{gap}")))
+            style=gap.map(|gap| ("--leptonic-grid-gap", format!("{gap}")))
         >
-            {children()}
+            { children() }
         </leptonic-grid-row>
     }
 }
@@ -60,15 +48,10 @@ pub fn Col(
     #[prop(optional)] lg: Option<u32>,
     #[prop(optional)] xl: Option<u32>,
     #[prop(optional, default = Default::default())] h_align: ColAlign,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
         <leptonic-grid-col
-            id=id
-            class=class
             class:leptonic-grid-col-flex-start=h_align == ColAlign::Start
             class:leptonic-grid-col-flex-center=h_align == ColAlign::Center
             class:leptonic-grid-col-flex-end=h_align == ColAlign::End
@@ -77,9 +60,8 @@ pub fn Col(
             data-md=md
             data-lg=lg
             data-xl=xl
-            style=style
         >
-            {children()}
+            { children() }
         </leptonic-grid-col>
     }
 }

@@ -1,4 +1,4 @@
-use leptos::Oco;
+use leptos::oco::Oco;
 use leptos_reactive::{Callback, MaybeSignal};
 
 pub struct LongPressEvent {}

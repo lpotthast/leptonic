@@ -1,11 +1,8 @@
-use leptos::*;
+use leptos::prelude::*;
 
-use crate::{
-    components::{
-        prelude::{Toggle, ToggleIcons},
-        toggle::{ToggleProps, ToggleSize, ToggleVariant},
-    },
-    OptMaybeSignal,
+use crate::components::{
+    prelude::{Toggle, ToggleIcons},
+    toggle::{ToggleProps, ToggleSize, ToggleVariant},
 };
 
 /// Leptonic's default themes. You may want to create your own theme-defining-type if you have additional or differently named themes.
@@ -33,7 +30,7 @@ impl Theme for LeptonicTheme {
 }
 
 pub trait Theme:
-    Default + PartialEq + Clone + Copy + serde::Serialize + serde::de::DeserializeOwned
+    Default + PartialEq + Clone + Copy + Send + Sync + serde::Serialize + serde::de::DeserializeOwned
 {
     fn name(&self) -> &'static str;
     fn icon(&self) -> icondata::Icon;
@@ -53,7 +50,7 @@ pub fn ThemeProvider<T>(
 where
     T: Theme + 'static,
 {
-    let (theme, set_theme) = theme.unwrap_or_else(|| create_signal(T::default()));
+    let (theme, set_theme) = theme.unwrap_or_else(|| signal(T::default()));
 
     provide_context(ThemeContext { theme, set_theme });
 
@@ -72,8 +69,6 @@ pub fn ThemeToggle<T>(
     off: T,
     on: T,
     #[prop(optional)] variant: ToggleVariant,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView
 where
     T: Theme + 'static,
@@ -82,18 +77,15 @@ where
         .expect("<ThemeToggle/> component should be nested within a <ThemeProvider/>.");
 
     let toggle = Toggle(ToggleProps {
-        state: MaybeSignal::derive(move || theme_context.theme.get() == on),
+        state: Signal::derive(move || theme_context.theme.get() == on),
         set_state: Some(Into::into(move |val: bool| {
             theme_context.set_theme.update(|current| match val {
                 true => *current = on,
                 false => *current = off,
             });
         })),
-        active: OptMaybeSignal(None),
-        disabled: OptMaybeSignal(None),
-        id: None,
-        class: None,
-        style: None,
+        active: None,
+        disabled: None,
         size: ToggleSize::default(),
         variant,
         icons: Some(ToggleIcons {
@@ -103,7 +95,7 @@ where
     });
 
     view! {
-        <leptonic-theme-toggle class=class style=style>
+        <leptonic-theme-toggle>
             { toggle }
         </leptonic-theme-toggle>
     }

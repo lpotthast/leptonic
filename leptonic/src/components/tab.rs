@@ -1,16 +1,27 @@
-use std::rc::Rc;
+use std::sync::Arc;
+use std::fmt::Debug;
 
-use leptos::*;
+use leptos::prelude::*;
 use uuid::Uuid;
 
 use crate::components::tabs::use_tabs;
 use crate::{Mount, Out};
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct TabData {
     pub id: Uuid,
     pub name: Oco<'static, str>,
-    pub label: Rc<View>,
+    pub label: ViewFn,
+}
+
+impl Debug for TabData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TabData")
+            .field("id", &self.id)
+            .field("name", &self.name)
+            .field("label", &"... (ViewFn)")
+            .finish()
+    }
 }
 
 // TODO: We might want to take only `Children` and hide them when the tab is not active...
@@ -18,13 +29,17 @@ pub struct TabData {
 pub fn Tab(
     // TODO: Can / should we accept a String instead?
     #[prop(optional)] id: Option<Uuid>,
+    
     /// Uniquely identifies this tab.
     #[prop(into)]
     name: Oco<'static, str>,
-    #[prop(into)] label: View,
+    
+    #[prop(into)] label: ViewFn,
+    
     #[prop(optional)] mount: Option<Mount>,
 
-    #[prop(optional)] children: Option<ChildrenFn>,
+    #[prop(optional, default = Arc::new(|| view! {}.into_any()))]
+    children: ChildrenFn,
 
     /// Called whenever the tab comes into view.
     #[prop(into, optional)]
@@ -39,12 +54,12 @@ pub fn Tab(
 
     let mount = mount.or(tabs.default_mount_type).unwrap_or(Mount::Once);
 
-    let name = store_value(name);
+    let name = StoredValue::new(name);
 
     tabs.register(TabData {
         id,
         name: name.get_value(),
-        label: Rc::new(label.into_view()),
+        label,
     });
 
     on_cleanup(move || {
@@ -52,7 +67,7 @@ pub fn Tab(
     });
 
     if let Some(on_show) = on_show {
-        create_effect(move |_| {
+        Effect::new(move |_| {
             let history = tabs.history.get();
             let this = name.get_value();
             if history.get_active() == Some(&this) && history.get_previous() != Some(&this) {
@@ -62,7 +77,7 @@ pub fn Tab(
     }
 
     if let Some(on_hide) = on_hide {
-        create_effect(move |_| {
+        Effect::new(move |_| {
             let history = tabs.history.get();
             let this = name.get_value();
             if history.get_active() != Some(&this) && history.get_previous() == Some(&this) {
@@ -75,36 +90,16 @@ pub fn Tab(
 
     match mount {
         Mount::Once => view! {
-            {
-                view! {
-                    <leptonic-tab id=id.to_string() data-name=name.get_value() role="tabpanel" aria-hidden=move || if is_active() { "false" } else { "true"} >
-                        {
-                            if let Some(children) = &children {
-                                children()
-                            } else {
-                                Fragment::new(vec![])
-                            }
-                        }
-                    </leptonic-tab>
-                }.into_view()
-            }
-        },
+            <leptonic-tab id=id.to_string() data-name=name.get_value() role="tabpanel" aria-hidden=move || if is_active() { "false" } else { "true"} >
+                { children() }
+            </leptonic-tab>
+        }.into_any(),
         Mount::WhenShown => view! {
-            {
-                view! {
-                    <Show when=is_active fallback=|| ()>
-                        <leptonic-tab id=id.to_string() data:name=name.get_value() role="tabpanel">
-                            {
-                                if let Some(children) = &children {
-                                    children()
-                                } else {
-                                    Fragment::new(vec![])
-                                }
-                            }
-                        </leptonic-tab>
-                    </Show>
-                }.into_view()
-            }
-        },
+            <Show when=is_active fallback=|| ()>
+                <leptonic-tab id=id.to_string() data:name=name.get_value() role="tabpanel">
+                    { children() }
+                </leptonic-tab>
+            </Show>
+        }.into_any(),
     }
 }

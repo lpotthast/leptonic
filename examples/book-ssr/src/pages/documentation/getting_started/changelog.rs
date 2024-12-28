@@ -1,5 +1,5 @@
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
@@ -83,7 +83,7 @@ pub fn PageChangelog() -> impl IntoView {
             <ul>
                 <li>"Getting started instructions were consolidated."</li>
                 <li>"Installation instructions are now much more straight-forward."</li>
-                <li>"Modals are now SSR compatible. The `ModalFn` component was dropped. If you used it, just rename all occurrences to `Modal`. If you previously used `Modal`, you might see some 'requires Fn but is FnOnce error's. Storing values moved into `Modal`s children through `store_value` should be a quick fix."</li>
+                <li>"Modals are now SSR compatible. The `ModalFn` component was dropped. If you used it, just rename all occurrences to `Modal`. If you previously used `Modal`, you might see some 'requires Fn but is FnOnce error's. Storing values moved into `Modal`s children through `StoredValue::new` should be a quick fix."</li>
                 <li>"Tabs are now SSR compatible. Rendering order changed to make this possible. This should not affect anyone."</li>
                 <li>"Toggles are now SSR compatible. Rendering of the (optional) icons changed. This should only affect you if custom styling is in play."</li>
                 <li>"Tables are now SSR compatible. Components were renamed to `TableHeader`, `TableBody`, `TableRow`, `TableHeaderCell` and `TableCell`."</li>

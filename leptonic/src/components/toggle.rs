@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::{components::icon::Icon, prelude::*};
 
@@ -53,25 +53,22 @@ impl ToggleVariant {
     }
 }
 
+// TODO: Given id was previously spread onto inner leptonic-toggle, it now goes to the outer wrapper. Is this a problem?
 #[component]
 pub fn Toggle(
-    #[prop(into)] state: MaybeSignal<bool>,
+    #[prop(into)] state: Signal<bool>,
     #[prop(into, optional)] set_state: Option<Out<bool>>,
-    #[prop(into, optional)] active: OptMaybeSignal<bool>,
-    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] active: Option<Signal<bool>>,
+    #[prop(into, optional)] disabled: Option<Signal<bool>>,
     #[prop(optional)] size: ToggleSize,
     #[prop(optional)] variant: ToggleVariant,
     #[prop(into, optional)] icons: Option<ToggleIcons>,
 ) -> impl IntoView {
     view! {
-        <leptonic-toggle-wrapper class=class style=style>
+        <leptonic-toggle-wrapper>
             <leptonic-toggle
-                id=id
-                class:active=move || active.0.as_ref().map(SignalGet::get).unwrap_or(true)
-                class:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
+                class:active=move || active.get().unwrap_or(true)
+                class:disabled=move || disabled.get().unwrap_or(false)
                 data-size=size.as_str()
                 data-variant=variant.as_str()
                 on:click=move |_| { if let Some(set) = &set_state { set.set(!state.get_untracked()) } }
@@ -83,11 +80,11 @@ pub fn Toggle(
                             let on_icon = icons.on;
                             view! {
                                 <span class="icon-positioner">
-                                    <Icon icon=off_icon style=move || match state.get() {
+                                    <Icon icon=off_icon attr:style=move || match state.get() {
                                         true => "display: none",
                                         false => "display: inherit",
                                     } />
-                                    <Icon icon=on_icon style=move || match state.get() {
+                                    <Icon icon=on_icon attr:style=move || match state.get() {
                                         true => "display: inherit",
                                         false => "display: none",
                                     } />

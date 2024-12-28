@@ -1,8 +1,8 @@
 use std::fmt::Debug;
+use leptos::context::Provider;
+use leptos::prelude::*;
 
-use leptos::*;
-
-pub trait FormInput: Debug {
+pub trait FormInput: Debug + Send + Sync {
     fn on_label_press(&self);
 }
 
@@ -14,16 +14,13 @@ pub struct FormControlContext {
 #[component]
 pub fn FormControl(
     children: Children,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
 ) -> impl IntoView {
-    let input = create_rw_signal(None);
+    let input = RwSignal::new(None);
 
     let ctx = FormControlContext { input };
 
     view! {
-        <leptonic-form-control id=id class=class style=style>
+        <leptonic-form-control>
             <Provider value=ctx>
                 { children() }
             </Provider>

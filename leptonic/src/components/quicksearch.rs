@@ -4,22 +4,19 @@ use crate::{
         input::TextInput,
         modal::{Modal, ModalBody, ModalFooter, ModalHeader},
     },
-    prelude::{Consumer, GlobalKeyboardEvent, Producer, ViewProducer},
+    prelude::{GlobalKeyboardEvent, ViewProducer},
     utils::callback::ViewCallback,
 };
-use leptos::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn Quicksearch(
     #[prop(into)] trigger: ViewCallback<WriteSignal<bool>>,
-    #[prop(into)] query: Consumer<String, Vec<QuicksearchOption>>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
 ) -> impl IntoView {
-    let (show_modal, set_show_modal) = create_signal(false);
+    let (show_modal, set_show_modal) = signal(false);
     view! {
-        <leptonic-quicksearch id=id class=class style=style>
+        <leptonic-quicksearch>
             { trigger.render(set_show_modal) }
             <QuicksearchModal
                 show_when=show_modal
@@ -33,13 +30,10 @@ pub fn Quicksearch(
 #[component]
 pub fn QuicksearchTrigger(
     #[prop(into)] set_quicksearch: WriteSignal<bool>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <leptonic-quicksearch-trigger id=id class=class style=style on:click=move |_| set_quicksearch.set(true)>
+        <leptonic-quicksearch-trigger on:click=move |_| set_quicksearch.set(true)>
             { children() }
         </leptonic-quicksearch-trigger>
     }
@@ -49,48 +43,47 @@ pub fn QuicksearchTrigger(
 pub struct QuicksearchOption {
     pub label: Oco<'static, str>,
     pub view: ViewProducer,
-    pub on_select: Producer<()>,
+    pub on_select: Callback<(), ()>,
 }
 
 #[component]
 fn QuicksearchModal(
     #[prop(into)] show_when: Signal<bool>,
-    #[prop(into)] query: Consumer<String, Vec<QuicksearchOption>>,
-    #[prop(into)] on_cancel: Producer<()>,
+    #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
+    #[prop(into)] on_cancel: Callback<(), ()>,
 ) -> impl IntoView {
-    let (input, set_input) = create_signal(String::new());
+    let (input, set_input) = signal(String::new());
 
-    let options = move || query.consume(input.get());
+    let options = move || query.run(input.get());
 
     let g_keyboard_event: GlobalKeyboardEvent = expect_context::<GlobalKeyboardEvent>();
-    create_effect(move |_old| {
+    Effect::new(move |_old| {
         if let Some(e) = g_keyboard_event.read_signal.get() {
             if show_when.get_untracked() && e.key().as_str() == "Escape" {
-                on_cancel.produce();
+                on_cancel.run(());
             }
         }
     });
 
-    let cancel = Callback::new(move |_| on_cancel.produce());
+    let cancel = Callback::new(move |_| on_cancel.run(()));
 
     view! {
-        <Modal show_when=show_when on_escape=move || on_cancel.produce() class="quicksearch-modal">
+        <Modal show_when=show_when on_escape=move || on_cancel.run(()) class="quicksearch-modal">
             <ModalHeader>
                 <TextInput
                     get=input
                     set=set_input
                     placeholder="Search"
-                    class="search-input"
                     should_be_focused=show_when
-                    prepend=().into_view()
+                    attr:class="search-input"
                 />
             </ModalHeader>
-            <ModalBody style="overflow: auto;">
+            <ModalBody attr:style="overflow: auto;">
                 <leptonic-quicksearch-results>
                     { move || options().into_iter().map(|option| view! {
                         <leptonic-quicksearch-result on:click=move |_| {
-                                option.on_select.produce();
-                                on_cancel.produce();
+                                option.on_select.run(());
+                                on_cancel.run(());
                             }>
                             { option.view.produce() }
                         </leptonic-quicksearch-result>

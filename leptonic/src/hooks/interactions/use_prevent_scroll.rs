@@ -1,30 +1,22 @@
 use std::sync::atomic::{AtomicIsize, Ordering::SeqCst};
 
-use educe::Educe;
-use leptos::on_cleanup;
-use leptos_reactive::{create_effect, MaybeSignal, SignalGet};
+use leptos::prelude::*;
 use leptos_use::{use_document, use_window};
-
-use crate::utils::props::Attributes;
 
 static PREVENT_SCROLL_COUNT: AtomicIsize = AtomicIsize::new(0);
 
 #[derive(Debug, Clone, Copy)]
 pub struct UsePreventScrollInput {
-    pub disabled: MaybeSignal<bool>,
+    pub disabled: Signal<bool>,
 }
 
 #[derive(Debug)]
 pub struct UsePreventScrollReturn {
-    pub props: UsePreventScrollProps,
+    pub attrs: UsePreventScrollAttrs,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
-pub struct UsePreventScrollProps {
-    /// These attributes must be spread onto the target element: `<foo {..attrs} />`
-    pub attrs: Attributes,
-}
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
+pub type UsePreventScrollAttrs = ();
 
 pub fn use_prevent_scroll(input: UsePreventScrollInput) -> UsePreventScrollReturn {
     let style = move |window: &web_sys::Window, root: &web_sys::Element| {
@@ -66,7 +58,7 @@ pub fn use_prevent_scroll(input: UsePreventScrollInput) -> UsePreventScrollRetur
         }
     };
 
-    let _effect = create_effect(move |last| {
+    let _effect = Effect::new(move |last| {
         if let Some(Some(())) = last {
             cleanup();
         }
@@ -84,9 +76,7 @@ pub fn use_prevent_scroll(input: UsePreventScrollInput) -> UsePreventScrollRetur
     });
 
     UsePreventScrollReturn {
-        props: UsePreventScrollProps {
-            attrs: Attributes::new(),
-        },
+        attrs: (),
     }
 }
 

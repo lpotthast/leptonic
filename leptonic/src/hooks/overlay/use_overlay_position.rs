@@ -1,11 +1,12 @@
-use std::rc::Rc;
+use std::marker::PhantomData;
 
 use educe::Educe;
-use leptos::{html::ElementDescriptor, Attribute, NodeRef, Oco};
-use leptos_reactive::{create_memo, MaybeSignal, SignalGet};
+use leptos::prelude::*;
+use leptos::tachys::html::style::Style;
+use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::{use_document, use_element_bounding};
 
-use crate::utils::{locale::WritingDirection, props::Attributes};
+use crate::utils::locale::WritingDirection;
 
 // TODO: Serialize, Deserialize, Display, FormStr ???
 
@@ -70,44 +71,45 @@ impl PlacementX {
 
 #[derive(Clone, Copy, Educe)]
 #[educe(Debug)]
-pub struct UseOverlayPositionInput<OverlayRef, TargetRef>
+pub struct UseOverlayPositionInput<Overlay, Target, M>
 where
-    OverlayRef: ElementDescriptor + 'static,
-    TargetRef: ElementDescriptor + 'static,
+    Overlay: IntoElementMaybeSignal<web_sys::Element, M>,
+    Target: IntoElementMaybeSignal<web_sys::Element, M>,
 {
     /// Element that resembles the overlay content.
     #[educe(Debug(ignore))]
-    pub overlay_ref: NodeRef<OverlayRef>,
+    pub overlay: Overlay,
 
     /// Element to which the overlay should be positioned relative to.
     #[educe(Debug(ignore))]
-    pub target_ref: NodeRef<TargetRef>,
+    pub target: Target,
 
-    pub placement_x: MaybeSignal<PlacementX>,
-    pub placement_y: MaybeSignal<PlacementY>,
+    pub placement_x: Signal<PlacementX>,
+    pub placement_y: Signal<PlacementY>,
 
-    pub writing_direction: MaybeSignal<WritingDirection>,
+    pub writing_direction: Signal<WritingDirection>,
+
+    pub phantom_data: PhantomData<M>,
 }
 
 #[derive(Debug)]
 pub struct UseOverlayPositionReturn {
-    pub props: UseOverlayPositionProps,
+    pub attrs: UseOverlayPositionAttrs,
 }
 
-#[derive(Debug)]
-pub struct UseOverlayPositionProps {
-    pub attrs: Attributes,
-}
+pub type UseOverlayPositionAttrs = (
+    Style<Signal<(&'static str, String)>>,
+);
 
-pub fn use_overlay_position<OverlayRef, TargetRef>(
-    input: UseOverlayPositionInput<OverlayRef, TargetRef>,
+pub fn use_overlay_position<Overlay, Target, M>(
+    input: UseOverlayPositionInput<Overlay, Target, M>,
 ) -> UseOverlayPositionReturn
 where
-    OverlayRef: ElementDescriptor + Clone + 'static,
-    TargetRef: ElementDescriptor + Clone + 'static,
+    Overlay: IntoElementMaybeSignal<web_sys::Element, M>,
+    Target: IntoElementMaybeSignal<web_sys::Element, M>,
 {
-    let overlay_bounding = use_element_bounding(input.overlay_ref);
-    let target_bounding = use_element_bounding(input.target_ref);
+    let overlay_bounding = use_element_bounding(input.overlay);
+    let target_bounding = use_element_bounding(input.target);
 
     let container_width = move || match use_document().as_ref() {
         Some(document) => match document.body() {
@@ -125,7 +127,7 @@ where
         None => 0.0,
     };
 
-    let placement_x = create_memo(move |_| {
+    let placement_x = Memo::new(move |_| {
         match input
             .placement_x
             .get()
@@ -149,7 +151,7 @@ where
         }
     });
 
-    let placement_y = create_memo(move |_| match input.placement_y.get() {
+    let placement_y = Memo::new(move |_| match input.placement_y.get() {
         original @ PlacementY::Above => {
             let space_top = target_bounding.top.get();
             match overlay_bounding.height.get() > space_top {
@@ -167,7 +169,7 @@ where
         other => other,
     });
 
-    let top = create_memo(move |_| match placement_y.get() {
+    let top = Memo::new(move |_| match placement_y.get() {
         PlacementY::Above => target_bounding.top.get() - overlay_bounding.height.get(),
         PlacementY::Top => target_bounding.top.get(),
         PlacementY::Center => {
@@ -178,7 +180,7 @@ where
         PlacementY::Below => target_bounding.bottom.get(),
     });
 
-    let left = create_memo(move |_| match placement_x.get() {
+    let left = Memo::new(move |_| match placement_x.get() {
         PhysicalPlacementX::OuterLeft => target_bounding.left.get() - overlay_bounding.width.get(),
         PhysicalPlacementX::Left => target_bounding.left.get(),
         PhysicalPlacementX::Center => {
@@ -189,18 +191,14 @@ where
         PhysicalPlacementX::OuterRight => target_bounding.right.get(),
     });
 
-    let mut attrs = Attributes::new();
-    attrs.insert(
-        "style",
-        Attribute::Fn(Rc::new(move || {
-            let top = top.get();
-            let left = left.get();
-            let style = format!("position: fixed; z-index: 100000; top: {top}px; left: {left}px");
-            Attribute::String(Oco::Owned(style))
-        })),
-    );
-
     UseOverlayPositionReturn {
-        props: UseOverlayPositionProps { attrs },
+        attrs: (
+            leptos::tachys::html::style::style(Signal::derive(move || {
+                let top = top.get();
+                let left = left.get();
+                let position = format!("fixed; z-index: 100000; top: {top}px; left: {left}px");
+                ("position", position)
+            })),
+        ),
     }
 }

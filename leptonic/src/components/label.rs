@@ -1,27 +1,23 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::{
     components::form_control::FormControlContext,
     hooks::{use_press, UsePressInput, UsePressReturn},
-    OptMaybeSignal,
 };
 
 /// Interactive label usable in forms. Automatically registers with the parent `FormControl` to control a sibling input.
 #[component]
 pub fn Label(
     children: Children,
-    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
+    #[prop(into, optional)] disabled: Signal<bool>,
 ) -> impl IntoView {
     let fc_ctx = use_context::<FormControlContext>();
 
     let UsePressReturn {
+        attrs,
         is_pressed: _,
-        props,
     } = use_press(UsePressInput {
-        disabled: disabled.0.unwrap_or(false.into()),
+        disabled,
         force_prevent_default: false,
         on_press: Callback::new(move |_| {
             if let Some(fc_ctx) = &fc_ctx {
@@ -39,15 +35,7 @@ pub fn Label(
     });
 
     view! {
-        <leptonic-label
-            {..props.attrs}
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
-            id=id
-            class=class
-            style=style
-        >
+        <leptonic-label {..attrs}>
             { children() }
         </leptonic-label>
     }

@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use time::format_description::well_known::Rfc3339;
 use web_sys::KeyboardEvent;
 
@@ -13,10 +13,10 @@ pub fn DateTimeInput(
     #[prop(optional, into)] label: OptMaybeSignal<String>,
     #[prop(into)] get: MaybeSignal<Option<time::OffsetDateTime>>,
     #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
-    #[prop(optional, into)] prepend: OptMaybeSignal<View>,
+    #[prop(into, optional)] prepend: ViewFn,
     #[prop(into, optional)] id: Option<Oco<'static, str>>,
     #[prop(into, optional)] class: Option<Oco<'static, str>>,
-    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(optional)] margin: Option<Margin>,
 
     #[prop(optional)] min: Option<time::OffsetDateTime>,
@@ -34,8 +34,8 @@ pub fn DateTimeInput(
 
     let style = margin.map(|it| format!("--margin: {it}"));
 
-    let (open, set_open) = create_signal(false);
-    let (in_focus, set_in_focus) = create_signal(false);
+    let (open, set_open) = signal(false);
+    let (in_focus, set_in_focus) = signal(false);
 
     let on_key_down = move |event: KeyboardEvent| {
         let in_focus = in_focus.get();
@@ -62,7 +62,7 @@ pub fn DateTimeInput(
     let date_selector = move || {
         DateSelector(DateSelectorProps {
             value: get.get().unwrap(),
-            on_change: Out::new_func(move |new_value| {
+            on_change: Out::new_callback(move |new_value| {
                 tracing::info!("Received new value {:?}", new_value);
                 // Skip propagating a change event when the received value does not deviate from the current value.
                 if let Some(current) = get.get() {
@@ -89,14 +89,7 @@ pub fn DateTimeInput(
 
     view! {
         <leptonic-input-field style=style>
-            {match prepend.0 {
-                Some(view) => view! {
-                    <div>
-                        { view.get() }
-                    </div>
-                }.into_view(),
-                None => ().into_view(),
-            }}
+            { prepend.run() }
             <input
                 id=id
                 class=class
@@ -106,7 +99,7 @@ pub fn DateTimeInput(
                 }
                 tabindex="0"
                 type="text"
-                prop:disabled=move || disabled.0.as_ref().map_or(false, SignalGet::get)
+                prop:disabled=move || disabled.get()
                 prop:value=move || get.get().map(|it| it.format(&Rfc3339).expect("Formatting to Rfc3339 to be non-fallible.")).unwrap_or_default()
                 on:click=move |_| set_open.update(|open| *open = !*open)
                 on:focusin=move |_| set_in_focus.set(true)
@@ -118,12 +111,12 @@ pub fn DateTimeInput(
                     <div class="datetime-dropdown-menu">
                         {
                             match input_type {
-                                Type::Date => date_selector().into_view(),
-                                Type::Time => time_selector().into_view(),
+                                Type::Date => date_selector().into_any(),
+                                Type::Time => time_selector().into_any(),
                                 Type::DateTime => view! {
                                     {date_selector()}
                                     {time_selector()}
-                                }.into_view(),
+                                }.into_any(),
                             }
                         }
                     </div>

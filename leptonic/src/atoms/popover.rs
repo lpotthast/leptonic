@@ -1,12 +1,17 @@
+use leptos::context::Provider;
+use leptos::html;
+use leptos::portal::Portal;
+use leptos::prelude::*;
+
+use crate::hooks::UseOverlayAttrs;
 use crate::{
     hooks::{
         use_overlay, use_overlay_position, use_overlay_trigger, PlacementX, PlacementY,
-        UseOverlayInput, UseOverlayPositionInput, UseOverlayPositionReturn, UseOverlayProps,
+        UseOverlayInput, UseOverlayPositionInput, UseOverlayPositionReturn,
         UseOverlayReturn, UseOverlayTriggerInput, UseOverlayTriggerReturn,
     },
     utils::{aria::AriaHasPopup, locale::WritingDirection},
 };
-use leptos::*;
 
 #[derive(Debug, Clone)]
 pub struct PopoverContext {
@@ -14,24 +19,24 @@ pub struct PopoverContext {
     pub set_state: WriteSignal<bool>,
 
     id: Oco<'static, str>,
-    overlay_props: UseOverlayProps, // TODO: Rc?
-    trigger_el: ReadSignal<Option<NodeRef<html::Custom>>>,
-    set_trigger_el: WriteSignal<Option<NodeRef<html::Custom>>>,
+    overlay_attrs: UseOverlayAttrs,
+    trigger_el: ReadSignal<Option<NodeRef<html::Custom<&'static str>>>>, // TODO: generic el type
+    set_trigger_el: WriteSignal<Option<NodeRef<html::Custom<&'static str>>>>, // TODO: generic el type
 }
 
 #[component]
-pub fn Popover(#[prop(into)] disabled: MaybeSignal<bool>, children: Children) -> impl IntoView {
+pub fn Popover(#[prop(into)] disabled: Signal<bool>, children: Children) -> impl IntoView {
     let UseOverlayReturn {
-        props: overlay_props,
+        attrs: overlay_attrs,
         id,
         state,
         set_state,
     } = use_overlay(UseOverlayInput { disabled });
 
-    let (trigger_el, set_trigger_el) = create_signal(None);
+    let (trigger_el, set_trigger_el) = signal(None);
 
     view! {
-        <Provider value=PopoverContext { id, overlay_props, state, set_state, trigger_el, set_trigger_el }>
+        <Provider value=PopoverContext { id, overlay_attrs, state, set_state, trigger_el, set_trigger_el }>
             { children() }
         </Provider>
     }
@@ -41,11 +46,11 @@ pub fn Popover(#[prop(into)] disabled: MaybeSignal<bool>, children: Children) ->
 pub fn PopoverTrigger(children: Children) -> impl IntoView {
     let ctx = expect_context::<PopoverContext>();
 
-    let trigger_el: NodeRef<html::Custom> = create_node_ref();
+    let trigger_el: NodeRef<html::Custom<&str>> = NodeRef::new();
     ctx.set_trigger_el.set(Some(trigger_el));
 
     let UseOverlayTriggerReturn {
-        props: trigger_props,
+        attrs: trigger_attrs,
     } = use_overlay_trigger(UseOverlayTriggerInput {
         show: ctx.state.into(),
         overlay_id: ctx.id,
@@ -53,7 +58,7 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
     });
 
     view! {
-        <leptonic-popover-trigger {..trigger_props.attrs} node_ref=trigger_el>
+        <leptonic-popover-trigger {..trigger_attrs} node_ref=trigger_el>
             { children() }
         </leptonic-popover-trigger>
     }
@@ -61,36 +66,38 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
 
 #[component]
 pub fn PopoverContent(
-    #[prop(into)] placement_x: MaybeSignal<PlacementX>,
-    #[prop(into)] placement_y: MaybeSignal<PlacementY>,
-    #[prop(into)] writing_direction: MaybeSignal<WritingDirection>,
+    #[prop(into)] placement_x: Signal<PlacementX>,
+    #[prop(into)] placement_y: Signal<PlacementY>,
+    #[prop(into)] writing_direction: Signal<WritingDirection>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let ctx = expect_context::<PopoverContext>();
 
-    let overlay_el: NodeRef<html::Custom> = create_node_ref();
+    let overlay_el: NodeRef<html::Custom<&str>> = NodeRef::new();
 
     let UseOverlayPositionReturn {
-        props: overlay_pos_props,
+        attrs: overlay_pos_attrs,
     } = use_overlay_position(UseOverlayPositionInput {
-        overlay_ref: overlay_el,
-        target_ref: ctx.trigger_el.get_untracked().expect("trigger present"),
+        overlay: overlay_el,
+        target: ctx.trigger_el.get_untracked().expect("trigger present"),
         placement_x,
         placement_y,
         writing_direction,
+        phantom_data: Default::default(),
     });
 
     view! {
         <Portal>
         {
-            let overlay_props_attrs = ctx.overlay_props.attrs.clone();
-            let overlay_pos_props_attrs = overlay_pos_props.attrs.clone();
+            let overlay_attrs = ctx.overlay_attrs.clone();
+            let overlay_pos_attrs = overlay_pos_attrs.clone();
             let children = children.clone();
+            let overlay_el = overlay_el;
             view! {
                 <Show when=move || ctx.state.get()>
                     <leptonic-popover-content
-                        {..overlay_props_attrs.clone()}
-                        {..overlay_pos_props_attrs.clone()}
+                        {..overlay_attrs.clone()}
+                        {..overlay_pos_attrs.clone()}
                         node_ref=overlay_el
                     >
                         { children() }

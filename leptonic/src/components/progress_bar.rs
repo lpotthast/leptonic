@@ -1,12 +1,13 @@
-use leptos::*;
+use leptos::html;
+use leptos::prelude::*;
 use leptos_use::{use_element_size, UseElementSizeReturn};
 
 #[component]
 pub fn ProgressBar(
-    #[prop(into, default = MaybeSignal::Static(100.0))] max: MaybeSignal<f64>,
-    #[prop(into)] progress: MaybeSignal<Option<f64>>,
+    #[prop(into, default = Signal::from(100.0))] max: Signal<f64>,
+    #[prop(into)] progress: Signal<Option<f64>>,
 ) -> impl IntoView {
-    let el: NodeRef<html::Custom> = create_node_ref();
+    let el: NodeRef<html::Custom<&str>> = NodeRef::new();
 
     let UseElementSizeReturn { width, height: _ } = use_element_size(el);
 

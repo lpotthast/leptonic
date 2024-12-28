@@ -17,30 +17,32 @@ pub(crate) fn project_into_range(value: f64, range: f64, min: f64, step: Option<
 
 #[cfg(test)]
 mod tests {
+    use assertr::prelude::*;
+
     use super::percentage_in_range;
     use super::value_in_range;
 
     #[test]
     fn test_simple_range() {
-        assert_eq!(0.75, percentage_in_range(0.0, 100.0, 75.0));
-        assert_eq!(75.0, value_in_range(0.0, 100.0, 0.75));
+        assert_that(percentage_in_range(0.0, 100.0, 75.0)).is_equal_to(0.75);
+        assert_that(value_in_range(0.0, 100.0, 0.75)).is_equal_to(75.0);
     }
 
     #[test]
     fn test_min() {
-        assert_eq!(0.0, percentage_in_range(50.0, 100.0, 50.0));
-        assert_eq!(50.0, value_in_range(50.0, 100.0, 0.0));
+        assert_that(percentage_in_range(50.0, 100.0, 50.0)).is_equal_to(0.0);
+        assert_that(value_in_range(50.0, 100.0, 0.0)).is_equal_to(50.0);
     }
 
     #[test]
     fn test_max() {
-        assert_eq!(1.0, percentage_in_range(50.0, 100.0, 100.0));
-        assert_eq!(100.0, value_in_range(50.0, 100.0, 1.0));
+        assert_that(percentage_in_range(50.0, 100.0, 100.0)).is_equal_to(1.0);
+        assert_that(value_in_range(50.0, 100.0, 1.0)).is_equal_to(100.0);
     }
 
     #[test]
     fn test_range_negative_to_positive_skewed() {
-        assert_eq!(0.625, percentage_in_range(-20.0, 12.0, 0.0));
-        assert_eq!(0.0, value_in_range(-20.0, 12.0, 0.625));
+        assert_that(percentage_in_range(-20.0, 12.0, 0.0)).is_equal_to(0.625);
+        assert_that(value_in_range(-20.0, 12.0, 0.625)).is_equal_to(0.0);
     }
 }

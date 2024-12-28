@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 
 // TODO: Allow more styles / variants
 

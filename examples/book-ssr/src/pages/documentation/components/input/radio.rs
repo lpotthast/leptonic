@@ -1,15 +1,15 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageRadio() -> impl IntoView {
-    let (checked, set_checked) = create_signal(false);
-    let (checked2, set_checked2) = create_signal(false);
-    let (checked3, set_checked3) = create_signal(false);
-    let (checked_disabled, set_checked_disabled) = create_signal(false);
+    let (checked, set_checked) = signal(false);
+    let (checked2, set_checked2) = signal(false);
+    let (checked3, set_checked3) = signal(false);
+    let (checked_disabled, set_checked_disabled) = signal(false);
 
     view! {
         <Article>
@@ -22,7 +22,7 @@ pub fn PageRadio() -> impl IntoView {
 
             <Code>
                 {indoc!(r"
-                    let (checked, set_checked) = create_signal(false);
+                    let (checked, set_checked) = signal(false);
                     view! {
                         <Radio checked=checked set_checked=set_checked />
                     }

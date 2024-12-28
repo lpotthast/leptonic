@@ -1,19 +1,19 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn PageInput() -> impl IntoView {
-    let (text, set_text) = create_signal("text".to_owned());
-    let (password, set_password) = create_signal("secret".to_owned());
-    let (number, set_number) = create_signal(4.2);
-    let (unrestricted_number, set_unrestricted_number) = create_signal(4.2);
+    let (text, set_text) = signal("text".to_owned());
+    let (password, set_password) = signal("secret".to_owned());
+    let (number, set_number) = signal(4.2);
+    let (unrestricted_number, set_unrestricted_number) = signal(4.2);
     let number_string = Signal::derive(move || format!("{:.1}", number.get()));
 
-    let (placeholder_input, set_placeholder_input) = create_signal(String::new());
+    let (placeholder_input, set_placeholder_input) = signal(String::new());
 
     view! {
         <Article>
@@ -26,7 +26,7 @@ pub fn PageInput() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (text, set_text) = create_signal("text".to_owned());
+                    let (text, set_text) = signal("text".to_owned());
                     view! {
                         <TextInput get=text set=set_text/>
                     }
@@ -76,7 +76,7 @@ pub fn PageInput() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (password, set_password) = create_signal("secret".to_owned());
+                    let (password, set_password) = signal("secret".to_owned());
                     view! {
                         <PasswordInput get=password set=set_password/>
                     }
@@ -95,7 +95,7 @@ pub fn PageInput() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (number, set_number) = create_signal(Some(42.0));
+                    let (number, set_number) = signal(Some(42.0));
                     let number_string = Signal::derive(move || format!("{:.1}", number.get()));
                     view! {
                         <NumberInput min=0.0 max=10.0 step=0.1
@@ -158,7 +158,7 @@ pub fn PageInput() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (text, set_text) = create_signal(String::new());
+                    let (text, set_text) = signal(String::new());
                     view! {
                         <TextInput get=text set=set_text placeholder="This is a placeholder"/>
                         <Button

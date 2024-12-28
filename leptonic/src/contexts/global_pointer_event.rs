@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use web_sys::PointerEvent;
 
 use super::WasmClosure;

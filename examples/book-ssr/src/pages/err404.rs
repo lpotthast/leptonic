@@ -1,5 +1,5 @@
 use leptonic::{components::prelude::*, prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::app::AppRoutes;
 

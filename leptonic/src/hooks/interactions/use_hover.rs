@@ -1,11 +1,9 @@
-use educe::Educe;
-use leptos_reactive::{
-    create_effect, create_signal, on_cleanup, store_value, Callable, Callback, MaybeSignal, Signal,
-    SignalDispose, SignalGet, SignalGetUntracked, SignalSet,
-};
+use leptos::ev;
+use leptos::ev::{on, On};
+use leptos::prelude::*;
 use web_sys::PointerEvent;
 
-use crate::utils::{pointer_type::PointerType, props::Attributes, EventExt};
+use crate::utils::{pointer_type::PointerType, EventExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useHover.ts
 
@@ -27,7 +25,7 @@ pub struct UseHoverInput {
     /// When true, both `on_hover_start` and `on_hover_end` are no longer called.
     /// When the element is currently hovered when this switches to `true`,
     /// a programmatic `on_hover_end` is triggered and `is_hovered` transitions to `false`.
-    pub disabled: MaybeSignal<bool>,
+    pub disabled: Signal<bool>,
 
     /// Called whenever a pointer starts hovering the element.
     pub on_hover_start: Option<Callback<HoverStartEvent>>,
@@ -37,25 +35,20 @@ pub struct UseHoverInput {
     pub on_hover_end: Option<Callback<HoverEndEvent>>,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
-pub struct UseHoverProps {
-    pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_pointer_enter: Box<dyn Fn(PointerEvent)>,
-    #[educe(Debug(ignore))]
-    pub on_pointer_leave: Box<dyn Fn(PointerEvent)>,
-}
 
 #[derive(Debug)]
 pub struct UseHoverReturn {
     /// Properties which must be spread on an element.
-    pub props: UseHoverProps,
+    pub attrs: UseHoverAttrs,
 
     /// Whether the element is currently hovered.
     pub is_hovered: Signal<bool>,
 }
+
+pub type UseHoverAttrs = (
+    On<ev::pointerenter, Box<dyn Fn(PointerEvent) + Send + Sync + 'static>>,
+    On<ev::pointerleave, Box<dyn Fn(PointerEvent) + Send + Sync + 'static>>,
+);
 
 #[derive(Debug, Clone)]
 struct HoverState {
@@ -63,8 +56,8 @@ struct HoverState {
 }
 
 pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
-    let state = store_value(Option::<HoverState>::None);
-    let (is_hovered, set_is_hovered) = create_signal(false);
+    let state = StoredValue::new(Option::<HoverState>::None);
+    let (is_hovered, set_is_hovered) = signal(false);
 
     let trigger_hover_start =
         move |pointer_type: PointerType, current_target: Option<web_sys::EventTarget>| {
@@ -77,8 +70,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             }
 
             if let Some(on_hover_start) = input.on_hover_start {
-                Callable::call(
-                    &on_hover_start,
+                on_hover_start.run(
                     HoverStartEvent {
                         pointer_type: pointer_type.clone(),
                         current_target,
@@ -97,8 +89,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
         let s = state.get_value().expect("present");
         if let Some(on_hover_end) = input.on_hover_end {
-            Callable::call(
-                &on_hover_end,
+            on_hover_end.run(
                 HoverEndEvent {
                     pointer_type: s.pointer_type,
                     current_target,
@@ -129,7 +120,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         trigger_hover_end(e.current_target());
     });
 
-    let cancel_hover_when_disabled = create_effect(move |_| {
+    let cancel_hover_when_disabled = Effect::new(move |_| {
         if input.disabled.get() {
             trigger_hover_end(None);
         }
@@ -142,11 +133,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     });
 
     UseHoverReturn {
-        props: UseHoverProps {
-            attrs: Attributes::new(),
-            on_pointer_enter,
-            on_pointer_leave,
-        },
+        attrs: (
+            on(ev::pointerenter, on_pointer_enter),
+            on(ev::pointerleave, on_pointer_leave),
+        ),
         is_hovered: is_hovered.into(),
     }
 }

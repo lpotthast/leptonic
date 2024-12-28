@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::atoms::prelude as atoms;
 use leptonic::components::prelude::*;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::use_window;
 
 use crate::pages::documentation::article::Article;

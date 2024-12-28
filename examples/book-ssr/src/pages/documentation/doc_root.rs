@@ -1,7 +1,7 @@
 use std::fmt::Display;
 
 use leptonic::{components::prelude::*, prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_router::*;
 
 use crate::app::APP_BAR_HEIGHT;

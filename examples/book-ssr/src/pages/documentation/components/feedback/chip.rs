@@ -1,12 +1,12 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageChip() -> impl IntoView {
-    let (dismissed, set_dismissed) = create_signal(false);
+    let (dismissed, set_dismissed) = signal(false);
 
     view! {
         <Article>

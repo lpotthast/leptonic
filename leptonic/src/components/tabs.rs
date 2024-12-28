@@ -1,6 +1,5 @@
-use std::rc::Rc;
-
-use leptos::*;
+use leptos::context::Provider;
+use leptos::prelude::*;
 use uuid::Uuid;
 
 use crate::{components::tab::TabData, Mount};
@@ -93,8 +92,8 @@ pub fn use_tabs() -> TabsContext {
 
 #[component]
 pub fn Tabs(#[prop(optional)] mount: Option<Mount>, children: Children) -> impl IntoView {
-    let (history, set_history) = create_signal(TabHistory::new());
-    let (tabs, set_tabs) = create_signal(Vec::new());
+    let (history, set_history) = signal(TabHistory::new());
+    let (tabs, set_tabs) = signal(Vec::new());
 
     view! {
         <leptonic-tabs>
@@ -159,10 +158,10 @@ fn TabSelector<A, S>(
     is_active: A,
     set_active: S,
     name: Oco<'static, str>,
-    label: Rc<View>,
+    label: ViewFn,
 ) -> impl IntoView
 where
-    A: Fn() -> bool + 'static,
+    A: Fn() -> bool + Send + Sync + 'static,
     S: Fn() + 'static,
 {
     view! {
@@ -172,7 +171,7 @@ where
             on:click=move |_event| set_active()
             role="tab"
         >
-            { (*label).clone() }
+            { label.run() }
         </leptonic-tab-selector>
     }
 }

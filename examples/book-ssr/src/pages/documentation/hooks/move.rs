@@ -5,7 +5,7 @@ use leptonic::contexts::global_pointer_event::{
     GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent, GlobalPointerUpEvent,
 };
 use leptonic::hooks::*;
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::use_element_bounding;
 use ringbuf::{HeapRb, Rb};
 
@@ -21,19 +21,19 @@ pub enum Event {
 
 #[component]
 pub fn PageUseMove() -> impl IntoView {
-    let (events, set_events) = create_signal(HeapRb::<Oco<'static, str>>::new(50));
-    let (left, set_left) = create_signal(0.0);
-    let (top, set_top) = create_signal(0.0);
+    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
+    let (left, set_left) = signal(0.0);
+    let (top, set_top) = signal(0.0);
 
     let global_pointer_up = expect_context::<GlobalPointerUpEvent>().read_signal;
     let global_pointer_down = expect_context::<GlobalPointerDownEvent>().read_signal;
     let global_pointer_cancel = expect_context::<GlobalPointerCancelEvent>().read_signal;
     let global_pointer_move = expect_context::<GlobalPointerMoveEvent>().read_signal;
 
-    let container: NodeRef<html::Div> = create_node_ref();
+    let container: NodeRef<html::Div> = NodeRef::new();
     let container_bounding = use_element_bounding(container);
 
-    let draggable: NodeRef<html::Div> = create_node_ref();
+    let draggable: NodeRef<html::Div> = NodeRef::new();
     let draggable_bounding = use_element_bounding(draggable);
 
     let mov: UseMoveReturn = use_move(UseMoveInput {
@@ -77,7 +77,7 @@ pub fn PageUseMove() -> impl IntoView {
         global_pointer_move: global_pointer_move.into(),
     });
 
-    let string = create_memo(move |_| {
+    let string = Memo::new(move |_| {
         events.with(|events| {
             let mut result = String::new();
             for e in events.iter().rev() {

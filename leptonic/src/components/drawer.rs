@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::{use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -30,14 +30,11 @@ enum DrawerAnimationState {
 pub fn Drawer(
     side: DrawerSide,
     #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
-    let memoized_shown = create_memo(move |_| shown.get());
+    let memoized_shown = Memo::new(move |_| shown.get());
 
-    let (anim_state, set_anim_state) = create_signal(match memoized_shown.get_untracked() {
+    let (anim_state, set_anim_state) = signal(match memoized_shown.get_untracked() {
         true => DrawerAnimationState::Shown,
         false => DrawerAnimationState::Hidden,
     });
@@ -86,7 +83,7 @@ pub fn Drawer(
     );
     pause();
 
-    create_effect(move |_| {
+    Effect::new(move |_| {
         let anim_state = anim_state.get();
         let target_state = target_state.get();
 
@@ -99,13 +96,10 @@ pub fn Drawer(
 
     view! {
         <leptonic-drawer
-            id=id
-            class=class
             class:shown=move || anim_state.get() == DrawerAnimationState::Shown
             class:showing=move || anim_state.get() == DrawerAnimationState::Showing
             class:hiding=move || anim_state.get() == DrawerAnimationState::Hiding
             class:hidden=move || anim_state.get() == DrawerAnimationState::Hidden
-            style=style
             data-side=side.to_str()
         >
             { children() }

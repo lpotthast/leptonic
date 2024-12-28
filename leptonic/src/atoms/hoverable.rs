@@ -1,19 +1,16 @@
-use leptos::{
-    ev::{pointerenter, pointerleave},
-    *,
-};
+use leptos::prelude::*;
 
 use crate::hooks::{use_hover, HoverEndEvent, HoverStartEvent, UseHoverInput, UseHoverReturn};
 
 #[component]
 pub fn Hoverable(
-    #[prop(into, optional)] disabled: Option<MaybeSignal<bool>>,
+    #[prop(into, optional)] disabled: Option<Signal<bool>>,
     #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let UseHoverReturn {
-        props,
+        attrs: (on_pointerenter, on_pointerleave),
         is_hovered: _,
     } = use_hover(UseHoverInput {
         disabled: disabled.unwrap_or(false.into()),
@@ -21,8 +18,7 @@ pub fn Hoverable(
         on_hover_end,
     });
 
-    children()
-        .into_view()
-        .on(pointerenter, props.on_pointer_enter)
-        .on(pointerleave, props.on_pointer_leave)
+    children().into_view()
+        .add_any_attr(on_pointerenter)
+        .add_any_attr(on_pointerleave)
 }

@@ -1,15 +1,17 @@
-use educe::Educe;
-use leptos::{ev::FocusEvent, Callable, Callback, MaybeSignal, SignalGet};
+use leptos::ev;
+use leptos::ev::{on, On};
+use leptos::prelude::*;
 use leptos_use::use_document;
+use web_sys::FocusEvent;
 
-use crate::utils::{props::Attributes, EventTargetExt};
+use crate::utils::EventTargetExt;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocus.ts
 
 #[derive(Debug, Clone, Copy)]
 pub struct UseFocusInput {
     /// Disables the handling focus events when true.
-    pub disabled: MaybeSignal<bool>,
+    pub disabled: Signal<bool>,
 
     pub on_focus: Option<Callback<FocusEvent>>,
     pub on_blur: Option<Callback<FocusEvent>>,
@@ -18,20 +20,14 @@ pub struct UseFocusInput {
 
 #[derive(Debug)]
 pub struct UseFocusReturn {
-    pub props: UseFocusProps,
+    pub attrs: UseFocusAttrs,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
-pub struct UseFocusProps {
-    /// These attributes must be spread onto the target element: `<foo {..attrs} />`
-    pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_focus: Box<dyn Fn(FocusEvent)>,
-    #[educe(Debug(ignore))]
-    pub on_blur: Box<dyn Fn(FocusEvent)>,
-}
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
+pub type UseFocusAttrs = (
+    On<ev::focus, Box<dyn Fn(FocusEvent) + Send + Sync + 'static>>,
+    On<ev::blur, Box<dyn Fn(FocusEvent) + Send + Sync + 'static>>,
+);
 
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     let on_focus = Box::new(move |e: FocusEvent| {
@@ -42,11 +38,11 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
             && !input.disabled.get()
         {
             if let Some(on_focus) = input.on_focus {
-                Callable::call(&on_focus, e);
+                on_focus.run(e);
             }
 
             if let Some(on_focus_change) = input.on_focus_change {
-                Callable::call(&on_focus_change, true);
+                on_focus_change.run(true);
             }
         }
     });
@@ -54,20 +50,19 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     let on_blur = Box::new(move |e: FocusEvent| {
         if e.target() == e.current_target() && !input.disabled.get() {
             if let Some(on_blur) = input.on_blur {
-                Callable::call(&on_blur, e);
+                on_blur.run(e);
             }
 
             if let Some(on_focus_change) = input.on_focus_change {
-                Callable::call(&on_focus_change, true);
+                on_focus_change.run(true);
             }
         }
     });
 
     UseFocusReturn {
-        props: UseFocusProps {
-            attrs: Attributes::new(),
-            on_focus,
-            on_blur,
-        },
+        attrs: (
+            on(ev::focus, on_focus),
+            on(ev::blur, on_blur),
+        ),
     }
 }

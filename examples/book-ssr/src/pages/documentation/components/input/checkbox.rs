@@ -1,13 +1,13 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageCheckbox() -> impl IntoView {
-    let (checked, set_checked) = create_signal(false);
-    let (checked_disabled, set_checked_disabled) = create_signal(false);
+    let (checked, set_checked) = signal(false);
+    let (checked_disabled, set_checked_disabled) = signal(false);
 
     view! {
         <Article>
@@ -20,7 +20,7 @@ pub fn PageCheckbox() -> impl IntoView {
 
             <Code>
                 {indoc!(r"
-                    let (checked, set_checked) = create_signal(false);
+                    let (checked, set_checked) = signal(false);
                     view! {
                         <Checkbox checked=checked set_checked=set_checked />
                     }

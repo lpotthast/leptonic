@@ -1,12 +1,12 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageProgress() -> impl IntoView {
-    let (progress, set_progress) = create_signal(Some(34.0));
+    let (progress, set_progress) = signal(Some(34.0));
 
     view! {
         <Article>
@@ -21,7 +21,7 @@ pub fn PageProgress() -> impl IntoView {
 
             <Code>
                 {indoc!(r"
-                    let (progress, set_progress) = create_signal(Some(34.0));
+                    let (progress, set_progress) = signal(Some(34.0));
 
                     view! {
                         <ProgressBar progress=progress/>
@@ -59,11 +59,11 @@ pub fn PageProgress() -> impl IntoView {
 
             <Code>
                 {indoc!(r"
-                    <ProgressBar progress=create_signal(None).0 />
+                    <ProgressBar progress=signal(None).0 />
                 ")}
             </Code>
 
-            <ProgressBar progress=create_signal(None).0 />
+            <ProgressBar progress=signal(None).0 />
 
             <H2 id="styling" class="anchor">
                 "Styling"

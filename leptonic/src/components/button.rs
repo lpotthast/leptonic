@@ -1,20 +1,13 @@
-use std::{
-    fmt::{Display, Formatter},
-    rc::Rc,
-};
+use std::fmt::{Display, Formatter};
 
-use leptos::*;
-use leptos_router::{State, ToHref};
+use leptos::prelude::*;
+use leptos_router::components::ToHref;
 
-use crate::{
-    atoms,
-    hooks::{
-        interactions::use_hover::{HoverEndEvent, HoverStartEvent},
-        interactions::use_press::PressEvent,
-    },
-    utils::aria::{AriaExpanded, AriaHasPopup},
-    OptMaybeSignal,
-};
+use crate::atoms::button::LinkTarget;
+use crate::{atoms, hooks::{
+    interactions::use_hover::{HoverEndEvent, HoverStartEvent},
+    interactions::use_press::PressEvent,
+}, utils::aria::{AriaExpanded, AriaHasPopup}};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -96,16 +89,13 @@ impl Display for ButtonSize {
 
 #[component]
 pub fn Button(
-    #[prop(into)] on_press: Callback<PressEvent>,
-    #[prop(into, optional)] variant: OptMaybeSignal<ButtonVariant>,
-    #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
-    #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
-    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
-    #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
-    #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
+    #[prop(into)] on_press: Callback<(PressEvent,)>,
+    #[prop(into, optional)] variant: Signal<ButtonVariant>,
+    #[prop(into, optional)] color: Signal<ButtonColor>,
+    #[prop(into, optional)] size: Signal<ButtonSize>,
+    #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
+    #[prop(into, optional)] aria_expanded: Signal<AriaExpanded>,
     children: Children,
 ) -> impl IntoView {
     view! {
@@ -114,9 +104,6 @@ pub fn Button(
             disabled=disabled
             aria_haspopup=aria_haspopup
             aria_expanded=aria_expanded
-            id=id
-            class=class
-            style=style
             attr:data-variant=move || variant.get().as_str()
             attr:data-color=move || color.get().as_str()
             attr:data-size=move || size.get().as_str()
@@ -148,74 +135,53 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
 pub fn LinkButton<H>(
     href: H,
+    #[prop(into, optional)] target: Option<LinkTarget>,
     #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
-    #[prop(into, optional)] variant: OptMaybeSignal<ButtonVariant>,
-    #[prop(into, optional)] color: OptMaybeSignal<ButtonColor>,
-    #[prop(into, optional)] size: OptMaybeSignal<ButtonSize>,
-    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
-    #[prop(into, optional)] active: OptMaybeSignal<bool>, // TODO: Use
-    #[prop(into, optional)] id: Option<Oco<'static, str>>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
-    #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
-    #[prop(into, optional)] aria_expanded: OptMaybeSignal<AriaExpanded>,
-    #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
-    #[prop(into, optional)]
-    title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
+    #[prop(into, optional)] variant: Signal<ButtonVariant>,
+    #[prop(into, optional)] color: Signal<ButtonColor>,
+    #[prop(into, optional)] size: Signal<ButtonSize>,
+    #[prop(into, optional)] disabled: Option<Signal<bool>>,
+    #[prop(into, optional)] active: Option<Signal<bool>>, // TODO: Use
+    #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
+    #[prop(into, optional)] aria_expanded: Option<Signal<AriaExpanded>>,
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
     exact: bool,
-    /// An object of any type that will be pushed to router state
-    #[prop(optional)]
-    state: Option<State>,
-    /// If `true`, the link will not add to the browser's history (so, pressing `Back`
-    /// will skip this page.)
-    #[prop(optional)]
-    replace: bool,
-    /// Arbitrary additional attributes.
-    #[prop(attrs)]
-    mut attributes: Vec<(&'static str, Attribute)>,
     children: Children,
 ) -> impl IntoView
 where
-    H: ToHref + 'static,
+    H: ToHref + Send + Sync + 'static,
 {
-    attributes.push((
-        "data-variant",
-        Attribute::Fn(Rc::new(move || {
-            Attribute::String(Oco::Borrowed(variant.get().as_str()))
-        })),
-    ));
-    attributes.push((
-        "data-color",
-        Attribute::Fn(Rc::new(move || {
-            Attribute::String(Oco::Borrowed(color.get().as_str()))
-        })),
-    ));
-    attributes.push((
-        "data-size",
-        Attribute::Fn(Rc::new(move || {
-            Attribute::String(Oco::Borrowed(size.get().as_str()))
-        })),
-    ));
-
     atoms::button::LinkButton(atoms::button::LinkButtonProps {
         href,
+        target,
         disabled,
-        id,
-        class,
-        style,
         aria_haspopup,
         aria_expanded,
         exact,
-        state,
-        replace,
-        attributes,
         children,
         on_hover_start,
         on_hover_end,
     })
     .into_view()
+        .attr(
+            "data-variant",
+           move || {
+                   Oco::Borrowed(variant.get().as_str())
+               }
+        )
+        .attr(
+            "data-color",
+           move || {
+                   Oco::Borrowed(color.get().as_str())
+               }
+        )
+        .attr(
+            "data-size",
+           move || {
+                   Oco::Borrowed(size.get().as_str())
+               }
+        )
 }

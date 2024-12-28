@@ -1,4 +1,5 @@
-use leptos::{html::Div, *};
+use leptos::prelude::*;
+use leptos::html::Div;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum CollapseAxis {
@@ -18,7 +19,7 @@ pub fn Collapse(
     #[prop(optional)] axis: CollapseAxis,
     children: Children,
 ) -> impl IntoView {
-    let content: NodeRef<Div> = create_node_ref();
+    let content: NodeRef<Div> = NodeRef::new();
 
     let style = Signal::derive(move || {
         let show = show.get();

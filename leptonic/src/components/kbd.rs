@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 
-use leptos::*;
+use leptos::prelude::*;
 use strum::EnumIter;
 
 use crate::Language;
@@ -43,8 +43,8 @@ pub fn KbdShortcut<const N: usize>(
             { keys.into_iter().enumerate().map(|(i, key)| view! {
                 <KbdKey key=key/>
                 { match i == N - 1 {
-                    true => ().into_view(),
-                    false => view! { <KbdConcatenate with=concatenate_with.clone()/>}.into_view(),
+                    true => ().into_any(),
+                    false => view! { <KbdConcatenate with=concatenate_with.clone()/>}.into_any(),
                 }}
             }).collect_view() }
         </KbdShortcutRoot>

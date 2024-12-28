@@ -1,12 +1,12 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageToggle() -> impl IntoView {
-    let (state, set_state) = create_signal(false);
+    let (state, set_state) = signal(false);
 
     view! {
         <Article>
@@ -19,7 +19,7 @@ pub fn PageToggle() -> impl IntoView {
 
             <Code>
                 {indoc!(r"
-                    let (state, set_state) = create_signal(false);
+                    let (state, set_state) = signal(false);
 
                     view! {
                         <Toggle state=state set_state=set_state/>
@@ -38,7 +38,7 @@ pub fn PageToggle() -> impl IntoView {
 
             <Code>
                 {indoc!(r"
-                    let (state, set_state) = create_signal(false);
+                    let (state, set_state) = signal(false);
 
                     view! {
                         <Toggle state=state set_state=set_state icons=ToggleIcons {

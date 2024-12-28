@@ -1,15 +1,19 @@
 use educe::Educe;
-use leptos::{Attribute, Callable, Callback, IntoAttribute, SignalGet};
-use leptos_reactive::{MaybeSignal, Oco};
+use leptos::attr::Attr;
+use leptos::ev::On;
+use leptos::oco::Oco;
+use leptos::prelude::*;
+use leptos::{attr, ev};
+use leptos_reactive::{MaybeSignal, SignalGet};
 use leptos_use::{use_document, use_window};
 use wasm_bindgen::JsValue;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent, ScrollIntoViewOptions};
 
 use crate::utils::{
-    aria::*, props::Attributes, scroll_behavior::ScrollBehavior, signals::MaybeSignalExt,
+    aria::*, scroll_behavior::ScrollBehavior, signals::MaybeSignalExt,
 };
 
-use super::{use_press, UsePressInput};
+use super::{use_press, UsePressInput, UsePressReturn};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Href(Oco<'static, str>);
@@ -32,8 +36,8 @@ pub struct UseAnchorLinkInput {
     /// How the browser should scroll to the referenced anchor element. Doe not perform any scrolling when set to None.
     pub scroll_behavior: Option<ScrollBehavior>,
 
-    /// Wether the link is disabled.
-    pub disabled: MaybeSignal<bool>,
+    /// Whether the link is disabled.
+    pub disabled: Signal<bool>,
 
     /// Description of this anchor for accessibility.
     /// If text is provided in children, this could be omitted.
@@ -48,24 +52,20 @@ pub struct UseAnchorLinkInput {
 #[derive(Debug)]
 pub struct UseAnchorLinkReturn {
     /// Spread these props onto your link using the spread syntax: `<foo {..props}>...`
-    pub props: UseAnchorLinkProps,
+    pub attrs: UseAnchorLinkAttrs,
+
+    pub is_pressed: Signal<bool>,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
-pub struct UseAnchorLinkProps {
-    pub attrs: Attributes,
-
-    /// This handler must be attached to the target element: `<foo on:keydown=on_key_down />`
-    #[educe(Debug(ignore))]
-    pub on_key_down: Box<dyn Fn(KeyboardEvent)>,
-    /// This handler must be attached to the target element: `<foo on:click=on_click />`
-    #[educe(Debug(ignore))]
-    pub on_click: Box<dyn Fn(MouseEvent)>,
-    /// This handler must be attached to the target element: `<foo on:pointerdown=on_pointer_down />`
-    #[educe(Debug(ignore))]
-    pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
-}
+pub type UseAnchorLinkAttrs = (
+    Attr<attr::Role, &'static str>,
+    Attr<attr::Hreflang, Oco<'static, str>>,
+    Attr<attr::AriaLabel, Option<Oco<'static, str>>>,
+    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    On<ev::keydown, Box<dyn Fn(KeyboardEvent) + Send + Sync + 'static>>,
+    On<ev::click, Box<dyn Fn(MouseEvent) + Send + Sync + 'static>>,
+    On<ev::pointerdown, Box<dyn Fn(PointerEvent) + Send + Sync + 'static>>,
+);
 
 // TODO: Add proper focus behavior!
 pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
@@ -105,18 +105,13 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             }
             update_url(&href);
         }
-        Callback::call(&original_on_press, e);
+        original_on_press.run(e);
     });
 
-    let press = use_press(press_input);
+    let UsePressReturn { attrs: (on_keydown, on_click, on_pointerdown), is_pressed } = use_press(press_input);
 
     let href: Href = input.href;
-    let mut attrs = Attributes::new();
-    attrs.insert("role", AriaRole::Link);
-    attrs.insert("href", Attribute::String(href.0));
-    if let Some(description) = input.description {
-        attrs.insert("aria-label", Attribute::String(description));
-    }
+
     /*attrs.insert(
         "tabindex",
         input
@@ -128,31 +123,20 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             .into_attribute(),
     );
     attrs.insert("disabled", input.disabled.into_attribute());*/
-    attrs.insert(
-        "aria-disabled",
-        input
-            .disabled
-            .map(|it| match it {
-                true => "true",
-                false => "false",
-            })
-            .into_attribute(),
-    );
-
-    // Merge attributes
-    attrs.merge(press.props.attrs);
-
-    // Merge event handlers
-    let on_key_down = press.props.on_key_down;
-    let on_click = press.props.on_click;
-    let on_pointer_down = press.props.on_pointer_down;
 
     UseAnchorLinkReturn {
-        props: UseAnchorLinkProps {
-            attrs,
-            on_key_down,
+        attrs: (
+            Attr(attr::Role, AriaRole::Link.into_attribute_value()),
+            Attr(attr::Hreflang, href.0),
+            Attr(attr::AriaLabel, input.description),
+            Attr(attr::AriaDisabled, Signal::derive(move || match input.disabled.get() {
+                true => "true",
+                false => "false",
+            })),
+            on_keydown,
             on_click,
-            on_pointer_down,
-        },
+            on_pointerdown,
+        ),
+        is_pressed
     }
 }

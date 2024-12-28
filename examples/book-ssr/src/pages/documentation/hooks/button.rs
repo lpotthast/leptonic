@@ -3,7 +3,7 @@ use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_use::use_window;
 
 use crate::pages::documentation::article::Article;
@@ -11,7 +11,7 @@ use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageUseButton() -> impl IntoView {
-    let el: NodeRef<html::Div> = create_node_ref();
+    let el: NodeRef<html::Div> = NodeRef::new();
 
     let UseButtonReturn { props } = use_button(UseButtonInput {
         node_ref: el,
@@ -54,7 +54,7 @@ pub fn PageUseButton() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let el: NodeRef<html::Div> = create_node_ref();
+                    let el: NodeRef<html::Div> = NodeRef::new();
 
                     let UseButtonReturn { props } = use_button(UseButtonInput {
                         node_ref: el,

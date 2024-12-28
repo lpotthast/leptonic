@@ -1,6 +1,6 @@
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
@@ -8,15 +8,15 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 #[allow(clippy::too_many_lines)]
 #[allow(clippy::similar_names)]
 pub fn PageSlider() -> impl IntoView {
-    let (value1, set_value1) = create_signal(6.0);
-    let (value2, set_value2) = create_signal(4.2);
-    let (value3, set_value3) = create_signal(-3.0);
-    let (value4, set_value4) = create_signal(0.5);
-    let (value5, set_value5) = create_signal(0.5);
-    let (range_a, set_range_a) = create_signal(0.5);
-    let (range_b, set_range_b) = create_signal(0.75);
-    let (range_a_step, set_range_a_step) = create_signal(2.0);
-    let (range_b_step, set_range_b_step) = create_signal(4.0);
+    let (value1, set_value1) = signal(6.0);
+    let (value2, set_value2) = signal(4.2);
+    let (value3, set_value3) = signal(-3.0);
+    let (value4, set_value4) = signal(0.5);
+    let (value5, set_value5) = signal(0.5);
+    let (range_a, set_range_a) = signal(0.5);
+    let (range_b, set_range_b) = signal(0.75);
+    let (range_a_step, set_range_a_step) = signal(2.0);
+    let (range_b_step, set_range_b_step) = signal(4.0);
 
     view! {
         <Article>
@@ -35,7 +35,7 @@ pub fn PageSlider() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (value, set_value) = create_signal(6.0);
+                    let (value, set_value) = signal(6.0);
                     view! {
                         <Slider min=0.0 max=1.0 step=0.0001
                             value=value set_value=set_value
@@ -62,7 +62,7 @@ pub fn PageSlider() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (value, set_value) = create_signal(0.5);
+                    let (value, set_value) = signal(0.5);
                     view! {
                         <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
                             <Icon icon=icondata::BsVolumeDownFill style="font-size: 2.5em;"/>
@@ -95,7 +95,7 @@ pub fn PageSlider() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (value, set_value) = create_signal(6.0);
+                    let (value, set_value) = signal(6.0);
                     view! {
                         <Slider min=1.0 max=10.0 step=1.0
                             value=value set_value=set_value
@@ -122,7 +122,7 @@ pub fn PageSlider() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (value, set_value) = create_signal(6.0);
+                    let (value, set_value) = signal(6.0);
                     view! {
                         <Slider min=1.0 max=10.0 step=1.0
                             value=value set_value=set_value
@@ -201,8 +201,8 @@ pub fn PageSlider() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (value_a, set_value_a) = create_signal(0.5);
-                    let (value_b, set_value_b) = create_signal(0.75);
+                    let (value_a, set_value_a) = signal(0.5);
+                    let (value_b, set_value_b) = signal(0.75);
                     view! {
                         <RangeSlider
                             value_a=range_a

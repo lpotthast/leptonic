@@ -1,15 +1,12 @@
-use std::rc::Rc;
-
 use educe::Educe;
-use leptos::Oco;
-use leptos_reactive::{Signal, SignalGet};
+use leptos::attr;
+use leptos::attr::{Attr, IntoAttributeValue};
+use leptos::oco::Oco;
+use leptos::prelude::*;
 
 use crate::{
     prelude::{AriaExpanded, AriaHasPopup},
-    utils::{
-        aria::{AriaAttribute, AriaControls, GenericAttribute},
-        props::Attributes,
-    },
+    utils::aria::AriaControls,
 };
 
 #[derive(Debug, Clone)]
@@ -28,21 +25,21 @@ pub struct UseOverlayTriggerInput {
 #[derive(Debug)]
 pub struct UseOverlayTriggerReturn {
     /// Props for the trigger.
-    pub props: UseOverlayTriggerProps,
+    pub attrs: UseOverlayTriggerAttrs,
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
-pub struct UseOverlayTriggerProps {
-    /// These attributes must be spread onto the target element: `<foo {..attrs} />`
-    pub attrs: Attributes,
-}
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
+pub type UseOverlayTriggerAttrs = (
+    Attr<attr::AriaHaspopup, &'static str>,
+    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaControls, Signal<Option<String>>>,
+);
 
 #[derive(Educe)]
 #[educe(Debug)]
 pub struct UseOverlayTriggerOverlayProps {
     /// These attributes must be spread onto the target element: `<foo {..attrs} />`
-    pub attrs: Attributes,
+    pub attrs: (),
 }
 
 pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerReturn {
@@ -64,23 +61,24 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
 
     let overlay_id = input.overlay_id;
 
-    let mut trigger_attrs = Attributes::new();
-    trigger_attrs.insert_entry(AriaAttribute::HasPopup(GenericAttribute::Static(
-        aria_has_popup,
-    )));
-    trigger_attrs.insert_entry(AriaAttribute::Expanded(GenericAttribute::Fn(Rc::new(
-        move || AriaExpanded::from(input.show.get()),
-    ))));
-    trigger_attrs.insert_entry(AriaAttribute::Controls(GenericAttribute::Fn(Rc::new(
-        move || match input.show.get() {
-            true => AriaControls::Id(vec![overlay_id.to_string()]),
-            false => AriaControls::Undefined,
-        },
-    ))));
-
     UseOverlayTriggerReturn {
-        props: UseOverlayTriggerProps {
-            attrs: trigger_attrs,
-        },
+        attrs: (
+            Attr(attr::AriaHaspopup, aria_has_popup.into_attribute_value()),
+            Attr(
+                attr::AriaExpanded,
+                Signal::derive(move || {
+                    AriaExpanded::from(input.show.get()).into_attribute_value()
+                })
+            ),
+            Attr(
+                attr::AriaControls,
+                Signal::derive(move ||
+                    match input.show.get() {
+                        true => AriaControls::Id(vec![overlay_id.to_string()]),
+                        false => AriaControls::Undefined,
+                    }.into_attribute_value()
+                )
+            ),
+        ),
     }
 }

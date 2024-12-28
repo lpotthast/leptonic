@@ -1,5 +1,5 @@
 use leptonic::{components::prelude::*, prelude::*};
-use leptos::*;
+use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, Style, Stylesheet, Title};
 use leptos_router::*;
 use leptos_use::use_media_query;
@@ -210,7 +210,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
 
     let router_context = use_context::<RouterContext>();
     
-    let is_doc = create_memo(move |_| {
+    let is_doc = Memo::new(move |_| {
         router_context
             .as_ref()
             .map(|router| router.pathname().get().starts_with("/doc"))
@@ -219,11 +219,11 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
 
 
     // The main drawer is only used on mobile / small screens!.
-    let (main_drawer_closed, set_main_drawer_closed) = create_signal(true);
-    let (doc_drawer_closed, set_doc_drawer_closed) = create_signal(false);
+    let (main_drawer_closed, set_main_drawer_closed) = signal(true);
+    let (doc_drawer_closed, set_doc_drawer_closed) = signal(false);
 
     // Make sure the doc_drawer is closed whenever we leave a documentation route.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if !is_doc.get() {
             set_doc_drawer_closed.set(true);
         } else {
@@ -235,7 +235,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
 
     // Always close the doc-drawer when the application is now small.
     // Always open the doc-drawer when the application is no longer small.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if is_small.get() {
             set_doc_drawer_closed.set(true);
         } else {
@@ -244,7 +244,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     });
 
     // Always close the main-drawer when the application is no longer small.
-    create_effect(move |_| {
+    Effect::new(move |_| {
         if !is_small.get() {
             set_main_drawer_closed.set(true);
         }

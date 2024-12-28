@@ -1,10 +1,7 @@
-use educe::Educe;
-use leptos_reactive::{
-    create_effect, on_cleanup, store_value, Callable, Callback, Signal, SignalDispose, SignalGet,
-};
+use leptos::ev;
+use leptos::ev::{on, On};
+use leptos::prelude::*;
 use web_sys::PointerEvent;
-
-use crate::utils::props::Attributes;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useMove.ts
 
@@ -20,31 +17,26 @@ pub struct MoveEvent {
 #[derive(Debug, Clone, Copy)]
 pub struct MoveEndEvent {}
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct UseMoveInput {
     pub on_move_start: Callback<MoveStartEvent>,
     pub on_move: Callback<MoveEvent>,
     pub on_move_end: Callback<MoveEndEvent>,
 
-    pub global_pointer_up: Signal<Option<PointerEvent>>,
-    pub global_pointer_down: Signal<Option<PointerEvent>>,
-    pub global_pointer_cancel: Signal<Option<PointerEvent>>,
-    pub global_pointer_move: Signal<Option<PointerEvent>>,
-}
-
-#[derive(Educe)]
-#[educe(Debug)]
-pub struct UseMoveProps {
-    pub attrs: Attributes,
-
-    #[educe(Debug(ignore))]
-    pub on_pointer_down: Box<dyn Fn(PointerEvent)>,
+    pub global_pointer_up: Signal<Option<PointerEvent>, LocalStorage>,
+    pub global_pointer_down: Signal<Option<PointerEvent>, LocalStorage>,
+    pub global_pointer_cancel: Signal<Option<PointerEvent>, LocalStorage>,
+    pub global_pointer_move: Signal<Option<PointerEvent>, LocalStorage>,
 }
 
 #[derive(Debug)]
 pub struct UseMoveReturn {
-    pub props: UseMoveProps,
+    pub attrs: UseMoveAttrs,
 }
+
+pub type UseMoveAttrs = (
+    On<ev::pointerdown, Box<dyn Fn(PointerEvent) + Send + Sync + 'static>>,
+);
 
 #[derive(Debug, Clone, Copy)]
 struct MoveState {
@@ -58,8 +50,8 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     // We start movement tracking by listening for on_pointer_down events.
     // Only movements from the pointer which initiated the tracking is propagated.
 
-    let state = store_value(Option::<MoveState>::None);
-    let active = store_value(false);
+    let state = StoredValue::new(Option::<MoveState>::None);
+    let active = StoredValue::new(false);
 
     let on_pointer_down = Box::new(move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
@@ -77,7 +69,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         }
     });
 
-    let on_move = create_effect(move |_| {
+    let on_move = Effect::new(move |_| {
         let e = input.global_pointer_move.get();
         if active.get_value() {
             if let Some(e) = e {
@@ -98,21 +90,18 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     });
 
                     if first_move {
-                        Callable::call(&input.on_move_start, MoveStartEvent {});
+                        input.on_move_start.run(MoveStartEvent {});
                     }
-                    Callable::call(
-                        &input.on_move,
-                        MoveEvent {
-                            delta_x: new_x - old_x,
-                            delta_y: new_y - old_y,
-                        },
-                    );
+                    input.on_move.run(MoveEvent {
+                        delta_x: new_x - old_x,
+                        delta_y: new_y - old_y,
+                    });
                 }
             }
         }
     });
 
-    let on_cancel = create_effect(move |_| {
+    let on_cancel = Effect::new(move |_| {
         let e = input.global_pointer_up.get();
         if active.get_value() {
             if let Some(e) = e {
@@ -125,7 +114,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     let moved = state.with_value(|s| s.expect("present").moved);
 
                     if moved {
-                        Callable::call(&input.on_move_end, MoveEndEvent {});
+                        input.on_move_end.run(MoveEndEvent {});
                     }
 
                     state.set_value(None);
@@ -135,7 +124,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         }
     });
 
-    let on_up = create_effect(move |_| {
+    let on_up = Effect::new(move |_| {
         let e = input.global_pointer_up.get();
         if active.get_value() {
             if let Some(e) = e {
@@ -148,7 +137,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     let moved = state.with_value(|s| s.expect("present").moved);
 
                     if moved {
-                        Callable::call(&input.on_move_end, MoveEndEvent {});
+                        input.on_move_end.run(MoveEndEvent {});
                     }
 
                     state.set_value(None);
@@ -165,9 +154,8 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     });
 
     UseMoveReturn {
-        props: UseMoveProps {
-            attrs: Attributes::new(),
-            on_pointer_down,
-        },
+        attrs: (
+            on(ev::pointerdown, on_pointer_down),
+        ),
     }
 }

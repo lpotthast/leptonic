@@ -1,6 +1,6 @@
 use std::sync::{Arc, RwLock};
 
-use leptos::*;
+use leptos::prelude::*;
 use tracing::warn;
 use uuid::Uuid;
 
@@ -83,7 +83,7 @@ pub fn Collapsibles(default_on_open: OnOpen, children: Children) -> impl IntoVie
 pub fn use_collapsible(open: bool, on_open: Option<OnOpen>) -> CollapsibleContext {
     let id = Uuid::new_v4();
 
-    let (show, set_show) = create_signal(open);
+    let (show, set_show) = signal(open);
 
     let mut parent = use_context::<CollapsiblesContext>();
 
@@ -144,8 +144,6 @@ pub fn use_collapsible_header() -> CollapsibleHeaderWrapperContext {
 #[slot]
 pub struct CollapsibleHeader {
     children: Children,
-    #[prop(into, optional)]
-    class: Option<AttributeValue>,
 }
 
 #[component]
@@ -154,7 +152,7 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
     let ctx2 = use_collapsible_header();
     view! {
         <leptonic-collapsible-header-wrapper on:click=move |_| ctx.collapsible_ctx.toggle()>
-            <leptonic-collapsible-header class=collapsible_header.class>
+            <leptonic-collapsible-header>
                 { (collapsible_header.children)() }
             </leptonic-collapsible-header>
 
@@ -169,8 +167,6 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
 #[slot]
 pub struct CollapsibleBody {
     children: Children,
-    #[prop(into, optional)]
-    class: Option<AttributeValue>,
 }
 
 #[component]
@@ -179,7 +175,7 @@ fn CollapsibleBodyInternal(collapsible_body: CollapsibleBody) -> impl IntoView {
         .expect("A CollapsibleHeader must be placed inside a Collapsible component.");
 
     view! {
-        <leptonic-collapsible-body class=collapsible_body.class class:show=move || collapsible_ctx.show.get()>
+        <leptonic-collapsible-body class:show=move || collapsible_ctx.show.get()>
             { (collapsible_body.children)() }
         </leptonic-collapsible-body>
     }

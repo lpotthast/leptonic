@@ -1,4 +1,5 @@
-use leptos::*;
+use leptos::prelude::*;
+use std::fmt::Debug;
 use uuid::Uuid;
 
 use crate::components::icon::Icon;
@@ -34,14 +35,27 @@ impl Default for ToastVariant {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct Toast {
     pub id: Uuid,
     pub created_at: time::OffsetDateTime,
     pub variant: ToastVariant,
-    pub header: View,
-    pub body: View,
+    pub header: ViewFn,
+    pub body: ViewFn,
     pub timeout: ToastTimeout,
+}
+
+impl Debug for Toast {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Toast")
+            .field("id", &self.id)
+            .field("created_at", &self.created_at)
+            .field("variant", &self.variant)
+            .field("header", &"... (ViewFn)")
+            .field("body", &"... (ViewFn)")
+            .field("timeout", &self.timeout)
+            .finish()
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -116,21 +130,18 @@ pub trait SignalUpdateExt<T> {
     fn update_ret<O>(&self, f: impl FnOnce(&mut T) -> Option<O>) -> Option<O>;
 }
 
-impl<T> SignalUpdateExt<T> for WriteSignal<T> {
+impl<T: Send + Sync + 'static> SignalUpdateExt<T> for WriteSignal<T> {
     fn update_ret<O>(&self, f: impl FnOnce(&mut T) -> Option<O>) -> Option<O> {
-        match self.try_update(f) {
-            Some(value) => value,
-            None => {
-                tracing::warn!("Attempted to update a signal after it was disposed.");
-                None
-            }
-        }
+        self.try_update(f).unwrap_or_else(|| {
+            tracing::warn!("Attempted to update a signal after it was disposed.");
+            None
+        })
     }
 }
 
 #[component]
 pub fn ToastRoot(children: Children) -> impl IntoView {
-    let (toasts, set_toasts) = create_signal(Vec::new());
+    let (toasts, set_toasts) = signal(Vec::new());
 
     provide_context::<Toasts>(Toasts { toasts, set_toasts });
 
@@ -178,23 +189,23 @@ pub fn Toast(toast: Toast) -> impl IntoView {
     view! {
         <leptonic-toast id=toast.id.to_string() data-variant=toast.variant.as_str()>
             <leptonic-toast-header>
-                { toast.header }
+                { toast.header.run() }
 
                 { match manually_closable {
                     true => view! {
                         <div>
                             <Icon
-                                class="dismiss"
+                                attr:class="dismiss"
                                 icon=icondata::BsXCircleFill
                                 on:click=move |_e| { expect_context::<Toasts>().try_remove(toast.id); }
                             />
                         </div>
-                    }.into_view(),
-                    false => ().into_view(),
+                    }.into_any(),
+                    false => ().into_any(),
                 } }
             </leptonic-toast-header>
             <leptonic-toast-message>
-                { toast.body }
+                { toast.body.run() }
             </leptonic-toast-message>
         </leptonic-toast>
     }

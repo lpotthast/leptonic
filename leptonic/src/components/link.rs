@@ -1,58 +1,40 @@
-use leptos::*;
-use leptos_router::*;
+use crate::hooks::{use_press, PressEvent, UsePressInput, UsePressReturn};
+use leptos::html;
+use leptos::prelude::*;
+use leptos_router::components::{ToHref, A};
 
-use crate::{
-    hooks::{use_press, PressEvent, UsePressInput, UsePressReturn},
-    OptMaybeSignal,
-};
-
+// TODO: Use router state again (leptos_router::location::State) (accepting a prop)
 #[component]
-#[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
+#[allow(clippy::needless_pass_by_value)]
 pub fn Link<H>(
     /// Used to calculate the link's `href` attribute. Will be resolved relative
     /// to the current route.
     href: H,
     #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
-    #[prop(into, optional)]
-    title: Option<AttributeValue>, // TODO: This should be limited to string attributes...
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
     exact: bool,
-    /// An object of any type that will be pushed to router state
-    #[prop(optional)]
-    state: Option<State>,
-    /// If `true`, the link will not add to the browser's history (so, pressing `Back`
-    /// will skip this page.)
-    #[prop(optional)]
-    replace: bool,
-    /// Sets the `id` attribute, making it easier to target.
-    #[prop(into, optional)]
-    id: Option<AttributeValue>,
-    /// Sets the `class` attribute, making it easier to style.
-    #[prop(into, optional)]
-    class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
-    #[prop(into, optional)] on_press: Option<Callback<(PressEvent, NodeRef<html::Custom>)>>,
+    #[prop(into, optional)] on_press: Option<Callback<(PressEvent, NodeRef<html::Custom<&'static str>>)>>,
 ) -> impl IntoView
 where
-    H: ToHref + 'static,
+    H: ToHref + Send + Sync + 'static,
 {
-    let el: NodeRef<html::Custom> = create_node_ref();
+    let el: NodeRef<html::Custom<&str>> = NodeRef::new();
 
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
     let UsePressReturn {
+        attrs,
         is_pressed: _,
-        props,
     } = use_press(UsePressInput {
         // Links cannot be disabled (for now).
         disabled: false.into(),
         force_prevent_default: false,
-        on_press: Callback::new(move |e| {
+        on_press: Callback::from(move |e| {
             if let Some(on_press) = on_press {
-                on_press.call((e, el));
+                on_press.run((e, el));
             }
         }),
         on_press_up: None,
@@ -60,18 +42,10 @@ where
         on_press_end: None,
     });
 
+    // TODO: propagate missing A props
     view! {
-        <leptonic-link
-            {..props.attrs}
-            on:keydown=props.on_key_down
-            on:click=props.on_click
-            on:pointerdown=props.on_pointer_down
-            _ref=el
-            id=id
-            class=class
-            style=style
-        >
-            <A href=href exact=exact state=state.unwrap_or_default() replace=replace>
+        <leptonic-link {..attrs} node_ref=el>
+            <A href=href exact=exact>
                 { children() }
             </A>
         </leptonic-link>
@@ -103,27 +77,24 @@ pub fn LinkExt<H>(
     /// Used to calculate the link's `href` attribute.
     href: H,
     target: LinkExtTarget,
-    #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
+    #[prop(into, optional)] disabled: Signal<bool>,
     // TODO: Impl this prop
     // /// If `true`, the link will not add to the browser's history (so, pressing `Back`
     // /// will skip this page.)
     // #[prop(optional)]
     // replace: bool,
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView
 where
-    H: ToHref + 'static,
+    H: ToHref + Send + Sync + 'static,
 {
     // NOTE(lukas): rel="noopener" is added for security reasons. See: https://developer.chrome.com/docs/lighthouse/best-practices/external-anchors-use-rel-noopener/
     view! {
-        <leptonic-link id=id class=class style=style>
+        <leptonic-link>
             <a
                 href=move || href.to_href()()
                 target=format!("{target}")
-                prop:disabled=move || disabled.0.as_ref().map(SignalGet::get).unwrap_or(false)
+                prop:disabled=move || disabled.get()
                 rel={ match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }
             >
                 { children() }

@@ -6,7 +6,7 @@ use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverT
 use leptonic::components::typography::{Code, H1, P};
 use leptonic::hooks::{PlacementX, PlacementY};
 use leptonic::utils::locale::WritingDirection;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;

@@ -1,19 +1,17 @@
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::{
     components::prelude::{Button, ButtonVariant, Icon},
     Out,
 };
+use crate::hooks::PressEvent;
 
 #[component]
 pub fn H1(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <h1 id=id class=class style=style>
+        <h1>
             { children() }
         </h1>
     }
@@ -21,13 +19,10 @@ pub fn H1(
 
 #[component]
 pub fn H2(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <h2 id=id class=class style=style>
+        <h2>
             { children() }
         </h2>
     }
@@ -35,13 +30,10 @@ pub fn H2(
 
 #[component]
 pub fn H3(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <h3 id=id class=class style=style>
+        <h3>
             { children() }
         </h3>
     }
@@ -49,13 +41,10 @@ pub fn H3(
 
 #[component]
 pub fn H4(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <h4 id=id class=class style=style>
+        <h4>
             { children() }
         </h4>
     }
@@ -63,13 +52,10 @@ pub fn H4(
 
 #[component]
 pub fn H5(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <h5 id=id class=class style=style>
+        <h5>
             { children() }
         </h5>
     }
@@ -77,13 +63,10 @@ pub fn H5(
 
 #[component]
 pub fn H6(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <h6 id=id class=class style=style>
+        <h6>
             { children() }
         </h6>
     }
@@ -91,13 +74,10 @@ pub fn H6(
 
 #[component]
 pub fn P(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     children: Children,
 ) -> impl IntoView {
     view! {
-        <p id=id class=class style=style>
+        <p>
             { children() }
         </p>
     }
@@ -111,19 +91,16 @@ pub struct Li {
 
 #[component]
 pub fn Ul(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(default=vec![])] li: Vec<Li>,
 ) -> impl IntoView {
     view! {
-        <ul id=id class=class style=style>
+        <ul>
             <For
                 each=move || { li.clone().into_iter().enumerate() }
                 key=move |(index, _e)| *index
                 children=move |(_index, e)| view!{
                     <li>
-                        {e.children}
+                        { (e.children)() }
                     </li>
                 }
             />
@@ -131,53 +108,43 @@ pub fn Ul(
     }
 }
 
+// TODO (new): This once received children (in leptos 0.6) and extracted text from them. This does not seem to be possible anymore?
 #[component]
 pub fn Code(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(optional)] inline: Option<bool>,
     #[prop(optional)] show_copy_button: Option<bool>,
     #[prop(into, optional)] on_copy: Option<Out<Result<(), ()>>>,
-    children: Children,
+    #[prop(into)] code: String,
 ) -> impl IntoView {
-    let code_text = store_value(
-        itertools::Itertools::intersperse(
-            children().nodes.iter().map(|e| match e {
-                View::Text(t) => t.content.clone(),
-                _ => panic!("non-text children are not allowed: {:?}", e.to_owned()),
-            }),
-            "\n".into(),
-        )
-        .collect::<String>(),
-    );
+    let code_text = StoredValue::new(code);
 
     let show_copy_button = show_copy_button.unwrap_or_else(|| !inline.unwrap_or(false));
-    let on_success = move || {
+    let on_success = Callback::from(move || {
         if let Some(on_copy) = on_copy {
             on_copy.set(Ok(()));
         }
-    };
-    let on_err = move || {
+    });
+    let on_err = Callback::from(move || {
         if let Some(on_copy) = on_copy {
             on_copy.set(Err(()));
         } else {
             tracing::warn!("copy to clipboard failed");
         }
-    };
-
-    let on_press = Callback::new(move |_| copy_to_clipboard(
-        code_text.with_value(|c| c.clone()),
-        on_success,
-        on_err
-    ));
+    });
 
     let copy_btn = show_copy_button.then(|| {
         view!(
             <Button
-                class="leptonic-code-copy-button"
+                attr:class="leptonic-code-copy-button"
                 variant=ButtonVariant::Flat
-                on_press=on_press>
+                on_press=move |_| {
+                    let text = code_text.get_value();
+                    copy_to_clipboard(
+                        text.as_str(),
+                        on_success,
+                        on_err
+                    );
+                }>
                 <Icon icon=icondata::VsCopy/>
             </Button>
         )
@@ -185,7 +152,7 @@ pub fn Code(
 
     view! {
         <leptonic-code inline=inline.map(|it| it.to_string())>
-            <leptonic-code-text id=id class=class style=style inline=inline.map(|it| it.to_string()) >
+            <leptonic-code-text inline=inline.map(|it| it.to_string()) >
                 { code_text.get_value() }
             </leptonic-code-text>
             { copy_btn }
@@ -194,44 +161,37 @@ pub fn Code(
 }
 
 #[cfg(feature = "clipboard")]
-fn copy_to_clipboard<T: AsRef<str>, S: Fn() + 'static, E: Fn() + 'static>(
-    text: T,
-    on_success: S,
-    on_err: E,
+fn copy_to_clipboard(
+    text: &str,
+    on_success: Callback<(), ()>,
+    on_err: Callback<(), ()>,
 ) {
     match leptos_use::use_window().navigator() {
         Some(navigator) => {
-            match navigator.clipboard() {
-                Some(clipboard) => {
-                    let promise = clipboard.write_text(text.as_ref());
-                    let future = wasm_bindgen_futures::JsFuture::from(promise);
-                    wasm_bindgen_futures::spawn_local(async move {
-                        match future.await {
-                            Ok(_result) => {
-                                on_success();
-                            }
-                            Err(_err) => {
-                                on_err();
-                            }
-                        }
-                    });
+            let promise = navigator.clipboard().write_text(text);
+            let future = wasm_bindgen_futures::JsFuture::from(promise);
+            wasm_bindgen_futures::spawn_local(async move {
+                match future.await {
+                    Ok(_result) => {
+                        on_success.run(());
+                    }
+                    Err(_err) => {
+                        on_err.run(());
+                    }
                 }
-                None => {
-                    on_err();
-                }
-            };
+            });
         }
         None => {
-            on_err();
+            on_err.run(());
         }
     }
 }
 
 #[cfg(not(feature = "clipboard"))]
-fn copy_to_clipboard<T: AsRef<str>, S: Fn() + 'static, E: Fn() + 'static>(
-    _text: T,
-    _on_success: S,
-    _on_err: E,
+fn copy_to_clipboard(
+    _text: &str,
+    _on_success: Callback<()>,
+    _on_err: Callback<()>,
 ) {
     tracing::warn!("Clipboard related functionality requires leptonic's 'Clipboard' feature as well as '--cfg=web_sys_unstable_apis'.");
 }

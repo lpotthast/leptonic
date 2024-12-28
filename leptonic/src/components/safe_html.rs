@@ -1,9 +1,9 @@
-use std::borrow::Cow;
-
-use leptos::{html::span, *};
+use leptos::html;
+use leptos::html::InnerHtmlValue;
+use leptos::prelude::*;
 
 #[component]
-pub fn SafeHtml(#[prop(into)] html: Cow<'static, str>) -> impl IntoView {
-    // TODO: Sanitize input?
-    span().inner_html(html)
+pub fn SafeHtml<H: InnerHtmlValue>(#[prop(into)] html: H) -> impl IntoView {
+    // TODO: Sanitize input!
+    html::span().inner_html(html)
 }

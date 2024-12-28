@@ -2,16 +2,16 @@ use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::utils::color::HSV;
-use leptos::*;
+use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 
 #[component]
 pub fn PageColorPicker() -> impl IntoView {
-    let (hsv, set_hsv) = create_signal(HSV::new());
+    let (hsv, set_hsv) = signal(HSV::new());
 
-    let (hsv_test, set_hsv_test) = create_signal(HSV::new());
+    let (hsv_test, set_hsv_test) = signal(HSV::new());
     let hsv_test_rgb_preview = Signal::derive(move || hsv_test.get().into_rgb8());
 
     view! {
@@ -25,7 +25,7 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <Code>
                 {indoc!(r"
-                    let (hsv, set_hsv) = create_signal(HSV::new());
+                    let (hsv, set_hsv) = signal(HSV::new());
                     view! {
                         <ColorPicker hsv=hsv set_hsv=set_hsv/>
                     }
@@ -45,7 +45,7 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <Code>
                 {indoc!(r"
-                    let (hsv, set_hsv) = create_signal(HSV::new());
+                    let (hsv, set_hsv) = signal(HSV::new());
                     let rgb = Signal::derive(move || hsv.get().into_rgb8());
                 ")}
             </Code>

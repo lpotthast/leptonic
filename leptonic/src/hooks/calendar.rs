@@ -1,4 +1,4 @@
-use leptos::*;
+use leptos::prelude::*;
 use time::macros::format_description;
 use uuid::Uuid;
 
@@ -95,12 +95,12 @@ pub fn use_calendar(
     min: Option<time::OffsetDateTime>,
     max: Option<time::OffsetDateTime>,
 ) -> UseCalendarReturn {
-    let (staging, set_staging) = create_signal(initial_value);
+    let (staging, set_staging) = signal(initial_value);
 
-    let staging_year = create_memo(move |_| staging.get().year());
-    let staging_month_name = create_memo(move |_| staging.get().month().to_string());
+    let staging_year = Memo::new(move |_| staging.get().year());
+    let staging_month_name = Memo::new(move |_| staging.get().month().to_string());
 
-    let selected: Memo<time::OffsetDateTime> = create_memo(move |_| staging.get());
+    let selected: Memo<time::OffsetDateTime> = Memo::new(move |_| staging.get());
 
     let years_start = create_rw_signal(staging.get_untracked().year() - 4);
     let years = Signal::derive(move || {

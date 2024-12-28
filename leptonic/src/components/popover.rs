@@ -1,10 +1,10 @@
-use std::rc::Rc;
-
-use leptos::*;
+use leptos::html;
+use leptos::prelude::*;
 use leptos_use::{use_element_bounding, use_element_hover};
+use std::sync::Arc;
 use uuid::Uuid;
 
-use crate::{prelude::Consumer, Size, UseElementBoundingReturnReadOnly};
+use crate::{Size, UseElementBoundingReturnReadOnly};
 
 #[derive(Clone)]
 struct PopoverData {
@@ -73,10 +73,6 @@ pub struct PopoverContent {
 
 #[component]
 pub fn Popover(
-    #[prop(into, optional)] id: Option<AttributeValue>,
-    #[prop(into, optional)] class: Option<AttributeValue>,
-    #[prop(into, optional)] style: Option<AttributeValue>,
-
     #[prop(default = PopoverAlignX::Center)] align_x: PopoverAlignX,
     #[prop(default = PopoverAlignY::Top)] align_y: PopoverAlignY,
 
@@ -86,11 +82,11 @@ pub fn Popover(
 
     /// Custom X position of the popover.
     #[prop(optional)]
-    position_x: Option<Consumer<UseElementBoundingReturnReadOnly, String>>,
+    position_x: Option<Callback<UseElementBoundingReturnReadOnly, String>>,
 
     /// Custom Y position of the popover.
     #[prop(optional)]
-    position_y: Option<Consumer<UseElementBoundingReturnReadOnly, String>>,
+    position_y: Option<Callback<UseElementBoundingReturnReadOnly, String>>,
 
     #[prop(into, optional)] show: Option<MaybeSignal<bool>>,
 
@@ -98,14 +94,14 @@ pub fn Popover(
 
     children: Children,
 ) -> impl IntoView {
-    let (clicked, set_clicked) = create_signal(false);
+    let (clicked, set_clicked) = signal(false);
 
     let ctx = expect_context::<PopoverRootContext>();
 
-    let el: NodeRef<html::Custom> = create_node_ref();
+    let el: NodeRef<html::Div> = NodeRef::new();
     let el_bounds = use_element_bounding(el);
 
-    let pop_el: NodeRef<html::Custom> = create_node_ref();
+    let pop_el: NodeRef<html::Div> = NodeRef::new();
     let pop_bounds = use_element_bounding(pop_el);
 
     let show: MaybeSignal<bool> = match show {
@@ -121,7 +117,7 @@ pub fn Popover(
     let pop_style: Signal<String> = Signal::derive(move || match show.get() {
         true => {
             let left = match position_x {
-                Some(pos_x) => pos_x.consume(pop_bounds_read_only),
+                Some(pos_x) => pos_x.run(pop_bounds_read_only),
                 None => {
                     let x = match align_x {
                         PopoverAlignX::Left => el_bounds.x.get(),
@@ -141,7 +137,7 @@ pub fn Popover(
             };
 
             let top = match position_y {
-                Some(pos_y) => pos_y.consume(pop_bounds_read_only),
+                Some(pos_y) => pos_y.run(pop_bounds_read_only),
                 None => {
                     let y = match align_y {
                         PopoverAlignY::Top => el_bounds.y.get() - pop_bounds_read_only.height.get(),
@@ -166,14 +162,13 @@ pub fn Popover(
 
     ctx.push(PopoverData {
         key,
-        children: Rc::new(move || {
-            view! {
-                <leptonic-popover ref=pop_el id=key.to_string() style=pop_style data-active=move || match show.get() { true => "true", false => "false" }> // id=id class=class style=style
+        children: Arc::new(move || {
+            let v = view! {
+                <div class="leptonic-popover" node_ref=pop_el id=key.to_string() style=pop_style data-active=move || match show.get() { true => "true", false => "false" }> // id=id class=class style=style
                     { (popover_content.children)() }
-                </leptonic-popover>
-            }
-            .into_view()
-            .into()
+                </div>
+            };
+            v.into_any()
         }),
     });
 
@@ -182,8 +177,8 @@ pub fn Popover(
     });
 
     view! {
-        <leptonic-has-popover ref=el id=id class=class style=style on:click=move |_| set_clicked.set(!clicked.get_untracked())>
+        <div class="leptonic-has-popover" node_ref=el on:click=move |_| set_clicked.set(!clicked.get_untracked())>
             { children() }
-        </leptonic-has-popover>
+        </div>
     }
 }
