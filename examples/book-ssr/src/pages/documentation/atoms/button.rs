@@ -12,12 +12,12 @@ use crate::pages::documentation::toc::Toc;
 pub fn PageAtomButton() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="button" class="anchor">
+            <h1 id="button" class="anchor">
                 "Button"
                 <AnchorLink href="#button" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"..."</P>
+            <p>"..."</p>
 
             <Code>
                 {indoc!(r#"

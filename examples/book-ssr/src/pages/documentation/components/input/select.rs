@@ -56,14 +56,14 @@ pub fn PageSelect() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="select" class="anchor">
+            <h1 id="select" class="anchor">
                 "Select"
                 <AnchorLink href="#select" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Select inputs allow you to choose between different predefined values."</P>
+            <p>"Select inputs allow you to choose between different predefined values."</p>
 
-            <P>"Lets assume this type definition, providing us with a set of values to choose from."</P>
+            <p>"Lets assume this type definition, providing us with a set of values to choose from."</p>
 
             <Code>
                 {indoc!(r"
@@ -76,19 +76,19 @@ pub fn PageSelect() -> impl IntoView {
                 ")}
             </Code>
 
-            <H2 id="variants" class="anchor">
+            <h2 id="variants" class="anchor">
                 "Variants"
                 <AnchorLink href="#variants" description="Direct link to section: Variants"/>
-            </H2>
+            </h2>
 
-            <P>"There are three variants of the select component, accepting different inputs and changing only slightly in its behavior."</P>
+            <p>"There are three variants of the select component, accepting different inputs and changing only slightly in its behavior."</p>
 
             <H3 id="variant-select" class="anchor">
                 "Select"
                 <AnchorLink href="#variant-select" description="Direct link to section: Variant - Select"/>
-            </H3>
+            </h3>
 
-            <P>"The simplest form, requiring a selected option to be present the whole time."</P>
+            <p>"The simplest form, requiring a selected option to be present the whole time."</p>
 
             <Code>
                 {indoc!(r#"
@@ -117,9 +117,9 @@ pub fn PageSelect() -> impl IntoView {
             <H3 id="variant-optional-select" class="anchor">
                 "OptionalSelect"
                 <AnchorLink href="#variant-optional-select" description="Direct link to section: Variant - OptionalSelect"/>
-            </H3>
+            </h3>
 
-            <P>"As the name implies, this variant stores its chosen value in an " <Code inline=true>"Option"</Code> ", allowing the select to be initialized without a value and optionally allowing the user to deselect the current value."</P>
+            <p>"As the name implies, this variant stores its chosen value in an " <Code inline=true>"Option"</Code> ", allowing the select to be initialized without a value and optionally allowing the user to deselect the current value."</p>
 
             <Code>
                 {indoc!(r#"
@@ -150,9 +150,9 @@ pub fn PageSelect() -> impl IntoView {
             <H3 id="variant-multiselect" class="anchor">
                 "Multiselect"
                 <AnchorLink href="#variant-multiselect" description="Direct link to section: Variant - Multiselect"/>
-            </H3>
+            </h3>
 
-            <P>"In its simplest form, the Select component can be created with a static list of options to choose from."</P>
+            <p>"In its simplest form, the Select component can be created with a static list of options to choose from."</p>
 
             <Code>
                 {indoc!(r#"
@@ -178,7 +178,7 @@ pub fn PageSelect() -> impl IntoView {
                 set_selected=move |v| set_selected_multi.set(v)
             />
 
-            <P>"Using the "<Code inline=true>"max"</Code>" prop, a maximum number of selectable elements can be specified. Here: 2"</P>
+            <p>"Using the "<Code inline=true>"max"</Code>" prop, a maximum number of selectable elements can be specified. Here: 2"</p>
 
             <Multiselect
                 options=vec![Foo::A, Foo::B, Foo::C]
@@ -189,12 +189,12 @@ pub fn PageSelect() -> impl IntoView {
                 set_selected=set_selected_multi2
             />
 
-            <H2 id="keyboard-navigation" class="anchor">
+            <h2 id="keyboard-navigation" class="anchor">
                 "Keyboard navigation"
                 <AnchorLink href="#keyboard-navigation" description="Direct link to section: Keyboard navigation"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "The select component was designed with keyboard navigation in mind. "
                 "Press "<Code inline=true>"Tab"</Code>" to jump to the next or "<Code inline=true>"Shift + Tab"</Code>" to jump to the previous select. "
                 "Open the dropdown using "<Code inline=true>"Enter"</Code>". "
@@ -202,19 +202,19 @@ pub fn PageSelect() -> impl IntoView {
                 "When the dropdown is not open, starting to preselect an element using the arrow keys will open it. "
                 "Choose an option by pressing "<Code inline=true>"Enter"</Code>". "
                 "Close the dropdown by pressing "<Code inline=true>"Escape"</Code>"."
-            </P>
+            </p>
 
-            <P>
+            <p>
                 "Select options can be searched. When opening the dropdown of available options, focus will automatically jump to the search input, allowing you to type instantly. "
                 "When closing the dropdown, focus is automatically restored to the select, allowing you to "<Code inline=true>"Tab"</Code>" to the next element."
-            </P>
+            </p>
 
-            <H2 id="customization" class="anchor">
+            <h2 id="customization" class="anchor">
                 "Customization"
                 <AnchorLink href="#customization" description="Direct link to section: Customization"/>
-            </H2>
+            </h2>
 
-            <P>"Let's define a select component which allows selection from a list of struct values."</P>
+            <p>"Let's define a select component which allows selection from a list of struct values."</p>
 
             <Code>
                 {indoc!(r#"
@@ -244,7 +244,7 @@ pub fn PageSelect() -> impl IntoView {
                     let (selected_user, set_selected_user) = signal(selectable_users[0].clone());
 
                     view! {
-                        <P>"Selected user is: " { move || selected_user.get().to_string() }</P>
+                        <p>"Selected user is: " { move || selected_user.get().to_string() }</p>
                         <Select
                             options=selectable_users.clone()
                             search_text_provider=move |o| o.to_string()
@@ -256,7 +256,7 @@ pub fn PageSelect() -> impl IntoView {
                 "#)}
             </Code>
 
-            <P>"Selected user is: " { move || selected_user.get().to_string() }</P>
+            <p>"Selected user is: " { move || selected_user.get().to_string() }</p>
 
             <Select
                 options=selectable_users.clone()
@@ -266,12 +266,12 @@ pub fn PageSelect() -> impl IntoView {
                 set_selected=move |v| set_selected_user.set(v)
             />
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

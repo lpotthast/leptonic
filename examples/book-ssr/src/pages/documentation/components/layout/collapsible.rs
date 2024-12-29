@@ -8,10 +8,10 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 pub fn PageCollapsible() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="collapsible" class="anchor">
+            <h1 id="collapsible" class="anchor">
                 "Collapsible"
                 <AnchorLink href="#collapsible" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
             <Code>
                 {indoc!(r#"

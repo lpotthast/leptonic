@@ -11,15 +11,15 @@ pub fn PageKbd() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="keyboard" class="anchor">
+            <h1 id="keyboard" class="anchor">
                 "Keyboard"
                 <AnchorLink href="#keyboard" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>
+            <p>
                 "Display labeled keyboard key-caps using the "<Code inline=true>"<KbdKey>"</Code>" component."
                 " Leptonic provides the "<Code inline=true>"Key"</Code>" enum which provides well-known keys and their display properties."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r"
@@ -29,18 +29,18 @@ pub fn PageKbd() -> impl IntoView {
 
             <KbdKey key=Key::Option/>
 
-            <H2 id="shortcuts" class="anchor">
+            <h2 id="shortcuts" class="anchor">
                 "Shortcuts"
                 <AnchorLink href="#shortcuts" description="Direct link to section: Shortcuts"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "You may use this component to display a hint to a keyboard shortcut your users can use to interact with your app."
                 " As shortcuts mostly consist of two or more keys, Leptonic also provide the "<Code inline=true>"<KbdShortcut>"</Code>
                 " component to make this task as easy as possible. Simply provide the keys which must be pressed in order to activate the shortcut."
-            </P>
+            </p>
 
-            <P>"Note that these component do not listen for key-presses. Their sole purpose is to unify rendering of key caps and shortcuts!"</P>
+            <p>"Note that these component do not listen for key-presses. Their sole purpose is to unify rendering of key caps and shortcuts!"</p>
 
             <Code>
                 {indoc!(r"
@@ -50,7 +50,7 @@ pub fn PageKbd() -> impl IntoView {
 
             <KbdShortcut keys=[Key::Command, Key::Enter]/>
 
-            <P>"This could also be rendered manually using the following markup."</P>
+            <p>"This could also be rendered manually using the following markup."</p>
 
             <Code>
                 {indoc!(r#"
@@ -68,12 +68,12 @@ pub fn PageKbd() -> impl IntoView {
                 <KbdKey key=Key::Enter/>
             </KbdShortcutRoot>
 
-            <H2 id="keys" class="anchor">
+            <h2 id="keys" class="anchor">
                 "Keys"
                 <AnchorLink href="#keys" description="Direct link to section: Keys"/>
-            </H2>
+            </h2>
 
-            <P>"Here is a list of all keys provided by the "<Code inline=true>"Key"</Code>" enum."</P>
+            <p>"Here is a list of all keys provided by the "<Code inline=true>"Key"</Code>" enum."</p>
 
             {
                 all_keys
@@ -85,7 +85,7 @@ pub fn PageKbd() -> impl IntoView {
                     .collect_view()
             }
 
-            <P>"If you need custom content in a "<Code inline=true>"<Kbd>"</Code>" element, use the "<Code inline=true>"Key::Custom(String)"</Code>" variant."</P>
+            <p>"If you need custom content in a "<Code inline=true>"<Kbd>"</Code>" element, use the "<Code inline=true>"Key::Custom(String)"</Code>" variant."</p>
 
             <Code>
                 {indoc!(r#"
@@ -95,12 +95,12 @@ pub fn PageKbd() -> impl IntoView {
 
             <KbdKey key=Key::Custom("Foo")/>
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

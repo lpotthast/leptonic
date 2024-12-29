@@ -10,10 +10,10 @@ pub fn PageChip() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="chip" class="anchor">
+            <h1 id="chip" class="anchor">
                 "Chip"
                 <AnchorLink href="#chip" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
             <Code>
                 {indoc!(r#"
@@ -28,16 +28,16 @@ pub fn PageChip() -> impl IntoView {
             <Chip color=ChipColor::Warn>"Warn"</Chip>
             <Chip color=ChipColor::Danger>"Danger"</Chip>
 
-            <H2 id="dismissible-chips" class="anchor">
+            <h2 id="dismissible-chips" class="anchor">
                 "Dismissible chips"
                 <AnchorLink href="#dismissible-chips" description="Direct link to section: Dismissible chips"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "As chips are often used to convey mutable state, we allow chips to be dismissible. "
                 "Dismissible chips display an "<Code inline=true>"X"</Code>" icon which lets the user dismiss the chip. "
                 "The component embedding the chip is responsible of actually removing it, e.g. not rendering it again."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r#"
@@ -56,12 +56,12 @@ pub fn PageChip() -> impl IntoView {
                 </Chip>
             </Show>
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

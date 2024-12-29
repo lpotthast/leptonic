@@ -8,10 +8,10 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 pub fn PageGrid() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="grid" class="anchor">
+            <h1 id="grid" class="anchor">
                 "Grid"
                 <AnchorLink href="#grid" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
             <Code>
                 {indoc!(r#"

@@ -1,15 +1,14 @@
 use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
-use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, Style, Stylesheet, Title};
-use leptos_router::*;
+use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, MetaTags, Style, Stylesheet, Title};
+use leptos_router::components::*;
+use leptos_router::hooks::use_location;
+use leptos_router::path;
 use leptos_use::use_media_query;
 
-use crate::{
-    error_template::{AppError, ErrorTemplate},
-    pages::{
-        documentation::doc_root::DocRoutes, editor::ThemeEditor, err404::PageErr404,
-        welcome::PageWelcome,
-    },
+use crate::pages::{
+    editor::ThemeEditor, err404::PageErr404,
+    welcome::PageWelcome,
 };
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
@@ -120,6 +119,24 @@ const FONT: &'static str = r#"
 }
 "#;
 
+pub fn shell(options: LeptosOptions) -> impl IntoView {
+    view! {
+        <!DOCTYPE html>
+        <html lang="en">
+            <head>
+                <meta charset="utf-8"/>
+                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <AutoReload options=options.clone() />
+                <HydrationScripts options/>
+                <MetaTags/>
+            </head>
+            <body>
+                <App/>
+            </body>
+        </html>
+    }
+}
+
 #[component]
 pub fn App() -> impl IntoView {
     provide_meta_context();
@@ -140,18 +157,13 @@ pub fn App() -> impl IntoView {
         <Title text="Leptonic"/>
 
         <Root default_theme=LeptonicTheme::default()>
-            <Router fallback=|| {
-                let mut outside_errors = Errors::default();
-                outside_errors.insert_with_default_key(AppError::NotFound);
-                view! {
+            <Router>
+                <Routes fallback=|| view! {
                     <Layout>
-                        <ErrorTemplate outside_errors/>
+                        <PageErr404/>
                     </Layout>
-                }
-                .into_view()
-            }>
-                <Routes>
-                    <Route path="" view=|| view! { <Layout/> }>
+                }>
+                    <Route path=path!("") view=|| view! { <Layout/> }>
                         <Route path=AppRoutes::Welcome view=|| view! { <PageWelcome/> }/>
                         <DocRoutes path=AppRoutes::Doc/>
                         <Route path=AppRoutes::ThemeEditor view=|| view! { <ThemeEditor/> }/>
@@ -208,15 +220,11 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     let is_small = use_media_query("(max-width: 800px)");
     let is_medium = use_media_query("(max-width: 1200px)");
 
-    let router_context = use_context::<RouterContext>();
+    let location = use_location();
     
     let is_doc = Memo::new(move |_| {
-        router_context
-            .as_ref()
-            .map(|router| router.pathname().get().starts_with("/doc"))
-            .unwrap_or(false)
+        location.pathname.get().starts_with("/doc")
     });
-
 
     // The main drawer is only used on mobile / small screens!.
     let (main_drawer_closed, set_main_drawer_closed) = signal(true);
@@ -303,13 +311,13 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     };
 
     view! {
-        <AppBar id="app-bar" height=APP_BAR_HEIGHT>
+        <AppBar attr:id="app-bar" height=APP_BAR_HEIGHT>
             <div id="app-bar-content">
-                <Stack id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
+                <Stack attr:id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
                     { move || match (is_doc.get(), is_small.get()) {
                         (false, true) => logo().into_view(),
                         (true, true) => view! {
-                            <Icon id="mobile-menu-trigger" icon=icondata::BsList on:click=move |_| ctx.toggle_doc_drawer()/>
+                            <Icon attr:id="mobile-menu-trigger" icon=icondata::BsList on:click=move |_| ctx.toggle_doc_drawer()/>
                             { logo }
                         }.into_view(),
                         (_, false) => view! {
@@ -317,22 +325,22 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                             <Link href=AppRoutes::Doc>
                                 <H3 style="margin: 0 0 0 0.5em">
                                     "Docs"
-                                </H3>
+                                </h3>
                             </Link>
                             //<Link href=AppRoutes::ThemeEditor>
                             //    <H3 style="margin: 0 0 0 0.5em">
                             //        "Theme Editor"
-                            //    </H3>
+                            //    </h3>
                             //</Link>
                         }.into_view(),
                     } }
                 </Stack>
 
-                <Stack id="center" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
+                <Stack attr:id="center" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     <Quicksearch
-                        id="quicksearch"
+                        attr:id="quicksearch"
                         trigger=move |set_quicksearch| view! {
-                            <QuicksearchTrigger id="quicksearch-trigger" set_quicksearch=set_quicksearch>
+                            <QuicksearchTrigger attr:id="quicksearch-trigger" set_quicksearch=set_quicksearch>
                                 { move || match is_small.get() {
                                     true => view! { <Icon icon=icondata::BsSearch />}.into_view(),
                                     false => view! { "Search"}.into_view(),
@@ -352,16 +360,16 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                     />
                 </Stack>
 
-                <Stack id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
+                <Stack attr:id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     { move || match is_small.get() {
                         true => view! {
-                            <Icon id="mobile-menu-trigger" icon=icondata::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
+                            <Icon attr:id="mobile-menu-trigger" icon=icondata::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
                         }.into_view(),
                         false => view! {
                             <Link href=DocRoutes::Changelog>"v0.6.0 (main)"</Link>
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
-                                <Icon id="github-icon" icon=icondata::BsGithub aria_label="GitHub icon"/>
+                                <Icon attr:id="github-icon" icon=icondata::BsGithub aria_label="GitHub icon"/>
                             </LinkExt>
 
                             <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
@@ -372,27 +380,31 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
         </AppBar>
 
         <Box 
-            id="content" 
+            attr:id="content"
             attr:aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
         >
             {
                 match children {
                     Some(children) => {
-                        let children = children();
-                        view! {{children}}.into_view()
+                        children()
                     },
                     None => view! {
                         // <Outlet/> will show nested child routes.
                         <Outlet/>
-                    }.into_view(),
+                    }.into_any(),
                 }
             }
 
-            <Drawer id="main-drawer" shown=Signal::derive(move || !main_drawer_closed.get()) side=DrawerSide::Right style=format!("top: {APP_BAR_HEIGHT}")>
+            <Drawer
+                attr:id="main-drawer"
+                attr:style=format!("top: {APP_BAR_HEIGHT}")
+                shown=Signal::derive(move || !main_drawer_closed.get())
+                side=DrawerSide::Right
+            >
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) class="menu">
 
                     <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank style="font-size: 3em;">
-                        <Icon id="github-icon" icon=icondata::BsGithub/>
+                        <Icon attr:id="github-icon" icon=icondata::BsGithub/>
                     </LinkExt>
 
                     <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
@@ -414,6 +426,6 @@ fn create_search_option(route: DocRoutes, label: &'static str) -> QuicksearchOpt
                 </Link>
             }
         }),
-        on_select: Producer::new(move || {}),
+        on_select: Callback::new(|| ()),
     }
 }

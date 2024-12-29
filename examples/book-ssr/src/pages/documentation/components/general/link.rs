@@ -13,19 +13,19 @@ use crate::pages::documentation::toc::Toc;
 pub fn PageLink() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="link" class="anchor">
+            <h1 id="link" class="anchor">
                 "Link"
                 <AnchorLink href="#link" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Links bring your users to a different place of your application."</P>
+            <p>"Links bring your users to a different place of your application."</p>
 
-            <H2 id="internal-links" class="anchor">
+            <h2 id="internal-links" class="anchor">
                 "Internal links"
                 <AnchorLink href="#internal-links" description="Direct link to section: Internal links"/>
-            </H2>
+            </h2>
 
-            <P>"These links, created with the "<Code inline=true>"<Link>"</Code>" component, use the leptos router under the hood and are meant to direct users to a different location inside your app, as the given "<Code inline=true>"href"</Code>" prop is always considered to be relative to your site."</P>
+            <p>"These links, created with the "<Code inline=true>"<Link>"</Code>" component, use the leptos router under the hood and are meant to direct users to a different location inside your app, as the given "<Code inline=true>"href"</Code>" prop is always considered to be relative to your site."</p>
 
             <Code>
                 {formatdoc!(r#"
@@ -37,12 +37,12 @@ pub fn PageLink() -> impl IntoView {
 
             <Link href=DocRoutes::Link>"This is a link to the current route."</Link>
 
-            <H2 id="external-links" class="anchor">
+            <h2 id="external-links" class="anchor">
                 "External links"
                 <AnchorLink href="#external-links" description="Direct link to section: External links"/>
-            </H2>
+            </h2>
 
-            <P>"These links, created with the "<Code inline=true>"<LinkExt>"</Code>" component, do not use the leptos router and must be used when directing users to external sources."</P>
+            <p>"These links, created with the "<Code inline=true>"<LinkExt>"</Code>" component, do not use the leptos router and must be used when directing users to external sources."</p>
 
             <Code>
                 {indoc!(r#"
@@ -56,16 +56,16 @@ pub fn PageLink() -> impl IntoView {
                 <Icon id="github-icon" icon=icondata::BsGithub style="font-size: 3em;"/>
             </LinkExt>
 
-            <H2 id="link-buttons" class="anchor">
+            <h2 id="link-buttons" class="anchor">
                 "Link Buttons"
                 <AnchorLink href="#link-buttons" description="Direct link to section: Link Buttons"/>
-            </H2>
+            </h2>
 
-            <P>"It is likely that you want to render a link in the form of a button. Please respect the HTML standard and do not render a <Button> inside a <Link>."</P>
+            <p>"It is likely that you want to render a link in the form of a button. Please respect the HTML standard and do not render a <Button> inside a <Link>."</p>
 
-            <P>"Use the "<Code inline=true>"<LinkButton>"</Code>" component, which accepts most props from both the <Link> as well as the <Button> component."</P>
+            <p>"Use the "<Code inline=true>"<LinkButton>"</Code>" component, which accepts most props from both the <Link> as well as the <Button> component."</p>
 
-            <P>"The \"Read the docs\" button on the welcome page was implemented this way!"</P>
+            <p>"The \"Read the docs\" button on the welcome page was implemented this way!"</p>
 
             <Code>
                 {indoc!(r#"
@@ -79,12 +79,12 @@ pub fn PageLink() -> impl IntoView {
                 "Read the docs"
             </LinkButton>
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

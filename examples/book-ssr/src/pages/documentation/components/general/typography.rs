@@ -8,36 +8,36 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 pub fn PageTypography() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="typography" class="anchor">
+            <h1 id="typography" class="anchor">
                 "Typography"
                 <AnchorLink href="#typography" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
             <Separator />
 
-            <H1>"Typography - H1"</H1>
-            <H2>"Typography - H2"</H2>
-            <H3>"Typography - H3"</H3>
-            <H4>"Typography - H4"</H4>
-            <H5>"Typography - H5"</H5>
-            <H6>"Typography - H6"</H6>
+            <h1>"Typography - H1"</h1>
+            <h2>"Typography - H2"</h2>
+            <h3>"Typography - H3"</h3>
+            <h4>"Typography - H4"</h4>
+            <h5>"Typography - H5"</h5>
+            <h6>"Typography - H6"</h6>
 
-            <P>"This is a paragraph"</P>
+            <p>"This is a paragraph"</p>
 
             <Code inline=false>"Typography - Code"</Code>
 
-            <P>
+            <p>
                 "This is a paragraph containing an "
                 <Code inline=true>"inlined"</Code>
                 " piece of code."
-            </P>
+            </p>
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

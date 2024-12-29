@@ -29,7 +29,7 @@ enum DrawerAnimationState {
 #[allow(clippy::match_same_arms)]
 pub fn Drawer(
     side: DrawerSide,
-    #[prop(into, optional, default = true.into())] shown: MaybeSignal<bool>,
+    #[prop(into, optional, default = Signal::from(true))] shown: Signal<bool>,
     children: Children,
 ) -> impl IntoView {
     let memoized_shown = Memo::new(move |_| shown.get());

@@ -1,8 +1,8 @@
-use std::fmt::Display;
-
 use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
+use leptos_router::components::{Outlet, ParentRoute, Redirect, Route, Routes, ToHref};
 use leptos_router::*;
+use std::fmt::Debug;
 
 use crate::app::APP_BAR_HEIGHT;
 use crate::app::{AppLayoutContext, AppRoutes};
@@ -50,206 +50,169 @@ use crate::pages::documentation::hooks::overlay::PageUseOverlay;
 use crate::pages::documentation::hooks::press::PageUsePress;
 use crate::pages::documentation::hooks::r#move::PageUseMove;
 
-#[derive(Debug, Copy, Clone)]
-pub enum DocRoutes {
+pub mod doc_routes {
+    use leptos_router::{path, StaticSegment};
+
     // Getting started
-    Overview,
-    Installation,
-    Themes,
-    Changelog,
+    pub const OVERVIEW: (StaticSegment<&str>,) = path!("overview");
+    pub const INSTALLATION: (StaticSegment<&str>,) = path!("installation");
+    pub const THEMES: (StaticSegment<&str>,) = path!("themes");
+    pub const CHANGELOG: (StaticSegment<&str>,) = path!("changelog");
 
     // Hooks
-    UsePress,
-    UseMove,
-    UseHover,
-    UseButton,
-    UseOverlay,
-    UseAnchorLink,
+    pub const USE_PRESS: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-press");
+    pub const USE_MOVE: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-move");
+    pub const USE_HOVER: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-hover");
+    pub const USE_BUTTON: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-button");
+    pub const USE_OVERLAY: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-overlay");
+    pub const USE_ANCHORLINK: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-anchor-link");
 
     // Atoms
-    AtomButton,
-    AtomPopover,
-    AtomAnchorLink,
+    pub const ATOM_BUTTON: (StaticSegment<&str>, StaticSegment<&str>) = path!("atoms/button");
+    pub const ATOM_POPOVER: (StaticSegment<&str>, StaticSegment<&str>) = path!("atoms/popover");
+    pub const ATOM_ANCHORLINK: (StaticSegment<&str>, StaticSegment<&str>) = path!("atoms/anchor-link");
 
     // Layout
-    Stack,
-    Grid,
-    Separator,
-    Skeleton,
-    AppBar,
-    Drawer,
-    Tab,
-    Table,
-    Collapsible,
+    pub const STACK: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/stack");
+    pub const GRID: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/grid");
+    pub const SEPARATOR: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/separator");
+    pub const SKELETON: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/skeleton");
+    pub const APP_BAR: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/app-bar");
+    pub const DRAWER: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/drawer");
+    pub const TAB: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/tabs");
+    pub const TABLE: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/table");
+    pub const COLLAPSIBLE: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/collapsible");
 
     // Input
-    Button,
-    Input,
-    TiptapEditor,
-    DateTime,
-    Slider,
-    Select,
-    Checkbox,
-    Radio,
-    Toggle,
-    ColorPicker,
+    pub const BUTTON: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/button");
+    pub const INPUT: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/input");
+    pub const TIPTAP_EDITOR: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/tiptap-editor");
+    pub const DATETIME: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/date-time");
+    pub const SLIDER: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/slider");
+    pub const SELECT: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/select");
+    pub const CHECKBOX: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/checkbox");
+    pub const RADIO: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/radio");
+    pub const TOGGLE: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/toggle");
+    pub const COLOR_PICKER: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/color-picker");
 
     // Feedback
-    Alert,
-    Toast,
-    Modal,
-    Progress,
-    Popover,
-    Chip,
-    Kbd,
+    pub const ALERT: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/alert");
+    pub const TOAST: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/toast");
+    pub const MODAL: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/modal");
+    pub const PROGRESS: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/progress");
+    pub const POPOVER: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/popover");
+    pub const CHIP: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/chip");
+    pub const KBD: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/kbd");
 
     // General
-    Typography,
-    Icon,
-    Link,
-    Callback,
+    pub const TYPOGRAPHY: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/typography");
+    pub const ICON: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/icon");
+    pub const LINK: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/link");
+    pub const CALLBACK: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/callback");
 
     // Animation
     //Transition,
 
     // Technical
-    NotFound,
+    pub const NOT_FOUND: (StaticSegment<&str>,) = path!("not-found");
 }
 
-impl DocRoutes {
-    pub const fn route(self) -> &'static str {
-        match self {
-            Self::Overview => "overview",
-            Self::Installation => "installation",
-            Self::Themes => "themes",
-            Self::Changelog => "changelog",
+/// Required so that `Routes` variants can be used in `<Link href=Routes::Foo.render() ...>` definitions.
+pub trait SegmentRenderer {
+    fn to_href(&self) -> String;
+}
 
-            Self::UsePress => "hooks/use-press",
-            Self::UseMove => "hooks/use-move",
-            Self::UseHover => "hooks/use-hover",
-            Self::UseButton => "hooks/use-button",
-            Self::UseOverlay => "hooks/use-overlay",
-            Self::UseAnchorLink => "hooks/use-anchor-link",
+// AppRoutes::Doc.route()
 
-            Self::AtomButton => "atoms/button",
-            Self::AtomPopover => "atoms/popover",
-            Self::AtomAnchorLink => "atoms/anchor-link",
-
-            Self::Stack => "components/stack",
-            Self::Grid => "components/grid",
-            Self::Separator => "components/separator",
-            Self::Skeleton => "components/skeleton",
-            Self::AppBar => "components/app-bar",
-            Self::Drawer => "components/drawer",
-            Self::Tab => "components/tabs",
-            Self::Table => "components/table",
-            Self::Collapsible => "components/collapsible",
-
-            Self::Button => "components/button",
-            Self::Input => "components/input",
-            Self::TiptapEditor => "components/tiptap-editor",
-            Self::DateTime => "components/date-time",
-            Self::Slider => "components/slider",
-            Self::Select => "components/select",
-            Self::Checkbox => "components/checkbox",
-            Self::Radio => "components/radio",
-            Self::Toggle => "components/toggle",
-            Self::ColorPicker => "components/color-picker",
-
-            Self::Alert => "components/alert",
-            Self::Toast => "components/toast",
-            Self::Modal => "components/modal",
-            Self::Progress => "components/progress",
-            Self::Popover => "components/popover",
-            Self::Chip => "components/chip",
-            Self::Kbd => "components/kbd",
-
-            Self::Typography => "components/typography",
-            Self::Icon => "components/icon",
-            Self::Link => "components/link",
-            Self::Callback => "components/callback",
-
-            //Self::Transition => "transition",
-            Self::NotFound => "not-found", // Leptos requires this to be be named "*"!
-        }
+impl SegmentRenderer for (StaticSegment<&'static str>,) {
+    fn to_href(&self) -> String {
+        let (a,) = self;
+        let a = a.0.as_path();
+        format!("{a}")
     }
 }
 
-/// Required so that `Routes` variants can be used in `<Route path=Routes::Foo ...>` definitions.
-impl Display for DocRoutes {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.route())
-    }
-}
-
-/// Required so that `Routes` variants can be used in `<Link href=Routes::Foo ...>` definitions.
-impl ToHref for DocRoutes {
-    fn to_href(&self) -> Box<dyn Fn() -> String + '_> {
-        Box::new(move || format!("/{}/{}", AppRoutes::Doc.route(), self.route()))
+impl SegmentRenderer for (StaticSegment<&'static str>, StaticSegment<&'static str>,) {
+    fn to_href(&self) -> String {
+        let (a, b) = self;
+        let a = a.0.as_path();
+        let b = b.0.as_path();
+        format!("{a}/{b}")
     }
 }
 
 // You can define other routes in their own component.
 // Use a #[component(transparent)] that returns a <Route/>.
 #[component(transparent)]
-pub fn DocRoutes<P: Display>(path: P) -> impl IntoView {
+pub fn DocRoutes<Segments: PossibleRouteMatch + Debug + Clone + Send + Sync + 'static>(path: Segments) -> impl IntoView {
+    // TODO: This should be a helper function.
+    let mut segs = Vec::new();
+    doc_routes::OVERVIEW.generate_path(&mut segs);
+    let mut overview_path = String::new();
+    for seg in segs {
+        overview_path.push_str(seg.as_raw_str());
+    }
+
     view! {
-        <Route path=path view=|| view! { <DocLayout/>}>
-            <Route path="" view=|| view! { <Redirect path=DocRoutes::Overview/> }/>
-            <Route path=DocRoutes::Overview view=|| view! { <PageOverview/> }/>
-            <Route path=DocRoutes::Installation view=|| view! { <PageInstallation/> }/>
-            <Route path=DocRoutes::Themes view=|| view! { <PageThemes/> }/>
-            <Route path=DocRoutes::Changelog view=|| view! { <PageChangelog/> }/>
+        <Routes fallback=|| "Not found.">
+            <ParentRoute path=path view=DocLayout>
+                <Route path=path!("") view=move || view! { <Redirect path=overview_path.clone()/> }/>
 
-            <Route path=DocRoutes::UsePress view=|| view! { <PageUsePress/> }/>
-            <Route path=DocRoutes::UseMove view=|| view! { <PageUseMove/> }/>
-            <Route path=DocRoutes::UseHover view=|| view! { <PageUseHover/> }/>
-            <Route path=DocRoutes::UseButton view=|| view! { <PageUseButton/> }/>
-            <Route path=DocRoutes::UseOverlay view=|| view! { <PageUseOverlay/> }/>
-            <Route path=DocRoutes::UseAnchorLink view=|| view! { <PageUseAnchorLink/> }/>
+                <Route path=doc_routes::OVERVIEW view=PageOverview/>
+                <Route path=doc_routes::INSTALLATION view=PageInstallation/>
+                <Route path=doc_routes::THEMES view=PageThemes/>
+                <Route path=doc_routes::CHANGELOG view=PageChangelog/>
 
-            <Route path=DocRoutes::AtomButton view=|| view! { <PageAtomButton/> }/>
-            <Route path=DocRoutes::AtomPopover view=|| view! { <PageAtomPopover/> }/>
-            <Route path=DocRoutes::AtomAnchorLink view=|| view! { <PageAtomAnchorLink/> }/>
+                <Route path=doc_routes::USE_PRESS view=PageUsePress/>
+                <Route path=doc_routes::USE_MOVE view=PageUseMove/>
+                <Route path=doc_routes::USE_HOVER view=PageUseHover/>
+                <Route path=doc_routes::USE_BUTTON view=PageUseButton/>
+                <Route path=doc_routes::USE_OVERLAY view=PageUseOverlay/>
+                <Route path=doc_routes::USE_ANCHORLINK view=PageUseAnchorLink/>
 
-            <Route path=DocRoutes::Stack view=|| view! { <PageStack/> }/>
-            <Route path=DocRoutes::Grid view=|| view! { <PageGrid/> }/>
-            <Route path=DocRoutes::Separator view=|| view! { <PageSeparator/> }/>
-            <Route path=DocRoutes::Skeleton view=|| view! { <PageSkeleton/> }/>
-            <Route path=DocRoutes::AppBar view=|| view! { <PageAppBar/> }/>
-            <Route path=DocRoutes::Drawer view=|| view! { <PageDrawer/> }/>
-            <Route path=DocRoutes::Tab view=|| view! { <PageTab/> }/>
-            <Route path=DocRoutes::Table view=|| view! { <PageTable/> }/>
-            <Route path=DocRoutes::Collapsible view=|| view! { <PageCollapsible/> }/>
+                <Route path=doc_routes::ATOM_BUTTON view=PageAtomButton/>
+                <Route path=doc_routes::ATOM_POPOVER view=PageAtomPopover/>
+                <Route path=doc_routes::ATOM_ANCHORLINK view=PageAtomAnchorLink/>
 
-            <Route path=DocRoutes::Button view=|| view! { <PageButton/> }/>
-            <Route path=DocRoutes::Input view=|| view! { <PageInput/> }/>
-            <Route path=DocRoutes::TiptapEditor view=|| view! { <PageTiptapEditor/> }/>
-            <Route path=DocRoutes::DateTime view=|| view! { <PageDateTime/> }/>
-            <Route path=DocRoutes::Slider view=|| view! { <PageSlider/> }/>
-            <Route path=DocRoutes::Select view=|| view! { <PageSelect/> }/>
-            <Route path=DocRoutes::Checkbox view=|| view! { <PageCheckbox/> }/>
-            <Route path=DocRoutes::Radio view=|| view! { <PageRadio/> }/>
-            <Route path=DocRoutes::Toggle view=|| view! { <PageToggle/> }/>
-            <Route path=DocRoutes::ColorPicker view=|| view! { <PageColorPicker/> }/>
+                <Route path=doc_routes::STACK view=PageStack/>
+                <Route path=doc_routes::GRID view=PageGrid/>
+                <Route path=doc_routes::SEPARATOR view=PageSeparator/>
+                <Route path=doc_routes::SKELETON view=PageSkeleton/>
+                <Route path=doc_routes::APP_BAR view=PageAppBar/>
+                <Route path=doc_routes::DRAWER view=PageDrawer/>
+                <Route path=doc_routes::TAB view=PageTab/>
+                <Route path=doc_routes::TABLE view=PageTable/>
+                <Route path=doc_routes::COLLAPSIBLE view=PageCollapsible/>
 
-            <Route path=DocRoutes::Alert view=|| view! { <PageAlert/> }/>
-            <Route path=DocRoutes::Toast view=|| view! { <PageToast/> }/>
-            <Route path=DocRoutes::Modal view=|| view! { <PageModal/> }/>
-            <Route path=DocRoutes::Progress view=|| view! { <PageProgress/> }/>
-            <Route path=DocRoutes::Popover view=|| view! { <PagePopover/> }/>
-            <Route path=DocRoutes::Chip view=|| view! { <PageChip/> }/>
-            <Route path=DocRoutes::Kbd view=|| view! { <PageKbd/> }/>
+                <Route path=doc_routes::BUTTON view=PageButton/>
+                <Route path=doc_routes::INPUT view=PageInput/>
+                <Route path=doc_routes::TIPTAP_EDITOR view=PageTiptapEditor/>
+                <Route path=doc_routes::DATETIME view=PageDateTime/>
+                <Route path=doc_routes::SLIDER view=PageSlider/>
+                <Route path=doc_routes::SELECT view=PageSelect/>
+                <Route path=doc_routes::CHECKBOX view=PageCheckbox/>
+                <Route path=doc_routes::RADIO view=PageRadio/>
+                <Route path=doc_routes::TOGGLE view=PageToggle/>
+                <Route path=doc_routes::COLOR_PICKER view=PageColorPicker/>
 
-            <Route path=DocRoutes::Typography view=|| view! { <PageTypography/> }/>
-            <Route path=DocRoutes::Icon view=|| view! { <PageIcon/> }/>
-            <Route path=DocRoutes::Link view=|| view! { <PageLink/> }/>
-            <Route path=DocRoutes::Callback view=|| view! { <PageCallback/> }/>
+                <Route path=doc_routes::ALERT view=PageAlert/>
+                <Route path=doc_routes::TOAST view=PageToast/>
+                <Route path=doc_routes::MODAL view=PageModal/>
+                <Route path=doc_routes::PROGRESS view=PageProgress/>
+                <Route path=doc_routes::POPOVER view=PagePopover/>
+                <Route path=doc_routes::CHIP view=PageChip/>
+                <Route path=doc_routes::KBD view=PageKbd/>
 
-            //<Route path=DocRoutes::Transition view=|| view! { <PageTransition/> }/>
+                <Route path=doc_routes::TYPOGRAPHY view=PageTypography/>
+                <Route path=doc_routes::ICON view=PageIcon/>
+                <Route path=doc_routes::LINK view=PageLink/>
+                <Route path=doc_routes::CALLBACK view=PageCallback/>
 
-            <Route path=DocRoutes::NotFound view=|| view! { <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
-        </Route>
+                //<Route path=doc_routes::Transition view=PageTransition/>
+
+                <Route path=doc_routes::NOT_FOUND view=|| view! { <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
+            </ParentRoute>
+        </Routes>
     }
 }
 
@@ -273,34 +236,34 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                <Link href=DocRoutes::Overview class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
-                <Link href=DocRoutes::Installation class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
-                <Link href=DocRoutes::Themes class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
-                <Link href=DocRoutes::Changelog class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                <Link href=doc_routes::OVERVIEW.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
+                <Link href=doc_routes::INSTALLATION.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
+                <Link href=doc_routes::THEMES.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
+                <Link href=doc_routes::CHANGELOG.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
             </Stack>
         </DrawerSection>
 
         <DrawerSection level=1 header=move || view! {
             <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Hooks"
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                <Link href=DocRoutes::UsePress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
-                <Link href=DocRoutes::UseMove class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
-                <Link href=DocRoutes::UseHover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
-                <Link href=DocRoutes::UseButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
-                <Link href=DocRoutes::UseOverlay class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
-                <Link href=DocRoutes::UseAnchorLink class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_anchor_link"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                <Link href=doc_routes::USE_PRESS.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
+                <Link href=doc_routes::USE_MOVE.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
+                <Link href=doc_routes::USE_HOVER.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
+                <Link href=doc_routes::USE_BUTTON.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
+                <Link href=doc_routes::USE_OVERLAY.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
+                <Link href=doc_routes::USE_ANCHORLINK.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_anchor_link"</Link>
             </Stack>
         </DrawerSection>
 
         <DrawerSection level=1 header=move || view! {
             <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Atoms"
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                <Link href=DocRoutes::AtomButton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
-                <Link href=DocRoutes::AtomPopover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
-                <Link href=DocRoutes::AtomAnchorLink class="item" on:click=move |_| close_doc_drawer_on_mobile()>"AnchorLink"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                <Link href=doc_routes::ATOM_BUTTON.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
+                <Link href=doc_routes::ATOM_POPOVER.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
+                <Link href=doc_routes::ATOM_ANCHORLINK.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"AnchorLink"</Link>
             </Stack>
         </DrawerSection>
 
@@ -310,58 +273,58 @@ pub fn DocLayout() -> impl IntoView {
             <DrawerSection level=2 header=move || view! {
                 <Icon icon=icondata::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
             }>
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                    <Link href=DocRoutes::Stack class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
-                    <Link href=DocRoutes::Grid class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
-                    <Link href=DocRoutes::Separator class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
-                    <Link href=DocRoutes::Skeleton class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Skeleton"</Link>
-                    <Link href=DocRoutes::AppBar class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
-                    <Link href=DocRoutes::Drawer class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
-                    <Link href=DocRoutes::Tab class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
-                    <Link href=DocRoutes::Table class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Table"</Link>
-                    <Link href=DocRoutes::Collapsible class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=doc_routes::STACK.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Stack"</Link>
+                    <Link href=doc_routes::GRID.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
+                    <Link href=doc_routes::SEPARATOR.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
+                    <Link href=doc_routes::SKELETON.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Skeleton"</Link>
+                    <Link href=doc_routes::APP_BAR.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"App Bar"</Link>
+                    <Link href=doc_routes::DRAWER.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drawer"</Link>
+                    <Link href=doc_routes::TAB.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
+                    <Link href=doc_routes::TABLE.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Table"</Link>
+                    <Link href=doc_routes::COLLAPSIBLE.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
                 </Stack>
             </DrawerSection>
 
             <DrawerSection level=2 header=move || view! {
                 <Icon icon=icondata::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
             }>
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                    <Link href=DocRoutes::Button class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
-                    <Link href=DocRoutes::Input class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Input"</Link>
-                    <Link href=DocRoutes::TiptapEditor class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tiptap editor"</Link>
-                    <Link href=DocRoutes::DateTime class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Date & Time"</Link>
-                    <Link href=DocRoutes::Slider class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
-                    <Link href=DocRoutes::Select class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
-                    <Link href=DocRoutes::Checkbox class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Checkbox"</Link>
-                    <Link href=DocRoutes::Radio class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Radio"</Link>
-                    <Link href=DocRoutes::Toggle class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
-                    <Link href=DocRoutes::ColorPicker class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Color Picker"</Link>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=doc_routes::BUTTON.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
+                    <Link href=doc_routes::INPUT.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Input"</Link>
+                    <Link href=doc_routes::TIPTAP_EDITOR.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tiptap editor"</Link>
+                    <Link href=doc_routes::DATETIME.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Date & Time"</Link>
+                    <Link href=doc_routes::SLIDER.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
+                    <Link href=doc_routes::SELECT.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
+                    <Link href=doc_routes::CHECKBOX.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Checkbox"</Link>
+                    <Link href=doc_routes::RADIO.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Radio"</Link>
+                    <Link href=doc_routes::TOGGLE.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
+                    <Link href=doc_routes::COLOR_PICKER.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Color Picker"</Link>
                 </Stack>
             </DrawerSection>
 
             <DrawerSection level=2 header=move || view! {
                 <Icon icon=icondata::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
             }>
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                    <Link href=DocRoutes::Alert class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
-                    <Link href=DocRoutes::Toast class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
-                    <Link href=DocRoutes::Modal class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
-                    <Link href=DocRoutes::Progress class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
-                    <Link href=DocRoutes::Popover class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
-                    <Link href=DocRoutes::Chip class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
-                    <Link href=DocRoutes::Kbd class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Kbd"</Link>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=doc_routes::ALERT.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Alert"</Link>
+                    <Link href=doc_routes::TOAST.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toast"</Link>
+                    <Link href=doc_routes::MODAL.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
+                    <Link href=doc_routes::PROGRESS.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
+                    <Link href=doc_routes::POPOVER.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
+                    <Link href=doc_routes::CHIP.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
+                    <Link href=doc_routes::KBD.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Kbd"</Link>
                 </Stack>
             </DrawerSection>
 
             <DrawerSection level=2 header=move || view! {
                 <Icon icon=icondata::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
             }>
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="link-stack">
-                    <Link href=DocRoutes::Typography class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
-                    <Link href=DocRoutes::Icon class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
-                    <Link href=DocRoutes::Link class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
-                    <Link href=DocRoutes::Callback class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Callback"</Link>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=doc_routes::TYPOGRAPHY.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Typography"</Link>
+                    <Link href=doc_routes::ICON.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Icon"</Link>
+                    <Link href=doc_routes::LINK.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
+                    <Link href=doc_routes::CALLBACK.to_href() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Callback"</Link>
                 </Stack>
             </DrawerSection>
         </DrawerSection>
@@ -376,7 +339,7 @@ pub fn DocLayout() -> impl IntoView {
     };
 
     view! {
-        <Box id="doc-layout" style=move || format!(
+        <Box attr:id="doc-layout" attr:style=move || format!(
             "margin-left: {}em; margin-right: {}em;",
             match app_layout_context.doc_drawer_closed.get() {
                 true => 0,
@@ -389,12 +352,12 @@ pub fn DocLayout() -> impl IntoView {
         )>
             <Drawer
                 side=DrawerSide::Left
-                id="doc-drawer"
+                attr:id="doc-drawer"
                 shown=Signal::derive(move || !app_layout_context.doc_drawer_closed.get())
-                class=drawer_class
-                style=format!("position: fixed; left: 0; top: {APP_BAR_HEIGHT}; bottom: 0;")
+                attr:class=drawer_class
+                attr:style=format!("position: fixed; left: 0; top: {APP_BAR_HEIGHT}; bottom: 0;")
             >
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero class="menu">
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="menu">
                     { drawer_content }
                 </Stack>
             </Drawer>
@@ -425,7 +388,7 @@ where
 #[allow(dead_code)]
 pub fn New() -> impl IntoView {
     view! {
-        <Chip style="color: var(--primary-color); background-color: transparent; margin: 0; padding: 0;">
+        <Chip attr:style="color: var(--primary-color); background-color: transparent; margin: 0; padding: 0;">
             "NEW"
         </Chip>
     }

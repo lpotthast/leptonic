@@ -9,16 +9,16 @@ use crate::pages::documentation::{article::Article, doc_root::DocRoutes, toc::To
 pub fn PageInstallation() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="installation" class="anchor">
+            <h1 id="installation" class="anchor">
                 "Installation"
                 <AnchorLink href="#installation" description="Direct link to an overview of installation instructions."/>
-            </H1>
+            </h1>
 
-            <P>
+            <p>
                 "The easiest way to get started is by cloning either "
                 <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkExtTarget::Blank>"template-ssr"</LinkExt> " or "
                 <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkExtTarget::Blank>"template-csr"</LinkExt> "."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r"
@@ -32,14 +32,14 @@ pub fn PageInstallation() -> impl IntoView {
                 <Li slot>"Use client-side-rendering (CSR) when big bundle-sizes and slow initial load times are not an issue for you or when you want a solution with less complexity involved."</Li>
             </Ul>
 
-            <P>"The way you use Leptonic will stay the same either way."</P>
+            <p>"The way you use Leptonic will stay the same either way."</p>
 
-            <H2 id="custom-setup" class="anchor">
+            <h2 id="custom-setup" class="anchor">
                 "Custom setup"
                 <AnchorLink href="#custom-setup" description="Custom setup"/>
-            </H2>
+            </h2>
 
-            <P>"Start by adding "<Code inline=true>"leptonic"</Code>" as a dependency of your app. "</P>
+            <p>"Start by adding "<Code inline=true>"leptonic"</Code>" as a dependency of your app. "</p>
 
             <Code>
                 {indoc!(r"
@@ -47,14 +47,14 @@ pub fn PageInstallation() -> impl IntoView {
                 ")}
             </Code>
 
-            <P>
+            <p>
                 "Leptonic comes with default styling in form of the "<LinkExt href="https://github.com/lpotthast/leptonic-theme/tree/main" target=LinkExtTarget::Blank>"leptonic-theme"</LinkExt>" crate. "
                 "The themes, as well as other static files, are automatically copied to your project root directory when building your application. "
                 "You have to tell Leptonic where you want these files to be stored. "
                 "We recommend not excluding them from your VCS."
-            </P>
+            </p>
 
-            <P>"Add the following to your "<Code inline=true>"Cargo.toml"</Code>". We will assume that the 'style' directory also contains your 'main.scss' file."</P>
+            <p>"Add the following to your "<Code inline=true>"Cargo.toml"</Code>". We will assume that the 'style' directory also contains your 'main.scss' file."</p>
 
             <Code>
                 {indoc!(r#"
@@ -67,7 +67,7 @@ pub fn PageInstallation() -> impl IntoView {
                 "#)}
             </Code>
 
-            <P>"To incorporate the Leptonic themes in your app, add the following to your "<Code inline=true>"style/main.scss"</Code>" file."</P>
+            <p>"To incorporate the Leptonic themes in your app, add the following to your "<Code inline=true>"style/main.scss"</Code>" file."</p>
 
             <Code>
                 {indoc!(r#"
@@ -75,7 +75,7 @@ pub fn PageInstallation() -> impl IntoView {
                 "#)}
             </Code>
 
-            <P>"You can overwrite or add styles for a particular theme using a "<Code inline=true>"[data-theme=\"...\"]"</Code>" selector like so:"</P>
+            <p>"You can overwrite or add styles for a particular theme using a "<Code inline=true>"[data-theme=\"...\"]"</Code>" selector like so:"</p>
 
             <Code>
                 {indoc!(r#"
@@ -89,11 +89,11 @@ pub fn PageInstallation() -> impl IntoView {
                 "#)}
             </Code>
 
-            <P>
+            <p>
                 "Leptonic depends on the "<Code inline=true>"leptos-use"</Code>" crate. Some of the features used require an opt-in."
                 " In order for your app to compile properly, add a folder named "<Code inline=true>".cargo"</Code>" besides your "<Code inline=true>"Cargo.toml"</Code>" file."
                 " Place a "<Code inline=true>"config.toml"</Code>" file inside it containing the following content:"
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r#"
@@ -103,21 +103,21 @@ pub fn PageInstallation() -> impl IntoView {
                 "#)}
             </Code>
 
-            <P>"You should now be ready to use leptonic components in your leptos app. Let's set up your first component."</P>
+            <p>"You should now be ready to use leptonic components in your leptos app. Let's set up your first component."</p>
 
 
-            <P>"Similar to Leptos, this crate comes with a prelude module."</P>
+            <p>"Similar to Leptos, this crate comes with a prelude module."</p>
 
-            <P>"Just " <Code inline=true>"use leptonic::prelude::*;"</Code> " and you are ready to use any component mentioned in this book."</P>
+            <p>"Just " <Code inline=true>"use leptonic::prelude::*;"</Code> " and you are ready to use any component mentioned in this book."</p>
 
-            <P>
+            <p>
                 "Leptonic provides the "<Code inline=true>"<Root>"</Code>" component. "
                 "It is responsible for enabling the "<Link href=DocRoutes::Themes>"Theming"</Link>", "<Link href=DocRoutes::Modal>"Modal"</Link>" and "
                 <Link href=DocRoutes::Toast>"Toast"</Link>" functionality of Leptonic as well as providing global event-listening capabilities."
                 "You have to include it in your app once, and render all your content inside it."
-            </P>
+            </p>
 
-            <P>"Let's implement the famous counter example."</P>
+            <p>"Let's implement the famous counter example."</p>
 
             <Code>
                 {indoc!(r#"
@@ -129,7 +129,7 @@ pub fn PageInstallation() -> impl IntoView {
                         view! {
                             <Root default_theme=LeptonicTheme::default()>
                                 <Box style="display: flex; flex-direction: column; align-items: center; padding: 1em; min-height: 100%; min-width: 100%">
-                                    <H2>"Welcome to Leptonic"</H2>
+                                    <h2>"Welcome to Leptonic"</h2>
 
                                     <span style="margin-top: 3em;">"Count: " {move || count.get()}</span>
                                     <Button on_click=move|_| set_count.update(|c| *c += 1)>

@@ -47,12 +47,12 @@ pub fn PageUseHover() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="use-hover" class="anchor">
+            <h1 id="use-hover" class="anchor">
                 "use_hover"
                 <AnchorLink href="#use-hover" description="Direct link to section: use_hover"/>
-            </H1>
+            </h1>
 
-            <P>"Track element hover."</P>
+            <p>"Track element hover."</p>
 
             <Code>
                 {indoc!(r"
@@ -76,9 +76,9 @@ pub fn PageUseHover() -> impl IntoView {
                 <Label>"Disabled"</Label>
             </FormControl>
 
-            <P>"Is hovered: " { move || hover.is_hovered.get() }</P>
+            <p>"Is hovered: " { move || hover.is_hovered.get() }</p>
 
-            <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
+            <p>"Last " { move || events.with(|events| events.len()) } " events: "</p>
 
             <pre style="
                 width: 100%;

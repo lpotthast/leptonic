@@ -14,9 +14,9 @@ pub fn PageTransition() -> impl IntoView {
 
     view! {
         <Article>
-            <H1>"Transitions"</H1>
+            <h1>"Transitions"</h1>
 
-            <H2>"Transition - Collapse - horizontally"</H2>
+            <h2>"Transition - Collapse - horizontally"</h2>
             <Toggle state=transition_collapse_h set_state=set_transition_collapse_h/>
             <Collapse show=transition_collapse_h axis=CollapseAxis::X>
                 <Skeleton height=Size::Em(5.0) width=Size::Percent(100.0)>"Collapse"</Skeleton>
@@ -24,7 +24,7 @@ pub fn PageTransition() -> impl IntoView {
 
             <Separator />
 
-            <H2>"Transition - Collapse - vertically"</H2>
+            <h2>"Transition - Collapse - vertically"</h2>
             <Toggle state=transition_collapse_v set_state=set_transition_collapse_v/>
             <Collapse show=transition_collapse_v axis=CollapseAxis::Y>
                 <Skeleton height=Size::Em(5.0)>"Collapse"</Skeleton>
@@ -32,7 +32,7 @@ pub fn PageTransition() -> impl IntoView {
 
             <Separator />
 
-            <H2>"Transition - Fade"</H2>
+            <h2>"Transition - Fade"</h2>
             <Toggle state=transition_fade set_state=set_transition_fade/>
             <Fade inn=Signal::derive(move || transition_fade.get())>
                 <Skeleton>"Fade"</Skeleton>
@@ -40,7 +40,7 @@ pub fn PageTransition() -> impl IntoView {
 
             <Separator />
 
-            //<H2>"Transition - Grow"</H2>
+            //<h2>"Transition - Grow"</h2>
             //<Toggle state=transition_grow set_state=set_transition_grow/>
             //<Grow inn=Signal::derive(move || transition_grow.get())>
             //    <Skeleton>"Grow"</Skeleton>
@@ -48,7 +48,7 @@ pub fn PageTransition() -> impl IntoView {
 
             //<Separator />
 
-            //<H2>"Transition - Slide"</H2>
+            //<h2>"Transition - Slide"</h2>
             //<Toggle state=transition_slide set_state=set_transition_slide/>
             //<Slide inn=Signal::derive(move || transition_slide.get())>
             //    <Skeleton>"Slide"</Skeleton>
@@ -56,7 +56,7 @@ pub fn PageTransition() -> impl IntoView {
 
             //<Separator />
 
-            //<H2>"Transition - Zoom"</H2>
+            //<h2>"Transition - Zoom"</h2>
             //<Toggle state=transition_zoom set_state=set_transition_zoom/>
             //<Zoom inn=Signal::derive(move || transition_zoom.get())>
             //    <Skeleton>"Zoom"</Skeleton>

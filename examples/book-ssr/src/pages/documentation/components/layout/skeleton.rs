@@ -8,16 +8,16 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 pub fn PageSkeleton() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="skeleton" class="anchor">
+            <h1 id="skeleton" class="anchor">
                 "Skeleton"
                 <AnchorLink href="#skeleton" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>
+            <p>
                 "A skeleton is a placeholder element of a specific shape and size which can be displayed in place of some actual content, "
                 "whenever, for example, this content cannot be displayed because required data is still being fetched from a network resource. "
                 "This reduces layout shifts and prepares the user for where content will be visible when available."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r"
@@ -25,24 +25,24 @@ pub fn PageSkeleton() -> impl IntoView {
                 ")}
             </Code>
 
-            <P>
+            <p>
                 "An explicit "<Code inline=true>"width"</Code>" property of "<Code inline=true>"Size::Percent(100.0)"</Code>" can be omitting as this is the default width of any skeleton."<br />
                 "The "<Code inline=true>"height"</Code>" property defaults to "<Code inline=true>"Size::Auto"</Code>", so setting an explicit height is always advised when not embedding children in the skeleton."
-            </P>
+            </p>
 
-            <P>"The skeleton will render as:"</P>
+            <p>"The skeleton will render as:"</p>
 
             <Skeleton height=Size::Em(5.0)/>
 
-            <H2 id="animation">
+            <h2 id="animation">
                 "Animation"
                 <AnchorLink href="#animation" description="Direct link to section: Animation"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "By default, skeleton components contain an animation, suggesting that something is waiting to replace this component shortly. "
                 "If for any reason, this animation is not desired, it can be disabled using the "<Code inline=true>"animated"</Code>" property."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r"
@@ -50,25 +50,25 @@ pub fn PageSkeleton() -> impl IntoView {
                 ")}
             </Code>
 
-            <P>"The skeleton will render as:"</P>
+            <p>"The skeleton will render as:"</p>
 
             <Skeleton animated=false height=Size::Em(5.0)/>
 
-            <P>
+            <p>
                 "Albeit used quite often these days, I would like to remind you that this concept is only tries to mitigate the problem of slowly loading resources. "
                 "All that might just not be required, if resources are preloaded, if services providing data do that in a few milliseconds, and so on and so forth... Try avoiding overly aggressive use of the skeleton component."
                 "But, even if your services respond quickly, keep in mind that the (uncontrollable) user-network-speeds may still result in slow resources."
-            </P>
+            </p>
 
-            <H2 id="children">
+            <h2 id="children">
                 "Children"
                 <AnchorLink href="#children" description="Direct link to section: Children"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "As already mentioned briefly, the skeleton component optionally accepts children, so that content con be rendered if desired. "
                 "In this case, a specific "<Code inline=true>"height"</Code>" property may not be specified."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r#"
@@ -78,20 +78,20 @@ pub fn PageSkeleton() -> impl IntoView {
                 "#)}
             </Code>
 
-            <P>"The skeleton will render as:"</P>
+            <p>"The skeleton will render as:"</p>
 
             <Skeleton animated=false>
                 "I am a skeleton!"
             </Skeleton>
 
-            <P>"We will encounter these skeletons on other pages of this layout chapter."</P>
+            <p>"We will encounter these skeletons on other pages of this layout chapter."</p>
 
-            <H2 id="styling">
+            <h2 id="styling">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

@@ -15,7 +15,7 @@ pub fn PageUseAnchorLink() -> impl IntoView {
 
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
-    let UseAnchorLinkReturn { props } = use_anchor_link(UseAnchorLinkInput {
+    let UseAnchorLinkReturn { attrs, is_pressed } = use_anchor_link(UseAnchorLinkInput {
         href: Href::from_str(Oco::Borrowed("#my-anchor-element")).expect("valid href"),
         scroll_behavior: Some(ScrollBehavior::Smooth),
         disabled: disabled.into(),
@@ -35,12 +35,12 @@ pub fn PageUseAnchorLink() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="use-anchor-link" class="anchor">
+            <h1 id="use-anchor-link" class="anchor">
                 "use_anchor_link"
                 <AnchorLink href="#use-anchor-link" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Make any element an anchor link."</P>
+            <p>"Make any element an anchor link."</p>
 
             <Code>
                 {indoc!(r##"
@@ -58,10 +58,7 @@ pub fn PageUseAnchorLink() -> impl IntoView {
             </Code>
 
             <a
-                {..props.attrs}
-                on:keydown=props.on_key_down
-                on:click=props.on_click
-                on:pointerdown=props.on_pointer_down
+                {..attrs}
                 class="leptonic-anchor-link"
                 target="_self"
             >

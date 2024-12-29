@@ -11,17 +11,17 @@ pub fn PageTiptapEditor() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="editor" class="anchor">
+            <h1 id="editor" class="anchor">
                 "Tiptap editor"
                 <AnchorLink href="#editor" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Embed a simple WYSIWYG editor into your app."</P>
+            <p>"Embed a simple WYSIWYG editor into your app."</p>
 
-            <P>
+            <p>
                 "The provided editor is a wrapper around a headless Tiptap editor instance obtainable via the leptos-tiptap integration. "
                 "You may want to look into building you own editor UI!"
-            </P>
+            </p>
 
             <P style="display: flex;">
                 <Toggle state=disabled set_state=set_disabled style="margin-right: 0.5em;"/>
@@ -33,7 +33,7 @@ pub fn PageTiptapEditor() -> impl IntoView {
                         }
                     }
                 </span>
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r"

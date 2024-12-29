@@ -244,7 +244,7 @@ pub fn ColorPicker(
                 </Field>
             </div>
 
-            <P>"Hex: #"{move || format!("{:X}", rgb.get())}</P>
+            <p>"Hex: #"{move || format!("{:X}", rgb.get())}</p>
         </leptonic-color-picker>
     }
 }

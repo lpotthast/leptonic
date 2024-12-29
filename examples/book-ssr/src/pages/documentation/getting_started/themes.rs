@@ -8,30 +8,30 @@ use crate::pages::documentation::{article::Article, doc_root::DocRoutes, toc::To
 pub fn PageThemes() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="theming">
+            <h1 id="theming">
                 "Theming"
                 <AnchorLink href="#theming" description="Direct link to section: Theming"/>
-            </H1>
+            </h1>
 
-            <P>"From the first day on, Leptonic was built with theming in mind."</P>
+            <p>"From the first day on, Leptonic was built with theming in mind."</p>
 
-            <P>
+            <p>
                 "Styles are not attached to components directly, are not injected in any way upon rendering, "
                 "which means that all components could be describes as \"headless\" in that regard."
-            </P>
+            </p>
 
-            <P>
+            <p>
                 "All styling is provided through the "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkExtTarget::Blank>"leptonic-theme"</LinkExt>" crate. "
                 "When used as a build.rs dependency, this crate can write out SCSS code, styling the Leptonic components in two themes: "<Code inline=true>"light"</Code>" and "<Code inline=true>"dark"</Code>"."
-            </P>
+            </p>
 
-            <P>
+            <p>
                 "The "<Code inline=true>"<Root>"</Code>" component already discussed in the "<Link href=DocRoutes::Installation>"Installation"</Link>" section provides everything required (namely rendering the "<Code inline=true>"<ThemeProvider>"</Code>" component) to active a theme."
-            </P>
+            </p>
 
-            <P>
+            <p>
                 "A simple " <Code inline=true>"ThemeToggle"</Code>" component is provided, which you can embed like this:"
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r"
@@ -39,30 +39,30 @@ pub fn PageThemes() -> impl IntoView {
                 ")}
             </Code>
 
-            <P>
+            <p>
                 "We are using the "<Code inline=true>"<LeptonicTheme>"</Code>" enum here, which describes the two out-of-the-box themes (light and dark). "
                 "This is not mandatory though as you could create your own theme-defining type and your own theme toggle components."
-            </P>
+            </p>
 
-            <H2 id="customization">
+            <h2 id="customization">
                 "Customization"
                 <AnchorLink href="#customization" description="Direct link to section: Customization"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "Having a theme, even better a theme provided by default is, is great, but only if that them can be customized in a meaningful way."
-            </P>
+            </p>
 
-            <P>
+            <p>
                 "All components styles therefore make broad use of CSS variables, with which many aspects of the two default themes can be changed. "
                 "In every page of this book explaining a component, we hint you to the styles you might want to override. A theme generator may come in the future..."
-            </P>
+            </p>
 
-            <P>
+            <p>
                 "Have a look at this excerpt from this book's main "<Code inline=true>"style.scss"</Code>" file, "
                 "showing you how we include the leptonic standard themes previously written by our build script "
                 "and overwrite a few variables to meet our design needs."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r#"

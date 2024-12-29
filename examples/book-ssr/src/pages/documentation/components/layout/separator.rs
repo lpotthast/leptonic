@@ -8,10 +8,10 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 pub fn PageSeparator() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="separator" class="anchor">
+            <h1 id="separator" class="anchor">
                 "Separator"
                 <AnchorLink href="#separator" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
             <Code>
                 {indoc!(r"

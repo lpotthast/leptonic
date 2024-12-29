@@ -15,12 +15,12 @@ use crate::pages::documentation::toc::Toc;
 pub fn PageAtomPopover() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="popover" class="anchor">
+            <h1 id="popover" class="anchor">
                 "Popover"
                 <AnchorLink href="#popover" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"..."</P>
+            <p>"..."</p>
 
             <Code>
                 {indoc!(r#"

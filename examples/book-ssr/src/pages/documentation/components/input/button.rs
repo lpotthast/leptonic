@@ -13,13 +13,13 @@ pub fn PageButton() -> impl IntoView {
     let (disabled, set_disabled) = signal(false);
     view! {
         <Article>
-            <H1 id="button" class="anchor">
+            <h1 id="button" class="anchor">
                 "Button"
                 <AnchorLink href="#button" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Buttons are one of the most common input mechanisms with which your users can interact with your software."</P>
-            <P>"Buttons only require an action handler and can therefor be created like in this minimal example."</P>
+            <p>"Buttons are one of the most common input mechanisms with which your users can interact with your software."</p>
+            <p>"Buttons only require an action handler and can therefor be created like in this minimal example."</p>
 
             <Code>
                 {indoc!(r#"
@@ -33,12 +33,12 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {}>"My Button"</Button>
             </div>
 
-            <H2 id="colors" class="anchor">
+            <h2 id="colors" class="anchor">
                 "Colors"
                 <AnchorLink href="#colors" description="Direct link to section: Colors"/>
-            </H2>
+            </h2>
 
-            <P>"Buttons come in different colors. You can overwrite these using theme variables."</P>
+            <p>"Buttons come in different colors. You can overwrite these using theme variables."</p>
 
             <Code>
                 {indoc!(r#"
@@ -58,17 +58,17 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {} color=ButtonColor::Info>"Info"</Button>
             </Stack>
 
-            <H2 id="variants" class="anchor">
+            <h2 id="variants" class="anchor">
                 "Variants"
                 <AnchorLink href="#variants" description="Direct link to section: Variants"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "Buttons come in three different " <Code inline=true>"ButtonVariant"</Code> "s."
                 <Code inline=true>"Flat"</Code> ", "
                 <Code inline=true>"Outlined"</Code> " and "
                 <Code inline=true>"Filled"</Code> ", with the Filled variant being the default, hence the visual of our simple button above."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r#"
@@ -84,12 +84,12 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
             </Stack>
 
-            <H2 id="groups" class="anchor">
+            <h2 id="groups" class="anchor">
                 "Groups"
                 <AnchorLink href="#groups" description="Direct link to section: Groups"/>
-            </H2>
+            </h2>
 
-            <P>"Buttons can be displayed in a group. This lets adjacent buttons snap to each other, creating a seamless row of buttons. It is recommended to only use the Filled button variant when putting buttons inside a group."</P>
+            <p>"Buttons can be displayed in a group. This lets adjacent buttons snap to each other, creating a seamless row of buttons. It is recommended to only use the Filled button variant when putting buttons inside a group."</p>
 
             <Code>
                 {indoc!(r#"
@@ -107,18 +107,18 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {}>"Button 3"</Button>
             </ButtonGroup>
 
-            <H2 id="disabled" class="anchor">
+            <h2 id="disabled" class="anchor">
                 "Disabled"
                 <AnchorLink href="#disabled" description="Direct link to section: Disabled"/>
-            </H2>
+            </h2>
 
-            <P>"Buttons can be set disabled using a signal."</P>
+            <p>"Buttons can be set disabled using a signal."</p>
 
-            <P>
+            <p>
                 "Buttons can be disabled using the "
                 <Code inline=true>"disabled"</Code>
                 " property. You can supply anything evaluating to a boolean, including signals."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r#"
@@ -138,12 +138,12 @@ pub fn PageButton() -> impl IntoView {
                 <Button on_press=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
             </ButtonWrapper>
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

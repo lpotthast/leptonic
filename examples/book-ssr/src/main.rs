@@ -1,12 +1,13 @@
+use tower_http::compression::CompressionLayer;
+
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
     use axum::Router;
+    use leptos::logging::log;
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use book_ssr::app::*;
-    use book_ssr::fileserv::file_and_error_handler;
-    use tower_http::compression::CompressionLayer;
 
     use tracing_subscriber::{
         prelude::__tracing_subscriber_SubscriberExt,
@@ -36,22 +37,18 @@ async fn main() {
     let (shutdown_send, mut shutdown_recv) = tokio::sync::mpsc::unbounded_channel::<()>();
 
     let _app_jh = tokio::spawn(async move {
-        // Setting get_configuration(None) means we'll be using cargo-leptos's env values
-        // For deployment these variables are:
-        // <https://github.com/leptos-rs/start-axum#executing-a-server-on-a-remote-machine-without-the-toolchain>
-        // Alternately a file can be specified such as Some("Cargo.toml")
-        // The file would need to be included with the executable when moved to deployment
-        let conf = get_configuration(None).await.unwrap();
+        let conf = get_configuration(None).unwrap();
+        let addr = conf.leptos_options.site_addr;
         let leptos_options = conf.leptos_options;
-        let addr = leptos_options.site_addr;
+        // Generate the list of routes in your Leptos App
         let routes = generate_route_list(App);
 
-        // build our application with a route
         let app = Router::new()
-            .leptos_routes(&leptos_options, routes, App)
-            .fallback(
-                file_and_error_handler
-            )
+            .leptos_routes(&leptos_options, routes, {
+                let leptos_options = leptos_options.clone();
+                move || shell(leptos_options.clone())
+            })
+            .fallback(leptos_axum::file_and_error_handler(shell))
             .layer(
                 CompressionLayer::new()
                     .gzip(true)
@@ -60,7 +57,7 @@ async fn main() {
                     .quality(tower_http::CompressionLevel::Default),
             )
             .with_state(leptos_options);
-
+        
         tracing::info!("Loading certs...");
 
         let working_dir = std::env::current_dir().expect("Could not determine working directory.");
@@ -102,6 +99,6 @@ async fn main() {
 #[cfg(not(feature = "ssr"))]
 pub fn main() {
     // no client-side main function
-    // unless we want this to work with e.g., Trunk for a purely client-side app
+    // unless we want this to work with e.g., Trunk for pure client-side testing
     // see lib.rs for hydration function instead
 }

@@ -17,10 +17,10 @@ pub fn PageToast() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="toast" class="anchor">
+            <h1 id="toast" class="anchor">
                 "Toast"
                 <AnchorLink href="#toast" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
             <TextInput get=header set=set_header placeholder="Header text" style="margin-bottom: 1em;"/>
             <TextInput get=body set=set_body placeholder="Body text" style="margin-bottom: 1em;"/>
@@ -76,12 +76,12 @@ pub fn PageToast() -> impl IntoView {
                 "#)}
             </Code>
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

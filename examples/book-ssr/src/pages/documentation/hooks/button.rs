@@ -1,4 +1,5 @@
 use indoc::indoc;
+use leptos::html;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -13,7 +14,7 @@ use crate::pages::documentation::toc::Toc;
 pub fn PageUseButton() -> impl IntoView {
     let el: NodeRef<html::Div> = NodeRef::new();
 
-    let UseButtonReturn { props } = use_button(UseButtonInput {
+    let UseButtonReturn { attrs, is_hovered, is_pressed } = use_button(UseButtonInput {
         node_ref: el,
         disabled: false.into(),
         aria_haspopup: AriaHasPopup::default().into(),
@@ -45,12 +46,12 @@ pub fn PageUseButton() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="use_button" class="anchor">
+            <h1 id="use_button" class="anchor">
                 "use_button"
                 <AnchorLink href="#use_button" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Create standardized buttons from arbitrary elements."</P>
+            <p>"Create standardized buttons from arbitrary elements."</p>
 
             <Code>
                 {indoc!(r#"
@@ -105,13 +106,8 @@ pub fn PageUseButton() -> impl IntoView {
             </Code>
 
             <div
-                {..props.attrs}
+                {..attrs}
                 node_ref=el
-                on:keydown=props.on_key_down
-                on:click=props.on_click
-                on:pointerdown=props.on_pointer_down
-                on:focus=props.on_focus
-                on:blur=props.on_blur
                 style="
                     display: inline-flex;
                     border: 0.1em solid green;

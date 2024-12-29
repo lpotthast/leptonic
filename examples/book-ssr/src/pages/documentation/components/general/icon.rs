@@ -11,21 +11,21 @@ use crate::pages::documentation::toc::Toc;
 pub fn PageIcon() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="icon" class="anchor">
+            <h1 id="icon" class="anchor">
                 "Icon"
                 <AnchorLink href="#icon" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>
+            <p>
                 "Icons are supported through the "<LinkExt target=LinkExtTarget::Blank href="https://crates.io/crates/icondata">"https://crates.io/crates/icondata"</LinkExt> " crate. "
                 "The crates readme show the available icon packages and their current versions."
-            </P>
+            </p>
 
-            <P style="font-weight: bold;">"Browse through available icons at "<LinkExt target=LinkExtTarget::Blank href="https://carlosted.github.io/icondata/">"https://carlosted.github.io/icondata/"</LinkExt> "!"</P>
+            <P style="font-weight: bold;">"Browse through available icons at "<LinkExt target=LinkExtTarget::Blank href="https://carlosted.github.io/icondata/">"https://carlosted.github.io/icondata/"</LinkExt> "!"</p>
 
-            <P>"Leptonic provides a re-export of the "<Code inline=true>"icondata"</Code>" crate when using the prelude module."</P>
+            <p>"Leptonic provides a re-export of the "<Code inline=true>"icondata"</Code>" crate when using the prelude module."</p>
 
-            <P>"You can simply include an icon using the "<Code inline=true>"<Icon>"</Code>" component."</P>
+            <p>"You can simply include an icon using the "<Code inline=true>"<Icon>"</Code>" component."</p>
 
             <Code>
                 {indoc!(r#"
@@ -41,16 +41,16 @@ pub fn PageIcon() -> impl IntoView {
             <Icon icon=icondata::BsFolderFill style="font-size: 6em;"/>
             <Icon icon=icondata::BsFolder style="font-size: 6em;"/>
 
-            <P>"SVG data of all the icons used in your application is embedded into your binary."</P>
+            <p>"SVG data of all the icons used in your application is embedded into your binary."</p>
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"There are currently no CSS variables exposed, targeting the "<Code inline=true>"<Icon>"</Code> " component."</P>
+            <p>"There are currently no CSS variables exposed, targeting the "<Code inline=true>"<Icon>"</Code> " component."</p>
 
-            <P>"Notes:"</P>
+            <p>"Notes:"</p>
             <ul>
                 <li>"Scale icons by setting the css "<Code inline=true>"font-size"</Code> " attribute."</li>
                 <li>"Color icons by setting the css "<Code inline=true>"color"</Code> " attribute."</li>

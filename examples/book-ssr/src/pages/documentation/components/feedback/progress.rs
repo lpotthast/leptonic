@@ -10,14 +10,14 @@ pub fn PageProgress() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="progress" class="anchor">
+            <h1 id="progress" class="anchor">
                 "Progress"
                 <AnchorLink href="#progress" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>
+            <p>
                 "Display how much work of an operation is already completed using the "<Code inline=true>"<ProgressBar>"</Code>" component."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r"
@@ -45,17 +45,17 @@ pub fn PageProgress() -> impl IntoView {
                 step=0.01
             />
 
-            <H2 id="indeterminate-state" class="anchor">
+            <h2 id="indeterminate-state" class="anchor">
                 "Indeterminate state"
                 <AnchorLink href="#indeterminate-state" description="Direct link to section: Indeterminate state"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "As you have probably spotted in the above example, progress is stored as "<Code inline=true>"Option<T>"</Code>". "
                 "In our earlier example, we always had "<Code inline=true>"Some(progress)"</Code>" which the progress bar displayed for us. "
                 "Whenever the signal stores a "<Code inline=true>"None"</Code>" value, the progress bar is in the "<Code inline=true>"indeterminate"</Code>" state, "
                 "telling the user that something is going on, but we cannot exactly say how much of the total work already completed."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r"
@@ -65,12 +65,12 @@ pub fn PageProgress() -> impl IntoView {
 
             <ProgressBar progress=signal(None).0 />
 
-            <H2 id="styling" class="anchor">
+            <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

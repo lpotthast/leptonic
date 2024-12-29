@@ -8,17 +8,17 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 pub fn PageStack() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="stack" class="anchor">
+            <h1 id="stack" class="anchor">
                 "Stack"
                 <AnchorLink href="#stack" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <H2 id="vertical-stacks" class="anchor">
+            <h2 id="vertical-stacks" class="anchor">
                 "Vertical stacks"
                 <AnchorLink href="#vertical-stacks" description="Direct link to section: Vertical stacks"/>
-            </H2>
+            </h2>
 
-            <P>"Use a stack to create a container displaying its list of children one after the other while spacing them out by a predefined distance."</P>
+            <p>"Use a stack to create a container displaying its list of children one after the other while spacing them out by a predefined distance."</p>
 
             <Code>
                 {indoc!(r#"
@@ -36,16 +36,16 @@ pub fn PageStack() -> impl IntoView {
                 <Skeleton animated=false>"Item 3"</Skeleton>
             </Stack>
 
-            <H2 id="horizontal-stacks" class="anchor">
+            <h2 id="horizontal-stacks" class="anchor">
                 "Horizontal stacks"
                 <AnchorLink href="#horizontal-stacks" description="Direct link to section: Horizontal stacks"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "A stacks default orientation is "<Code inline=true>"StackOrientation::Vertical"</Code>". "
                 "You can explicitly set the orientation to be "<Code inline=true>"StackOrientation::Horizontal"</Code>" "
                 "to let the stack display its children horizontally."
-            </P>
+            </p>
 
             <Code>
                 {indoc!(r#"

@@ -8,78 +8,78 @@ use crate::pages::documentation::{article::Article, toc::Toc};
 pub fn PageChangelog() -> impl IntoView {
     view! {
         <Article>
-            <H1 id="changelog" class="anchor">
+            <h1 id="changelog" class="anchor">
                 "Changelog"
                 <AnchorLink href="#changelog" description="Direct link to section: Changelog"/>
-            </H1>
+            </h1>
 
-            <H2 id="v0.6.0" class="anchor">
+            <h2 id="v0.6.0" class="anchor">
                 "v0.6.0 (main branch)"
                 <AnchorLink href="#v0.6.0" description="Direct link to section: v0.6.0"/>
-            </H2>
+            </h2>
 
-            <H3>"Overview"</H3>
+            <h3>"Overview"</h3>
 
-            <P>
+            <p>
                 ""
-            </P>
+            </p>
 
-            <H3>"Added:"</H3>
+            <h3>"Added:"</h3>
             <ul>
                 <li>"`Checkbox` component, styling and documentation."</li>
                 <li>"`Radio` and `RadioGroup` components, styling and documentation."</li>
             </ul>
 
-            <H3>"Changed:"</H3>
+            <h3>"Changed:"</h3>
             <ul>
                 <li>"Reworked the `Popover` component. It now allows for much greater flexibility. Documentation was updated."</li>
             </ul>
 
-            <H3>"Removed:"</H3>
+            <h3>"Removed:"</h3>
             <ul>
                 <li>"Buttons no longer support `variations`. They resulted in non compliant code."</li>
                 <li>"The `OptionalSignal` prop type, which was never used in our public API. You may want to use `OptMaybeSignal` instead."</li>
             </ul>
 
-            <H2 id="v0.5.0" class="anchor">
+            <h2 id="v0.5.0" class="anchor">
                 "0.5.0"
                 <AnchorLink href="#v0.5.0" description="Direct link to section: v0.5.0"/>
-            </H2>
+            </h2>
 
-            <P>"Leptonic now supports Leptos in version 0.6!"</P>
+            <p>"Leptonic now supports Leptos in version 0.6!"</p>
 
-            <H3>"Changed:"</H3>
+            <h3>"Changed:"</h3>
             <ul>
                 <li>"Leptos dependencies were update to v0.6."</li>
                 <li>"The `Icon' component no longer wraps an Icon from `leptos-icons`. It now expects v0.3 `icondata` icons. Documentation of the component was updated."</li>
             </ul>
 
-            <H3>"Added:"</H3>
+            <h3>"Added:"</h3>
             <ul>
                 <li>"Dependency on the `icondata` crate. Leptonic provides a re-export through `use leptonic::prelude::*;`. You do not have to depend on this yourself."</li>
             </ul>
 
-            <H3>"Removed:"</H3>
+            <h3>"Removed:"</h3>
             <ul>
                 <li>"Dependency on the `leptos-icons` crate. You can remove the dependency from you Cargo.toml as well if you have not used it outside of the Leptonic context."</li>
                 <li>"Lepton"</li>
             </ul>
 
-            <H2 id="v0.4.0" class="anchor">
+            <h2 id="v0.4.0" class="anchor">
                 "0.4.0"
                 <AnchorLink href="#v0.4.0" description="Direct link to section: v0.4.0"/>
-            </H2>
+            </h2>
 
-            <P>"Leptonic now supports server-side-rendering (SSR). This book is now deployed with SSR enabled."</P>
-            <P>
+            <p>"Leptonic now supports server-side-rendering (SSR). This book is now deployed with SSR enabled."</p>
+            <p>
                 "The "
                 <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkExtTarget::Blank>"leptonic-template-ssr"</LinkExt>
                 " and "
                 <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkExtTarget::Blank>"leptonic-template-csr"</LinkExt>
                 " templates were created. Use them to get started quickly."
-            </P>
+            </p>
 
-            <H3>"Changed:"</H3>
+            <h3>"Changed:"</h3>
             <ul>
                 <li>"Getting started instructions were consolidated."</li>
                 <li>"Installation instructions are now much more straight-forward."</li>
@@ -96,17 +96,17 @@ pub fn PageChangelog() -> impl IntoView {
                 <li>"The Tiptap-Editor functionality is now gated through the new `tiptap` feature. Enabling it will alter the build to automatically include required JS files."</li>
             </ul>
 
-            <H3>"Fixed:"</H3>
+            <h3>"Fixed:"</h3>
             <ul>
                 <li>"Fixed a bug which led to buttons not getting disabled properly."</li>
             </ul>
 
-            <H2 id="v0.3.0" class="anchor">
+            <h2 id="v0.3.0" class="anchor">
                 "0.3.0"
                 <AnchorLink href="#v0.3.0" description="Direct link to section: v0.3.0"/>
-            </H2>
+            </h2>
 
-            <H3>"Added:"</H3>
+            <h3>"Added:"</h3>
             <ul>
                 <li>"The `Consumer` type. Use `Consumer<In>` when you would otherwise write `Callback<In, ()>`."</li>
                 <li>"The `Producer` type. Use `Producer<Out>` when you would otherwise write `Callback<(), Out>`."</li>
@@ -114,29 +114,29 @@ pub fn PageChangelog() -> impl IntoView {
                 <li>"The `ViewCallback` type. Use `ViewCallback<In>` when you would otherwise write `Callback<In, leptos::View>`."</li>
             </ul>
 
-            <H3>"Changed:"</H3>
+            <h3>"Changed:"</h3>
             <ul>
                 <li>"Updated to leptos 0.5.1. No more `cx`!"</li>
                 <li>"The `render_option` prop for select inputs no longer requires you to call `.into_view()` on whatever your closure returns."</li>
                 <li>"Collapsibles now use the slot approach."</li>
             </ul>
 
-            <H3>"Fixed:"</H3>
+            <h3>"Fixed:"</h3>
             <ul>
                 <li>"Fixed a bug which prevented progress bars in their indeterminate state to animate."</li>
             </ul>
 
-            <H3>"Removed:"</H3>
+            <h3>"Removed:"</h3>
             <ul>
                 <li>"The `Callback` and `Callable` types moved into leptos itself! They should still be accessible on most use-sites as they are now imported with `use leptos::*`, which should already be present in most places the leptonic Callback was used before."</li>
             </ul>
 
-            <H2 id="v0.2.0" class="anchor">
+            <h2 id="v0.2.0" class="anchor">
                 "0.2.0"
                 <AnchorLink href="#v0.2.0" description="Direct link to section: v0.2.0"/>
-            </H2>
+            </h2>
 
-            <H3>"Added:"</H3>
+            <h3>"Added:"</h3>
             <ul>
                 <li>
                     "Added the `Out` type. An enum abstracting over `Callback`s and `WriteSignal`s."
@@ -154,7 +154,7 @@ pub fn PageChangelog() -> impl IntoView {
                 <li>"Initial version of a `ColorPicker` component."</li>
             </ul>
 
-            <H3>"Changed:"</H3>
+            <h3>"Changed:"</h3>
             <ul>
                 <li>"The DateSelector components on_change prop now takes a Callback instead of a generic function."</li>
                 <li>"Buttons of type `outlined` now use --button-outlined-[color]-... variables for their styling."</li>
@@ -181,7 +181,7 @@ pub fn PageChangelog() -> impl IntoView {
                 <li>"All `Select` components now require a `search_text_provider` prop. The `SelectOption` trait no longer enforces `Display` to be implemented."</li>
             </ul>
 
-            <H3>"Fixed:"</H3>
+            <h3>"Fixed:"</h3>
             <ul>
                 <li>"A button with variants now properly respects its disabled state."</li>
                 <li>"A button with variants now only triggers one of its actions (either main or variant) per interaction."</li>
@@ -189,21 +189,21 @@ pub fn PageChangelog() -> impl IntoView {
                 <li>"The installation instructions now include a section describing how to enable the required web_sys_unstable_apis opt-in."</li>
             </ul>
 
-            <H2 id="v0.1.0" class="anchor">
+            <h2 id="v0.1.0" class="anchor">
                 "0.1.0"
                 <AnchorLink href="#v0.1.0" description="Direct link to section: v0.1.0"/>
-            </H2>
+            </h2>
 
-            <P>"Initial release."</P>
+            <p>"Initial release."</p>
 
-            <H3>"Added utilities:"</H3>
+            <h3>"Added utilities:"</h3>
             <ul>
                 <li>"Callback types"</li>
                 <li>"OptionalMaybeSignal type"</li>
                 <li>"Global event listener contexts"</li>
             </ul>
 
-            <H3>"Added components:"</H3>
+            <h3>"Added components:"</h3>
             <ul>
                 <li>"Root component"</li>
                 <li>"Skeleton component and styles"</li>

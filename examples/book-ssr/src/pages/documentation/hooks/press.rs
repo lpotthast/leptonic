@@ -60,12 +60,12 @@ pub fn PageUsePress() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="use_press" class="anchor">
+            <h1 id="use_press" class="anchor">
                 "use_press"
                 <AnchorLink href="#use_press" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Track element press."</P>
+            <p>"Track element press."</p>
 
             <Code>
                 {indoc!(r"
@@ -87,13 +87,13 @@ pub fn PageUsePress() -> impl IntoView {
                 <Label>"Disabled"</Label>
             </FormControl>
 
-            <P>"Is pressed: " { move || press.is_pressed.get() }</P>
-            <P>"Was pressed: " { move || count.get() } { move || match count.get() {
+            <p>"Is pressed: " { move || press.is_pressed.get() }</p>
+            <p>"Was pressed: " { move || count.get() } { move || match count.get() {
                 1 => " time",
                 _ => " times",
-            } }</P>
+            } }</p>
 
-            <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
+            <p>"Last " { move || events.with(|events| events.len()) } " events: "</p>
 
             <pre style="
                 width: 100%;

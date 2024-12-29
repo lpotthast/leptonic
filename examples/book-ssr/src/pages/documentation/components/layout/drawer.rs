@@ -11,15 +11,15 @@ pub fn PageDrawer() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="drawer" class="anchor">
+            <h1 id="drawer" class="anchor">
                 "Drawer"
                 <AnchorLink href="#drawer" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>
+            <p>
                 "The "<Code inline=true>"<Drawer>"</Code>" component is intended to be used as a side menu. It is animated to conditionally move in and out of visibility."
                 "The required "<Code inline=true>"side"</Code>" prop controls to which side the drawer should move when hiding."
-            </P>
+            </p>
 
             <Toggle state=shown set_state=set_shown/>
 
@@ -30,7 +30,7 @@ pub fn PageDrawer() -> impl IntoView {
                     </Stack>
                 </Drawer>
                 <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                    <P>"Scroll ↓"</P>
+                    <p>"Scroll ↓"</p>
                     <Stack spacing=Size::Em(0.5)>
                         {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
                     </Stack>
@@ -46,7 +46,7 @@ pub fn PageDrawer() -> impl IntoView {
                             </Stack>
                         </Drawer>
                         <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                            <P>"Scroll ↓"</P>
+                            <p>"Scroll ↓"</p>
                             <Stack spacing=Size::Em(0.5)>
                                 {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
                             </Stack>
@@ -55,22 +55,22 @@ pub fn PageDrawer() -> impl IntoView {
                 "#)}
             </Code>
 
-            <H2 id="layout-shifts" class="anchor">
+            <h2 id="layout-shifts" class="anchor">
                 "Layout shifts"
                 <AnchorLink href="#layout-shifts" description="Direct link to section: Layout shifts"/>
-            </H2>
+            </h2>
 
-            <P>
+            <p>
                 "To avoid layout shifts, you may declare the drawer as absolutely positioned to let it overlay your content when shown. "
                 "This is especially useful when the menu is only animated on user action on small / mobile screens and fills the whole width of the viewport when shown. "
                 "When viewing this documentation on a small device, the open- and closeable main and documentation menus are created this way."
-            </P>
+            </p>
 
             <Toggle state=shown2 set_state=set_shown2/>
 
             <Box style="position: relative; display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
                 <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                    <P>"Scroll ↓"</P>
+                    <p>"Scroll ↓"</p>
                     <Stack spacing=Size::Em(0.5)>
                         {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
                     </Stack>
@@ -86,7 +86,7 @@ pub fn PageDrawer() -> impl IntoView {
                 {indoc!(r#"
                     <Box style="position: relative; display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
                         <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                            <P>"Scroll ↓"</P>
+                            <p>"Scroll ↓"</p>
                             <Stack spacing=Size::Em(0.5)>
                                 {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
                             </Stack>
@@ -100,12 +100,12 @@ pub fn PageDrawer() -> impl IntoView {
                 "#)}
             </Code>
 
-            <H2 id="styling">
+            <h2 id="styling">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
-            </H2>
+            </h2>
 
-            <P>"You may overwrite any of the following CSS variables to meet your styling needs."</P>
+            <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
             <Code>
                 {indoc!(r"

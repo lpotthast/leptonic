@@ -75,12 +75,12 @@ pub fn PageUseOverlay() -> impl IntoView {
     });
     view! {
         <Article>
-            <H1 id="use_overlay" class="anchor">
+            <h1 id="use_overlay" class="anchor">
                 "use_overlay"
                 <AnchorLink href="#use_overlay" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Create overlays."</P>
+            <p>"Create overlays."</p>
 
             <Code>
                 {indoc!(r#"

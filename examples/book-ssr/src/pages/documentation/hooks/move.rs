@@ -90,12 +90,12 @@ pub fn PageUseMove() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="use_move" class="anchor">
+            <h1 id="use_move" class="anchor">
                 "use_move"
                 <AnchorLink href="#use_move" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"Track movement."</P>
+            <p>"Track movement."</p>
 
             <Code>
                 {indoc!(r"
@@ -140,7 +140,7 @@ pub fn PageUseMove() -> impl IntoView {
                 </div>
             </div>
 
-            <P>"Last " { move || events.with(|events| events.len()) } " events: "</P>
+            <p>"Last " { move || events.with(|events| events.len()) } " events: "</p>
 
             <pre style="
                 width: 100%;

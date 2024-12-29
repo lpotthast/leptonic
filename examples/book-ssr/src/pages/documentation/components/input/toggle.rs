@@ -10,12 +10,12 @@ pub fn PageToggle() -> impl IntoView {
 
     view! {
         <Article>
-            <H1 id="toggle" class="anchor">
+            <h1 id="toggle" class="anchor">
                 "Toggle"
                 <AnchorLink href="#toggle" description="Direct link to article header"/>
-            </H1>
+            </h1>
 
-            <P>"A toggle is a representation of a boolean value."</P>
+            <p>"A toggle is a representation of a boolean value."</p>
 
             <Code>
                 {indoc!(r"
@@ -29,12 +29,12 @@ pub fn PageToggle() -> impl IntoView {
 
             <Toggle state=state set_state=set_state/>
 
-            <H2 id="icons" class="anchor">
+            <h2 id="icons" class="anchor">
                 "Icons"
                 <AnchorLink href="#icons" description="Direct link to section: Icons"/>
-            </H2>
+            </h2>
 
-            <P>"A toggle can be configured with a pair of icons. One icon being rendered in the off position, the other being rendered in the on position."</P>
+            <p>"A toggle can be configured with a pair of icons. One icon being rendered in the off position, the other being rendered in the on position."</p>
 
             <Code>
                 {indoc!(r"
@@ -54,13 +54,13 @@ pub fn PageToggle() -> impl IntoView {
                 off: icondata::BsFolder,
             }/>
 
-            <H2 id="variations" class="anchor">
+            <h2 id="variations" class="anchor">
                 "Variations"
                 <AnchorLink href="#variations" description="Direct link to section: Variations"/>
-            </H2>
+            </h2>
 
-            <P>"The toggle comes in two variants: Sliding and Stationary. Sliding toggles are the default and the ones we have used so far."</P>
-            <P>"Stationary toggles are not animated and only consist of a single circle."</P>
+            <p>"The toggle comes in two variants: Sliding and Stationary. Sliding toggles are the default and the ones we have used so far."</p>
+            <p>"Stationary toggles are not animated and only consist of a single circle."</p>
 
             <Toggle state=state set_state=set_state variant=ToggleVariant::Stationary icons=ToggleIcons {
                 on: icondata::BsFolderFill,
