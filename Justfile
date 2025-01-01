@@ -27,20 +27,20 @@ use-stable:
 
 # Install dependencies for building, running examples, profiling and more...
 install-tools:
-  cargo install cargo-clean-all # Clean up build artifact cluttering up your system.
+  cargo install just # Tool to execute the recipes of this Justfile.
+  cargo install cargo-clean-all # Clean up build artifacts, cluttering up your system.
   cargo install cargo-edit # Make `cargo upgrade` available, upgrading dependencies in your Cargo.toml.
-  cargo install cargo-expand # Expand macros, super helpful ehn debugging procedural macros.
+  cargo install cargo-expand # Expand macros, super helpful when debugging procedural macros.
   cargo install cargo-llvm-lines # Count lines of LLVM IR per generic function.
   cargo install cargo-sort # Sort the dependencies section of a Cargo.toml file.
-  cargo install cargo-udeps # Find unused dependencies.
+  cargo install cargo-udeps # Find unused dependencies (RustRover has that functionality already built in).
   cargo install cargo-upgrades # Check for upgradable dependencies.
-  cargo install cargo-watch # Run a command and watch for filesystem changes.
+  cargo install cargo-watch # Run a command, watch for filesystem changes and re-run that command automatically.
   cargo install cargo-whatfeatures # Inspect features made available by a specific crate.
-  cargo install just # Tool to execute the recepies of this Justfile.
-  cargo install tokei # Count your code, line counts, quickly.
-  cargo install trunk # Build, watch, server WASM frontends.
+  cargo install tokei # Count your code, quickly.
+  cargo install trunk # Build, watch, serve WASM frontends.
   cargo install twiggy # Inspect WASM bundles.
-  cargo install create-tauri-app # Create new Tauri application.
+  cargo install create-tauri-app # Create new Tauri applications.
   cargo install tauri-cli@2.0.0-beta.8 # Run tauri applications.
   cargo install cargo-leptos # Run leptos applications.
 
