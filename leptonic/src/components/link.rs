@@ -10,13 +10,18 @@ pub fn Link<H>(
     /// Used to calculate the link's `href` attribute. Will be resolved relative
     /// to the current route.
     href: H,
+
     #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
     exact: bool,
+
     children: Children,
-    #[prop(into, optional)] on_press: Option<Callback<(PressEvent, NodeRef<html::Custom<&'static str>>)>>,
+
+    #[prop(into, optional)] on_press: Option<
+        Callback<(PressEvent, NodeRef<html::Custom<&'static str>>)>,
+    >,
 ) -> impl IntoView
 where
     H: ToHref + Send + Sync + 'static,

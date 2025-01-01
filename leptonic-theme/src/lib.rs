@@ -36,9 +36,9 @@ pub fn generate(path: impl AsRef<Path>) -> Result<()> {
     file.write_all(
         indoc!(
             r#"
-            @import "./themes/builder";
-            @import "./themes/light";
-            @import "./themes/dark";
+            @use "./themes/builder";
+            @use "./themes/light";
+            @use "./themes/dark";
             "#
         )
         .as_bytes(),

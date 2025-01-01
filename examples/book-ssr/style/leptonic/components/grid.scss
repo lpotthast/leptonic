@@ -189,14 +189,14 @@ $-tiers: (
 
       @for $i from 1 through $-grid-columns {
         [data-#{$tier-name}="#{$i}"] {
-          $percentage: percentage(math.div($i, $-grid-columns));
+          $percentage: math.percentage(math.div($i, $-grid-columns));
           flex-basis: calc($percentage - var(--leptonic-grid-gap));
         }
       }
 
       @for $i from 0 to $-grid-columns {
         [data-#{$tier-name}-offset="#{$i}"] {
-          margin-left: percentage(math.div($i, $-grid-columns));
+          margin-left: math.percentage(math.div($i, $-grid-columns));
         }
       }
 

@@ -14,7 +14,7 @@ pub struct Minion {
 
 #[component]
 pub fn PageTable() -> impl IntoView {
-    let minions = create_rw_signal(vec![
+    let minions = RwSignal::new(vec![
         Minion {
             id: 1,
             name: String::from("Kevin"),

@@ -34,7 +34,7 @@ pub fn PageProgress() -> impl IntoView {
             <NumberInput
                 get=Signal::derive(move || progress.get().unwrap_or_default())
                 set=move |v| set_progress.set(Some(v))
-                style="margin-top: 1em;"
+                attr:style="margin-top: 1em;"
             />
 
             <Slider

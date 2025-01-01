@@ -19,7 +19,7 @@ pub fn PageCollapsible() -> impl IntoView {
                         <Stack spacing=Size::Em(0.6)>
                             <Collapsible>
                                 <CollapsibleHeader slot>"Header1"</CollapsibleHeader>
-                                <CollapsibleBody class="my-body" slot>"Body1"</CollapsibleBody>
+                                <CollapsibleBody attr:class="my-body" slot>"Body1"</CollapsibleBody>
                             </Collapsible>
                             <Collapsible>
                                 <CollapsibleHeader slot>"Header2"</CollapsibleHeader>

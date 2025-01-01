@@ -12,7 +12,7 @@ use leptos::prelude::*;
 #[component]
 pub fn Quicksearch(
     #[prop(into)] trigger: ViewCallback<WriteSignal<bool>>,
-    #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
+    #[prop(into)] query: Callback<(String,), Vec<QuicksearchOption>>,
 ) -> impl IntoView {
     let (show_modal, set_show_modal) = signal(false);
     view! {
@@ -49,12 +49,12 @@ pub struct QuicksearchOption {
 #[component]
 fn QuicksearchModal(
     #[prop(into)] show_when: Signal<bool>,
-    #[prop(into)] query: Callback<String, Vec<QuicksearchOption>>,
+    #[prop(into)] query: Callback<(String,), Vec<QuicksearchOption>>,
     #[prop(into)] on_cancel: Callback<(), ()>,
 ) -> impl IntoView {
     let (input, set_input) = signal(String::new());
 
-    let options = move || query.run(input.get());
+    let options = move || query.run((input.get(),));
 
     let g_keyboard_event: GlobalKeyboardEvent = expect_context::<GlobalKeyboardEvent>();
     Effect::new(move |_old| {

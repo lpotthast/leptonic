@@ -1,6 +1,7 @@
 use leptos::ev;
 use leptos::ev::{on, On};
 use leptos::prelude::*;
+use send_wrapper::SendWrapper;
 use web_sys::PointerEvent;
 
 use crate::utils::{pointer_type::PointerType, EventExt};
@@ -10,13 +11,13 @@ use crate::utils::{pointer_type::PointerType, EventExt};
 #[derive(Debug, Clone)]
 pub struct HoverStartEvent {
     pub pointer_type: PointerType,
-    pub current_target: Option<web_sys::EventTarget>,
+    pub current_target: Option<SendWrapper<web_sys::EventTarget>>,
 }
 
 #[derive(Debug, Clone)]
 pub struct HoverEndEvent {
     pub pointer_type: PointerType,
-    pub current_target: Option<web_sys::EventTarget>,
+    pub current_target: Option<SendWrapper<web_sys::EventTarget>>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -28,13 +29,12 @@ pub struct UseHoverInput {
     pub disabled: Signal<bool>,
 
     /// Called whenever a pointer starts hovering the element.
-    pub on_hover_start: Option<Callback<HoverStartEvent>>,
+    pub on_hover_start: Option<Callback<(HoverStartEvent,)>>,
 
     /// Called whenever a pointer stops hovering the element
     /// or when the element is hovered and `disabled` transitions to `true`.
-    pub on_hover_end: Option<Callback<HoverEndEvent>>,
+    pub on_hover_end: Option<Callback<(HoverEndEvent,)>>,
 }
-
 
 #[derive(Debug)]
 pub struct UseHoverReturn {
@@ -70,12 +70,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             }
 
             if let Some(on_hover_start) = input.on_hover_start {
-                on_hover_start.run(
-                    HoverStartEvent {
-                        pointer_type: pointer_type.clone(),
-                        current_target,
-                    }
-                );
+                on_hover_start.run((HoverStartEvent {
+                    pointer_type: pointer_type.clone(),
+                    current_target: current_target.map(|it| SendWrapper::new(it)),
+                },));
             }
 
             set_is_hovered.set(true);
@@ -89,12 +87,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
         let s = state.get_value().expect("present");
         if let Some(on_hover_end) = input.on_hover_end {
-            on_hover_end.run(
-                HoverEndEvent {
-                    pointer_type: s.pointer_type,
-                    current_target,
-                }
-            );
+            on_hover_end.run((HoverEndEvent {
+                pointer_type: s.pointer_type,
+                current_target: current_target.map(|it| SendWrapper::new(it)),
+            },));
         }
 
         set_is_hovered.set(false);

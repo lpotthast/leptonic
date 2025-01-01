@@ -136,8 +136,8 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
 pub fn LinkButton<H>(
     href: H,
     #[prop(into, optional)] target: Option<LinkTarget>,
-    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
-    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<(HoverStartEvent,)>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<(HoverEndEvent,)>>,
     #[prop(into, optional)] variant: Signal<ButtonVariant>,
     #[prop(into, optional)] color: Signal<ButtonColor>,
     #[prop(into, optional)] size: Signal<ButtonSize>,

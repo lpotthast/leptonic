@@ -1,7 +1,6 @@
 use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
-use leptonic::prelude::*;
 use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
@@ -14,8 +13,8 @@ pub fn PageModal() -> impl IntoView {
     let (show_staged_modal1, set_show_staged_modal1) = signal(false);
     let (show_staged_modal2, set_show_staged_modal2) = signal(false);
 
-    let escape_staged_modal1 = Producer::new(move || set_show_staged_modal1.set(false));
-    let escape_staged_modal2 = Producer::new(move || {
+    let escape_staged_modal1 = Callback::new(move |()| set_show_staged_modal1.set(false));
+    let escape_staged_modal2 = Callback::new(move |()| {
         set_show_staged_modal2.set(false);
         set_show_staged_modal1.set(true);
     });
@@ -309,8 +308,8 @@ pub fn ConfirmModal<A, C>(
     on_cancel: C,
 ) -> impl IntoView
 where
-    A: Fn() + Copy + 'static,
-    C: Fn() + Copy + 'static,
+    A: Fn() + Send + Sync + Copy + 'static,
+    C: Fn() + Send + Sync + Copy + 'static,
 {
     let required = StoredValue::new(requires_confirmation_of);
 

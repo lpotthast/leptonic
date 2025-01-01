@@ -23,17 +23,17 @@ pub fn PageTab() -> impl IntoView {
             <Code>
                 {indoc!(r#"
                     <Tabs mount=Mount::Once>
-                        <Tab name="tab-1" label="Tab 1".into_view()>"Content of tab 1"</Tab>
-                        <Tab name="tab-2" label="Tab 2".into_view()>"Content of tab 2"</Tab>
-                        <Tab name="tab-3" label="Tab 3".into_view()>"Content of tab 3"</Tab>
+                        <Tab name="tab-1" label=|| "Tab 1">"Content of tab 1"</Tab>
+                        <Tab name="tab-2" label=|| "Tab 2">"Content of tab 2"</Tab>
+                        <Tab name="tab-3" label=|| "Tab 3">"Content of tab 3"</Tab>
                     </Tabs>
                 "#)}
             </Code>
 
             <Tabs mount=Mount::Once>
-                <Tab name="tab-1" label="Tab 1".into_view()>"Content of tab 1"</Tab>
-                <Tab name="tab-2" label="Tab 2".into_view()>"Content of tab 2"</Tab>
-                <Tab name="tab-3" label="Tab 3".into_view()>"Content of tab 3"</Tab>
+                <Tab name="tab-1" label=|| "Tab 1">"Content of tab 1"</Tab>
+                <Tab name="tab-2" label=|| "Tab 2">"Content of tab 2"</Tab>
+                <Tab name="tab-3" label=|| "Tab 3">"Content of tab 3"</Tab>
             </Tabs>
 
             <h2 id="reactivity" class="anchor">
@@ -51,10 +51,10 @@ pub fn PageTab() -> impl IntoView {
 
                     view! {
                         <Tabs mount=Mount::Once>
-                            <Tab name="tab-1" label=view! { "State: " {move || bool.get()}}>
+                            <Tab name="tab-1" label=move || format!("State: {}", bool.get())>
                                 <Toggle state=bool on_toggle=move |s| set_bool.set(s) />
                             </Tab>
-                            <Tab name="tab-2" label="Tab 2">
+                            <Tab name="tab-2" label=|| "Tab 2">
                                 "Content of tab 2"
                             </Tab>
                         </Tabs>
@@ -63,10 +63,10 @@ pub fn PageTab() -> impl IntoView {
             </Code>
 
             <Tabs mount=Mount::Once>
-                <Tab name="tab-1" label=view! { "State: " {move || test_reactive_label_bool.get()}}.into_view()>
+                <Tab name="tab-1" label=move || format!("State: {}", test_reactive_label_bool.get())>
                     <Toggle state=test_reactive_label_bool set_state=set_test_reactive_label_bool/>
                 </Tab>
-                <Tab name="tab-2" label="Tab 2".into_view()>
+                <Tab name="tab-2" label=|| "Tab 2">
                     "Content of tab 2"
                 </Tab>
             </Tabs>
@@ -83,33 +83,33 @@ pub fn PageTab() -> impl IntoView {
             <Code>
                 {indoc!(r#"
                     <Tabs mount=Mount::Once>
-                        <Tab name="outer-1" label="Outer 1">
+                        <Tab name="outer-1" label=|| "Outer 1">
                             <Tabs>
-                                <Tab name="inner-1" label="Inner 1">
+                                <Tab name="inner-1" label=|| "Inner 1">
                                     "This is a nested tab."
                                 </Tab>
-                                <Tab name="inner-2" label="Inner 2">
+                                <Tab name="inner-2" label=|| "Inner 2">
                                     "This tah is nested as well."
                                 </Tab>
                             </Tabs>
                         </Tab>
-                        <Tab name="outer-2" label="Outer 2"></Tab>
+                        <Tab name="outer-2" label=|| "Outer 2"></Tab>
                     </Tabs>
                 "#)}
             </Code>
 
             <Tabs mount=Mount::Once>
-                <Tab name="outer-1" label="Outer 1".into_view()>
+                <Tab name="outer-1" label=|| "Outer 1">
                     <Tabs>
-                        <Tab name="inner-1" label="Inner 1".into_view()>
+                        <Tab name="inner-1" label=|| "Inner 1">
                             "This is a nested tab."
                         </Tab>
-                        <Tab name="inner-2" label="Inner 2".into_view()>
+                        <Tab name="inner-2" label=|| "Inner 2">
                             "This tab is nested as well."
                         </Tab>
                     </Tabs>
                 </Tab>
-                <Tab name="outer-2" label="Outer 2".into_view()></Tab>
+                <Tab name="outer-2" label=|| "Outer 2"></Tab>
             </Tabs>
 
             <h2 id="when-are-tabs-rendered" class="anchor">
@@ -131,13 +131,13 @@ pub fn PageTab() -> impl IntoView {
             <ul>
                 <li>
                     <Code inline=true>"Mount::Once"</Code>
-                    <P style="margin-top: 0.5em;">
+                    <p style="margin-top: 0.5em;">
                         "Tab content is rendered once. Tabs are simply hidden when not shown."
                     </p>
                 </li>
                 <li>
                     <Code inline=true>"Mount::WhenShown"</Code>
-                    <P style="margin-top: 0.5em;">
+                    <p style="margin-top: 0.5em;">
                         "Tab content is rendered every time a tab is shown. The dom of the tab is unmounted when hidden. "
                         "This means that there is only ever one tab in the final dom, not requiring any hiding-mechanism as in the "<Code inline=true>"Mount::Once"</Code>" case."
                     </p>
@@ -145,17 +145,17 @@ pub fn PageTab() -> impl IntoView {
             </ul>
 
             <Tabs mount=Mount::WhenShown>
-                <Tab name="outer-1" label="Outer 1".into_view()>
+                <Tab name="outer-1" label=|| "Outer 1">
                     <Tabs>
-                        <Tab name="inner-1" label="Inner 1".into_view()>
+                        <Tab name="inner-1" label=|| "Inner 1">
                             "This is a nested tab."
                         </Tab>
-                        <Tab name="inner-2" label="Inner 2".into_view()>
+                        <Tab name="inner-2" label=|| "Inner 2">
                             "This tab is nested as well."
                         </Tab>
                     </Tabs>
                 </Tab>
-                <Tab name="outer-2" label="Outer 2".into_view()></Tab>
+                <Tab name="outer-2" label=|| "Outer 2"></Tab>
             </Tabs>
 
             // <h2>"Default tab"</h2>

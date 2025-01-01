@@ -17,16 +17,16 @@ pub fn PageAppBar() -> impl IntoView {
 
             <p>"The "<Code inline=true>"<AppBar>"</Code>" component sticks to the top of its parent and provides a convenient entrypoint for many app layouts."</p>
 
-            <Box style="position: relative; border: 4px solid gray; width: 100%; height: 20em; overflow: auto;">
-                <AppBar height=app_bar_height style="z-index: 1; background: var(--brand-color); color: white;">
-                    <H3 style="margin-left: 1em; color: white;">"Leptonic"</h3>
-                    <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
+            <Box attr:style="position: relative; border: 4px solid gray; width: 100%; height: 20em; overflow: auto;">
+                <AppBar height=app_bar_height attr:style="z-index: 1; background: var(--brand-color); color: white;">
+                    <h3 style="margin-left: 1em; color: white;">"Leptonic"</h3>
+                    <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) attr:style="margin-right: 1em">
                         <Icon icon=icondata::BsBell></Icon>
                         <Icon icon=icondata::BsPower></Icon>
                     </Stack>
                 </AppBar>
 
-                <Box style="padding: 0.5em;">
+                <Box attr:style="padding: 0.5em;">
                     <p>"Scroll ↓"</p>
                     <Stack spacing=Size::Em(0.5)>
                         {(0..10).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}

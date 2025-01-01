@@ -4,14 +4,11 @@ use leptos::ev::On;
 use leptos::oco::Oco;
 use leptos::prelude::*;
 use leptos::{attr, ev};
-use leptos_reactive::{MaybeSignal, SignalGet};
 use leptos_use::{use_document, use_window};
 use wasm_bindgen::JsValue;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent, ScrollIntoViewOptions};
 
-use crate::utils::{
-    aria::*, scroll_behavior::ScrollBehavior, signals::MaybeSignalExt,
-};
+use crate::utils::{aria::*, scroll_behavior::ScrollBehavior};
 
 use super::{use_press, UsePressInput, UsePressReturn};
 
@@ -92,10 +89,11 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
                 if let Some(document) = use_document().as_ref() {
                     let el_id = href.0.replace('#', "");
                     if let Some(el) = document.get_element_by_id(el_id.as_str()) {
-                        el.scroll_into_view_with_scroll_into_view_options(
-                            ScrollIntoViewOptions::new()
-                                .behavior(web_sys::ScrollBehavior::from(scroll_behavior)),
-                        );
+                        el.scroll_into_view_with_scroll_into_view_options(&{
+                            let opts = ScrollIntoViewOptions::new();
+                            opts.set_behavior(web_sys::ScrollBehavior::from(scroll_behavior));
+                            opts
+                        });
                     } else {
                         tracing::warn!(
                             "AnchorLink could not find anchor (element) with id '{el_id}'."
@@ -108,7 +106,10 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         original_on_press.run(e);
     });
 
-    let UsePressReturn { attrs: (on_keydown, on_click, on_pointerdown), is_pressed } = use_press(press_input);
+    let UsePressReturn {
+        attrs: (on_keydown, on_click, on_pointerdown),
+        is_pressed,
+    } = use_press(press_input);
 
     let href: Href = input.href;
 
@@ -129,14 +130,17 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             Attr(attr::Role, AriaRole::Link.into_attribute_value()),
             Attr(attr::Hreflang, href.0),
             Attr(attr::AriaLabel, input.description),
-            Attr(attr::AriaDisabled, Signal::derive(move || match input.disabled.get() {
-                true => "true",
-                false => "false",
-            })),
+            Attr(
+                attr::AriaDisabled,
+                Signal::derive(move || match input.disabled.get() {
+                    true => "true",
+                    false => "false",
+                }),
+            ),
             on_keydown,
             on_click,
             on_pointerdown,
         ),
-        is_pressed
+        is_pressed,
     }
 }

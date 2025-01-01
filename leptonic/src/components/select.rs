@@ -1,6 +1,6 @@
-use std::fmt::Debug;
 use leptos::html;
 use leptos::prelude::*;
+use std::fmt::Debug;
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
 use crate::{
@@ -82,10 +82,10 @@ fn select_next<O: SelectOption + 'static>(
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn Select<O>(
-    #[prop(into)] options: MaybeSignal<Vec<O>>,
+    #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Out<O>,
-    #[prop(into)] search_text_provider: Callback<O, String>,
+    #[prop(into)] search_text_provider: Callback<(O,), String>,
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
@@ -119,7 +119,7 @@ where
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .run(it.clone())
+                        .run((it.clone(),))
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })
@@ -309,12 +309,12 @@ where
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn OptionalSelect<O>(
-    #[prop(into)] options: MaybeSignal<Vec<O>>,
+    #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
     #[prop(into)] set_selected: Out<Option<O>>,
-    #[prop(into)] search_text_provider: Callback<O, String>,
+    #[prop(into)] search_text_provider: Callback<(O,), String>,
     #[prop(into)] render_option: ViewCallback<O>,
-    #[prop(into)] allow_deselect: MaybeSignal<bool>,
+    #[prop(into)] allow_deselect: Signal<bool>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
 ) -> impl IntoView
@@ -347,7 +347,7 @@ where
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .run(it.clone())
+                        .run((it.clone(),))
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })
@@ -561,10 +561,10 @@ where
 #[allow(clippy::too_many_lines)]
 pub fn Multiselect<O>(
     #[prop(optional, default=u64::MAX)] max: u64,
-    #[prop(into)] options: MaybeSignal<Vec<O>>,
+    #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Out<Vec<O>>,
-    #[prop(into)] search_text_provider: Callback<O, String>,
+    #[prop(into)] search_text_provider: Callback<(O,), String>,
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
@@ -598,7 +598,7 @@ where
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .run(it.clone())
+                        .run((it.clone(),))
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })

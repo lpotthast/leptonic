@@ -10,7 +10,9 @@ use crate::{
 
 #[component]
 pub fn DateTimeInput(
-    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] label: Signal<Oco<'static, str>>,
+    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] label: Signal<
+        Oco<'static, str>,
+    >,
     #[prop(into)] get: Signal<Option<time::OffsetDateTime>>,
     #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
     #[prop(into, optional)] prepend: ViewFn,

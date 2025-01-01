@@ -101,7 +101,7 @@ pub fn PageAlert() -> impl IntoView {
             <Alert variant=AlertVariant::Warn default_icon_slot=AlertIconSlot::None>
                 <AlertTitle slot style="text-transform: uppercase; font-size: 1.3em;">
                     "Warning"
-                    <AlertIcon variant=AlertVariant::Warn style="margin-left: 0.5em;" />
+                    <AlertIcon variant=AlertVariant::Warn attr:style="margin-left: 0.5em;" />
                 </AlertTitle>
                 <AlertContent slot>"This is dangerous!"</AlertContent>
             </Alert>

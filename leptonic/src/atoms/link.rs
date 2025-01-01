@@ -21,13 +21,17 @@ pub fn AnchorLink(
     /// which should be described using this field.
     #[prop(into, optional)]
     description: Option<Oco<'static, str>>,
+
     /// If no children are provided, this component renders a single `#` character.
     #[prop(optional)]
     children: Option<Children>,
 ) -> impl IntoView {
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
-    let UseAnchorLinkReturn { attrs, is_pressed: _ } = use_anchor_link(UseAnchorLinkInput {
+    let UseAnchorLinkReturn {
+        attrs,
+        is_pressed: _,
+    } = use_anchor_link(UseAnchorLinkInput {
         href: Href::from_str(href).expect("valid href"),
         scroll_behavior: scroll_behavior.or(Some(ScrollBehavior::default())),
         disabled: false.into(),

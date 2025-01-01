@@ -5,8 +5,8 @@ use crate::hooks::{use_hover, HoverEndEvent, HoverStartEvent, UseHoverInput, Use
 #[component]
 pub fn Hoverable(
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
-    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
-    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<(HoverStartEvent,)>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<(HoverEndEvent,)>>,
     children: ChildrenFn,
 ) -> impl IntoView {
     let UseHoverReturn {

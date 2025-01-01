@@ -1,12 +1,11 @@
-use indoc::indoc;
+use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptos::prelude::*;
-use ringbuf::{HeapRb, Rb};
-
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use ringbuf::traits::{Consumer, Observer, RingBuffer};
+use ringbuf::HeapRb;
 
 #[derive(Clone)]
 pub enum Event {
@@ -32,7 +31,7 @@ pub fn PageUsePress() -> impl IntoView {
         })
     });
 
-    let press = use_press(UsePressInput {
+    let UsePressReturn { attrs, is_pressed } = use_press(UsePressInput {
         disabled: disabled.into(),
         force_prevent_default: false,
         on_press: Callback::new(move |e| {
@@ -68,32 +67,25 @@ pub fn PageUsePress() -> impl IntoView {
             <p>"Track element press."</p>
 
             <Code>
-                {indoc!(r"
-                    ...
-                ")}
+                "..."
             </Code>
 
-            <button
-                {..press.props.attrs}
-                on:keydown=press.props.on_key_down
-                on:click=press.props.on_click
-                on:pointerdown=press.props.on_pointer_down
-            >
+            <button {..attrs}>
                 "Press me"
             </button>
 
-            <FormControl style="flex-direction: row; align-items: center; gap: 0.5em;">
+            <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em;">
                 <Checkbox checked=disabled set_checked=set_disabled />
                 <Label>"Disabled"</Label>
             </FormControl>
 
-            <p>"Is pressed: " { move || press.is_pressed.get() }</p>
+            <p>"Is pressed: " { move || is_pressed.get() }</p>
             <p>"Was pressed: " { move || count.get() } { move || match count.get() {
                 1 => " time",
                 _ => " times",
             } }</p>
 
-            <p>"Last " { move || events.with(|events| events.len()) } " events: "</p>
+            <p>"Last " { move || events.with(|events| events.occupied_len()) } " events: "</p>
 
             <pre style="
                 width: 100%;

@@ -22,8 +22,8 @@ pub fn PageToast() -> impl IntoView {
                 <AnchorLink href="#toast" description="Direct link to article header"/>
             </h1>
 
-            <TextInput get=header set=set_header placeholder="Header text" style="margin-bottom: 1em;"/>
-            <TextInput get=body set=set_body placeholder="Body text" style="margin-bottom: 1em;"/>
+            <TextInput get=header set=set_header placeholder=Oco::Borrowed("Header text") attr:style="margin-bottom: 1em;"/>
+            <TextInput get=body set=set_body placeholder=Oco::Borrowed("Body text") attr:style="margin-bottom: 1em;"/>
 
             <Select
                 options={ToastVariant::iter().collect::<Vec<_>>()}
@@ -31,7 +31,7 @@ pub fn PageToast() -> impl IntoView {
                 set_selected=set_variant
                 search_text_provider=move |o| format!("{o}")
                 render_option=move |o| format!("{o:?}").into_view()
-                style="margin-bottom: 1em;"
+                attr:style="margin-bottom: 1em;"
             />
 
             <Select
@@ -40,7 +40,7 @@ pub fn PageToast() -> impl IntoView {
                 set_selected=set_timeout
                 search_text_provider=move |o| format!("{o}")
                 render_option=move |o| format!("{o:?}").into_view()
-                style="margin-bottom: 1em;"
+                attr:style="margin-bottom: 1em;"
             />
 
             <Button on_press=move |_| { toasts.push(
@@ -48,8 +48,8 @@ pub fn PageToast() -> impl IntoView {
                     id: Uuid::new_v4(),
                     created_at: time::OffsetDateTime::now_utc(),
                     variant: variant.get_untracked(),
-                    header: header.get_untracked().into_view(),
-                    body: body.get_untracked().into_view(),
+                    header: (move || header.get()).into(),
+                    body: (move || body.get()).into(),
                     timeout: timeout.get_untracked(),
                 }); }>
                 "Create Toast"

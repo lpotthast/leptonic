@@ -4,84 +4,6 @@ use crate::{
     components::prelude::{Button, ButtonVariant, Icon},
     Out,
 };
-use crate::hooks::PressEvent;
-
-#[component]
-pub fn H1(
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <h1>
-            { children() }
-        </h1>
-    }
-}
-
-#[component]
-pub fn H2(
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <h2>
-            { children() }
-        </h2>
-    }
-}
-
-#[component]
-pub fn H3(
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <h3>
-            { children() }
-        </h3>
-    }
-}
-
-#[component]
-pub fn H4(
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <h4>
-            { children() }
-        </h4>
-    }
-}
-
-#[component]
-pub fn H5(
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <h5>
-            { children() }
-        </h5>
-    }
-}
-
-#[component]
-pub fn H6(
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <h6>
-            { children() }
-        </h6>
-    }
-}
-
-#[component]
-pub fn P(
-    children: Children,
-) -> impl IntoView {
-    view! {
-        <p>
-            { children() }
-        </p>
-    }
-}
 
 #[derive(Clone)]
 #[slot]
@@ -114,8 +36,11 @@ pub fn Code(
     #[prop(optional)] inline: Option<bool>,
     #[prop(optional)] show_copy_button: Option<bool>,
     #[prop(into, optional)] on_copy: Option<Out<Result<(), ()>>>,
-    #[prop(into)] code: String,
+    //#[prop(into)] code: String,
+    children: TypedChildren<impl Into<Oco<'static, str>>>,
 ) -> impl IntoView {
+    let code = (children.into_inner())().into_inner().into();
+
     let code_text = StoredValue::new(code);
 
     let show_copy_button = show_copy_button.unwrap_or_else(|| !inline.unwrap_or(false));

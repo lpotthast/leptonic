@@ -34,7 +34,7 @@ pub fn PageInput() -> impl IntoView {
             </Code>
 
             <TextInput get=text set=set_text/>
-            <P style="color: gray; margin-top: 0; font-style: italic;">"Text is: " {move || text.get()}</p>
+            <p style="color: gray; margin-top: 0; font-style: italic;">"Text is: " {move || text.get()}</p>
 
             <h2 id="labeled" class="anchor">
                 "Labeled"
@@ -84,7 +84,7 @@ pub fn PageInput() -> impl IntoView {
             </Code>
 
             <PasswordInput get=password set=set_password/>
-            <P style="color: gray; margin-top: 0; font-style: italic;">"Password is: " {move || password.get()}</p>
+            <p style="color: gray; margin-top: 0; font-style: italic;">"Password is: " {move || password.get()}</p>
 
             <p>
                 "Note that the input is always given back to you as a "<Code inline=true>"String"</Code>" no matter the type."
@@ -115,7 +115,7 @@ pub fn PageInput() -> impl IntoView {
                 get=number
                 set=set_number
             />
-            <P style="color: gray; margin-top: 0; font-style: italic;">"Number is: " {move || number_string.get()}</p>
+            <p style="color: gray; margin-top: 0; font-style: italic;">"Number is: " {move || number_string.get()}</p>
 
             <h2 id="value-updates" class="anchor">
                 "Value updates"
@@ -160,7 +160,7 @@ pub fn PageInput() -> impl IntoView {
                 {indoc!(r#"
                     let (text, set_text) = signal(String::new());
                     view! {
-                        <TextInput get=text set=set_text placeholder="This is a placeholder"/>
+                        <TextInput get=text set=set_text placeholder=Oco::Borrowed("This is a placeholder")/>
                         <Button
                             variant=ButtonVariant::Flat
                             size=ButtonSize::Small
@@ -171,8 +171,18 @@ pub fn PageInput() -> impl IntoView {
                 "#)}
             </Code>
 
-            <TextInput get=placeholder_input set=set_placeholder_input placeholder="This is a placeholder"/>
-            <Button variant=ButtonVariant::Flat size=ButtonSize::Small on_press=move |_| set_placeholder_input.set(String::new())>"Clear input"</Button>
+            <TextInput
+                get=placeholder_input
+                set=set_placeholder_input
+                placeholder=Oco::Borrowed("This is a placeholder")
+            />
+            <Button 
+                variant=ButtonVariant::Flat
+                size=ButtonSize::Small
+                on_press=move |_| set_placeholder_input.set(String::new())
+            >
+                "Clear input"
+            </Button>
 
             <h2 id="styling" class="anchor">
                 "Styling"

@@ -3,7 +3,6 @@ use crate::{
         field::{Field, FieldLabel},
         input::NumberInput,
         prelude::{Slider, SliderMarks, SliderPopover},
-        typography::P,
     },
     contexts::global_mouseup_event::GlobalMouseupEvent,
     prelude::*,

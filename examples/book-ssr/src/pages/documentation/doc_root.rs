@@ -1,11 +1,13 @@
-use leptonic::{components::prelude::*, prelude::*};
-use leptos::prelude::*;
-use leptos_router::components::{Outlet, ParentRoute, Redirect, Route, Routes, ToHref};
-use leptos_router::*;
 use std::fmt::Debug;
 
-use crate::app::APP_BAR_HEIGHT;
-use crate::app::{AppLayoutContext, AppRoutes};
+use leptonic::{components::prelude::*, prelude::*};
+use leptos::prelude::*;
+use leptos_router::components::{Outlet, ParentRoute, Redirect, Route, Routes};
+use leptos_router::*;
+
+use crate::app::AppLayoutContext;
+use crate::app::SegmentRenderer;
+use crate::app::{app_routes, APP_BAR_HEIGHT};
 use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
 use crate::pages::documentation::atoms::button::PageAtomButton;
 use crate::pages::documentation::atoms::popover::PageAtomPopover;
@@ -65,12 +67,14 @@ pub mod doc_routes {
     pub const USE_HOVER: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-hover");
     pub const USE_BUTTON: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-button");
     pub const USE_OVERLAY: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-overlay");
-    pub const USE_ANCHORLINK: (StaticSegment<&str>, StaticSegment<&str>) = path!("hooks/use-anchor-link");
+    pub const USE_ANCHORLINK: (StaticSegment<&str>, StaticSegment<&str>) =
+        path!("hooks/use-anchor-link");
 
     // Atoms
     pub const ATOM_BUTTON: (StaticSegment<&str>, StaticSegment<&str>) = path!("atoms/button");
     pub const ATOM_POPOVER: (StaticSegment<&str>, StaticSegment<&str>) = path!("atoms/popover");
-    pub const ATOM_ANCHORLINK: (StaticSegment<&str>, StaticSegment<&str>) = path!("atoms/anchor-link");
+    pub const ATOM_ANCHORLINK: (StaticSegment<&str>, StaticSegment<&str>) =
+        path!("atoms/anchor-link");
 
     // Layout
     pub const STACK: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/stack");
@@ -81,19 +85,22 @@ pub mod doc_routes {
     pub const DRAWER: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/drawer");
     pub const TAB: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/tabs");
     pub const TABLE: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/table");
-    pub const COLLAPSIBLE: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/collapsible");
+    pub const COLLAPSIBLE: (StaticSegment<&str>, StaticSegment<&str>) =
+        path!("components/collapsible");
 
     // Input
     pub const BUTTON: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/button");
     pub const INPUT: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/input");
-    pub const TIPTAP_EDITOR: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/tiptap-editor");
+    pub const TIPTAP_EDITOR: (StaticSegment<&str>, StaticSegment<&str>) =
+        path!("components/tiptap-editor");
     pub const DATETIME: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/date-time");
     pub const SLIDER: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/slider");
     pub const SELECT: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/select");
     pub const CHECKBOX: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/checkbox");
     pub const RADIO: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/radio");
     pub const TOGGLE: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/toggle");
-    pub const COLOR_PICKER: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/color-picker");
+    pub const COLOR_PICKER: (StaticSegment<&str>, StaticSegment<&str>) =
+        path!("components/color-picker");
 
     // Feedback
     pub const ALERT: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/alert");
@@ -105,7 +112,8 @@ pub mod doc_routes {
     pub const KBD: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/kbd");
 
     // General
-    pub const TYPOGRAPHY: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/typography");
+    pub const TYPOGRAPHY: (StaticSegment<&str>, StaticSegment<&str>) =
+        path!("components/typography");
     pub const ICON: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/icon");
     pub const LINK: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/link");
     pub const CALLBACK: (StaticSegment<&str>, StaticSegment<&str>) = path!("components/callback");
@@ -117,34 +125,13 @@ pub mod doc_routes {
     pub const NOT_FOUND: (StaticSegment<&str>,) = path!("not-found");
 }
 
-/// Required so that `Routes` variants can be used in `<Link href=Routes::Foo.render() ...>` definitions.
-pub trait SegmentRenderer {
-    fn to_href(&self) -> String;
-}
-
-// AppRoutes::Doc.route()
-
-impl SegmentRenderer for (StaticSegment<&'static str>,) {
-    fn to_href(&self) -> String {
-        let (a,) = self;
-        let a = a.0.as_path();
-        format!("{a}")
-    }
-}
-
-impl SegmentRenderer for (StaticSegment<&'static str>, StaticSegment<&'static str>,) {
-    fn to_href(&self) -> String {
-        let (a, b) = self;
-        let a = a.0.as_path();
-        let b = b.0.as_path();
-        format!("{a}/{b}")
-    }
-}
-
 // You can define other routes in their own component.
 // Use a #[component(transparent)] that returns a <Route/>.
 #[component(transparent)]
-pub fn DocRoutes<Segments: PossibleRouteMatch + Debug + Clone + Send + Sync + 'static>(path: Segments) -> impl IntoView {
+pub fn DocRoutes<Segments>(path: Segments) -> impl IntoView
+where
+    Segments: PossibleRouteMatch + Debug + Clone + Send + Sync + 'static,
+{
     // TODO: This should be a helper function.
     let mut segs = Vec::new();
     doc_routes::OVERVIEW.generate_path(&mut segs);
@@ -210,7 +197,7 @@ pub fn DocRoutes<Segments: PossibleRouteMatch + Debug + Clone + Send + Sync + 's
 
                 //<Route path=doc_routes::Transition view=PageTransition/>
 
-                <Route path=doc_routes::NOT_FOUND view=|| view! { <Redirect path=AppRoutes::NotFound.to_href()() /> }/>
+                <Route path=doc_routes::NOT_FOUND view=|| view! { <Redirect path=app_routes::NOT_FOUND.to_href() /> }/>
             </ParentRoute>
         </Routes>
     }

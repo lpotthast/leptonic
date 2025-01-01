@@ -1,6 +1,5 @@
-use std::sync::{Arc, RwLock};
-
 use leptos::prelude::*;
+use std::sync::{Arc, RwLock};
 use tracing::warn;
 use uuid::Uuid;
 
@@ -157,8 +156,8 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
             </leptonic-collapsible-header>
 
             { move ||  match ctx2.collapsible_ctx.show.get() {
-                true => view! { <Icon icon=icondata::BsCaretUpFill/>}.into_view(),
-                false => view! { <Icon icon=icondata::BsCaretDownFill/>}.into_view()
+                true => view! { <Icon icon=icondata::BsCaretUpFill/>}.into_any(),
+                false => view! { <Icon icon=icondata::BsCaretDownFill/>}.into_any()
             } }
         </leptonic-collapsible-header-wrapper>
     }
@@ -167,6 +166,10 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
 #[slot]
 pub struct CollapsibleBody {
     children: Children,
+
+    // TODO: This does not allow for reactive classes, nor are any other attributes allowed on this slot.... Find a different solution.
+    #[prop(into, optional)]
+    class: String,
 }
 
 #[component]
@@ -175,7 +178,7 @@ fn CollapsibleBodyInternal(collapsible_body: CollapsibleBody) -> impl IntoView {
         .expect("A CollapsibleHeader must be placed inside a Collapsible component.");
 
     view! {
-        <leptonic-collapsible-body class:show=move || collapsible_ctx.show.get()>
+        <leptonic-collapsible-body class=collapsible_body.class class:show=move || collapsible_ctx.show.get()>
             { (collapsible_body.children)() }
         </leptonic-collapsible-body>
     }

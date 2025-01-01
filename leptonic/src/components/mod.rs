@@ -166,11 +166,4 @@ pub mod prelude {
     pub use super::typography::Code;
     pub use super::typography::Li;
     pub use super::typography::Ul;
-    pub use super::typography::H1;
-    pub use super::typography::H2;
-    pub use super::typography::H3;
-    pub use super::typography::H4;
-    pub use super::typography::H5;
-    pub use super::typography::H6;
-    pub use super::typography::P;
 }

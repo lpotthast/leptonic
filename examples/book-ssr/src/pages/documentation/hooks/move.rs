@@ -1,13 +1,14 @@
-use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::contexts::global_pointer_event::{
     GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent, GlobalPointerUpEvent,
 };
 use leptonic::hooks::*;
+use leptos::html;
 use leptos::prelude::*;
 use leptos_use::use_element_bounding;
-use ringbuf::{HeapRb, Rb};
+use ringbuf::traits::{Consumer, Observer, RingBuffer};
+use ringbuf::HeapRb;
 
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
@@ -36,7 +37,7 @@ pub fn PageUseMove() -> impl IntoView {
     let draggable: NodeRef<html::Div> = NodeRef::new();
     let draggable_bounding = use_element_bounding(draggable);
 
-    let mov: UseMoveReturn = use_move(UseMoveInput {
+    let UseMoveReturn { attrs } = use_move(UseMoveInput {
         on_move_start: Callback::new(move |_e| {
             set_events.update(move |events| {
                 events.push_overwrite(Oco::Borrowed("MoveStart"));
@@ -98,9 +99,7 @@ pub fn PageUseMove() -> impl IntoView {
             <p>"Track movement."</p>
 
             <Code>
-                {indoc!(r"
-                    ...
-                ")}
+                "..."
             </Code>
 
             // The `touch-action: none` is important. Browsers would otherwise interrupt touchmove events after a small delay!
@@ -114,9 +113,8 @@ pub fn PageUseMove() -> impl IntoView {
                 color: var(--typography-code-color);
             ">
                 <div
-                    {..mov.props.attrs}
+                    {..attrs}
                     node_ref=draggable
-                    on:pointerdown=mov.props.on_pointer_down
                     style=move || format!("
                         border: 0.1em solid green;
                         padding: 0.5em 1em;
@@ -140,7 +138,7 @@ pub fn PageUseMove() -> impl IntoView {
                 </div>
             </div>
 
-            <p>"Last " { move || events.with(|events| events.len()) } " events: "</p>
+            <p>"Last " { move || events.with(|events| events.occupied_len()) } " events: "</p>
 
             <pre style="
                 width: 100%;

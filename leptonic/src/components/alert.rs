@@ -24,16 +24,25 @@ impl AlertVariant {
 #[slot]
 pub struct AlertPrepend {
     pub children: Children,
+
+    #[prop(into, optional)]
+    pub style: Option<String>,
 }
 
 #[slot]
 pub struct AlertAppend {
     pub children: Children,
+
+    #[prop(into, optional)]
+    pub style: Option<String>,
 }
 
 #[slot]
 pub struct AlertTitle {
     pub children: Children,
+
+    #[prop(into, optional)]
+    pub style: Option<String>,
 }
 
 #[slot]
@@ -69,7 +78,7 @@ pub fn Alert(
             {
                 match alert_prepend {
                     Some(slot) => view! {
-                        <leptonic-alert-prepend>
+                        <leptonic-alert-prepend style=slot.style>
                             { (slot.children)() }
                         </leptonic-alert-prepend>
                     }.into_any(),
@@ -90,7 +99,7 @@ pub fn Alert(
                 {
                     match alert_title {
                         Some(slot) => view! {
-                            <leptonic-alert-title>
+                            <leptonic-alert-title style=slot.style>
                                 {(slot.children)()}
                             </leptonic-alert-title>
                         }.into_any() ,
@@ -112,7 +121,7 @@ pub fn Alert(
             {
                 match alert_append {
                     Some(slot) => view! {
-                        <leptonic-alert-append>
+                        <leptonic-alert-append style=slot.style>
                             { (slot.children)() }
                         </leptonic-alert-append>
                     }.into_any(),

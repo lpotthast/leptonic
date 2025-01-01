@@ -1,7 +1,8 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::doc_root::{doc_routes, SegmentRenderer};
+use crate::app::SegmentRenderer;
+use crate::pages::documentation::doc_root::doc_routes;
 
 #[component]
 pub fn PageWelcome() -> impl IntoView {

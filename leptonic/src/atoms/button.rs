@@ -2,16 +2,19 @@ use leptos::html;
 use leptos::prelude::*;
 use leptos_router::components::{ToHref, A};
 
-use crate::{hooks::{
-    use_button, HoverEndEvent, HoverStartEvent, PressEvent, UseButtonInput, UseButtonReturn,
-    UseFocusInput, UseHoverInput, UsePressInput,
-}, utils::aria::{AriaExpanded, AriaHasPopup}};
+use crate::{
+    hooks::{
+        use_button, HoverEndEvent, HoverStartEvent, PressEvent, UseButtonInput, UseButtonReturn,
+        UseFocusInput, UseHoverInput, UsePressInput,
+    },
+    utils::aria::{AriaExpanded, AriaHasPopup},
+};
 
 #[component]
 pub fn Button(
     #[prop(into, optional)] on_press: Option<Callback<(PressEvent,)>>,
-    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
-    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<(HoverStartEvent,)>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<(HoverEndEvent,)>>,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: Signal<AriaExpanded>,
@@ -19,7 +22,11 @@ pub fn Button(
 ) -> impl IntoView {
     let el: NodeRef<html::Button> = NodeRef::new();
 
-    let UseButtonReturn { attrs, is_hovered: _, is_pressed: _ } = use_button(UseButtonInput {
+    let UseButtonReturn {
+        attrs,
+        is_hovered: _,
+        is_pressed: _,
+    } = use_button(UseButtonInput {
         node_ref: el,
         disabled,
         aria_haspopup,
@@ -60,7 +67,7 @@ pub fn Button(
 }
 
 #[derive(Debug, Default, PartialEq, Eq)]
-pub(crate) enum LinkTarget {
+pub enum LinkTarget {
     /// Opens the linked document in a new window or tab.
     _Blank,
     /// Opens the linked document in the same frame as it was clicked (this is the default).
@@ -71,7 +78,7 @@ pub(crate) enum LinkTarget {
     /// Opens the linked document in the full body of the window.
     _Top,
     /// Opens the linked document in the frame with the given name.
-    Frame { with_name: Oco<'static, str> }
+    Frame { with_name: Oco<'static, str> },
 }
 
 impl LinkTarget {
@@ -81,7 +88,7 @@ impl LinkTarget {
             LinkTarget::_Self => Oco::Borrowed("_self"),
             LinkTarget::_Parent => Oco::Borrowed("_parent"),
             LinkTarget::_Top => Oco::Borrowed("_top"),
-            LinkTarget::Frame { with_name } => with_name.clone()
+            LinkTarget::Frame { with_name } => with_name.clone(),
         }
     }
 }
@@ -94,20 +101,15 @@ pub fn LinkButton<H>(
     #[prop(into, optional)]
     target: Option<LinkTarget>,
 
-    #[prop(into, optional)]
-    on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<(HoverStartEvent,)>>,
 
-    #[prop(into, optional)]
-    on_hover_end: Option<Callback<HoverEndEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<(HoverEndEvent,)>>,
 
-    #[prop(into, optional)]
-    disabled: Option<Signal<bool>>,
+    #[prop(into, optional)] disabled: Option<Signal<bool>>,
 
-    #[prop(into, optional)]
-    aria_haspopup: Option<Signal<AriaHasPopup>>,
+    #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
 
-    #[prop(into, optional)]
-    aria_expanded: Option<Signal<AriaExpanded>>,
+    #[prop(into, optional)] aria_expanded: Option<Signal<AriaExpanded>>,
 
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
@@ -121,7 +123,11 @@ where
 {
     let disabled = disabled.unwrap_or(Signal::from(false));
 
-    let UseButtonReturn { attrs, is_hovered, is_pressed } = use_button(UseButtonInput {
+    let UseButtonReturn {
+        attrs,
+        is_hovered: _,
+        is_pressed: _,
+    } = use_button(UseButtonInput {
         node_ref: NodeRef::<html::Custom<&str>>::new(),
         disabled,
         aria_haspopup: aria_haspopup.unwrap_or_default(),

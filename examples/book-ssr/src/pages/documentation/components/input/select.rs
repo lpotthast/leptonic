@@ -83,7 +83,7 @@ pub fn PageSelect() -> impl IntoView {
 
             <p>"There are three variants of the select component, accepting different inputs and changing only slightly in its behavior."</p>
 
-            <H3 id="variant-select" class="anchor">
+            <h3 id="variant-select" class="anchor">
                 "Select"
                 <AnchorLink href="#variant-select" description="Direct link to section: Variant - Select"/>
             </h3>
@@ -114,7 +114,7 @@ pub fn PageSelect() -> impl IntoView {
                 set_selected=move |v| set_selected.set(v)
             />
 
-            <H3 id="variant-optional-select" class="anchor">
+            <h3 id="variant-optional-select" class="anchor">
                 "OptionalSelect"
                 <AnchorLink href="#variant-optional-select" description="Direct link to section: Variant - OptionalSelect"/>
             </h3>
@@ -147,7 +147,7 @@ pub fn PageSelect() -> impl IntoView {
                 allow_deselect=true
             />
 
-            <H3 id="variant-multiselect" class="anchor">
+            <h3 id="variant-multiselect" class="anchor">
                 "Multiselect"
                 <AnchorLink href="#variant-multiselect" description="Direct link to section: Variant - Multiselect"/>
             </h3>

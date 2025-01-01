@@ -42,7 +42,7 @@ time = { version = "0.3.34", features = [
 ] }
 tracing = "0.1.40"
 uuid = { version = "1.7.0", features = ["v4", "v7", "js", "serde"] }
-wasm-bindgen = "0.2.91"
+wasm-bindgen = "0.2.99"
 wasm-bindgen-futures = "0.4.41"
 # TODO: What of all below is really required?
 web-sys = { version = "0.3.68", features = [
@@ -55,9 +55,10 @@ web-sys = { version = "0.3.68", features = [
     "Storage",
 ] }
 educe = "0.6.0"
+send_wrapper = "0.6.0"
 
 [dev-dependencies]
-wasm-bindgen = "0.2.91"
+wasm-bindgen = "0.2.99"
 web-sys = "0.3.68"
 assertr = { git = "https://github.com/lpotthast/assertr", branch = "main" }
 

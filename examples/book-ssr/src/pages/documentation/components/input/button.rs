@@ -50,7 +50,7 @@ pub fn PageButton() -> impl IntoView {
                 "#)}
             </Code>
 
-            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) style="justify-content: flex-start;">
+            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) attr:style="justify-content: flex-start;">
                 <Button on_press=move |_| {} color=ButtonColor::Primary>"Primary"</Button>
                 <Button on_press=move |_| {} color=ButtonColor::Secondary>"Secondary"</Button>
                 <Button on_press=move |_| {} color=ButtonColor::Warn>"Warn"</Button>
@@ -78,7 +78,7 @@ pub fn PageButton() -> impl IntoView {
                 "#)}
             </Code>
 
-            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) style="justify-content: flex-start;">
+            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) attr:style="justify-content: flex-start;">
                 <Button on_press=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
                 <Button on_press=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
                 <Button on_press=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>

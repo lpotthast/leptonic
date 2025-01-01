@@ -457,6 +457,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     });
 
+    // TODO: How can we chain multiple event handlers for the same type?
+    // A: Make `On` mutable, allowing repurposing an already stored callback.
+    // B: Do not store `On` types. Only store boxed futures (trivial to chain). Always require `attrs()` when spreading attributes, which packages the handler in On types.
+
     UsePressReturn {
         attrs: (
             on(ev::keydown, on_key_down),

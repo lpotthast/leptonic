@@ -1,8 +1,9 @@
+use crate::app::SegmentRenderer;
+use crate::pages::documentation::doc_root::doc_routes;
+use crate::pages::documentation::{article::Article, toc::Toc};
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::prelude::*;
-
-use crate::pages::documentation::{article::Article, doc_root::DocRoutes, toc::Toc};
 
 #[component]
 #[allow(clippy::too_many_lines)]
@@ -71,7 +72,7 @@ pub fn PageInstallation() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    @import "./leptonic/leptonic-themes";
+                    @use "./leptonic/leptonic-themes";
                 "#)}
             </Code>
 
@@ -112,8 +113,8 @@ pub fn PageInstallation() -> impl IntoView {
 
             <p>
                 "Leptonic provides the "<Code inline=true>"<Root>"</Code>" component. "
-                "It is responsible for enabling the "<Link href=DocRoutes::Themes>"Theming"</Link>", "<Link href=DocRoutes::Modal>"Modal"</Link>" and "
-                <Link href=DocRoutes::Toast>"Toast"</Link>" functionality of Leptonic as well as providing global event-listening capabilities."
+                "It is responsible for enabling the "<Link href=doc_routes::THEMES.to_href()>"Theming"</Link>", "<Link href=doc_routes::MODAL.to_href()>"Modal"</Link>" and "
+                <Link href=doc_routes::TOAST.to_href()>"Toast"</Link>" functionality of Leptonic as well as providing global event-listening capabilities."
                 "You have to include it in your app once, and render all your content inside it."
             </p>
 

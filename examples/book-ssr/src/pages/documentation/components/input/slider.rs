@@ -77,10 +77,10 @@ pub fn PageSlider() -> impl IntoView {
             </Code>
 
             <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
-                <Icon icon=icondata::BsVolumeDownFill style="font-size: 2.5em;"/>
-                <Slider min=0.0 max=1.0 value=value5 set_value=set_value5 style="width: 10em"
+                <Icon icon=icondata::BsVolumeDownFill attr:style="font-size: 2.5em;"/>
+                <Slider min=0.0 max=1.0 value=value5 set_value=set_value5 attr:style="width: 10em"
                     value_display=move |v| format!("{:.0}%", v * 100.0)/>
-                <Icon icon=icondata::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
+                <Icon icon=icondata::BsVolumeUpFill attr:style="font-size: 2.5em; margin-left: 0.25em;"/>
             </Stack>
 
             <h2 id="marks" class="anchor">

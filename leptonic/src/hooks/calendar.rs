@@ -102,7 +102,7 @@ pub fn use_calendar(
 
     let selected: Memo<time::OffsetDateTime> = Memo::new(move |_| staging.get());
 
-    let years_start = create_rw_signal(staging.get_untracked().year() - 4);
+    let years_start = RwSignal::new(staging.get_untracked().year() - 4);
     let years = Signal::derive(move || {
         staging
             .with(|staging| create_years(*staging, years_start.get(), min.as_ref(), max.as_ref()))

@@ -170,7 +170,7 @@ pub fn PasswordInput(
 
 #[component]
 pub fn NumberInput(
-    #[prop(into)] get: MaybeSignal<f64>,
+    #[prop(into)] get: Signal<f64>,
     #[prop(into, optional)] set: Option<Out<f64>>,
     #[prop(into, optional)] min: Option<Signal<f64>>,
     #[prop(into, optional)] max: Option<Signal<f64>>,

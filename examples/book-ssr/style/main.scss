@@ -1,3 +1,5 @@
+@use "./leptonic/leptonic-themes";
+
 * {
     font-family: Roboto, sans-serif;
 }
@@ -15,8 +17,6 @@ body {
 [data-disable-user-select="true"] {
     user-select: none;
 }
-
-@import "./leptonic/leptonic-themes";
 
 [data-theme="light"] {
     color-scheme: light;

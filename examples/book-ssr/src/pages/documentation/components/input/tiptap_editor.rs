@@ -23,8 +23,8 @@ pub fn PageTiptapEditor() -> impl IntoView {
                 "You may want to look into building you own editor UI!"
             </p>
 
-            <P style="display: flex;">
-                <Toggle state=disabled set_state=set_disabled style="margin-right: 0.5em;"/>
+            <p style="display: flex;">
+                <Toggle state=disabled set_state=set_disabled attr:style="margin-right: 0.5em;"/>
                 <span style="font-style: italic; color: gray;">
                     {
                         move || match disabled.get() {

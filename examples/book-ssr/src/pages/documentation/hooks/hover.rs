@@ -1,9 +1,9 @@
-use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptos::prelude::*;
-use ringbuf::{HeapRb, Rb};
+use ringbuf::traits::{Consumer, Observer, RingBuffer};
+use ringbuf::HeapRb;
 
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
@@ -31,7 +31,7 @@ pub fn PageUseHover() -> impl IntoView {
         })
     });
 
-    let hover = use_hover(UseHoverInput {
+    let UseHoverReturn { attrs, is_hovered } = use_hover(UseHoverInput {
         disabled: disabled.into(),
         on_hover_start: Some(Callback::new(move |e| {
             set_events.update(|events| {
@@ -55,15 +55,11 @@ pub fn PageUseHover() -> impl IntoView {
             <p>"Track element hover."</p>
 
             <Code>
-                {indoc!(r"
-                    ...
-                ")}
+                "..."
             </Code>
 
             <div
-                {..hover.props.attrs}
-                on:pointerenter=hover.props.on_pointer_enter
-                on:pointerleave=hover.props.on_pointer_leave
+                {..attrs}
                 style="display: inline-flex;
                 border: 0.1em solid green;
                 padding: 0.5em 1em;"
@@ -71,14 +67,14 @@ pub fn PageUseHover() -> impl IntoView {
                 "Hover me"
             </div>
 
-            <FormControl style="flex-direction: row; align-items: center; gap: 0.5em;">
+            <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em;">
                 <Checkbox checked=disabled set_checked=set_disabled />
                 <Label>"Disabled"</Label>
             </FormControl>
 
-            <p>"Is hovered: " { move || hover.is_hovered.get() }</p>
+            <p>"Is hovered: " { move || is_hovered.get() }</p>
 
-            <p>"Last " { move || events.with(|events| events.len()) } " events: "</p>
+            <p>"Last " { move || events.with(|events| events.occupied_len()) } " events: "</p>
 
             <pre style="
                 width: 100%;

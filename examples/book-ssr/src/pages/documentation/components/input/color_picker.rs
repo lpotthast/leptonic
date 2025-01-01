@@ -50,7 +50,7 @@ pub fn PageColorPicker() -> impl IntoView {
                 ")}
             </Code>
 
-            <H3 id="part-color-preview" class="anchor">
+            <h3 id="part-color-preview" class="anchor">
                 "ColorPreview"
                 <AnchorLink href="#part-color-preview" description="Direct link to section: Part - ColorPreview"/>
             </h3>
@@ -65,9 +65,9 @@ pub fn PageColorPicker() -> impl IntoView {
                 "#)}
             </Code>
 
-            <ColorPreview rgb=hsv_test_rgb_preview style="width: 5em%; height: 5em;"/>
+            <ColorPreview rgb=hsv_test_rgb_preview attr:style="width: 5em%; height: 5em;"/>
 
-            <H3 id="part-color-palette" class="anchor">
+            <h3 id="part-color-palette" class="anchor">
                 "ColorPalette"
                 <AnchorLink href="#part-color-palette" description="Direct link to section: Part - ColorPalette"/>
             </h3>
@@ -95,10 +95,10 @@ pub fn PageColorPicker() -> impl IntoView {
                 hsv=hsv_test
                 set_saturation=move |s| set_hsv_test.update(|hsv| hsv.saturation = s)
                 set_value=move |v| set_hsv_test.update(|hsv| hsv.value = v)
-                style="width: 10em; height: 5em;"
+                attr:style="width: 10em; height: 5em;"
             />
 
-            <H3 id="part-hue-slider" class="anchor">
+            <h3 id="part-hue-slider" class="anchor">
                 "HueSlider"
                 <AnchorLink href="#part-hue-slider" description="Direct link to section: Part - HueSlider"/>
             </h3>

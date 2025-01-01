@@ -1,3 +1,4 @@
+use std::fmt::{Debug, Formatter};
 use educe::Educe;
 use leptos::ev::On;
 use leptos::html::ElementType;
@@ -27,7 +28,6 @@ pub struct UseButtonInput<E: ElementType + 'static> {
     pub use_focus_input: UseFocusInput,
 }
 
-// #[derive(Debug)]
 pub struct UseButtonReturn {
     /// Spread these props onto your button using the spread syntax: `<button {..props}>...`
     pub attrs: UseButtonAttrs,
@@ -51,6 +51,16 @@ pub type UseButtonAttrs = (
     On<ev::focus, Box<dyn Fn(FocusEvent) + Send + Sync + 'static>>,
     On<ev::blur, Box<dyn Fn(FocusEvent) + Send + Sync + 'static>>,
 );
+
+impl Debug for UseButtonReturn {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UseButtonReturn")
+            .field("attrs", &"...")
+            .field("is_hovered", &self.is_hovered)
+            .field("is_pressed", &self.is_pressed)
+            .finish()
+    }
+}
 
 pub fn use_button<E: ElementType + 'static>(input: UseButtonInput<E>) -> UseButtonReturn {
     let UseHoverReturn { attrs: (on_pointerenter, on_pointerleave), is_hovered } = use_hover(input.use_hover_input);

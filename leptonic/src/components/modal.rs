@@ -51,8 +51,8 @@ impl ModalRootContext {
 
 #[component]
 pub fn ModalRoot(children: Children) -> impl IntoView {
-    let modals = create_rw_signal(Vec::new());
-    let shown_modals = create_rw_signal(Vec::new());
+    let modals = RwSignal::new(Vec::new());
+    let shown_modals = RwSignal::new(Vec::new());
     let ctx = ModalRootContext {
         modals,
         shown_modals,

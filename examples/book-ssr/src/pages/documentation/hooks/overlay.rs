@@ -4,6 +4,8 @@ use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};
 use leptonic::utils::locale::WritingDirection;
+use leptos::html;
+use leptos::portal::Portal;
 use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
@@ -20,7 +22,7 @@ pub fn PageUseOverlay() -> impl IntoView {
     let (overlay_content, set_overlay_content) = signal(String::from("overlay"));
 
     let UseOverlayReturn {
-        props: overlay_props,
+        attrs: overlay_attrs,
         id,
         state,
         set_state,
@@ -29,7 +31,7 @@ pub fn PageUseOverlay() -> impl IntoView {
     });
 
     let UseOverlayTriggerReturn {
-        props: trigger_props,
+        attrs: trigger_attrs,
     } = use_overlay_trigger(UseOverlayTriggerInput {
         show: state.into(),
         overlay_id: id,
@@ -37,16 +39,21 @@ pub fn PageUseOverlay() -> impl IntoView {
     });
 
     let UseOverlayPositionReturn {
-        props: overlay_pos_props,
+        attrs: overlay_pos_attrs,
     } = use_overlay_position(UseOverlayPositionInput {
-        overlay_ref: overlay_el,
-        target_ref: trigger_el,
+        overlay: overlay_el,
+        target: trigger_el,
         placement_y: selected_placement_y.into(),
         placement_x: selected_placement_x.into(),
         writing_direction: WritingDirection::Ltr.into(),
+        phantom_data: Default::default(),
     });
 
-    let UseButtonReturn { props: btn_props } = use_button(UseButtonInput {
+    let UseButtonReturn {
+        attrs: btn_attrs,
+        is_hovered,
+        is_pressed,
+    } = use_button(UseButtonInput {
         node_ref: trigger_el,
         disabled: false.into(),
         aria_haspopup: AriaHasPopup::default().into(),
@@ -88,62 +95,68 @@ pub fn PageUseOverlay() -> impl IntoView {
                 "#)}
             </Code>
 
-            <Grid gap=leptonic::Size::Em(0.5) style="margin-bottom: 1em;">
+            <Grid gap=leptonic::Size::Em(0.5) attr:style="margin-bottom: 1em;">
                 <Row>
-                    <Col xs=6 style="
+                    <Col xs=6 attr:style="
                         border: 0.1em solid lightgrey;
                         border-radius: 0.25em;
                         padding: 0.5em;
                     ">
-                        <RadioGroup style="display: flex; flex-direction: column; gap: 0.2em; width: 100%;">
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_x.get() == PlacementX::OuterLeft} set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::OuterLeft)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"OuterLeft"</Label>
+                        <RadioGroup attr:style="display: flex; flex-direction: column; gap: 0.2em; width: 100%;">
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio
+                                    checked=Signal::derive(move || selected_placement_x.get() == PlacementX::OuterLeft)
+                                    set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::OuterLeft)} }
+                                />
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"OuterLeft"</Label>
                             </FormControl>
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_x.get() == PlacementX::Left} set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::Left)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"Left"</Label>
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio
+                                    checked=Signal::derive(move || selected_placement_x.get() == PlacementX::Left)
+                                    set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::Left)} }
+                                />
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"Left"</Label>
                             </FormControl>
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_x.get() == PlacementX::Center} set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::Center)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"Center"</Label>
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio checked=Signal::derive(move || selected_placement_x.get() == PlacementX::Center) set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::Center)} }/>
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"Center"</Label>
                             </FormControl>
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_x.get() == PlacementX::Right} set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::Right)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"Right"</Label>
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio checked=Signal::derive(move || selected_placement_x.get() == PlacementX::Right) set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::Right)} }/>
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"Right"</Label>
                             </FormControl>
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_x.get() == PlacementX::OuterRight} set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::OuterRight)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"OuterRight"</Label>
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio checked=Signal::derive(move || selected_placement_x.get() == PlacementX::OuterRight) set_checked=move |checked| { if checked { set_selected_placement_x.set(PlacementX::OuterRight)} }/>
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"OuterRight"</Label>
                             </FormControl>
                         </RadioGroup>
                     </Col>
 
-                    <Col xs=6 style="
+                    <Col xs=6 attr:style="
                         border: 0.1em solid lightgrey;
                         border-radius: 0.25em;
                         padding: 0.5em;
                     ">
-                        <RadioGroup style="display: flex; flex-direction: column; gap: 0.2em; width: 100%;">
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_y.get() == PlacementY::Above} set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Above)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"Above"</Label>
+                        <RadioGroup attr:style="display: flex; flex-direction: column; gap: 0.2em; width: 100%;">
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio checked=Signal::derive(move || selected_placement_y.get() == PlacementY::Above) set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Above)} }/>
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"Above"</Label>
                             </FormControl>
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_y.get() == PlacementY::Top} set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Top)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"Top"</Label>
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio checked=Signal::derive(move || selected_placement_y.get() == PlacementY::Top) set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Top)} }/>
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"Top"</Label>
                             </FormControl>
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_y.get() == PlacementY::Center} set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Center)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"Center"</Label>
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio checked=Signal::derive(move || selected_placement_y.get() == PlacementY::Center) set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Center)} }/>
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"Center"</Label>
                             </FormControl>
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_y.get() == PlacementY::Bottom} set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Bottom)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"Bottom"</Label>
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio checked=Signal::derive(move || selected_placement_y.get() == PlacementY::Bottom) set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Bottom)} }/>
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"Bottom"</Label>
                             </FormControl>
-                            <FormControl style="display: flex; flex-direction: row; align-items: center; width: 100%;">
-                                <Radio checked=move || {selected_placement_y.get() == PlacementY::Below} set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Below)} }/>
-                                <Label style="margin-left: 0.25em; width: 100%; height: 100%;">"Below"</Label>
+                            <FormControl attr:style="display: flex; flex-direction: row; align-items: center; width: 100%;">
+                                <Radio checked=Signal::derive(move || selected_placement_y.get() == PlacementY::Below) set_checked=move |checked| { if checked { set_selected_placement_y.set(PlacementY::Below)} }/>
+                                <Label attr:style="margin-left: 0.25em; width: 100%; height: 100%;">"Below"</Label>
                             </FormControl>
                         </RadioGroup>
                     </Col>
@@ -157,14 +170,9 @@ pub fn PageUseOverlay() -> impl IntoView {
 
             <div style="display: flex; width: 100%; height: 20em; justify-content: center; align-items: center;">
                 <div
-                    {..trigger_props.attrs}
-                    {..btn_props.attrs}
+                    {..trigger_attrs}
+                    {..btn_attrs}
                     node_ref=trigger_el
-                    on:keydown=btn_props.on_key_down
-                    on:click=btn_props.on_click
-                    on:pointerdown=btn_props.on_pointer_down
-                    on:focus=btn_props.on_focus
-                    on:blur=btn_props.on_blur
                     style="
                         display: inline-flex;
                         border: 0.1em solid green;
@@ -182,8 +190,8 @@ pub fn PageUseOverlay() -> impl IntoView {
 
             <Portal>
                 {
-                    let overlay_props_attrs = overlay_props.attrs.clone();
-                    let overlay_pos_props_attrs = overlay_pos_props.attrs.clone();
+                    let overlay_attrs = overlay_attrs.clone();
+                    let overlay_pos_attrs = overlay_pos_attrs.clone();
                     view! {
                         <Show when=move || state.get()>
                             <style>
@@ -195,8 +203,8 @@ pub fn PageUseOverlay() -> impl IntoView {
                                 }"
                             </style>
                             <div
-                                {..overlay_props_attrs.clone()}
-                                {..overlay_pos_props_attrs.clone()}
+                                {..overlay_attrs.clone()}
+                                {..overlay_pos_attrs.clone()}
                                 node_ref=overlay_el
                                 class="my-overlay"
                             >

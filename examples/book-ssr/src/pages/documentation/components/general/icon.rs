@@ -1,7 +1,7 @@
 use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
-use leptonic::prelude::*;
 use leptonic::components::prelude::*;
+use leptonic::prelude::*;
 use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
@@ -21,7 +21,7 @@ pub fn PageIcon() -> impl IntoView {
                 "The crates readme show the available icon packages and their current versions."
             </p>
 
-            <P style="font-weight: bold;">"Browse through available icons at "<LinkExt target=LinkExtTarget::Blank href="https://carlosted.github.io/icondata/">"https://carlosted.github.io/icondata/"</LinkExt> "!"</p>
+            <p style="font-weight: bold;">"Browse through available icons at "<LinkExt target=LinkExtTarget::Blank href="https://carlosted.github.io/icondata/">"https://carlosted.github.io/icondata/"</LinkExt> "!"</p>
 
             <p>"Leptonic provides a re-export of the "<Code inline=true>"icondata"</Code>" crate when using the prelude module."</p>
 
@@ -38,8 +38,8 @@ pub fn PageIcon() -> impl IntoView {
                 "#)}
             </Code>
 
-            <Icon icon=icondata::BsFolderFill style="font-size: 6em;"/>
-            <Icon icon=icondata::BsFolder style="font-size: 6em;"/>
+            <Icon icon=icondata::BsFolderFill attr:style="font-size: 6em;"/>
+            <Icon icon=icondata::BsFolder attr:style="font-size: 6em;"/>
 
             <p>"SVG data of all the icons used in your application is embedded into your binary."</p>
 

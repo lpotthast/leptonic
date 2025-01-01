@@ -63,6 +63,7 @@ impl ElementExt for web_sys::Element {
 
 pub(crate) trait EventTargetExt {
     fn as_element(&self) -> Option<web_sys::Element>;
+    #[allow(unused)]
     fn as_html_element(&self) -> Option<web_sys::HtmlElement>;
     fn as_node(&self) -> Option<web_sys::Node>;
     fn as_container(&self) -> Option<DomContainer>;

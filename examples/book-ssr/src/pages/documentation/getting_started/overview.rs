@@ -1,7 +1,8 @@
+use crate::app::SegmentRenderer;
+use crate::pages::documentation::doc_root::doc_routes;
+use crate::pages::documentation::{article::Article, toc::Toc};
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::prelude::*;
-
-use crate::pages::documentation::{article::Article, doc_root::DocRoutes, toc::Toc};
 
 #[component]
 pub fn PageOverview() -> impl IntoView {
@@ -26,7 +27,7 @@ pub fn PageOverview() -> impl IntoView {
             <p>"Explore the available components and other features using the side menu to get acquainted with what Leptonic has to offer."</p>
 
             <p>
-                "If you want to dive right in, follow our " <Link href=DocRoutes::Installation>"Installation"</Link> " instructions."
+                "If you want to dive right in, follow our " <Link href=doc_routes::INSTALLATION.to_href()>"Installation"</Link> " instructions."
             </p>
 
             <h2 id="help">

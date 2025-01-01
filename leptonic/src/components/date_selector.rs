@@ -20,9 +20,8 @@ pub fn DateSelector(
     #[prop(into)] on_change: Out<time::OffsetDateTime>,
     #[prop(optional)] min: Option<time::OffsetDateTime>,
     #[prop(optional)] max: Option<time::OffsetDateTime>,
-    #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: MaybeSignal<
-        GuideMode,
-    >,
+    // TODO (new): guide_mode should not be a signal!
+    #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: Signal<GuideMode>,
 ) -> impl IntoView {
     let calendar = use_calendar(value, min, max);
 

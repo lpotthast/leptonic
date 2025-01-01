@@ -42,6 +42,7 @@ install-tools:
   cargo install twiggy # Inspect WASM bundles.
   cargo install create-tauri-app # Create new Tauri application.
   cargo install tauri-cli@2.0.0-beta.8 # Run tauri applications.
+  cargo install cargo-leptos # Run leptos applications.
 
 # Find the minimum supported rust version
 msrv:

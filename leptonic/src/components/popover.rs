@@ -33,7 +33,7 @@ impl PopoverRootContext {
 
 #[component]
 pub(crate) fn PopoverRoot(children: Children) -> impl IntoView {
-    let popovers = create_rw_signal(Vec::new());
+    let popovers = RwSignal::new(Vec::new());
     let ctx = PopoverRootContext { popovers };
     provide_context::<PopoverRootContext>(ctx.clone());
 
@@ -88,7 +88,7 @@ pub fn Popover(
     #[prop(optional)]
     position_y: Option<Callback<UseElementBoundingReturnReadOnly, String>>,
 
-    #[prop(into, optional)] show: Option<MaybeSignal<bool>>,
+    #[prop(into, optional)] show: Option<Signal<bool>>,
 
     popover_content: PopoverContent,
 
@@ -104,13 +104,10 @@ pub fn Popover(
     let pop_el: NodeRef<html::Div> = NodeRef::new();
     let pop_bounds = use_element_bounding(pop_el);
 
-    let show: MaybeSignal<bool> = match show {
-        Some(show) => show,
-        None => {
-            let is_hovered = use_element_hover(el);
-            MaybeSignal::derive(move || is_hovered.get() || clicked.get())
-        }
-    };
+    let show = show.unwrap_or_else(|| {
+        let is_hovered = use_element_hover(el);
+        Signal::derive(move || is_hovered.get() || clicked.get())
+    });
 
     let pop_bounds_read_only: UseElementBoundingReturnReadOnly = pop_bounds.into();
 

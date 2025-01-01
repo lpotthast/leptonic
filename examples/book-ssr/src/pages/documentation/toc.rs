@@ -47,7 +47,7 @@ pub fn TocEntry(toc: Toc, level: usize) -> impl IntoView {
                             { title }
                         </AnchorLink>
                     </li>
-                }.into_view(),
+                }.into_any(),
                 Toc::Group { title, link, inner } => view! {
                     <li data-level=level>
                         <AnchorLink href=link>
@@ -55,14 +55,14 @@ pub fn TocEntry(toc: Toc, level: usize) -> impl IntoView {
                         </AnchorLink>
                         <TocEntry toc=Toc::List { inner } level=level+1/>
                     </li>
-                }.into_view(),
+                }.into_any(),
                 Toc::List { inner } => view!{
                     <ul>
                         { inner.into_iter().map(|toc| view! {
                             <TocEntry toc=toc level=level/>
                         }).collect_view() }
                     </ul>
-                }.into_view(),
+                }.into_any(),
             }}
     }
 }

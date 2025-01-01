@@ -1,50 +1,65 @@
 use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
-use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, MetaTags, Style, Stylesheet, Title};
+use leptos_meta::{
+    provide_meta_context, Link as MetaLink, Meta, MetaTags, Style, Stylesheet, Title,
+};
 use leptos_router::components::*;
 use leptos_router::hooks::use_location;
-use leptos_router::path;
+use leptos_router::{AsPath, StaticSegment};
 use leptos_use::use_media_query;
 
-use crate::pages::{
-    editor::ThemeEditor, err404::PageErr404,
-    welcome::PageWelcome,
-};
+use crate::pages::documentation::doc_root::doc_routes;
+use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
 
-#[derive(Debug, Copy, Clone)]
-pub enum AppRoutes {
-    Welcome,
-    Doc,
-    ThemeEditor,
-    NotFound,
+/// Required so that `Routes` variants can be used in `<Link href=Routes::Foo.render() ...>` definitions.
+pub trait SegmentRenderer {
+    fn to_href(&self) -> String;
 }
 
-impl AppRoutes {
-    pub const fn route(self) -> &'static str {
-        match self {
-            Self::Welcome => "",
-            Self::Doc => "doc",
-            Self::ThemeEditor => "theme-editor",
-            Self::NotFound => "not-found", // Leptos requires this to be be named "*"!
-        }
+// AppRoutes::Doc.route()
+
+impl SegmentRenderer for () {
+    fn to_href(&self) -> String {
+        "".to_string()
     }
 }
 
-/// Required so that `Routes` variants can be used in `<Route path=Routes::Foo ...>` definitions.
-impl std::fmt::Display for AppRoutes {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.route())
+impl SegmentRenderer for (StaticSegment<&'static str>,) {
+    fn to_href(&self) -> String {
+        let (a,) = self;
+        let a = a.0.as_path();
+        format!("{a}")
     }
 }
 
+impl SegmentRenderer for (StaticSegment<&'static str>, StaticSegment<&'static str>) {
+    fn to_href(&self) -> String {
+        let (a, b) = self;
+        let a = a.0.as_path();
+        let b = b.0.as_path();
+        format!("{a}/{b}")
+    }
+}
+
+pub mod app_routes {
+    use leptos_router::{path, StaticSegment};
+
+    pub const WELCOME: () = path!("");
+    pub const DOC: (StaticSegment<&str>,) = path!("doc");
+    pub const THEME_EDITOR: (StaticSegment<&str>,) = path!("theme-editor");
+    pub const NOT_FOUND: (StaticSegment<&str>,) = path!("not-found");
+}
+
+/*
 /// Required so that `Routes` variants can be used in `<Link href=Routes::Foo ...>` definitions.
 impl ToHref for AppRoutes {
     fn to_href(&self) -> Box<dyn Fn() -> String + '_> {
         Box::new(move || format!("/{}", self.route()))
     }
 }
+*/
 
 // Sourced from: https://fonts.googleapis.com/css?family=Roboto&display=swap
 const FONT: &'static str = r#"
@@ -141,6 +156,26 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 pub fn App() -> impl IntoView {
     provide_meta_context();
 
+    let router = view! {
+        <Router>
+            <Routes
+                //fallback=|| "Page not found"
+                fallback=move || view! {
+                    <Layout>
+                        <PageErr404/>
+                    </Layout>
+                }
+            >
+                //<ParentRoute path=path!("/") view=move || view! { <Layout/> }.into_any()>
+                    <Route path=app_routes::WELCOME view=PageWelcome/>
+                    //<DocRoutes path=app_routes::DOC/>
+                    <Route path=app_routes::THEME_EDITOR view=ThemeEditor/>
+                    <Route path=app_routes::NOT_FOUND view=PageErr404/>
+                //</ParentRoute>
+            </Routes>
+        </Router>
+    };
+
     view! {
         <Meta name="description" content="Leptonic"/>
         <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -157,20 +192,7 @@ pub fn App() -> impl IntoView {
         <Title text="Leptonic"/>
 
         <Root default_theme=LeptonicTheme::default()>
-            <Router>
-                <Routes fallback=|| view! {
-                    <Layout>
-                        <PageErr404/>
-                    </Layout>
-                }>
-                    <Route path=path!("") view=|| view! { <Layout/> }>
-                        <Route path=AppRoutes::Welcome view=|| view! { <PageWelcome/> }/>
-                        <DocRoutes path=AppRoutes::Doc/>
-                        <Route path=AppRoutes::ThemeEditor view=|| view! { <ThemeEditor/> }/>
-                        <Route path=AppRoutes::NotFound view=|| view! { <PageErr404 /> }/>
-                    </Route>
-                </Routes>
-            </Router>
+            { router }
         </Root>
     }
 }
@@ -221,10 +243,8 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     let is_medium = use_media_query("(max-width: 1200px)");
 
     let location = use_location();
-    
-    let is_doc = Memo::new(move |_| {
-        location.pathname.get().starts_with("/doc")
-    });
+
+    let is_doc = Memo::new(move |_| location.pathname.get().starts_with("/doc"));
 
     // The main drawer is only used on mobile / small screens!.
     let (main_drawer_closed, set_main_drawer_closed) = signal(true);
@@ -270,36 +290,36 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     provide_context(ctx);
 
     let search_options = vec![
-        create_search_option(DocRoutes::Overview, "Overview"),
-        create_search_option(DocRoutes::Installation, "Installation"),
-        create_search_option(DocRoutes::Themes, "Themes"),
-        create_search_option(DocRoutes::Changelog, "Changelog"),
-        create_search_option(DocRoutes::Stack, "Grid"),
-        create_search_option(DocRoutes::Separator, "Separator"),
-        create_search_option(DocRoutes::Skeleton, "App Bar"),
-        create_search_option(DocRoutes::Drawer, "Drawer"),
-        create_search_option(DocRoutes::Tab, "Tabs"),
-        create_search_option(DocRoutes::Table, "Table"),
-        create_search_option(DocRoutes::Collapsible, "Collapsible"),
-        create_search_option(DocRoutes::Button, "Button"),
-        create_search_option(DocRoutes::Input, "Input"),
-        create_search_option(DocRoutes::TiptapEditor, "Tiptap Editor"),
-        create_search_option(DocRoutes::DateTime, "Date & Time"),
-        create_search_option(DocRoutes::Slider, "Slider"),
-        create_search_option(DocRoutes::Select, "Select"),
-        create_search_option(DocRoutes::ColorPicker, "Color Picker"),
-        create_search_option(DocRoutes::Alert, "Alert"),
-        create_search_option(DocRoutes::Toast, "Toast"),
-        create_search_option(DocRoutes::Modal, "Modal"),
-        create_search_option(DocRoutes::Progress, "Progress"),
-        create_search_option(DocRoutes::Popover, "Popover"),
-        create_search_option(DocRoutes::Chip, "Chip"),
-        create_search_option(DocRoutes::Kbd, "Keyboard"),
-        create_search_option(DocRoutes::Typography, "Typography"),
-        create_search_option(DocRoutes::Icon, "Icon"),
-        create_search_option(DocRoutes::Link, "Link"),
-        create_search_option(DocRoutes::Callback, "Callback"),
-        //create_search_option(DocRoutes::Transition, "Transition"),
+        create_search_option(doc_routes::OVERVIEW.to_href(), "Overview"),
+        create_search_option(doc_routes::INSTALLATION.to_href(), "Installation"),
+        create_search_option(doc_routes::THEMES.to_href(), "Themes"),
+        create_search_option(doc_routes::CHANGELOG.to_href(), "Changelog"),
+        create_search_option(doc_routes::STACK.to_href(), "Grid"),
+        create_search_option(doc_routes::SEPARATOR.to_href(), "Separator"),
+        create_search_option(doc_routes::SKELETON.to_href(), "App Bar"),
+        create_search_option(doc_routes::DRAWER.to_href(), "Drawer"),
+        create_search_option(doc_routes::TAB.to_href(), "Tabs"),
+        create_search_option(doc_routes::TABLE.to_href(), "Table"),
+        create_search_option(doc_routes::COLLAPSIBLE.to_href(), "Collapsible"),
+        create_search_option(doc_routes::BUTTON.to_href(), "Button"),
+        create_search_option(doc_routes::INPUT.to_href(), "Input"),
+        create_search_option(doc_routes::TIPTAP_EDITOR.to_href(), "Tiptap Editor"),
+        create_search_option(doc_routes::DATETIME.to_href(), "Date & Time"),
+        create_search_option(doc_routes::SLIDER.to_href(), "Slider"),
+        create_search_option(doc_routes::SELECT.to_href(), "Select"),
+        create_search_option(doc_routes::COLOR_PICKER.to_href(), "Color Picker"),
+        create_search_option(doc_routes::ALERT.to_href(), "Alert"),
+        create_search_option(doc_routes::TOAST.to_href(), "Toast"),
+        create_search_option(doc_routes::MODAL.to_href(), "Modal"),
+        create_search_option(doc_routes::PROGRESS.to_href(), "Progress"),
+        create_search_option(doc_routes::POPOVER.to_href(), "Popover"),
+        create_search_option(doc_routes::CHIP.to_href(), "Chip"),
+        create_search_option(doc_routes::KBD.to_href(), "Keyboard"),
+        create_search_option(doc_routes::TYPOGRAPHY.to_href(), "Typography"),
+        create_search_option(doc_routes::ICON.to_href(), "Icon"),
+        create_search_option(doc_routes::LINK.to_href(), "Link"),
+        create_search_option(doc_routes::CALLBACK.to_href(), "Callback"),
+        //create_search_option(doc_routes::TRANSITION.to_href(), "Transition"),
     ];
 
     let logo = move || {
@@ -315,15 +335,15 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
             <div id="app-bar-content">
                 <Stack attr:id="left" orientation=StackOrientation::Horizontal spacing=Size::Zero>
                     { move || match (is_doc.get(), is_small.get()) {
-                        (false, true) => logo().into_view(),
+                        (false, true) => logo().into_any(),
                         (true, true) => view! {
                             <Icon attr:id="mobile-menu-trigger" icon=icondata::BsList on:click=move |_| ctx.toggle_doc_drawer()/>
                             { logo }
-                        }.into_view(),
+                        }.into_any(),
                         (_, false) => view! {
                             { logo }
-                            <Link href=AppRoutes::Doc>
-                                <H3 style="margin: 0 0 0 0.5em">
+                            <Link href=app_routes::DOC.to_href()>
+                                <h3 style="margin: 0 0 0 0.5em">
                                     "Docs"
                                 </h3>
                             </Link>
@@ -332,7 +352,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                             //        "Theme Editor"
                             //    </h3>
                             //</Link>
-                        }.into_view(),
+                        }.into_any(),
                     } }
                 </Stack>
 
@@ -342,8 +362,8 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                         trigger=move |set_quicksearch| view! {
                             <QuicksearchTrigger attr:id="quicksearch-trigger" set_quicksearch=set_quicksearch>
                                 { move || match is_small.get() {
-                                    true => view! { <Icon icon=icondata::BsSearch />}.into_view(),
-                                    false => view! { "Search"}.into_view(),
+                                    true => view! { <Icon icon=icondata::BsSearch />}.into_any(),
+                                    false => view! { "Search"}.into_any(),
                                 } }
                             </QuicksearchTrigger>
                         }
@@ -364,22 +384,22 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                     { move || match is_small.get() {
                         true => view! {
                             <Icon attr:id="mobile-menu-trigger" icon=icondata::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
-                        }.into_view(),
+                        }.into_any(),
                         false => view! {
-                            <Link href=DocRoutes::Changelog>"v0.6.0 (main)"</Link>
+                            <Link href=doc_routes::CHANGELOG.to_href()>"v0.6.0 (main)"</Link>
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
                                 <Icon attr:id="github-icon" icon=icondata::BsGithub aria_label="GitHub icon"/>
                             </LinkExt>
 
-                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
-                        }.into_view(),
+                            <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark attr:style="margin-right: 1em"/>
+                        }.into_any(),
                     } }
                 </Stack>
             </div>
         </AppBar>
 
-        <Box 
+        <Box
             attr:id="content"
             attr:aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
         >
@@ -401,13 +421,13 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                 shown=Signal::derive(move || !main_drawer_closed.get())
                 side=DrawerSide::Right
             >
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) class="menu">
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) attr:class="menu">
 
-                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank style="font-size: 3em;">
+                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank attr:style="font-size: 3em;">
                         <Icon attr:id="github-icon" icon=icondata::BsGithub/>
                     </LinkExt>
 
-                    <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark style="margin-right: 1em"/>
+                    <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark attr:style="margin-right: 1em"/>
 
                     "Currently - v0.6.0 (main)"
                 </Stack>
@@ -416,16 +436,22 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     }
 }
 
-fn create_search_option(route: DocRoutes, label: &'static str) -> QuicksearchOption {
+fn create_search_option(
+    route: impl ToHref + Send + Sync + Clone + 'static,
+    label: &'static str,
+) -> QuicksearchOption {
     QuicksearchOption {
         label: label.into(),
         view: ViewProducer::new(move || {
-            view! {
-                <Link href=route class="search-link">
-                    {label}
-                </Link>
+            {
+                view! {
+                    <Link href=route.clone() attr:class="search-link">
+                        { label }
+                    </Link>
+                }
             }
+            .into_any()
         }),
-        on_select: Callback::new(|| ()),
+        on_select: Callback::new(|()| ()),
     }
 }

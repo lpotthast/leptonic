@@ -65,7 +65,7 @@ pub fn PageUseAnchorLink() -> impl IntoView {
                 "#"
             </a>
 
-            <FormControl style="flex-direction: row; align-items: center; gap: 0.5em;">
+            <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em;">
                 <Checkbox checked=disabled set_checked=set_disabled />
                 <Label>"Disabled"</Label>
             </FormControl>
