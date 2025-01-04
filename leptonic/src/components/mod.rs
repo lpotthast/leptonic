@@ -1,6 +1,5 @@
 pub mod alert;
 pub mod app_bar;
-pub mod r#box;
 pub mod button;
 pub mod card;
 pub mod checkbox;
@@ -110,7 +109,6 @@ pub mod prelude {
     pub use super::quicksearch::Quicksearch;
     pub use super::quicksearch::QuicksearchOption;
     pub use super::quicksearch::QuicksearchTrigger;
-    pub use super::r#box::Box;
     pub use super::radio::Radio;
     pub use super::radio::RadioGroup;
     pub use super::root::Leptonic;
