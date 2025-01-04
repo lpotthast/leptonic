@@ -1,15 +1,10 @@
 use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
-use leptos_meta::{
-    provide_meta_context, Link as MetaLink, Meta, MetaTags, Style, Stylesheet, Title,
-};
+use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, MetaTags, Stylesheet, Title};
 use leptos_router::components::*;
 use leptos_router::hooks::use_location;
 use leptos_router::path;
 use leptos_use::use_media_query;
-
-use crate::pages::documentation::doc_layout::DocLayout;
-use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
 
 use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
 use crate::pages::documentation::atoms::button::PageAtomButton;
@@ -44,6 +39,7 @@ use crate::pages::documentation::components::layout::skeleton::PageSkeleton;
 use crate::pages::documentation::components::layout::stack::PageStack;
 use crate::pages::documentation::components::layout::tab::PageTab;
 use crate::pages::documentation::components::layout::table::PageTable;
+use crate::pages::documentation::doc_layout::DocLayout;
 use crate::pages::documentation::getting_started::changelog::PageChangelog;
 use crate::pages::documentation::getting_started::installation::PageInstallation;
 use crate::pages::documentation::getting_started::overview::PageOverview;
@@ -54,82 +50,10 @@ use crate::pages::documentation::hooks::hover::PageUseHover;
 use crate::pages::documentation::hooks::overlay::PageUseOverlay;
 use crate::pages::documentation::hooks::press::PageUsePress;
 use crate::pages::documentation::hooks::r#move::PageUseMove;
+use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
 use crate::routes;
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
-
-// Sourced from: https://fonts.googleapis.com/css?family=Roboto&display=swap
-const FONT: &'static str = r#"
-/* cyrillic-ext */
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(font/roboto/v30/KFOmCnqEu92Fr1Mu72xKOzY.woff2) format('woff2');
-    unicode-range: U+0460-052F, U+1C80-1C88, U+20B4, U+2DE0-2DFF, U+A640-A69F, U+FE2E-FE2F;
-}
-
-/* cyrillic */
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(font/roboto/v30/KFOmCnqEu92Fr1Mu5mxKOzY.woff2) format('woff2');
-    unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116;
-}
-
-/* greek-ext */
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(font/roboto/v30/KFOmCnqEu92Fr1Mu7mxKOzY.woff2) format('woff2');
-    unicode-range: U+1F00-1FFF;
-}
-
-/* greek */
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(font/roboto/v30/KFOmCnqEu92Fr1Mu4WxKOzY.woff2) format('woff2');
-    unicode-range: U+0370-03FF;
-}
-
-/* vietnamese */
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(font/roboto/v30/KFOmCnqEu92Fr1Mu7WxKOzY.woff2) format('woff2');
-    unicode-range: U+0102-0103, U+0110-0111, U+0128-0129, U+0168-0169, U+01A0-01A1, U+01AF-01B0, U+0300-0301, U+0303-0304, U+0308-0309, U+0323, U+0329, U+1EA0-1EF9, U+20AB;
-}
-
-/* latin-ext */
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(font/roboto/v30/KFOmCnqEu92Fr1Mu7GxKOzY.woff2) format('woff2');
-    unicode-range: U+0100-02AF, U+0304, U+0308, U+0329, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20CF, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-/* latin */
-@font-face {
-    font-family: 'Roboto';
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-    src: url(font/roboto/v30/KFOmCnqEu92Fr1Mu4mxK.woff2) format('woff2');
-    unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-"#;
 
 //noinspection DuplicatedCode
 pub fn shell(options: LeptosOptions) -> impl IntoView {
@@ -142,6 +66,10 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 <AutoReload options=options.clone() />
                 <HydrationScripts options/>
                 <MetaTags/>
+
+                <link rel="preconnect" href="https://fonts.googleapis.com"/>
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+                <link href="https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet"/>
             </head>
             <body>
                 <App/>
@@ -160,9 +88,6 @@ pub fn App() -> impl IntoView {
         <Meta name="theme-color" content="#e66956"/>
 
         <Stylesheet id="leptos" href=format!("/pkg/{LEPTOS_OUTPUT_NAME}.css")/>
-        <Style>
-            { FONT }
-        </Style>
 
         <MetaLink rel="icon" href="/res/icon/leptonic_x64.png"/>
         <MetaLink rel="apple-touch-icon" href="/res/icon/maskable_icon_x192.png"/>
@@ -173,7 +98,7 @@ pub fn App() -> impl IntoView {
             <Router>
                 <Layout>
                     <Routes fallback=PageErr404>
-                        <Route path=routes::Welcome.path() view=PageWelcome/>
+                        <Route path=routes::Root.path() view=PageWelcome/>
                         <ParentRoute path=routes::Doc.path() view=DocLayout>
                             <Route path=path!("/") view=|| view! { <Redirect path=routes::doc::Overview.materialize()/> }/>
 
@@ -207,7 +132,7 @@ pub fn App() -> impl IntoView {
                                 <Route path=routes::doc::components::Tabs.path() view=PageTab/>
                                 <Route path=routes::doc::components::Table.path() view=PageTable/>
                                 <Route path=routes::doc::components::Collapsible.path() view=PageCollapsible/>
-                            
+
                                 <Route path=routes::doc::components::Button.path() view=PageButton/>
                                 <Route path=routes::doc::components::Input.path() view=PageInput/>
                                 <Route path=routes::doc::components::TiptapEditor.path() view=PageTiptapEditor/>
@@ -218,7 +143,7 @@ pub fn App() -> impl IntoView {
                                 <Route path=routes::doc::components::Radio.path() view=PageRadio/>
                                 <Route path=routes::doc::components::Toggle.path() view=PageToggle/>
                                 <Route path=routes::doc::components::ColorPicker.path() view=PageColorPicker/>
-                            
+
                                 <Route path=routes::doc::components::Alert.path() view=PageAlert/>
                                 <Route path=routes::doc::components::Toast.path() view=PageToast/>
                                 <Route path=routes::doc::components::Modal.path() view=PageModal/>
@@ -226,12 +151,12 @@ pub fn App() -> impl IntoView {
                                 <Route path=routes::doc::components::Popover.path() view=PagePopover/>
                                 <Route path=routes::doc::components::Chip.path() view=PageChip/>
                                 <Route path=routes::doc::components::Kbd.path() view=PageKbd/>
-                            
+
                                 <Route path=routes::doc::components::Typography.path() view=PageTypography/>
                                 <Route path=routes::doc::components::Icon.path() view=PageIcon/>
                                 <Route path=routes::doc::components::Link.path() view=PageLink/>
                                 <Route path=routes::doc::components::Callback.path() view=PageCallback/>
-                            
+
                                 //<Route path=routes::doc::components::Transition view=PageTransition/>
                             </ParentRoute>
                         </ParentRoute>
@@ -344,19 +269,34 @@ pub fn Layout(children: Children) -> impl IntoView {
         create_search_option(routes::doc::Themes.materialize(), "Themes"),
         create_search_option(routes::doc::Changelog.materialize(), "Changelog"),
         create_search_option(routes::doc::components::Stack.materialize(), "Grid"),
-        create_search_option(routes::doc::components::Separator.materialize(), "Separator"),
+        create_search_option(
+            routes::doc::components::Separator.materialize(),
+            "Separator",
+        ),
         create_search_option(routes::doc::components::Skeleton.materialize(), "App Bar"),
         create_search_option(routes::doc::components::Drawer.materialize(), "Drawer"),
         create_search_option(routes::doc::components::Tabs.materialize(), "Tabs"),
         create_search_option(routes::doc::components::Table.materialize(), "Table"),
-        create_search_option(routes::doc::components::Collapsible.materialize(), "Collapsible"),
+        create_search_option(
+            routes::doc::components::Collapsible.materialize(),
+            "Collapsible",
+        ),
         create_search_option(routes::doc::components::Button.materialize(), "Button"),
         create_search_option(routes::doc::components::Input.materialize(), "Input"),
-        create_search_option(routes::doc::components::TiptapEditor.materialize(), "Tiptap Editor"),
-        create_search_option(routes::doc::components::DateTime.materialize(), "Date & Time"),
+        create_search_option(
+            routes::doc::components::TiptapEditor.materialize(),
+            "Tiptap Editor",
+        ),
+        create_search_option(
+            routes::doc::components::DateTime.materialize(),
+            "Date & Time",
+        ),
         create_search_option(routes::doc::components::Slider.materialize(), "Slider"),
         create_search_option(routes::doc::components::Select.materialize(), "Select"),
-        create_search_option(routes::doc::components::ColorPicker.materialize(), "Color Picker"),
+        create_search_option(
+            routes::doc::components::ColorPicker.materialize(),
+            "Color Picker",
+        ),
         create_search_option(routes::doc::components::Alert.materialize(), "Alert"),
         create_search_option(routes::doc::components::Toast.materialize(), "Toast"),
         create_search_option(routes::doc::components::Modal.materialize(), "Modal"),
@@ -364,7 +304,10 @@ pub fn Layout(children: Children) -> impl IntoView {
         create_search_option(routes::doc::components::Popover.materialize(), "Popover"),
         create_search_option(routes::doc::components::Chip.materialize(), "Chip"),
         create_search_option(routes::doc::components::Kbd.materialize(), "Keyboard"),
-        create_search_option(routes::doc::components::Typography.materialize(), "Typography"),
+        create_search_option(
+            routes::doc::components::Typography.materialize(),
+            "Typography",
+        ),
         create_search_option(routes::doc::components::Icon.materialize(), "Icon"),
         create_search_option(routes::doc::components::Link.materialize(), "Link"),
         create_search_option(routes::doc::components::Callback.materialize(), "Callback"),

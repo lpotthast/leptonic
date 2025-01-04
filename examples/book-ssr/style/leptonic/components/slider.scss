@@ -89,6 +89,7 @@ leptonic-slider {
 
         content: "";
         position: absolute;
+        top: -0.5em;
         z-index: 1;
         height: var(--slider-knob-size);
         width: var(--slider-knob-size);
@@ -119,13 +120,13 @@ leptonic-slider {
         .mark {
             display: block;
             position: absolute;
-            left: 0%;
+            left: 0;
             border: var(--slider-mark-size) solid var(--slider-mark-color);
             border-radius: var(--slider-mark-size);
             margin-top: calc(var(--slider-bar-wrapper-height) * -0.5 - var(--slider-mark-size));
             margin-left: calc(var(--slider-mark-size) * -1);
-            height: 0px;
-            width: 0px;
+            height: 0;
+            width: 0;
 
             .title {
                 color: var(--slider-mark-title-color);

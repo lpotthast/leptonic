@@ -6,8 +6,8 @@ pub mod pages;
 #[routes]
 pub mod routes {
 
-    #[route("/welcome")]
-    pub mod welcome {}
+    #[route("/")]
+    pub mod root {}
 
     #[route("/doc")]
     pub mod doc {
