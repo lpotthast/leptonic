@@ -5,61 +5,58 @@ use leptos_meta::{
 };
 use leptos_router::components::*;
 use leptos_router::hooks::use_location;
-use leptos_router::{AsPath, StaticSegment};
+use leptos_router::path;
 use leptos_use::use_media_query;
 
-use crate::pages::documentation::doc_root::doc_routes;
+use crate::pages::documentation::doc_layout::DocLayout;
 use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
 
+use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
+use crate::pages::documentation::atoms::button::PageAtomButton;
+use crate::pages::documentation::atoms::popover::PageAtomPopover;
+use crate::pages::documentation::components::feedback::alert::PageAlert;
+use crate::pages::documentation::components::feedback::chip::PageChip;
+use crate::pages::documentation::components::feedback::kbd::PageKbd;
+use crate::pages::documentation::components::feedback::modal::PageModal;
+use crate::pages::documentation::components::feedback::popover::PagePopover;
+use crate::pages::documentation::components::feedback::progress::PageProgress;
+use crate::pages::documentation::components::feedback::toast::PageToast;
+use crate::pages::documentation::components::general::callback::PageCallback;
+use crate::pages::documentation::components::general::icon::PageIcon;
+use crate::pages::documentation::components::general::link::PageLink;
+use crate::pages::documentation::components::general::typography::PageTypography;
+use crate::pages::documentation::components::input::button::PageButton;
+use crate::pages::documentation::components::input::checkbox::PageCheckbox;
+use crate::pages::documentation::components::input::color_picker::PageColorPicker;
+use crate::pages::documentation::components::input::date_time::PageDateTime;
+use crate::pages::documentation::components::input::input_field::PageInput;
+use crate::pages::documentation::components::input::radio::PageRadio;
+use crate::pages::documentation::components::input::select::PageSelect;
+use crate::pages::documentation::components::input::slider::PageSlider;
+use crate::pages::documentation::components::input::tiptap_editor::PageTiptapEditor;
+use crate::pages::documentation::components::input::toggle::PageToggle;
+use crate::pages::documentation::components::layout::app_bar::PageAppBar;
+use crate::pages::documentation::components::layout::collapsible::PageCollapsible;
+use crate::pages::documentation::components::layout::drawer::PageDrawer;
+use crate::pages::documentation::components::layout::grid::PageGrid;
+use crate::pages::documentation::components::layout::separator::PageSeparator;
+use crate::pages::documentation::components::layout::skeleton::PageSkeleton;
+use crate::pages::documentation::components::layout::stack::PageStack;
+use crate::pages::documentation::components::layout::tab::PageTab;
+use crate::pages::documentation::components::layout::table::PageTable;
+use crate::pages::documentation::getting_started::changelog::PageChangelog;
+use crate::pages::documentation::getting_started::installation::PageInstallation;
+use crate::pages::documentation::getting_started::overview::PageOverview;
+use crate::pages::documentation::getting_started::themes::PageThemes;
+use crate::pages::documentation::hooks::anchor_link::PageUseAnchorLink;
+use crate::pages::documentation::hooks::button::PageUseButton;
+use crate::pages::documentation::hooks::hover::PageUseHover;
+use crate::pages::documentation::hooks::overlay::PageUseOverlay;
+use crate::pages::documentation::hooks::press::PageUsePress;
+use crate::pages::documentation::hooks::r#move::PageUseMove;
+use crate::routes;
+
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
-
-/// Required so that `Routes` variants can be used in `<Link href=Routes::Foo.render() ...>` definitions.
-pub trait SegmentRenderer {
-    fn to_href(&self) -> String;
-}
-
-// AppRoutes::Doc.route()
-
-impl SegmentRenderer for () {
-    fn to_href(&self) -> String {
-        "".to_string()
-    }
-}
-
-impl SegmentRenderer for (StaticSegment<&'static str>,) {
-    fn to_href(&self) -> String {
-        let (a,) = self;
-        let a = a.0.as_path();
-        format!("{a}")
-    }
-}
-
-impl SegmentRenderer for (StaticSegment<&'static str>, StaticSegment<&'static str>) {
-    fn to_href(&self) -> String {
-        let (a, b) = self;
-        let a = a.0.as_path();
-        let b = b.0.as_path();
-        format!("{a}/{b}")
-    }
-}
-
-pub mod app_routes {
-    use leptos_router::{path, StaticSegment};
-
-    pub const WELCOME: () = path!("");
-    pub const DOC: (StaticSegment<&str>,) = path!("doc");
-    pub const THEME_EDITOR: (StaticSegment<&str>,) = path!("theme-editor");
-    pub const NOT_FOUND: (StaticSegment<&str>,) = path!("not-found");
-}
-
-/*
-/// Required so that `Routes` variants can be used in `<Link href=Routes::Foo ...>` definitions.
-impl ToHref for AppRoutes {
-    fn to_href(&self) -> Box<dyn Fn() -> String + '_> {
-        Box::new(move || format!("/{}", self.route()))
-    }
-}
-*/
 
 // Sourced from: https://fonts.googleapis.com/css?family=Roboto&display=swap
 const FONT: &'static str = r#"
@@ -134,6 +131,7 @@ const FONT: &'static str = r#"
 }
 "#;
 
+//noinspection DuplicatedCode
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
@@ -156,26 +154,6 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
 pub fn App() -> impl IntoView {
     provide_meta_context();
 
-    let router = view! {
-        <Router>
-            <Routes
-                //fallback=|| "Page not found"
-                fallback=move || view! {
-                    <Layout>
-                        <PageErr404/>
-                    </Layout>
-                }
-            >
-                //<ParentRoute path=path!("/") view=move || view! { <Layout/> }.into_any()>
-                    <Route path=app_routes::WELCOME view=PageWelcome/>
-                    //<DocRoutes path=app_routes::DOC/>
-                    <Route path=app_routes::THEME_EDITOR view=ThemeEditor/>
-                    <Route path=app_routes::NOT_FOUND view=PageErr404/>
-                //</ParentRoute>
-            </Routes>
-        </Router>
-    };
-
     view! {
         <Meta name="description" content="Leptonic"/>
         <Meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -192,7 +170,76 @@ pub fn App() -> impl IntoView {
         <Title text="Leptonic"/>
 
         <Root default_theme=LeptonicTheme::default()>
-            { router }
+            <Router>
+                <Layout>
+                    <Routes fallback=PageErr404>
+                        <Route path=routes::Welcome.path() view=PageWelcome/>
+                        <ParentRoute path=routes::Doc.path() view=DocLayout>
+                            <Route path=path!("/") view=|| view! { <Redirect path=routes::doc::Overview.materialize()/> }/>
+
+                            <Route path=routes::doc::Overview.path() view=PageOverview/>
+                            <Route path=routes::doc::Installation.path() view=PageInstallation/>
+                            <Route path=routes::doc::Themes.path() view=PageThemes/>
+                            <Route path=routes::doc::Changelog.path() view=PageChangelog/>
+
+                            <ParentRoute path=routes::doc::Hooks.path() view=||view! { <Outlet/> }>
+                                <Route path=routes::doc::hooks::UsePress.path() view=PageUsePress/>
+                                <Route path=routes::doc::hooks::UseMove.path() view=PageUseMove/>
+                                <Route path=routes::doc::hooks::UseHover.path() view=PageUseHover/>
+                                <Route path=routes::doc::hooks::UseButton.path() view=PageUseButton/>
+                                <Route path=routes::doc::hooks::UseOverlay.path() view=PageUseOverlay/>
+                                <Route path=routes::doc::hooks::UseAnchorLink.path() view=PageUseAnchorLink/>
+                            </ParentRoute>
+
+                            <ParentRoute path=routes::doc::Atoms.path() view=||view! { <Outlet/> }>
+                                <Route path=routes::doc::atoms::Button.path() view=PageAtomButton/>
+                                <Route path=routes::doc::atoms::Popover.path() view=PageAtomPopover/>
+                                <Route path=routes::doc::atoms::AnchorLink.path() view=PageAtomAnchorLink/>
+                            </ParentRoute>
+
+                            <ParentRoute path=routes::doc::Components.path() view=||view! { <Outlet/> }>
+                                <Route path=routes::doc::components::Stack.path() view=PageStack/>
+                                <Route path=routes::doc::components::Grid.path() view=PageGrid/>
+                                <Route path=routes::doc::components::Separator.path() view=PageSeparator/>
+                                <Route path=routes::doc::components::Skeleton.path() view=PageSkeleton/>
+                                <Route path=routes::doc::components::AppBar.path() view=PageAppBar/>
+                                <Route path=routes::doc::components::Drawer.path() view=PageDrawer/>
+                                <Route path=routes::doc::components::Tabs.path() view=PageTab/>
+                                <Route path=routes::doc::components::Table.path() view=PageTable/>
+                                <Route path=routes::doc::components::Collapsible.path() view=PageCollapsible/>
+                            
+                                <Route path=routes::doc::components::Button.path() view=PageButton/>
+                                <Route path=routes::doc::components::Input.path() view=PageInput/>
+                                <Route path=routes::doc::components::TiptapEditor.path() view=PageTiptapEditor/>
+                                <Route path=routes::doc::components::DateTime.path() view=PageDateTime/>
+                                <Route path=routes::doc::components::Slider.path() view=PageSlider/>
+                                <Route path=routes::doc::components::Select.path() view=PageSelect/>
+                                <Route path=routes::doc::components::Checkbox.path() view=PageCheckbox/>
+                                <Route path=routes::doc::components::Radio.path() view=PageRadio/>
+                                <Route path=routes::doc::components::Toggle.path() view=PageToggle/>
+                                <Route path=routes::doc::components::ColorPicker.path() view=PageColorPicker/>
+                            
+                                <Route path=routes::doc::components::Alert.path() view=PageAlert/>
+                                <Route path=routes::doc::components::Toast.path() view=PageToast/>
+                                <Route path=routes::doc::components::Modal.path() view=PageModal/>
+                                <Route path=routes::doc::components::Progress.path() view=PageProgress/>
+                                <Route path=routes::doc::components::Popover.path() view=PagePopover/>
+                                <Route path=routes::doc::components::Chip.path() view=PageChip/>
+                                <Route path=routes::doc::components::Kbd.path() view=PageKbd/>
+                            
+                                <Route path=routes::doc::components::Typography.path() view=PageTypography/>
+                                <Route path=routes::doc::components::Icon.path() view=PageIcon/>
+                                <Route path=routes::doc::components::Link.path() view=PageLink/>
+                                <Route path=routes::doc::components::Callback.path() view=PageCallback/>
+                            
+                                //<Route path=routes::doc::components::Transition view=PageTransition/>
+                            </ParentRoute>
+                        </ParentRoute>
+                        <Route path=routes::ThemeEditor.path() view=ThemeEditor/>
+                        <Route path=routes::NotFound.path() view=PageErr404/>
+                    </Routes>
+                </Layout>
+            </Router>
         </Root>
     }
 }
@@ -238,7 +285,7 @@ impl AppLayoutContext {
 
 #[component]
 #[allow(clippy::too_many_lines)]
-pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
+pub fn Layout(children: Children) -> impl IntoView {
     let is_small = use_media_query("(max-width: 800px)");
     let is_medium = use_media_query("(max-width: 1200px)");
 
@@ -250,6 +297,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
     let (main_drawer_closed, set_main_drawer_closed) = signal(true);
     let (doc_drawer_closed, set_doc_drawer_closed) = signal(false);
 
+    /*
     // Make sure the doc_drawer is closed whenever we leave a documentation route.
     Effect::new(move |_| {
         if !is_doc.get() {
@@ -277,6 +325,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
             set_main_drawer_closed.set(true);
         }
     });
+    */
 
     let ctx = AppLayoutContext {
         is_small,
@@ -289,37 +338,37 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
 
     provide_context(ctx);
 
-    let search_options = vec![
-        create_search_option(doc_routes::OVERVIEW.to_href(), "Overview"),
-        create_search_option(doc_routes::INSTALLATION.to_href(), "Installation"),
-        create_search_option(doc_routes::THEMES.to_href(), "Themes"),
-        create_search_option(doc_routes::CHANGELOG.to_href(), "Changelog"),
-        create_search_option(doc_routes::STACK.to_href(), "Grid"),
-        create_search_option(doc_routes::SEPARATOR.to_href(), "Separator"),
-        create_search_option(doc_routes::SKELETON.to_href(), "App Bar"),
-        create_search_option(doc_routes::DRAWER.to_href(), "Drawer"),
-        create_search_option(doc_routes::TAB.to_href(), "Tabs"),
-        create_search_option(doc_routes::TABLE.to_href(), "Table"),
-        create_search_option(doc_routes::COLLAPSIBLE.to_href(), "Collapsible"),
-        create_search_option(doc_routes::BUTTON.to_href(), "Button"),
-        create_search_option(doc_routes::INPUT.to_href(), "Input"),
-        create_search_option(doc_routes::TIPTAP_EDITOR.to_href(), "Tiptap Editor"),
-        create_search_option(doc_routes::DATETIME.to_href(), "Date & Time"),
-        create_search_option(doc_routes::SLIDER.to_href(), "Slider"),
-        create_search_option(doc_routes::SELECT.to_href(), "Select"),
-        create_search_option(doc_routes::COLOR_PICKER.to_href(), "Color Picker"),
-        create_search_option(doc_routes::ALERT.to_href(), "Alert"),
-        create_search_option(doc_routes::TOAST.to_href(), "Toast"),
-        create_search_option(doc_routes::MODAL.to_href(), "Modal"),
-        create_search_option(doc_routes::PROGRESS.to_href(), "Progress"),
-        create_search_option(doc_routes::POPOVER.to_href(), "Popover"),
-        create_search_option(doc_routes::CHIP.to_href(), "Chip"),
-        create_search_option(doc_routes::KBD.to_href(), "Keyboard"),
-        create_search_option(doc_routes::TYPOGRAPHY.to_href(), "Typography"),
-        create_search_option(doc_routes::ICON.to_href(), "Icon"),
-        create_search_option(doc_routes::LINK.to_href(), "Link"),
-        create_search_option(doc_routes::CALLBACK.to_href(), "Callback"),
-        //create_search_option(doc_routes::TRANSITION.to_href(), "Transition"),
+    let search_options: Vec<QuicksearchOption> = vec![
+        create_search_option(routes::doc::Overview.materialize(), "Overview"),
+        create_search_option(routes::doc::Installation.materialize(), "Installation"),
+        create_search_option(routes::doc::Themes.materialize(), "Themes"),
+        create_search_option(routes::doc::Changelog.materialize(), "Changelog"),
+        create_search_option(routes::doc::components::Stack.materialize(), "Grid"),
+        create_search_option(routes::doc::components::Separator.materialize(), "Separator"),
+        create_search_option(routes::doc::components::Skeleton.materialize(), "App Bar"),
+        create_search_option(routes::doc::components::Drawer.materialize(), "Drawer"),
+        create_search_option(routes::doc::components::Tabs.materialize(), "Tabs"),
+        create_search_option(routes::doc::components::Table.materialize(), "Table"),
+        create_search_option(routes::doc::components::Collapsible.materialize(), "Collapsible"),
+        create_search_option(routes::doc::components::Button.materialize(), "Button"),
+        create_search_option(routes::doc::components::Input.materialize(), "Input"),
+        create_search_option(routes::doc::components::TiptapEditor.materialize(), "Tiptap Editor"),
+        create_search_option(routes::doc::components::DateTime.materialize(), "Date & Time"),
+        create_search_option(routes::doc::components::Slider.materialize(), "Slider"),
+        create_search_option(routes::doc::components::Select.materialize(), "Select"),
+        create_search_option(routes::doc::components::ColorPicker.materialize(), "Color Picker"),
+        create_search_option(routes::doc::components::Alert.materialize(), "Alert"),
+        create_search_option(routes::doc::components::Toast.materialize(), "Toast"),
+        create_search_option(routes::doc::components::Modal.materialize(), "Modal"),
+        create_search_option(routes::doc::components::Progress.materialize(), "Progress"),
+        create_search_option(routes::doc::components::Popover.materialize(), "Popover"),
+        create_search_option(routes::doc::components::Chip.materialize(), "Chip"),
+        create_search_option(routes::doc::components::Kbd.materialize(), "Keyboard"),
+        create_search_option(routes::doc::components::Typography.materialize(), "Typography"),
+        create_search_option(routes::doc::components::Icon.materialize(), "Icon"),
+        create_search_option(routes::doc::components::Link.materialize(), "Link"),
+        create_search_option(routes::doc::components::Callback.materialize(), "Callback"),
+        //create_search_option(routes::doc::components::Transition.materialize(), "Transition"),
     ];
 
     let logo = move || {
@@ -342,7 +391,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                         }.into_any(),
                         (_, false) => view! {
                             { logo }
-                            <Link href=app_routes::DOC.to_href()>
+                            <Link href=routes::Doc.materialize()>
                                 <h3 style="margin: 0 0 0 0.5em">
                                     "Docs"
                                 </h3>
@@ -356,6 +405,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                     } }
                 </Stack>
 
+                /*
                 <Stack attr:id="center" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     <Quicksearch
                         attr:id="quicksearch"
@@ -379,6 +429,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                         }
                     />
                 </Stack>
+                */
 
                 <Stack attr:id="right" orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
                     { move || match is_small.get() {
@@ -386,7 +437,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
                             <Icon attr:id="mobile-menu-trigger" icon=icondata::BsThreeDots on:click=move |_| ctx.toggle_main_drawer()/>
                         }.into_any(),
                         false => view! {
-                            <Link href=doc_routes::CHANGELOG.to_href()>"v0.6.0 (main)"</Link>
+                            <Link href=routes::doc::Changelog.materialize()>"v0.6.0 (main)"</Link>
 
                             <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
                                 <Icon attr:id="github-icon" icon=icondata::BsGithub aria_label="GitHub icon"/>
@@ -403,17 +454,7 @@ pub fn Layout(#[prop(optional)] children: Option<Children>) -> impl IntoView {
             attr:id="content"
             attr:aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
         >
-            {
-                match children {
-                    Some(children) => {
-                        children()
-                    },
-                    None => view! {
-                        // <Outlet/> will show nested child routes.
-                        <Outlet/>
-                    }.into_any(),
-                }
-            }
+            { children() }
 
             <Drawer
                 attr:id="main-drawer"

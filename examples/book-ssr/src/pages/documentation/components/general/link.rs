@@ -1,12 +1,12 @@
-use crate::app::SegmentRenderer;
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::doc_root::doc_routes;
-use crate::pages::documentation::toc::Toc;
 use indoc::{formatdoc, indoc};
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::prelude::*;
 use leptos::prelude::*;
+
+use crate::pages::documentation::article::Article;
+use crate::pages::documentation::toc::Toc;
+use crate::routes;
 
 #[component]
 pub fn PageLink() -> impl IntoView {
@@ -31,10 +31,10 @@ pub fn PageLink() -> impl IntoView {
                     <Link href="{}">
                         "This is a link to the current route."
                     </Link>
-                "#, doc_routes::LINK.to_href())}
+                "#, routes::doc::components::Link.materialize())}
             </Code>
 
-            <Link href=doc_routes::LINK.to_href()>"This is a link to the current route."</Link>
+            <Link href=routes::doc::components::Link.materialize()>"This is a link to the current route."</Link>
 
             <h2 id="external-links" class="anchor">
                 "External links"
@@ -74,7 +74,7 @@ pub fn PageLink() -> impl IntoView {
                 "#)}
             </Code>
 
-            <LinkButton href=doc_routes::OVERVIEW.to_href()>
+            <LinkButton href=routes::doc::Overview.materialize()>
                 "Read the docs"
             </LinkButton>
 

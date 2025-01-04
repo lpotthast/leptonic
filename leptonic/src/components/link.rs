@@ -11,7 +11,6 @@ pub fn Link<H>(
     /// to the current route.
     href: H,
 
-    #[allow(unused)] // TODO: Remove this when leptos's A component supports the title attribute.
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
@@ -48,6 +47,7 @@ where
     });
 
     // TODO: propagate missing A props
+    // TODO: do not wrap A, make this an atom
     view! {
         <leptonic-link {..attrs} node_ref=el>
             <A href=href exact=exact>

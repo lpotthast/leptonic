@@ -4,7 +4,6 @@ use tower_http::compression::CompressionLayer;
 #[tokio::main]
 async fn main() {
     use axum::Router;
-    use leptos::logging::log;
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
     use book_ssr::app::*;

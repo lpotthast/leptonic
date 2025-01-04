@@ -1,6 +1,5 @@
-use crate::app::SegmentRenderer;
-use crate::pages::documentation::doc_root::doc_routes;
 use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::routes;
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::prelude::*;
@@ -113,8 +112,8 @@ pub fn PageInstallation() -> impl IntoView {
 
             <p>
                 "Leptonic provides the "<Code inline=true>"<Root>"</Code>" component. "
-                "It is responsible for enabling the "<Link href=doc_routes::THEMES.to_href()>"Theming"</Link>", "<Link href=doc_routes::MODAL.to_href()>"Modal"</Link>" and "
-                <Link href=doc_routes::TOAST.to_href()>"Toast"</Link>" functionality of Leptonic as well as providing global event-listening capabilities."
+                "It is responsible for enabling the "<Link href=routes::doc::Themes.materialize()>"Theming"</Link>", "<Link href=routes::doc::components::Modal.materialize()>"Modal"</Link>" and "
+                <Link href=routes::doc::components::Toast.materialize()>"Toast"</Link>" functionality of Leptonic as well as providing global event-listening capabilities."
                 "You have to include it in your app once, and render all your content inside it."
             </p>
 

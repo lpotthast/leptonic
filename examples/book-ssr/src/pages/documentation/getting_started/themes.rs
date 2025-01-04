@@ -1,6 +1,5 @@
-use crate::app::SegmentRenderer;
-use crate::pages::documentation::doc_root::doc_routes;
 use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::routes;
 use indoc::indoc;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::prelude::*;
@@ -27,7 +26,7 @@ pub fn PageThemes() -> impl IntoView {
             </p>
 
             <p>
-                "The "<Code inline=true>"<Root>"</Code>" component already discussed in the "<Link href=doc_routes::INSTALLATION.to_href()>"Installation"</Link>" section provides everything required (namely rendering the "<Code inline=true>"<ThemeProvider>"</Code>" component) to active a theme."
+                "The "<Code inline=true>"<Root>"</Code>" component already discussed in the "<Link href=routes::doc::Installation.materialize()>"Installation"</Link>" section provides everything required (namely rendering the "<Code inline=true>"<ThemeProvider>"</Code>" component) to active a theme."
             </p>
 
             <p>

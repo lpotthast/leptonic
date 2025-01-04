@@ -1,6 +1,5 @@
-use crate::app::SegmentRenderer;
-use crate::pages::documentation::doc_root::doc_routes;
 use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::routes;
 use leptonic::{atoms::link::AnchorLink, components::prelude::*};
 use leptos::prelude::*;
 
@@ -27,7 +26,7 @@ pub fn PageOverview() -> impl IntoView {
             <p>"Explore the available components and other features using the side menu to get acquainted with what Leptonic has to offer."</p>
 
             <p>
-                "If you want to dive right in, follow our " <Link href=doc_routes::INSTALLATION.to_href()>"Installation"</Link> " instructions."
+                "If you want to dive right in, follow our " <Link href=routes::doc::Installation.materialize()>"Installation"</Link> " instructions."
             </p>
 
             <h2 id="help">
@@ -37,12 +36,12 @@ pub fn PageOverview() -> impl IntoView {
 
             <p>
                 "If you get stuck at any point integrating or using Leptonic, these are things you may find helpful: "
-                <ul>
-                    <li>"Look for help in the Leptos "<LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkExtTarget::Blank>"Discord"</LinkExt>" server."</li>
-                    <li>"If you think you encountered a bug, open a ticket in our " <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>"repository"</LinkExt></li>
-                    <li>"Compare the implementation of this book at "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/examples/book" target=LinkExtTarget::Blank>"GitHub"</LinkExt>" with what you currently have."</li>
-                </ul>
             </p>
+            <ul>
+                <li>"Look for help in the Leptos "<LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkExtTarget::Blank>"Discord"</LinkExt>" server."</li>
+                <li>"If you think you encountered a bug, open a ticket in our " <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>"repository"</LinkExt></li>
+                <li>"Compare the implementation of this book at "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/examples/book" target=LinkExtTarget::Blank>"GitHub"</LinkExt>" with what you currently have."</li>
+            </ul>
 
             <h2 id="contribute">
                 "Contribute"
@@ -52,11 +51,11 @@ pub fn PageOverview() -> impl IntoView {
             <p>
                 "If you have anything to say about Leptonic, be it a component you miss, a feature you feel missing, or a bug you encountered, "
                 "feel free to contribute back to the project by reaching the community or us through"
-                <ul>
-                    <li>"the Leptos "<LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkExtTarget::Blank>"Discord"</LinkExt>" server or "</li>
-                    <li>"the "<LinkExt href="https://github.com/lpotthast/leptonic/issues" target=LinkExtTarget::Blank>"Issues"</LinkExt>" section of the Leptonic repository."</li>
-                </ul>
             </p>
+            <ul>
+                <li>"the Leptos "<LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkExtTarget::Blank>"Discord"</LinkExt>" server or "</li>
+                <li>"the "<LinkExt href="https://github.com/lpotthast/leptonic/issues" target=LinkExtTarget::Blank>"Issues"</LinkExt>" section of the Leptonic repository."</li>
+            </ul>
 
             <p>
                 "Writing a component library is a big undertaking. Feel free to contribute by writing new or updating existing code yourself. "

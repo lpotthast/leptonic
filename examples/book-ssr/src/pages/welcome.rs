@@ -1,8 +1,7 @@
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::app::SegmentRenderer;
-use crate::pages::documentation::doc_root::doc_routes;
+use crate::routes;
 
 #[component]
 pub fn PageWelcome() -> impl IntoView {
@@ -19,7 +18,7 @@ pub fn PageWelcome() -> impl IntoView {
                 </h2>
 
                 // TODO: Investigate: When using AppRoutes::Doc, browser navigation (back) does nothing...
-                <LinkButton href=doc_routes::OVERVIEW.to_href() size=ButtonSize::Big attr:style="font-size: 1.5em; margin: 2em;">
+                <LinkButton href=routes::doc::Overview.materialize() size=ButtonSize::Big attr:style="font-size: 1.5em; margin: 2em;">
                     "Read the docs"
                 </LinkButton>
             </div>

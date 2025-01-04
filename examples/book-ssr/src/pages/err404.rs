@@ -1,8 +1,7 @@
 use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
 
-use crate::app::app_routes;
-use crate::app::SegmentRenderer;
+use crate::routes;
 
 #[component]
 pub(crate) fn PageErr404() -> impl IntoView {
@@ -13,7 +12,7 @@ pub(crate) fn PageErr404() -> impl IntoView {
                     <h1 id="error">"404"</h1>
                     <h2 id="whoops">"Whoops, this page doesn't exist :-("</h2>
 
-                    <Link href=app_routes::WELCOME.to_href()>
+                    <Link href=routes::Welcome.materialize()>
                         <Button attr:id="back-btn" on_press=move |_| {} variant=ButtonVariant::Filled>
                             "Back"
                         </Button>
