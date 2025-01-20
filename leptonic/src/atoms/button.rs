@@ -19,6 +19,7 @@ pub fn Button(
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] disabled: OptMaybeSignal<bool>,
     #[prop(into, optional)] id: Option<AttributeValue>,
+    #[prop(into, optional)] type_: Option<AttributeValue>,
     #[prop(into, optional)] class: Option<AttributeValue>,
     #[prop(into, optional)] style: Option<AttributeValue>,
     #[prop(into, optional)] aria_haspopup: OptMaybeSignal<AriaHasPopup>,
@@ -68,6 +69,7 @@ pub fn Button(
             class=class
             class:leptonic-btn=true
             style=style
+            type=type_
             on:keydown=props.on_key_down
             on:click=props.on_click
             on:pointerdown=props.on_pointer_down
@@ -76,7 +78,7 @@ pub fn Button(
             on:focus=props.on_focus
             on:blur=props.on_blur
         >
-            { children() }
+            {children()}
         </button>
     }
 }
@@ -177,8 +179,6 @@ where
 #[component]
 pub fn ButtonWrapper(children: Children) -> impl IntoView {
     view! {
-        <leptonic-btn-wrapper>
-            { children() }
-        </leptonic-btn-wrapper>
+        <leptonic-btn-wrapper>{children()}</leptonic-btn-wrapper>
     }
 }
