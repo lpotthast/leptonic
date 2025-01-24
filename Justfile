@@ -41,8 +41,9 @@ install-tools:
   cargo install trunk # Build, watch, serve WASM frontends.
   cargo install twiggy # Inspect WASM bundles.
   cargo install create-tauri-app # Create new Tauri applications.
-  cargo install tauri-cli@2.0.0-beta.8 # Run tauri applications.
+  cargo install tauri-cli # Run tauri applications.
   cargo install cargo-leptos # Run leptos applications.
+  cargo install wasm-bindgen-cli # WASM bindgen cli.
 
 # Find the minimum supported rust version
 msrv:
