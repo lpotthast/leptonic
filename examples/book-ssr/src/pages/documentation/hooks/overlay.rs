@@ -61,6 +61,7 @@ pub fn PageUseOverlay() -> impl IntoView {
         use_press_input: UsePressInput {
             disabled: false.into(),
             force_prevent_default: false,
+            allow_propagation: false,
             on_press: Callback::new(move |_e| {
                 set_state.set(!state.get_untracked());
             }),

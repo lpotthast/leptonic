@@ -51,6 +51,8 @@ pub struct UsePressInput {
     /// with the guarantee of no browser-specific behavior happening on user interactions.
     pub force_prevent_default: bool,
 
+    pub allow_propagation: bool,
+    
     pub on_press: Callback<(PressEvent,)>,
     pub on_press_up: Option<Callback<PressEvent>>,
     pub on_press_start: Option<Callback<PressEvent>>,
@@ -327,7 +329,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if input.disabled.get_untracked() || input.force_prevent_default {
             e.prevent_default();
         }
-        e.stop_propagation();
+        if !input.allow_propagation {
+            e.stop_propagation();
+        }
     });
 
     // Reset press state.
@@ -365,7 +369,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 if input.force_prevent_default {
                     e.prevent_default();
                 }
-                e.stop_propagation();
+                if !input.allow_propagation {
+                    e.stop_propagation();
+                }
 
                 let is_over_target = e
                     .current_target()

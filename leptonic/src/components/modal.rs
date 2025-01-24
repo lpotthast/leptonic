@@ -73,6 +73,7 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     } = use_press(UsePressInput {
         disabled: false.into(),
         force_prevent_default: true,
+        allow_propagation: false,
         on_press: Callback::new(move |_| {
             if let Some(modal_on_top) = shown_modals.get_untracked().into_iter().rev().next() {
                 if let Some(on_backdrop_interaction) = modal_on_top.on_backdrop_interaction {

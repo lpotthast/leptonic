@@ -34,6 +34,7 @@ pub fn Button(
         use_press_input: UsePressInput {
             disabled,
             force_prevent_default: false,
+            allow_propagation: false,
             on_press: Callback::new(move |e| match on_press {
                 Some(on_press) => on_press.run(e),
                 None => {}
@@ -135,6 +136,8 @@ where
         use_press_input: UsePressInput {
             disabled,
             force_prevent_default: false,
+            // Without setting this, Leptos' client-side navigation would not take place.
+            allow_propagation: true,
             on_press: Callback::new(move |_e| {}),
             on_press_up: None,
             on_press_start: None,

@@ -42,6 +42,7 @@ pub fn AnchorLink(
             // We are using an <a> tag and want the custom scrolling behavior from `use_anchor_link`.
             // If we would not enforce prevention of default behavior, automatic browser scroll-jumps would occur.
             force_prevent_default: true,
+            allow_propagation: false,
             on_press: Callback::new(move |_| {}),
             on_press_up: None,
             on_press_start: None,

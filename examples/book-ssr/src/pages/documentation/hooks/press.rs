@@ -34,6 +34,7 @@ pub fn PageUsePress() -> impl IntoView {
     let UsePressReturn { attrs, is_pressed } = use_press(UsePressInput {
         disabled: disabled.into(),
         force_prevent_default: false,
+        allow_propagation: false,
         on_press: Callback::new(move |e| {
             set_count.update(|c| *c += 1);
             set_events.update(|events| {

@@ -14,6 +14,7 @@ pub fn Pressable(
     } = use_press(UsePressInput {
         disabled,
         force_prevent_default: false,
+        allow_propagation: false,
         on_press,
         on_press_up: None,
         on_press_start: None,

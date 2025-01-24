@@ -19,6 +19,7 @@ pub fn Label(
     } = use_press(UsePressInput {
         disabled,
         force_prevent_default: false,
+        allow_propagation: false,
         on_press: Callback::new(move |_| {
             if let Some(fc_ctx) = &fc_ctx {
                 fc_ctx.input.with_untracked(move |input| match input {
