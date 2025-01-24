@@ -115,7 +115,7 @@ pub fn LinkButton<H>(
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
     exact: bool,
-    
+
     children: Children,
 ) -> impl IntoView
 where
@@ -182,7 +182,6 @@ where
         scroll: true,
         children,
     })
-    .into_any()
     .attr("class", "leptonic-btn")
     .add_any_attr(attrs)
 }
