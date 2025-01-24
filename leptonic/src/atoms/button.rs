@@ -1,6 +1,6 @@
 use leptos::html;
 use leptos::prelude::*;
-use leptos_router::components::{ToHref, A};
+use leptos_router::components::{AProps, ToHref, A};
 
 use crate::{
     hooks::{
@@ -115,7 +115,7 @@ pub fn LinkButton<H>(
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
     exact: bool,
-
+    
     children: Children,
 ) -> impl IntoView
 where
@@ -167,15 +167,24 @@ where
         });
      */
 
-    let target = target.unwrap_or_default().to_oco();
+    let target: Option<Oco<'static, str>> = Some(target.unwrap_or_default())
+        .filter(|it| it != &LinkTarget::_Self)
+        .map(|it| it.to_oco());
 
     // TODO: Propagate scroll and strict_trailing_slash?
     // TODO (new): Does a class in props.attrs override this? Do we need the old "prepend" logic?
-    view! {
-        <A href=href target=target exact=exact strict_trailing_slash=false scroll=true attr:class="leptonic-btn" {..attrs}>
-            { children() }
-        </A>
-    }
+
+    A(AProps {
+        href,
+        target,
+        exact,
+        strict_trailing_slash: false,
+        scroll: true,
+        children,
+    })
+    .into_any()
+    .attr("class", "leptonic-btn")
+    .add_any_attr(attrs)
 }
 
 #[component]
