@@ -35,7 +35,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         // focus handler already moved focus somewhere else.
         if e.target() == e.current_target()
             && use_document().active_element() == e.target().and_then(|t| t.as_element())
-            && !input.disabled.get()
+            && !input.disabled.get_untracked()
         {
             if let Some(on_focus) = input.on_focus {
                 on_focus.run(e);
@@ -48,7 +48,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     });
 
     let on_blur = Box::new(move |e: FocusEvent| {
-        if e.target() == e.current_target() && !input.disabled.get() {
+        if e.target() == e.current_target() && !input.disabled.get_untracked() {
             if let Some(on_blur) = input.on_blur {
                 on_blur.run(e);
             }
