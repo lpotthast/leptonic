@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use leptos::prelude::*;
-use leptos_reactive::create_isomorphic_effect;
 use uuid::Uuid;
 
 use crate::{
@@ -96,7 +95,9 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
                 <For
                     each=move || ctx.shown_modals.get()
                     key=|it| it.key
-                    children=|it| view! { {(it.children)()} }
+                    children=|it| {
+                        view! { {(it.children)()} }
+                    }
                 />
             </leptonic-modals>
         </leptonic-modal-host>
@@ -139,7 +140,7 @@ pub fn Modal(
         }
     }.into_any());
 
-    create_isomorphic_effect(move |_| match shown.get() {
+    Effect::new_isomorphic(move |_| match shown.get() {
         true => ctx.push_shown(ShownModalData {
             key,
             children: modal.clone(),
