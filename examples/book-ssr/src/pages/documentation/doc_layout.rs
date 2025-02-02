@@ -129,7 +129,7 @@ pub fn DocLayout() -> impl IntoView {
     };
 
     view! {
-        <Box attr:id="doc-layout" attr:style=move || format!(
+        <div id="doc-layout" style=move || format!(
             "margin-left: {}em; margin-right: {}em;",
             match app_layout_context.doc_drawer_closed.get() {
                 true => 0,
@@ -154,7 +154,7 @@ pub fn DocLayout() -> impl IntoView {
 
             // <Outlet/> will show nested child routes.
             <Outlet/>
-        </Box>
+        </div>
     }
 }
 

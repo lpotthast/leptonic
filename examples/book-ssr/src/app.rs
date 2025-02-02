@@ -393,9 +393,9 @@ pub fn Layout(children: Children) -> impl IntoView {
             </div>
         </AppBar>
 
-        <Box
-            attr:id="content"
-            attr:aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
+        <div
+            id="content"
+            aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
         >
             { children() }
 
@@ -416,7 +416,7 @@ pub fn Layout(children: Children) -> impl IntoView {
                     "Currently - v0.6.0 (main)"
                 </Stack>
             </Drawer>
-        </Box>
+        </div>
     }
 }
 

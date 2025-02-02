@@ -6,7 +6,7 @@ use crate::routes;
 #[component]
 pub fn PageWelcome() -> impl IntoView {
     view! {
-        <Box attr:id="welcome-page">
+        <div id="welcome-page">
             <div id="intro">
                 <h1 attr:id="slogan">
                     "LEPTONIC"
@@ -24,6 +24,6 @@ pub fn PageWelcome() -> impl IntoView {
             </div>
 
             <div id="features"></div>
-        </Box>
+        </div>
     }
 }
