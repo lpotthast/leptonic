@@ -36,7 +36,8 @@ where
         // Links cannot be disabled (for now).
         disabled: false.into(),
         force_prevent_default: false,
-        allow_propagation: false,
+        // Without setting this, Leptos' client-side navigation would not take place.
+        allow_propagation: true,
         on_press: Callback::from(move |e| {
             if let Some(on_press) = on_press {
                 on_press.run((e, el));
