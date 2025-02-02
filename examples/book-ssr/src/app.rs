@@ -395,8 +395,9 @@ pub fn Layout(children: Children) -> impl IntoView {
             </div>
         </AppBar>
 
-        <div
+        <main
             id="content"
+            style="color: var(--main-color); background-color: var(--main-background-color);"
             aria-hidden=move || { ((is_doc.get() && is_small.get() && !doc_drawer_closed.get()) || !main_drawer_closed.get()).to_string() }
         >
             { children() }
@@ -418,7 +419,7 @@ pub fn Layout(children: Children) -> impl IntoView {
                     "Currently - v0.6.0 (main)"
                 </Stack>
             </Drawer>
-        </div>
+        </main>
     }
 }
 
