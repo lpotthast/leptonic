@@ -35,6 +35,9 @@ pub mod routes {
 
             #[route("/use-hover")]
             pub mod use_hover {}
+            
+            #[route("/use-focus")]
+            pub mod use_focus {}
 
             #[route("/use-button")]
             pub mod use_button {}

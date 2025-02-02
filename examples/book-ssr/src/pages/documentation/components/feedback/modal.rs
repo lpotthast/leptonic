@@ -320,15 +320,15 @@ where
 
     let on_accept = move || {
         set_input.update(|it| it.clear());
-        (on_accept)();
+        on_accept();
     };
     let on_cancel = move || {
         set_input.update(|it| it.clear());
-        (on_cancel)();
+        on_cancel();
     };
 
     view! {
-        <Modal show_when=show_when on_escape=move || (on_cancel)()>
+        <Modal show_when=show_when on_escape=move || on_cancel()>
             <ModalHeader><ModalTitle>"Delete repository?"</ModalTitle></ModalHeader>
             <ModalBody>
                 "Please enter \""{required.get_value()}"\" to confirm."
@@ -336,8 +336,8 @@ where
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_press=move |_| (on_accept)() disabled=disabled color=ButtonColor::Danger>"Confirm"</Button>
-                    <Button on_press=move |_| (on_cancel)() color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=move |_| on_accept() disabled=disabled color=ButtonColor::Danger>"Confirm"</Button>
+                    <Button on_press=move |_| on_cancel() color=ButtonColor::Secondary>"Cancel"</Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>

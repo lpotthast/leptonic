@@ -6,6 +6,14 @@ edition = "2021"
 [lib]
 crate-type = ["cdylib", "rlib"]
 
+# Defines a size-optimized profile for the WASM bundle in release mode
+[profile.wasm-release]
+inherits = "release"
+opt-level = 'z'
+lto = true
+codegen-units = 1
+panic = "abort"
+
 [dependencies]
 axum = { version = "0.7.9", optional = true }
 axum-server = { version = "0.7.1", features = ["tls-rustls"], optional = true }
@@ -49,14 +57,6 @@ ssr = [
     "leptos_router/ssr",
     "leptonic/ssr",
 ]
-
-# Defines a size-optimized profile for the WASM bundle in release mode
-[profile.wasm-release]
-inherits = "release"
-opt-level = 'z'
-lto = true
-codegen-units = 1
-panic = "abort"
 
 [package.metadata.leptonic]
 # REQUIRED: Leptonic's build-script will copy the Leptonic themes to this directory. Relative to your project root.

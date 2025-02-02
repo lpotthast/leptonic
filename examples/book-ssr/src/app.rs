@@ -51,6 +51,7 @@ use crate::pages::documentation::hooks::overlay::PageUseOverlay;
 use crate::pages::documentation::hooks::press::PageUsePress;
 use crate::pages::documentation::hooks::r#move::PageUseMove;
 use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
+use crate::pages::documentation::hooks::focus::PageUseFocus;
 use crate::routes;
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
@@ -111,6 +112,7 @@ pub fn App() -> impl IntoView {
                                 <Route path=routes::doc::hooks::UsePress.path() view=PageUsePress/>
                                 <Route path=routes::doc::hooks::UseMove.path() view=PageUseMove/>
                                 <Route path=routes::doc::hooks::UseHover.path() view=PageUseHover/>
+                                <Route path=routes::doc::hooks::UseFocus.path() view=PageUseFocus/>
                                 <Route path=routes::doc::hooks::UseButton.path() view=PageUseButton/>
                                 <Route path=routes::doc::hooks::UseOverlay.path() view=PageUseOverlay/>
                                 <Route path=routes::doc::hooks::UseAnchorLink.path() view=PageUseAnchorLink/>
