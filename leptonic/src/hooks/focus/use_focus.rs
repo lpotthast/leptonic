@@ -48,7 +48,12 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     });
 
     let on_blur = Box::new(move |e: FocusEvent| {
-        if e.target() == e.current_target() && !input.disabled.get_untracked() {
+        // In certain situations, we saw this blur handler being called after the disabled signal
+        // was disposed. Mostly when interaction with this use_focus enabled element
+        // lead to removal from said element from the DOM.
+        let is_disabled = input.disabled.try_get_untracked().unwrap_or(true);
+
+        if e.target() == e.current_target() && !is_disabled {
             if let Some(on_blur) = input.on_blur {
                 on_blur.run(e);
             }
