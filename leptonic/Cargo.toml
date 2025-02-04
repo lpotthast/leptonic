@@ -65,7 +65,6 @@ assertr = "0.1.0"
 [features]
 default = ["hooks"]
 
-csr = ["leptos/csr"]
 ssr = ["leptos/ssr", "leptos-use/ssr", "leptos-tiptap?/ssr"]
 hydrate = ["leptos/hydrate"]
 
