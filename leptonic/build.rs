@@ -27,7 +27,8 @@ struct LeptonicMetadata {
 
 #[allow(clippy::unwrap_used)]
 pub fn main() -> Result<()> {
-    if cfg!(feature = "docsrs") {
+    // Do nothing when building documentation.
+    if cfg!(doc) {
         return Ok(());
     }
 
