@@ -12,6 +12,10 @@ impl ViewProducer {
         Self(callback.into())
     }
 
+    pub fn try_produce(&self) -> Option<AnyView> {
+        self.0.try_run(())
+    }
+
     pub fn produce(&self) -> AnyView {
         self.0.run(())
     }
@@ -27,6 +31,10 @@ impl std::ops::Deref for ViewProducer {
 
 // TODO (new): Is this impl still necessary?
 impl Callable<(), AnyView> for ViewProducer {
+    fn try_run(&self, _input: ()) -> Option<AnyView> {
+        self.try_produce()
+    }
+
     fn run(&self, _input: ()) -> AnyView {
         self.produce()
     }
@@ -56,9 +64,12 @@ where
     In: 'static;
 
 impl<In: 'static> ViewCallback<In> {
-    pub fn new(callback: impl Into<Callback<In, AnyView>>) -> Self
-    {
+    pub fn new(callback: impl Into<Callback<In, AnyView>>) -> Self {
         Self(callback.into())
+    }
+
+    pub fn try_render(&self, input: In) -> Option<AnyView> {
+        self.0.try_run(input)
     }
 
     pub fn render(&self, input: In) -> AnyView {
@@ -83,6 +94,10 @@ impl<In: 'static> Clone for ViewCallback<In> {
 }
 
 impl<In: 'static> Callable<In, AnyView> for ViewCallback<In> {
+    fn try_run(&self, input: In) -> Option<AnyView> {
+        self.try_render(input)
+    }
+
     fn run(&self, input: In) -> AnyView {
         self.render(input)
     }

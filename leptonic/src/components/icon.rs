@@ -29,7 +29,8 @@ where
     let svg = move || {
         let icon = icon.get();
         // TODO (new): Does into_any() do what we want? We deed it as svg() itself is now typed and alters the type whenever attributes are added.
-        let mut svg = svg::svg().inner_html(icon.data).into_any();
+        // TODO (new): We only add an arbitrary attribute here (aria-hidden) to get an `AnyViewWithAttrs`, on which we can conditionally add further attributes ...
+        let mut svg = svg::svg().inner_html(icon.data).into_any().attr("aria-hidden", "false");
         svg = match icon.style {
             Some(s) => svg.attr("style", s),
             None => svg,

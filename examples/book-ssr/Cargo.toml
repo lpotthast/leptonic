@@ -15,21 +15,21 @@ codegen-units = 1
 panic = "abort"
 
 [dependencies]
-axum = { version = "0.7.9", optional = true }
+axum = { version = "0.8.4", optional = true }
 axum-server = { version = "0.7.1", features = ["tls-rustls"], optional = true }
 console_error_panic_hook = "0.1.7"
 indoc = "2.0.5"
 #leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["clipboard", "tiptap"] }
 leptonic = { path = "../../leptonic", features = ["full"] }
-leptos = { version = "0.7.2", features = [] }
-leptos-use = "0.15.0"
-leptos_axum = { version = "0.7.2", optional = true }
-leptos_meta = { version = "0.7.2", features = [] }
-leptos_router = { version = "0.7.2", features = [] }
+leptos = { version = "0.8.2", features = [] }
+leptos-use = "0.16.0-beta2"
+leptos_axum = { version = "0.8.2", optional = true }
+leptos_meta = { version = "0.8.2", features = [] }
+leptos_router = { version = "0.8.2", features = [] }
 leptos-routes = { git = "https://github.com/lpotthast/leptos-routes", branch = "main" }
 ordered-float = "4.6.0"
 ringbuf = "0.4.7"
-strum = { version = "0.26.3", features = ["derive"] }
+strum = { version = "0.27.1", features = ["derive"] }
 time = { version = "0.3.37", features = ["wasm-bindgen"] }
 tokio = { version = "1.42.0", features = ["rt-multi-thread", "signal"], optional = true }
 tower = { version = "0.5.2", optional = true }
