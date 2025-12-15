@@ -85,7 +85,7 @@ pub fn Select<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
     #[prop(into)] set_selected: Out<O>,
-    #[prop(into)] search_text_provider: Callback<(O,), String>,
+    #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
@@ -119,7 +119,7 @@ where
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .run((it.clone(),))
+                        .run(it.clone())
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })
@@ -312,7 +312,7 @@ pub fn OptionalSelect<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
     #[prop(into)] set_selected: Out<Option<O>>,
-    #[prop(into)] search_text_provider: Callback<(O,), String>,
+    #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into)] allow_deselect: Signal<bool>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
@@ -347,7 +347,7 @@ where
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .run((it.clone(),))
+                        .run(it.clone())
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })
@@ -564,7 +564,7 @@ pub fn Multiselect<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Out<Vec<O>>,
-    #[prop(into)] search_text_provider: Callback<(O,), String>,
+    #[prop(into)] search_text_provider: Callback<O, String>,
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
@@ -598,7 +598,7 @@ where
             o.into_iter()
                 .filter(|it| {
                     search_text_provider
-                        .run((it.clone(),))
+                        .run(it.clone())
                         .to_lowercase()
                         .contains(lowercased_search.as_str())
                 })

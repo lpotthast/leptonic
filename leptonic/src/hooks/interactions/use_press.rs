@@ -9,8 +9,8 @@ use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::{
-    current_target_contains_target, pointer_type::PointerType, ElementExt,
-    EventExt, EventModifiers, EventTargetExt, Modifiers,
+    current_target_contains_target, pointer_type::PointerType, ElementExt, EventExt,
+    EventModifiers, EventTargetExt, Modifiers,
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
@@ -52,13 +52,12 @@ pub struct UsePressInput {
     pub force_prevent_default: bool,
 
     pub allow_propagation: bool,
-    
-    pub on_press: Callback<(PressEvent,)>,
+
+    pub on_press: Callback<PressEvent>,
     pub on_press_up: Option<Callback<PressEvent>>,
     pub on_press_start: Option<Callback<PressEvent>>,
     pub on_press_end: Option<Callback<PressEvent>>,
 }
-
 
 #[derive(Debug)]
 pub struct UsePressReturn {
@@ -166,17 +165,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if !is_pressed.get_untracked() {
             if let Some(on_press_start) = input.on_press_start {
                 let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-                on_press_start.run(
-                    PressEvent {
-                        pointer_type: s.pointer_type.clone(),
-                        //target: s.target.clone(),
-                        modifiers: match e {
-                            EventRef::Pointer(e) => e.modifiers(),
-                            EventRef::Keyboard(e) => e.modifiers(),
-                        },
-                        continue_propagation,
+                on_press_start.run(PressEvent {
+                    pointer_type: s.pointer_type.clone(),
+                    //target: s.target.clone(),
+                    modifiers: match e {
+                        EventRef::Pointer(e) => e.modifiers(),
+                        EventRef::Keyboard(e) => e.modifiers(),
                     },
-                );
+                    continue_propagation,
+                });
                 if !continue_propagation_state.load(Ordering::Acquire) {
                     match e {
                         EventRef::Pointer(e) => e.stop_propagation(),
@@ -193,17 +190,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if is_pressed.get_untracked() {
             if let Some(on_press_end) = input.on_press_end {
                 let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-                on_press_end.run(
-                    PressEvent {
-                        pointer_type: s.pointer_type.clone(),
-                        //target: s.target.clone(),
-                        modifiers: match e {
-                            EventRef::Pointer(e) => e.modifiers(),
-                            EventRef::Keyboard(e) => e.modifiers(),
-                        },
-                        continue_propagation,
+                on_press_end.run(PressEvent {
+                    pointer_type: s.pointer_type.clone(),
+                    //target: s.target.clone(),
+                    modifiers: match e {
+                        EventRef::Pointer(e) => e.modifiers(),
+                        EventRef::Keyboard(e) => e.modifiers(),
                     },
-                );
+                    continue_propagation,
+                });
                 if !continue_propagation_state.load(Ordering::Acquire) {
                     match e {
                         EventRef::Pointer(e) => e.stop_propagation(),
@@ -223,17 +218,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         );
 
         let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-        input.on_press.run(
-            (PressEvent {
-                pointer_type: s.pointer_type.clone(),
-                //target: s.target.clone(),
-                modifiers: match e {
-                    EventRef::Pointer(e) => e.modifiers(),
-                    EventRef::Keyboard(e) => e.modifiers(),
-                },
-                continue_propagation,
-            },),
-        );
+        input.on_press.run(PressEvent {
+            pointer_type: s.pointer_type.clone(),
+            //target: s.target.clone(),
+            modifiers: match e {
+                EventRef::Pointer(e) => e.modifiers(),
+                EventRef::Keyboard(e) => e.modifiers(),
+            },
+            continue_propagation,
+        });
         if !continue_propagation_state.load(Ordering::Acquire) {
             match e {
                 EventRef::Pointer(e) => e.stop_propagation(),

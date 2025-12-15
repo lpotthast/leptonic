@@ -29,11 +29,11 @@ pub struct UseHoverInput {
     pub disabled: Signal<bool>,
 
     /// Called whenever a pointer starts hovering the element.
-    pub on_hover_start: Option<Callback<(HoverStartEvent,)>>,
+    pub on_hover_start: Option<Callback<HoverStartEvent>>,
 
     /// Called whenever a pointer stops hovering the element
     /// or when the element is hovered and `disabled` transitions to `true`.
-    pub on_hover_end: Option<Callback<(HoverEndEvent,)>>,
+    pub on_hover_end: Option<Callback<HoverEndEvent>>,
 }
 
 #[derive(Debug)]
@@ -70,10 +70,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             }
 
             if let Some(on_hover_start) = input.on_hover_start {
-                on_hover_start.run((HoverStartEvent {
+                on_hover_start.run(HoverStartEvent {
                     pointer_type: pointer_type.clone(),
                     current_target: current_target.map(|it| SendWrapper::new(it)),
-                },));
+                });
             }
 
             set_is_hovered.set(true);
@@ -87,10 +87,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
         let s = state.get_value().expect("present");
         if let Some(on_hover_end) = input.on_hover_end {
-            on_hover_end.run((HoverEndEvent {
+            on_hover_end.run(HoverEndEvent {
                 pointer_type: s.pointer_type,
                 current_target: current_target.map(|it| SendWrapper::new(it)),
-            },));
+            });
         }
 
         set_is_hovered.set(false);

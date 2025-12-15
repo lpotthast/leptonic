@@ -38,7 +38,7 @@ where
         force_prevent_default: false,
         // Without setting this, Leptos' client-side navigation would not take place.
         allow_propagation: true,
-        on_press: Callback::from(move |e| {
+        on_press: Callback::new(move |e: PressEvent| {
             if let Some(on_press) = on_press {
                 on_press.run((e, el));
             }

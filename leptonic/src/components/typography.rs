@@ -12,9 +12,7 @@ pub struct Li {
 }
 
 #[component]
-pub fn Ul(
-    #[prop(default=vec![])] li: Vec<Li>,
-) -> impl IntoView {
+pub fn Ul(#[prop(default=vec![])] li: Vec<Li>) -> impl IntoView {
     view! {
         <ul>
             <For
@@ -39,17 +37,17 @@ pub fn Code(
     //#[prop(into)] code: String,
     children: TypedChildren<impl Into<Oco<'static, str>>>,
 ) -> impl IntoView {
-    let code = (children.into_inner())().into_inner().into();
+    let code = children.into_inner()().into_inner().into();
 
     let code_text = StoredValue::new(code);
 
     let show_copy_button = show_copy_button.unwrap_or_else(|| !inline.unwrap_or(false));
-    let on_success = Callback::from(move || {
+    let on_success = Callback::new(move |()| {
         if let Some(on_copy) = on_copy {
             on_copy.set(Ok(()));
         }
     });
-    let on_err = Callback::from(move || {
+    let on_err = Callback::new(move |()| {
         if let Some(on_copy) = on_copy {
             on_copy.set(Err(()));
         } else {
@@ -86,11 +84,7 @@ pub fn Code(
 }
 
 #[cfg(feature = "clipboard")]
-fn copy_to_clipboard(
-    text: &str,
-    on_success: Callback<(), ()>,
-    on_err: Callback<(), ()>,
-) {
+fn copy_to_clipboard(text: &str, on_success: Callback<(), ()>, on_err: Callback<(), ()>) {
     match leptos_use::use_window().navigator() {
         Some(navigator) => {
             let promise = navigator.clipboard().write_text(text);
@@ -113,10 +107,6 @@ fn copy_to_clipboard(
 }
 
 #[cfg(not(feature = "clipboard"))]
-fn copy_to_clipboard(
-    _text: &str,
-    _on_success: Callback<()>,
-    _on_err: Callback<()>,
-) {
+fn copy_to_clipboard(_text: &str, _on_success: Callback<()>, _on_err: Callback<()>) {
     tracing::warn!("Clipboard related functionality requires leptonic's 'Clipboard' feature as well as '--cfg=web_sys_unstable_apis'.");
 }

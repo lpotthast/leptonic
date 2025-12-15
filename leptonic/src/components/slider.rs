@@ -67,9 +67,9 @@ fn create_marks(
     max: f64,
     step: Option<f64>,
     range: Memo<f64>,
-    in_range: Callback<(f64,), Signal<bool>>,
+    in_range: Callback<f64, Signal<bool>>,
     marks: SliderMarks,
-    value_display: Option<Callback<(f64,), String>>,
+    value_display: Option<Callback<f64, String>>,
 ) -> Signal<Vec<Mark>> {
     match marks {
         SliderMarks::None => Signal::derive(Vec::new),
@@ -92,10 +92,10 @@ fn create_marks(
                     }
                     marks_at.push(Mark {
                         percentage: crate::utils::math::percentage_in_range(min, max, current),
-                        in_range: in_range.run((current,)),
+                        in_range: in_range.run(current),
                         name: match create_names {
                             true => Some(Cow::Owned(match &value_display {
-                                Some(callback) => callback.run((current,)),
+                                Some(callback) => callback.run(current),
                                 None => format!("{current}"),
                             })),
                             false => None,
@@ -156,7 +156,7 @@ fn create_marks(
                             }
                             SliderMarkValue::Percentage(percentage) => percentage,
                         },
-                        in_range: in_range.run((value,)),
+                        in_range: in_range.run(value),
                         name: mark.name.clone(),
                     }
                 })
@@ -216,9 +216,7 @@ impl SliderPopover {
                 (true, true) => {
                     let knob_is_hovered = use_element_hover(knob_el);
                     let listening = knob.listening;
-                    Signal::derive(move || {
-                        knob_is_hovered.get() || listening.get()
-                    })
+                    Signal::derive(move || knob_is_hovered.get() || listening.get())
                 }
                 (true, false) => {
                     let knob_is_hovered = use_element_hover(knob_el);
@@ -244,7 +242,7 @@ pub fn Slider(
     #[prop(optional)] active: bool,
     #[prop(optional)] disabled: bool,
     #[prop(optional)] marks: SliderMarks,
-    #[prop(into, optional)] value_display: Option<Callback<(f64,), String>>,
+    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView {
     let range = Memo::new(move |_| max - min);
 
@@ -291,7 +289,7 @@ pub fn Slider(
         max,
         step,
         range,
-        Callback::new(move |(v,)| match max > min {
+        Callback::new(move |v| match max > min {
             true => Signal::derive(move || v <= value.get()),
             false => Signal::derive(move || v >= value.get()),
         }),
@@ -342,7 +340,7 @@ pub fn Slider(
                                 {move || {
                                     let value = value.get();
                                     match &value_display {
-                                        Some(callback) => callback.run((value,)),
+                                        Some(callback) => callback.run(value),
                                         None => format!("{value}"),
                                     }
                                 }}
@@ -376,7 +374,7 @@ pub fn RangeSlider(
     #[prop(optional)] active: bool,
     #[prop(optional)] disabled: bool,
     #[prop(optional)] marks: SliderMarks,
-    #[prop(into, optional)] value_display: Option<Callback<(f64,), String>>,
+    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView {
     let range = Memo::new(move |_| max - min);
 
@@ -454,7 +452,7 @@ pub fn RangeSlider(
         max,
         step,
         range,
-        Callback::new(move |(v,)| match max > min {
+        Callback::new(move |v| match max > min {
             true => Signal::derive(move || v >= value_a.get() && v <= value_b.get()),
             false => Signal::derive(move || v <= value_a.get() && v >= value_b.get()),
         }),
@@ -537,7 +535,7 @@ pub fn RangeSlider(
                                 {move || {
                                     let value = value_a.get();
                                     match &value_display_a {
-                                        Some(callback) => callback.run((value,)),
+                                        Some(callback) => callback.run(value),
                                         None => format!("{value}"),
                                     }
                                 }}
@@ -553,7 +551,7 @@ pub fn RangeSlider(
                                 {move || {
                                     let value = value_b.get();
                                     match &value_display_b {
-                                        Some(callback) => callback.run((value,)),
+                                        Some(callback) => callback.run(value),
                                         None => format!("{value}"),
                                     }
                                 }}

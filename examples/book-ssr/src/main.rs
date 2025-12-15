@@ -1,17 +1,13 @@
-use tower_http::compression::CompressionLayer;
-
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
     use axum::Router;
+    use book_ssr::app::*;
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-    use book_ssr::app::*;
 
     use tracing_subscriber::{
-        prelude::__tracing_subscriber_SubscriberExt,
-        util::SubscriberInitExt,
-        Layer,
+        prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, Layer,
     };
 
     let log_filter = tracing_subscriber::filter::Targets::new()
@@ -49,20 +45,21 @@ async fn main() {
             })
             .fallback(leptos_axum::file_and_error_handler(shell))
             .layer(
-                CompressionLayer::new()
+                tower_http::compression::CompressionLayer::new()
                     .gzip(true)
                     .br(true)
                     .deflate(true)
                     .quality(tower_http::CompressionLevel::Default),
             )
             .with_state(leptos_options);
-        
+
         tracing::info!("Loading certs...");
 
         let working_dir = std::env::current_dir().expect("Could not determine working directory.");
 
         let mut cert_path = working_dir.clone();
-        cert_path.push(std::env::var("TLS_CERT_PATH").unwrap_or(String::from("certs/ssl_cert.pem")));
+        cert_path
+            .push(std::env::var("TLS_CERT_PATH").unwrap_or(String::from("certs/ssl_cert.pem")));
         tracing::info!("Using crt path: {cert_path:?}");
 
         let mut key_path = working_dir.clone();

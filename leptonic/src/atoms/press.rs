@@ -5,7 +5,7 @@ use crate::hooks::interactions::use_press::{use_press, PressEvent, UsePressInput
 #[component]
 pub fn Pressable(
     #[prop(into)] disabled: Signal<bool>,
-    on_press: Callback<(PressEvent,)>,
+    on_press: Callback<PressEvent>,
     children: Children,
 ) -> impl IntoView {
     let UsePressReturn {

@@ -12,9 +12,9 @@ use crate::{
 
 #[component]
 pub fn Button(
-    #[prop(into, optional)] on_press: Option<Callback<(PressEvent,)>>,
-    #[prop(into, optional)] on_hover_start: Option<Callback<(HoverStartEvent,)>>,
-    #[prop(into, optional)] on_hover_end: Option<Callback<(HoverEndEvent,)>>,
+    #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: Signal<AriaExpanded>,
@@ -102,9 +102,9 @@ pub fn LinkButton<H>(
     #[prop(into, optional)]
     target: Option<LinkTarget>,
 
-    #[prop(into, optional)] on_hover_start: Option<Callback<(HoverStartEvent,)>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
 
-    #[prop(into, optional)] on_hover_end: Option<Callback<(HoverEndEvent,)>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
 
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
 

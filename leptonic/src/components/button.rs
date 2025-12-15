@@ -4,10 +4,14 @@ use leptos::prelude::*;
 use leptos_router::components::ToHref;
 
 use crate::atoms::button::LinkTarget;
-use crate::{atoms, hooks::{
-    interactions::use_hover::{HoverEndEvent, HoverStartEvent},
-    interactions::use_press::PressEvent,
-}, utils::aria::{AriaExpanded, AriaHasPopup}};
+use crate::{
+    atoms,
+    hooks::{
+        interactions::use_hover::{HoverEndEvent, HoverStartEvent},
+        interactions::use_press::PressEvent,
+    },
+    utils::aria::{AriaExpanded, AriaHasPopup},
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ButtonVariant {
@@ -89,7 +93,7 @@ impl Display for ButtonSize {
 
 #[component]
 pub fn Button(
-    #[prop(into)] on_press: Callback<(PressEvent,)>,
+    #[prop(into)] on_press: Callback<PressEvent>,
     #[prop(into, optional)] variant: Signal<ButtonVariant>,
     #[prop(into, optional)] color: Signal<ButtonColor>,
     #[prop(into, optional)] size: Signal<ButtonSize>,
@@ -136,8 +140,8 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
 pub fn LinkButton<H>(
     href: H,
     #[prop(into, optional)] target: Option<LinkTarget>,
-    #[prop(into, optional)] on_hover_start: Option<Callback<(HoverStartEvent,)>>,
-    #[prop(into, optional)] on_hover_end: Option<Callback<(HoverEndEvent,)>>,
+    #[prop(into, optional)] on_hover_start: Option<Callback<HoverStartEvent>>,
+    #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] variant: Signal<ButtonVariant>,
     #[prop(into, optional)] color: Signal<ButtonColor>,
     #[prop(into, optional)] size: Signal<ButtonSize>,
@@ -166,22 +170,9 @@ where
         on_hover_end,
     })
     .into_view()
-        .attr(
-            "data-variant",
-           move || {
-                   Oco::Borrowed(variant.get().as_str())
-               }
-        )
-        .attr(
-            "data-color",
-           move || {
-                   Oco::Borrowed(color.get().as_str())
-               }
-        )
-        .attr(
-            "data-size",
-           move || {
-                   Oco::Borrowed(size.get().as_str())
-               }
-        )
+    .attr("data-variant", move || {
+        Oco::Borrowed(variant.get().as_str())
+    })
+    .attr("data-color", move || Oco::Borrowed(color.get().as_str()))
+    .attr("data-size", move || Oco::Borrowed(size.get().as_str()))
 }
