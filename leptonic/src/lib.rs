@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 use std::fmt::Display;
 
 use leptos::prelude::*;
@@ -114,7 +116,7 @@ impl<O: Send + Sync + 'static> Out<O, SyncStorage> {
 impl<T, F, S> From<F> for Out<T, S>
 where
     T: 'static,
-    F: Fn(T) + Send + Sync + 'static
+    F: Fn(T) + Send + Sync + 'static,
 {
     fn from(fun: F) -> Self {
         Self::new_callback(fun)
@@ -154,7 +156,9 @@ pub enum Mount {
 /// Create a read-write signal pair that automatically syncs the stored value in the browsers
 /// LocalStorage. When called, the value is read back from storage.
 /// When the value is not found, `initial` is set.
-pub fn signal_ls<T: Send + Sync + Clone + serde::Serialize + serde::de::DeserializeOwned +  'static>(
+pub fn signal_ls<
+    T: Send + Sync + Clone + serde::Serialize + serde::de::DeserializeOwned + 'static,
+>(
     key: &'static str,
     initial: T,
 ) -> (ReadSignal<T>, WriteSignal<T>) {
@@ -420,7 +424,9 @@ pub struct UseElementBoundingReturnReadOnly {
     pub y: Signal<f64>,
 }
 
-impl<F: Fn() + Send + Sync + Clone> From<UseElementBoundingReturn<F>> for UseElementBoundingReturnReadOnly {
+impl<F: Fn() + Send + Sync + Clone> From<UseElementBoundingReturn<F>>
+    for UseElementBoundingReturnReadOnly
+{
     fn from(value: UseElementBoundingReturn<F>) -> Self {
         UseElementBoundingReturnReadOnly {
             height: value.height,
