@@ -14,17 +14,16 @@ struct ShownModal {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct ModalRootContext {
+struct Modals {
     /// List of modals currently shown to the user.
     shown_modals: RwSignal<Vec<ShownModal>>,
 }
 
-impl ModalRootContext {
+impl Modals {
     fn is_shown(&self, modal_id: Uuid) -> bool {
         self.shown_modals
-            .read_untracked()
-            .iter()
-            .any(|it| it.modal_id == modal_id)
+            .try_read_untracked()
+            .is_some_and(|shown_modals| shown_modals.iter().any(|it| it.modal_id == modal_id))
     }
 
     /// Shows the modal with `modal_id`.
@@ -33,14 +32,13 @@ impl ModalRootContext {
     /// - If the modal is already shown.
     fn show(&self, data: ShownModal) {
         assert!(!self.is_shown(data.modal_id));
-
-        self.shown_modals.update(move |m| m.push(data));
+        self.shown_modals.try_update(move |m| m.push(data));
     }
 
     /// Removes the modal with `modal_id` from the list of shown modals.
     /// Should the modal not be shown right now, nothing happens.
     fn hide(&self, modal_id: Uuid) {
-        self.shown_modals.update(move |m| {
+        self.shown_modals.try_update(move |m| {
             if let Some(idx) = m.iter().position(|it| it.modal_id == modal_id) {
                 m.remove(idx);
             }
@@ -52,8 +50,8 @@ impl ModalRootContext {
 #[component]
 pub fn ModalRoot(children: Children) -> impl IntoView {
     let shown_modals = RwSignal::new(Vec::new());
-    let ctx = ModalRootContext { shown_modals };
-    provide_context::<ModalRootContext>(ctx.clone());
+    let ctx = Modals { shown_modals };
+    provide_context::<Modals>(ctx.clone());
 
     let has_modals = Memo::new(move |_| shown_modals.with(|modals| !modals.is_empty()));
 
@@ -108,7 +106,7 @@ pub fn Modal(
     #[prop(into, optional)] on_backdrop_interaction: Option<Callback<(), ()>>,
     children: ChildrenFn,
 ) -> impl IntoView {
-    let ctx = expect_context::<ModalRootContext>();
+    let ctx = expect_context::<Modals>();
 
     if let Some(on_escape) = on_escape {
         let g_keyboard_event = expect_context::<GlobalKeyboardEvent>();
