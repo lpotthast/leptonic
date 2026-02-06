@@ -243,8 +243,8 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use assertr::prelude::*;
     use crate::hooks::grid::grid_collection::GridRow;
+    use assertr::prelude::*;
 
     fn make_delegate(focus_mode: GridFocusMode) -> GridKeyboardDelegate<String> {
         let collection = GridCollection::new(vec![
@@ -274,133 +274,133 @@ mod tests {
 
     #[test]
     fn cell_navigation_down() {
-        let _owner = leptos::prelude::Owner::new();
+        let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Cell);
 
-        assertr::assert_that(d.get_key_below(&"0-1".into()))
+        assert_that(d.get_key_below(&"0-1".into()))
             .is_some()
-            .is_equal_to("1-1".to_string());
+            .is_equal_to("1-1");
 
         // At bottom-right, should clamp column
-        assertr::assert_that(d.get_key_below(&"1-2".into()))
+        assert_that(d.get_key_below(&"1-2".into()))
             .is_some()
-            .is_equal_to("2-1".to_string());
+            .is_equal_to("2-1");
 
         // Last row cell, no row below
-        assertr::assert_that(d.get_key_below(&"2-0".into())).is_none();
+        assert_that(d.get_key_below(&"2-0".into())).is_none();
     }
 
     #[test]
     fn cell_navigation_up() {
-        let _owner = leptos::prelude::Owner::new();
+        let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Cell);
 
-        assertr::assert_that(d.get_key_above(&"1-1".into()))
+        assert_that(d.get_key_above(&"1-1".into()))
             .is_some()
-            .is_equal_to("0-1".to_string());
+            .is_equal_to("0-1");
 
         // First row, no row above
-        assertr::assert_that(d.get_key_above(&"0-0".into())).is_none();
+        assert_that(d.get_key_above(&"0-0".into())).is_none();
     }
 
     #[test]
     fn cell_navigation_right_left() {
-        let _owner = leptos::prelude::Owner::new();
+        let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Cell);
 
-        assertr::assert_that(d.get_key_right_of(&"0-0".into()))
+        assert_that(d.get_key_right_of(&"0-0".into()))
             .is_some()
-            .is_equal_to("0-1".to_string());
+            .is_equal_to("0-1");
 
         // End of row in Cell mode: None
-        assertr::assert_that(d.get_key_right_of(&"0-2".into())).is_none();
+        assert_that(d.get_key_right_of(&"0-2".into())).is_none();
 
-        assertr::assert_that(d.get_key_left_of(&"0-1".into()))
+        assert_that(d.get_key_left_of(&"0-1".into()))
             .is_some()
-            .is_equal_to("0-0".to_string());
+            .is_equal_to("0-0");
 
         // Start of row in Cell mode: None
-        assertr::assert_that(d.get_key_left_of(&"0-0".into())).is_none();
+        assert_that(d.get_key_left_of(&"0-0".into())).is_none();
     }
 
     #[test]
     fn row_mode_right_enters_row() {
-        let _owner = leptos::prelude::Owner::new();
+        let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Row);
 
         // Right from row key → first cell
-        assertr::assert_that(d.get_key_right_of(&"row-0".into()))
+        assert_that(d.get_key_right_of(&"row-0".into()))
             .is_some()
-            .is_equal_to("0-0".to_string());
+            .is_equal_to("0-0");
 
         // At end of row in Row mode → back to row key
-        assertr::assert_that(d.get_key_right_of(&"0-2".into()))
+        assert_that(d.get_key_right_of(&"0-2".into()))
             .is_some()
-            .is_equal_to("row-0".to_string());
+            .is_equal_to("row-0");
     }
 
     #[test]
     fn row_mode_left_enters_row() {
-        let _owner = leptos::prelude::Owner::new();
+        let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Row);
 
         // Left from row key → last cell
-        assertr::assert_that(d.get_key_left_of(&"row-0".into()))
+        assert_that(d.get_key_left_of(&"row-0".into()))
             .is_some()
-            .is_equal_to("0-2".to_string());
+            .is_equal_to("0-2");
 
         // At start of row in Row mode → back to row key
-        assertr::assert_that(d.get_key_left_of(&"0-0".into()))
+        assert_that(d.get_key_left_of(&"0-0".into()))
             .is_some()
-            .is_equal_to("row-0".to_string());
+            .is_equal_to("row-0");
     }
 
     #[test]
     fn first_key_and_last_key() {
-        let _owner = leptos::prelude::Owner::new();
+        let _owner = Owner::new();
 
         let d_cell = make_delegate(GridFocusMode::Cell);
         // Global first in Cell mode → first cell
-        assertr::assert_that(d_cell.get_first_key(None, true))
+        assert_that(d_cell.get_first_key(None, true))
             .is_some()
-            .is_equal_to("0-0".to_string());
+            .is_equal_to("0-0");
 
         // From a cell, non-global → first cell in same row
-        assertr::assert_that(d_cell.get_first_key(Some(&"1-2".into()), false))
+        assert_that(d_cell.get_first_key(Some(&"1-2".into()), false))
             .is_some()
-            .is_equal_to("1-0".to_string());
+            .is_equal_to("1-0");
 
         // Global last in Cell mode → last cell of last row
-        assertr::assert_that(d_cell.get_last_key(None, true))
+        assert_that(d_cell.get_last_key(None, true))
             .is_some()
-            .is_equal_to("2-1".to_string());
+            .is_equal_to("2-1");
 
         let d_row = make_delegate(GridFocusMode::Row);
         // Global first in Row mode → first row key
-        assertr::assert_that(d_row.get_first_key(None, true))
+        assert_that(d_row.get_first_key(None, true))
             .is_some()
-            .is_equal_to("row-0".to_string());
+            .is_equal_to("row-0");
 
         // Global last in Row mode → last row key
-        assertr::assert_that(d_row.get_last_key(None, true))
+        assert_that(d_row.get_last_key(None, true))
             .is_some()
-            .is_equal_to("row-2".to_string());
+            .is_equal_to("row-2");
     }
 
     #[test]
     fn row_navigation_up_down() {
-        let _owner = leptos::prelude::Owner::new();
+        let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Row);
 
-        assertr::assert_that(d.get_key_below(&"row-0".into()))
+        assert_that(d.get_key_below(&"row-0".into()))
             .is_some()
-            .is_equal_to("row-1".to_string());
+            .is_equal_to("row-1");
 
-        assertr::assert_that(d.get_key_above(&"row-2".into()))
+        assert_that(d.get_key_above(&"row-2".into()))
             .is_some()
-            .is_equal_to("row-1".to_string());
+            .is_equal_to("row-1");
 
-        assertr::assert_that(d.get_key_below(&"row-2".into())).is_none();
-        assertr::assert_that(d.get_key_above(&"row-0".into())).is_none();
+        assert_that(d.get_key_below(&"row-2".into())).is_none();
+        assert_that(d.get_key_above(&"row-0".into())).is_none();
     }
 }

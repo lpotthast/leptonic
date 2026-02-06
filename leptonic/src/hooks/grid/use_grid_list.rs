@@ -1,209 +1,458 @@
-use leptos::attr;
-use leptos::attr::{Attr, Attribute};
-use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use std::collections::HashSet;
+use std::hash::Hash;
+
+use leptos::attr::Attr;
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
+use leptos::{attr, ev};
 use uuid::Uuid;
+use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridList.ts
+use crate::hooks::selection::use_selection_state::{
+    use_selection_state, Selection, SelectionBehavior, SelectionMode, UseSelectionStateInput,
+    UseSelectionStateReturn,
+};
+use crate::utils::EventHandler;
 
-/// The selection mode for grid list items.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum GridListSelectionMode {
-    /// No selection allowed.
-    #[default]
-    None,
-    /// Single item selection.
-    Single,
-    /// Multiple item selection.
-    Multiple,
-}
+use super::use_grid::EscapeKeyBehavior;
+
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridList.ts
+// and: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridListItem.ts
+//
+// ## DEVIATIONS FROM REACT-ARIA
+//
+// ### Omitted
+// - Virtualization (`isVirtualized`, `aria-rowcount`, `aria-colcount`).
+// - Tree support (`hasChildItems`, `expandedKeys`, `aria-expanded`, `aria-level`,
+//   `aria-posinset`, `aria-setsize`).
+// - RTL direction swapping.
+// - `isPressed` state — not tracked; use `use_press` separately if needed.
+// - Link behavior (`linkBehavior`).
+// - `shouldSelectOnPressUp` per-item override.
+// - Type-ahead search.
+// - Selection announcements (`useGridSelectionAnnouncement`).
+// - Drag-and-drop.
+// - Capture-phase keydown re-dispatch (we use bubble phase).
+//
+// ### Different
+// - Selection is delegated to `use_selection_state` directly.
+// - `UseGridListState<K>` struct instead of `listMap` `WeakMap`.
+// - `aria_multiselectable` only sets `"true"` for Multiple mode and omits it otherwise
+//   (matching React Aria, which doesn't set `"false"` for Single).
+// - Bubble-phase keydown instead of capture-phase + re-dispatch.
+//
+// ### Leptos-specific
+// - `ElementCaptureAttr` instead of React refs for DOM element access.
+// - `FocusManager` from `use_focus_manager` instead of `getFocusableTreeWalker`.
+// - `EventHandler<E>` for composable event handler chaining.
+// - Generic `K` key type instead of React Aria's `Key`.
 
 /// Input parameters for the `use_grid_list` hook.
-#[derive(Debug, Clone)]
-pub struct UseGridListInput {
-    /// The label for the grid list.
+#[derive(Clone)]
+pub struct UseGridListInput<K>
+where
+    K: Hash + Eq + Clone + Send + Sync + 'static,
+{
+    // --- ARIA ---
+    /// An accessible label for the grid list.
     pub label: Option<String>,
+    /// The ID of an element that labels the grid list.
+    pub labelled_by: Option<String>,
 
+    // --- List structure ---
+    /// Ordered list of all row keys.
+    pub all_keys: Signal<Vec<K>>,
+    /// Keys of disabled rows.
+    pub disabled_keys: Signal<HashSet<K>>,
+
+    // --- Selection (forwarded to `use_selection_state`) ---
     /// The selection mode.
-    pub selection_mode: GridListSelectionMode,
-
-    /// Whether the list is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// The currently selected item keys.
-    pub selected_keys: Signal<Vec<String>>,
-
+    pub selection_mode: SelectionMode,
+    /// The selection behavior (toggle vs replace).
+    pub selection_behavior: SelectionBehavior,
+    /// Controlled selected keys.
+    pub selected_keys: Option<Signal<Selection<K>>>,
+    /// Default selected keys (uncontrolled).
+    pub default_selected_keys: Option<Selection<K>>,
     /// Callback when selection changes.
-    pub on_selection_change: Option<Callback<Vec<String>>>,
-
-    /// Callback when an item is activated.
-    pub on_action: Option<Callback<String>>,
-
-    /// Whether to allow empty selection (deselect all).
+    pub on_selection_change: Option<Callback<Selection<K>>>,
+    /// Whether to disallow empty selection.
     pub disallow_empty_selection: bool,
+
+    // --- Behavior ---
+    /// Whether the grid list is disabled.
+    pub is_disabled: Signal<bool>,
+    /// Escape key behavior.
+    pub escape_key_behavior: EscapeKeyBehavior,
+    /// Whether arrow key navigation wraps around.
+    pub should_focus_wrap: bool,
+    /// Callback when a row is activated (Enter key).
+    pub on_action: Option<Callback<K>>,
 }
 
-impl Default for UseGridListInput {
+impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseGridListInput<K> {
     fn default() -> Self {
         Self {
             label: None,
-            selection_mode: GridListSelectionMode::None,
-            is_disabled: Signal::derive(|| false),
-            selected_keys: Signal::derive(Vec::new),
+            labelled_by: None,
+            all_keys: Signal::derive(Vec::new),
+            disabled_keys: Signal::derive(HashSet::new),
+            selection_mode: SelectionMode::default(),
+            selection_behavior: SelectionBehavior::default(),
+            selected_keys: None,
+            default_selected_keys: None,
             on_selection_change: None,
-            on_action: None,
             disallow_empty_selection: false,
+            is_disabled: Signal::derive(|| false),
+            escape_key_behavior: EscapeKeyBehavior::default(),
+            should_focus_wrap: false,
+            on_action: None,
         }
     }
 }
 
-/// The return value of the `use_grid_list` hook.
-#[derive(Debug, Clone)]
-pub struct UseGridListReturn {
-    /// Props for the grid list container element.
-    pub list_props: UseGridListAttrs,
-
-    /// The ID of the grid list.
-    pub list_id: String,
-
+/// Shared grid list state passed to child hooks like `use_grid_list_item`.
+///
+/// Analogous to react-aria's `listMap` `WeakMap`, but uses an explicit struct
+/// passed from `use_grid_list` to child hooks instead of a mutable `WeakMap` lookup.
+#[derive(Clone)]
+pub struct UseGridListState<K>
+where
+    K: Hash + Eq + Clone + Send + Sync + 'static,
+{
+    /// The selection state.
+    pub selection: UseSelectionStateReturn<K>,
+    /// The currently focused key.
+    pub focused_key: Signal<Option<K>>,
+    /// Set the focused key.
+    pub set_focused_key: Callback<Option<K>>,
+    /// Whether the grid list is disabled.
+    pub is_disabled: Signal<bool>,
     /// The selection mode.
-    pub selection_mode: GridListSelectionMode,
-
-    /// The currently focused item key.
-    pub focused_key: Signal<Option<String>>,
-
-    /// Set the focused item key.
-    pub set_focused_key: Callback<Option<String>>,
-
-    /// Select an item.
-    pub select_item: Callback<String>,
-
-    /// Toggle item selection.
-    pub toggle_item: Callback<String>,
-
-    /// Clear selection.
-    pub clear_selection: Callback<()>,
+    pub selection_mode: SelectionMode,
+    /// The selection behavior.
+    pub selection_behavior: SelectionBehavior,
+    /// Callback when a row is activated (Enter key or double-click).
+    pub on_action: Option<Callback<K>>,
 }
 
-/// Attributes for the grid list container element.
+// Manual Copy impl to avoid the derive macro adding an unnecessary `K: Copy` bound.
+impl<K: Hash + Eq + Clone + Send + Sync + 'static> Copy for UseGridListState<K> {}
+
+/// The return value of the `use_grid_list` hook.
+pub struct UseGridListReturn<K>
+where
+    K: Hash + Eq + Clone + Send + Sync + 'static,
+{
+    /// Props for the grid list container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseGridListProps,
+    /// Shared state to pass to child hooks (`use_grid_list_item`).
+    pub state: UseGridListState<K>,
+    /// The selection state, delegated to `use_selection_state`.
+    pub selection: UseSelectionStateReturn<K>,
+    /// The currently focused key.
+    pub focused_key: Signal<Option<K>>,
+    /// Set the focused key.
+    pub set_focused_key: Callback<Option<K>>,
+    /// Whether the grid list container has focus.
+    pub is_focused: Signal<bool>,
+}
+
+/// Props from `use_grid_list` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseGridListProps {
+    pub id: String,
+    pub role: &'static str,
+    pub tabindex: Signal<&'static str>,
+    pub aria_label: Option<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_multiselectable: Option<&'static str>,
+    pub aria_disabled: Signal<&'static str>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_mousedown: EventHandler<MouseEvent>,
+}
+
+impl UseGridListProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseGridListAttrs {
+        (
+            Attr(attr::Id, self.id.clone()),
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaLabel, self.aria_label.clone()),
+            Attr(attr::AriaLabelledby, self.aria_labelledby.clone()),
+            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.to_on(ev::keydown),
+            self.on_focus.to_on(ev::focus),
+            self.on_blur.to_on(ev::blur),
+            self.on_mousedown.to_on(ev::mousedown),
+        )
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseGridListAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_mousedown.into_on(ev::mousedown),
+        )
+    }
+}
+
+/// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UseGridListAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
+    Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaMultiselectable, Option<&'static str>>,
     Attr<attr::AriaDisabled, Signal<&'static str>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+    On<ev::focus, SharedEventCallback<FocusEvent>>,
+    On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
 );
+
+/// Get the next non-disabled key in the given direction.
+///
+/// Returns `None` if there is no valid key to move to (end of list without wrapping).
+fn get_next_key<K>(
+    all_keys: &[K],
+    disabled_keys: &HashSet<K>,
+    current: &K,
+    forward: bool,
+    wrap: bool,
+) -> Option<K>
+where
+    K: Hash + Eq + Clone,
+{
+    let len = all_keys.len();
+    if len == 0 {
+        return None;
+    }
+
+    let current_idx = all_keys.iter().position(|k| k == current)?;
+
+    let mut idx = current_idx;
+    let mut checked = 0;
+
+    loop {
+        if forward {
+            if idx + 1 >= len {
+                if wrap {
+                    idx = 0;
+                } else {
+                    return None;
+                }
+            } else {
+                idx += 1;
+            }
+        } else if idx == 0 {
+            if wrap {
+                idx = len - 1;
+            } else {
+                return None;
+            }
+        } else {
+            idx -= 1;
+        }
+
+        checked += 1;
+        if checked >= len {
+            return None;
+        }
+
+        let candidate = &all_keys[idx];
+        if !disabled_keys.contains(candidate) {
+            return Some(candidate.clone());
+        }
+    }
+}
+
+/// Get the first non-disabled key.
+fn get_first_key<K>(all_keys: &[K], disabled_keys: &HashSet<K>) -> Option<K>
+where
+    K: Hash + Eq + Clone,
+{
+    all_keys
+        .iter()
+        .find(|k| !disabled_keys.contains(k))
+        .cloned()
+}
+
+/// Get the last non-disabled key.
+fn get_last_key<K>(all_keys: &[K], disabled_keys: &HashSet<K>) -> Option<K>
+where
+    K: Hash + Eq + Clone,
+{
+    all_keys
+        .iter()
+        .rev()
+        .find(|k| !disabled_keys.contains(k))
+        .cloned()
+}
 
 /// Provides the behavior and accessibility for a grid list.
 ///
 /// A grid list is a one-dimensional list with keyboard navigation and selection,
-/// but with a grid role for accessibility purposes.
+/// using a grid role for accessibility. Each item is a row containing a single
+/// gridcell, which may contain focusable children navigable with ArrowLeft/ArrowRight.
+///
+/// ArrowUp/ArrowDown navigate between rows at the container level.
+/// ArrowLeft/ArrowRight are reserved for within-row child navigation at the item level.
+///
+/// ## DEVIATIONS FROM REACT-ARIA
+///
+/// - Selection is delegated to `use_selection_state` instead of react-aria's
+///   `useGridSelectionState` + `useSelectableCollection`.
+/// - No `listMap` `WeakMap` equivalent — child hooks (`use_grid_list_item`) receive
+///   a `UseGridListState<K>` struct explicitly instead of looking up shared state
+///   from a mutable `WeakMap`.
+/// - No virtualization (`is_virtualized`, `aria-rowcount`, `aria-colcount`).
+/// - No selection announcements (`useGridSelectionAnnouncement`).
+/// - No RTL direction swapping in keyboard navigation.
+/// - Uses `EventHandler` pattern for composable event handlers.
 ///
 /// # Example
 ///
 /// ```ignore
-/// let list = use_grid_list(UseGridListInput {
-///     label: Some("Files".to_string()),
-///     selection_mode: GridListSelectionMode::Multiple,
+/// let all_keys = Signal::stored(vec!["item-0".to_string(), "item-1".to_string(), "item-2".to_string()]);
+///
+/// let grid_list = use_grid_list(UseGridListInput {
+///     label: Some("My List".to_string()),
+///     all_keys: all_keys.into(),
+///     selection_mode: SelectionMode::Multiple,
 ///     ..Default::default()
 /// });
 ///
 /// view! {
-///     <ul {..list.list_props}>
+///     <div {..grid_list.props.into_attrs()}>
 ///         // Grid list items...
-///     </ul>
+///     </div>
 /// }
 /// ```
 #[allow(clippy::too_many_lines)]
-pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
+pub fn use_grid_list<K>(input: UseGridListInput<K>) -> UseGridListReturn<K>
+where
+    K: Hash + Eq + Clone + Send + Sync + 'static,
+{
     let list_id = format!("gridlist-{}", Uuid::new_v4());
     let is_disabled = input.is_disabled;
     let selection_mode = input.selection_mode;
-    let selected_keys = input.selected_keys;
-    let on_selection_change = input.on_selection_change;
+    let all_keys = input.all_keys;
+    let disabled_keys = input.disabled_keys;
+    let escape_key_behavior = input.escape_key_behavior;
     let on_action = input.on_action;
-    let disallow_empty_selection = input.disallow_empty_selection;
+    let should_focus_wrap = input.should_focus_wrap;
 
-    // Track focused item
-    let (focused_key, set_focused_key_signal) = signal::<Option<String>>(None);
+    // --- Selection state (delegated) ---
+    let selection = use_selection_state(UseSelectionStateInput {
+        selection_mode,
+        selection_behavior: input.selection_behavior,
+        disabled: is_disabled,
+        selected_keys: input.selected_keys,
+        default_selected_keys: input.default_selected_keys,
+        on_selection_change: input.on_selection_change,
+        disabled_keys,
+        disallow_empty_selection: input.disallow_empty_selection,
+    });
 
-    let set_focused_key = Callback::new(move |key: Option<String>| {
+    // --- Focus tracking ---
+    let (focused_key, set_focused_key_signal) = signal::<Option<K>>(None);
+    let (is_focused_rw, set_is_focused) = signal(false);
+    let is_focused: Signal<bool> = is_focused_rw.into();
+
+    let set_focused_key = Callback::new(move |key: Option<K>| {
         set_focused_key_signal.set(key);
     });
 
-    // Selection helpers
-    let select_item = Callback::new(move |key: String| {
-        if selection_mode == GridListSelectionMode::None {
-            return;
-        }
+    // --- Tabindex: -1 when list has internal focus, 0 otherwise ---
+    let tabindex = Signal::derive(move || if is_focused.get() { "-1" } else { "0" });
 
-        let new_selection = if selection_mode == GridListSelectionMode::Single {
-            vec![key]
-        } else {
-            let mut current = selected_keys.get_untracked();
-            if !current.contains(&key) {
-                current.push(key);
-            }
-            current
-        };
-
-        if let Some(on_change) = on_selection_change {
-            on_change.run(new_selection);
-        }
-    });
-
-    let toggle_item = Callback::new(move |key: String| {
-        if selection_mode == GridListSelectionMode::None {
-            return;
-        }
-
-        let mut current = selected_keys.get_untracked();
-        if let Some(pos) = current.iter().position(|k| k == &key) {
-            // Don't remove if it would leave empty selection and that's disallowed
-            if !disallow_empty_selection || current.len() > 1 {
-                current.remove(pos);
-            }
-        } else if selection_mode == GridListSelectionMode::Single {
-            current = vec![key];
-        } else {
-            current.push(key);
-        }
-
-        if let Some(on_change) = on_selection_change {
-            on_change.run(current);
-        }
-    });
-
-    let clear_selection = Callback::new(move |_| {
-        if disallow_empty_selection {
-            return;
-        }
-        if let Some(on_change) = on_selection_change {
-            on_change.run(vec![]);
-        }
-    });
-
-    // Compute aria-multiselectable
+    // --- ARIA attributes ---
+    // React Aria only sets aria-multiselectable="true" for Multiple mode and omits it otherwise.
     let aria_multiselectable = match selection_mode {
-        GridListSelectionMode::Multiple => Some("true"),
-        GridListSelectionMode::Single => Some("false"),
-        GridListSelectionMode::None => None,
+        SelectionMode::Multiple => Some("true"),
+        SelectionMode::Single | SelectionMode::None => None,
     };
 
-    // Compute aria-disabled
     let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
 
-    // Handle keyboard navigation
+    // --- Keyboard handler ---
     let handle_keydown = move |e: KeyboardEvent| {
         if is_disabled.get_untracked() {
             return;
         }
 
         let key = e.key();
+        let ctrl_or_meta = e.ctrl_key() || e.meta_key();
+
         match key.as_str() {
+            "ArrowDown" => {
+                e.prevent_default();
+                if let Some(focused) = focused_key.get_untracked() {
+                    let keys = all_keys.get_untracked();
+                    let disabled = disabled_keys.get_untracked();
+                    if let Some(next) =
+                        get_next_key(&keys, &disabled, &focused, true, should_focus_wrap)
+                    {
+                        set_focused_key_signal.set(Some(next));
+                    }
+                }
+            }
+            "ArrowUp" => {
+                e.prevent_default();
+                if let Some(focused) = focused_key.get_untracked() {
+                    let keys = all_keys.get_untracked();
+                    let disabled = disabled_keys.get_untracked();
+                    if let Some(prev) =
+                        get_next_key(&keys, &disabled, &focused, false, should_focus_wrap)
+                    {
+                        set_focused_key_signal.set(Some(prev));
+                    }
+                }
+            }
+            // ArrowLeft/ArrowRight: No-op at container level.
+            // Items handle within-row child navigation.
+            "Home" => {
+                e.prevent_default();
+                let keys = all_keys.get_untracked();
+                let disabled = disabled_keys.get_untracked();
+                if let Some(first) = get_first_key(&keys, &disabled) {
+                    set_focused_key_signal.set(Some(first));
+                }
+            }
+            "End" => {
+                e.prevent_default();
+                let keys = all_keys.get_untracked();
+                let disabled = disabled_keys.get_untracked();
+                if let Some(last) = get_last_key(&keys, &disabled) {
+                    set_focused_key_signal.set(Some(last));
+                }
+            }
+            " " => {
+                if let Some(focused) = focused_key.get_untracked() {
+                    if selection_mode != SelectionMode::None {
+                        e.prevent_default();
+                        selection.toggle.run(focused);
+                    }
+                }
+            }
             "Enter" => {
                 if let Some(focused) = focused_key.get_untracked() {
                     if let Some(on_action) = on_action {
@@ -212,221 +461,194 @@ pub fn use_grid_list(input: UseGridListInput) -> UseGridListReturn {
                     }
                 }
             }
-            " " => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    if selection_mode != GridListSelectionMode::None {
-                        e.prevent_default();
-                        let mut current = selected_keys.get_untracked();
-                        if let Some(pos) = current.iter().position(|k| k == &focused) {
-                            if !disallow_empty_selection || current.len() > 1 {
-                                current.remove(pos);
-                            }
-                        } else if selection_mode == GridListSelectionMode::Single {
-                            current = vec![focused];
-                        } else {
-                            current.push(focused);
-                        }
-                        if let Some(on_change) = on_selection_change {
-                            on_change.run(current);
-                        }
-                    }
-                }
-            }
             "Escape" => {
-                if selection_mode != GridListSelectionMode::None && !disallow_empty_selection {
+                if escape_key_behavior == EscapeKeyBehavior::ClearSelection
+                    && selection_mode != SelectionMode::None
+                {
                     e.prevent_default();
-                    if let Some(on_change) = on_selection_change {
-                        on_change.run(vec![]);
-                    }
+                    selection.clear_selection.run(());
                 }
             }
-            // Arrow navigation is handled at the item level
+            "a" if ctrl_or_meta => {
+                if selection_mode == SelectionMode::Multiple {
+                    e.prevent_default();
+                    selection.select_all.run(vec![]);
+                }
+            }
+            // Tab: don't intercept — let the browser handle single tab-stop exit.
             _ => {}
         }
+    };
+
+    // --- Focus handler ---
+    let handle_focus = move |_e: FocusEvent| {
+        set_is_focused.set(true);
+
+        // If nothing is focused yet, focus the first item.
+        if focused_key.get_untracked().is_none() {
+            let keys = all_keys.get_untracked();
+            let disabled = disabled_keys.get_untracked();
+            if let Some(first) = get_first_key(&keys, &disabled) {
+                set_focused_key_signal.set(Some(first));
+            }
+        }
+    };
+
+    // --- Blur handler ---
+    let list_id_for_blur = list_id.clone();
+    let handle_blur = move |e: FocusEvent| {
+        // Only blur if focus left the grid list container entirely.
+        if let Some(related) = e.related_target() {
+            if let Ok(el) = related.dyn_into::<web_sys::Element>() {
+                if let Some(container) = web_sys::window()
+                    .and_then(|w| w.document())
+                    .and_then(|d| d.get_element_by_id(&list_id_for_blur))
+                {
+                    if container.contains(Some(&el)) {
+                        return;
+                    }
+                }
+            }
+        }
+        set_is_focused.set(false);
+    };
+
+    // --- Mousedown handler (prevent scrollbar stealing focus) ---
+    let handle_mousedown = move |e: MouseEvent| {
+        // If the mousedown target is the grid list itself (scrollbar area), prevent
+        // default to avoid stealing focus from focused items.
+        if let Some(target) = e.target() {
+            if let Some(current_target) = e.current_target() {
+                if target == current_target {
+                    e.prevent_default();
+                }
+            }
+        }
+    };
+
+    let state = UseGridListState {
+        selection,
+        focused_key: focused_key.into(),
+        set_focused_key,
+        is_disabled,
+        selection_mode,
+        selection_behavior: input.selection_behavior,
+        on_action,
     };
 
     UseGridListReturn {
-        list_props: (
-            Attr(attr::Id, list_id.clone()),
-            Attr(attr::Role, "grid"),
-            Attr(attr::AriaLabel, input.label),
-            Attr(attr::AriaMultiselectable, aria_multiselectable),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
-        list_id,
-        selection_mode,
+        props: UseGridListProps {
+            id: list_id,
+            role: "grid",
+            tabindex,
+            aria_label: input.label,
+            aria_labelledby: input.labelled_by,
+            aria_multiselectable,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: EventHandler::new(handle_focus),
+            on_blur: EventHandler::new(handle_blur),
+            on_mousedown: EventHandler::new(handle_mousedown),
+        },
+        state,
+        selection,
         focused_key: focused_key.into(),
         set_focused_key,
-        select_item,
-        toggle_item,
-        clear_selection,
+        is_focused,
     }
 }
 
-/// Input for a grid list item.
-#[derive(Debug, Clone)]
-pub struct UseGridListItemInput {
-    /// The unique key for this item.
-    pub item_key: String,
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    /// The item index.
-    pub index: usize,
+    use assertr::prelude::*;
 
-    /// Whether the item is selected.
-    pub is_selected: Signal<bool>,
+    #[test]
+    fn get_next_key_moves_forward() {
+        let keys = vec!["a", "b", "c"];
+        let disabled = HashSet::new();
+        let result = get_next_key(&keys, &disabled, &"a", true, false);
+        assert_that(result).is_equal_to(Some("b"));
+    }
 
-    /// Whether the item is focused.
-    pub is_focused: Signal<bool>,
+    #[test]
+    fn get_next_key_moves_backward() {
+        let keys = vec!["a", "b", "c"];
+        let disabled = HashSet::new();
+        let result = get_next_key(&keys, &disabled, &"c", false, false);
+        assert_that(result).is_equal_to(Some("b"));
+    }
 
-    /// Whether the item is disabled.
-    pub is_disabled: Signal<bool>,
+    #[test]
+    fn get_next_key_wraps_forward() {
+        let keys = vec!["a", "b", "c"];
+        let disabled = HashSet::new();
+        let result = get_next_key(&keys, &disabled, &"c", true, true);
+        assert_that(result).is_equal_to(Some("a"));
+    }
 
-    /// Callback when the item is activated.
-    pub on_action: Option<Callback<()>>,
+    #[test]
+    fn get_next_key_wraps_backward() {
+        let keys = vec!["a", "b", "c"];
+        let disabled = HashSet::new();
+        let result = get_next_key(&keys, &disabled, &"a", false, true);
+        assert_that(result).is_equal_to(Some("c"));
+    }
 
-    /// Callback when selection changes.
-    pub on_selection_change: Option<Callback<bool>>,
+    #[test]
+    fn get_next_key_no_wrap_at_end() {
+        let keys = vec!["a", "b", "c"];
+        let disabled = HashSet::new();
+        let result = get_next_key(&keys, &disabled, &"c", true, false);
+        assert_that(result).is_equal_to(None);
+    }
 
-    /// Callback to navigate to the next item.
-    pub on_focus_next: Option<Callback<()>>,
+    #[test]
+    fn get_next_key_no_wrap_at_start() {
+        let keys = vec!["a", "b", "c"];
+        let disabled = HashSet::new();
+        let result = get_next_key(&keys, &disabled, &"a", false, false);
+        assert_that(result).is_equal_to(None);
+    }
 
-    /// Callback to navigate to the previous item.
-    pub on_focus_previous: Option<Callback<()>>,
-}
+    #[test]
+    fn get_next_key_skips_disabled() {
+        let keys = vec!["a", "b", "c"];
+        let disabled: HashSet<&str> = ["b"].into_iter().collect();
+        let result = get_next_key(&keys, &disabled, &"a", true, false);
+        assert_that(result).is_equal_to(Some("c"));
+    }
 
-/// Return value for a grid list item.
-#[derive(Debug, Clone)]
-pub struct UseGridListItemReturn {
-    /// Props for the item element.
-    pub item_props: UseGridListItemAttrs,
+    #[test]
+    fn get_next_key_all_disabled_returns_none() {
+        let keys = vec!["a", "b", "c"];
+        let disabled: HashSet<&str> = ["a", "b", "c"].into_iter().collect();
+        let result = get_next_key(&keys, &disabled, &"a", true, true);
+        assert_that(result).is_equal_to(None);
+    }
 
-    /// The item key.
-    pub item_key: String,
+    #[test]
+    fn get_next_key_empty_list() {
+        let keys: Vec<&str> = vec![];
+        let disabled = HashSet::new();
+        let result = get_next_key(&keys, &disabled, &"a", true, false);
+        assert_that(result).is_equal_to(None);
+    }
 
-    /// Whether the item is selected.
-    pub is_selected: Signal<bool>,
+    #[test]
+    fn get_first_key_returns_first_non_disabled() {
+        let keys = vec!["a", "b", "c"];
+        let disabled: HashSet<&str> = ["a"].into_iter().collect();
+        let result = get_first_key(&keys, &disabled);
+        assert_that(result).is_equal_to(Some("b"));
+    }
 
-    /// Whether the item is focused.
-    pub is_focused: Signal<bool>,
-}
-
-/// Attributes for a grid list item.
-pub type UseGridListItemAttrs = (
-    Attr<attr::Role, &'static str>,
-    Attr<attr::AriaRowindex, String>,
-    Attr<attr::AriaSelected, Signal<Option<&'static str>>>,
-    Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-);
-
-/// Provides the behavior and accessibility for a grid list item.
-#[allow(clippy::needless_pass_by_value)]
-pub fn use_grid_list_item(input: UseGridListItemInput) -> UseGridListItemReturn {
-    let item_key = input.item_key.clone();
-    let is_selected = input.is_selected;
-    let is_focused = input.is_focused;
-    let is_disabled = input.is_disabled;
-    let on_action = input.on_action;
-    let on_selection_change = input.on_selection_change;
-    let on_focus_next = input.on_focus_next;
-    let on_focus_previous = input.on_focus_previous;
-
-    // Compute aria-selected
-    let aria_selected = Signal::derive(move || {
-        if on_selection_change.is_some() {
-            if is_selected.get() {
-                Some("true")
-            } else {
-                Some("false")
-            }
-        } else {
-            None
-        }
-    });
-
-    // Compute tabindex
-    let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
-
-    // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
-
-    // Handle click
-    let handle_click = move |e: MouseEvent| {
-        if is_disabled.get_untracked() {
-            return;
-        }
-
-        if let Some(on_selection_change) = on_selection_change {
-            let toggle = e.ctrl_key() || e.meta_key();
-            if toggle {
-                on_selection_change.run(!is_selected.get_untracked());
-            } else {
-                on_selection_change.run(true);
-            }
-        }
-    };
-
-    // Handle keyboard
-    let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
-            return;
-        }
-
-        let key = e.key();
-        match key.as_str() {
-            "Enter" => {
-                e.prevent_default();
-                if let Some(on_action) = on_action {
-                    on_action.run(());
-                }
-            }
-            " " => {
-                e.prevent_default();
-                if let Some(on_selection_change) = on_selection_change {
-                    on_selection_change.run(!is_selected.get_untracked());
-                }
-            }
-            "ArrowDown" => {
-                e.prevent_default();
-                if let Some(on_next) = on_focus_next {
-                    on_next.run(());
-                }
-            }
-            "ArrowUp" => {
-                e.prevent_default();
-                if let Some(on_prev) = on_focus_previous {
-                    on_prev.run(());
-                }
-            }
-            _ => {}
-        }
-    };
-
-    // Handle focus
-    let handle_focus = move |_e: FocusEvent| {
-        // Focus is managed by parent
-    };
-
-    // Row index is 1-based for ARIA
-    let aria_rowindex = (input.index + 1).to_string();
-
-    UseGridListItemReturn {
-        item_props: (
-            Attr(attr::Role, "row"),
-            Attr(attr::AriaRowindex, aria_rowindex),
-            Attr(attr::AriaSelected, aria_selected),
-            Attr(attr::Tabindex, tabindex),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on(ev::focus, handle_focus).into_cloneable(),
-        ),
-        item_key,
-        is_selected,
-        is_focused,
+    #[test]
+    fn get_last_key_returns_last_non_disabled() {
+        let keys = vec!["a", "b", "c"];
+        let disabled: HashSet<&str> = ["c"].into_iter().collect();
+        let result = get_last_key(&keys, &disabled);
+        assert_that(result).is_equal_to(Some("b"));
     }
 }

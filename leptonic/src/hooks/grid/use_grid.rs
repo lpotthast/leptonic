@@ -103,6 +103,8 @@ where
     pub selection_behavior: SelectionBehavior,
     /// Callback when a cell is activated (Enter key on a cell key).
     pub on_cell_action: Option<Callback<K>>,
+    /// Callback when a row is activated (Enter key or double-click on a row key).
+    pub on_row_action: Option<Callback<K>>,
 }
 
 // Manual Copy impl to avoid the derive macro adding an unnecessary `K: Copy` bound.
@@ -463,6 +465,7 @@ where
         selection_mode,
         selection_behavior: input.selection_behavior,
         on_cell_action,
+        on_row_action,
     };
 
     UseGridReturn {
