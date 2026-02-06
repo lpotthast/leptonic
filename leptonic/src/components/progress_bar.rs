@@ -18,9 +18,10 @@ pub fn ProgressBar(
             .get()
             .map(|it| f64::max(it, 0.0))
             .map(|pos_progress| {
-                let percentage = match max == 0.0 {
-                    true => 0.0,
-                    false => pos_progress / max,
+                let percentage = if max == 0.0 {
+                    0.0
+                } else {
+                    pos_progress / max
                 };
                 percentage.clamp(0.0, 1.0)
             })

@@ -1,7 +1,20 @@
 #![recursion_limit = "256"]
+// Workspace-level clippy allows. These are specified in workspace Cargo.toml lints but
+// must also be set here because CLI `-D clippy::pedantic` takes precedence over Cargo.toml lints.
+#![allow(
+    clippy::option_if_let_else,
+    clippy::module_name_repetitions,
+    clippy::must_use_candidate,
+    clippy::wildcard_imports,
+    // `ignored_unit_patterns` fires on Leptos `view!` macro expansions and `#[component]` artifacts.
+    clippy::ignored_unit_patterns,
+    // `type_complexity` fires on `#[component]` macro-generated prop types that cannot be annotated individually.
+    clippy::type_complexity
+)]
 
 use std::fmt::Display;
 
+use crate::utils::EventTargetExt;
 use leptos::prelude::*;
 use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::{use_window, UseElementBoundingReturn};
@@ -53,8 +66,9 @@ pub enum Language {
 /// - a `WriteSignal`,
 /// - a combined `RwSignal` or
 /// - a `Callback` which only consumes an input and returns `()`.
+///
 /// This helps you to define props where the user can choose to use a signal directly
-/// or use a closure (which will be converted to a Callback).
+/// or use a closure (which will be converted to a `Callback`).
 #[derive(Debug)]
 pub enum Out<O: 'static, S = SyncStorage> {
     Fn(fn(O) -> ()),
@@ -154,7 +168,7 @@ pub enum Mount {
 }
 
 /// Create a read-write signal pair that automatically syncs the stored value in the browsers
-/// LocalStorage. When called, the value is read back from storage.
+/// `LocalStorage`. When called, the value is read back from storage.
 /// When the value is not found, `initial` is set.
 pub fn signal_ls<
     T: Send + Sync + Clone + serde::Serialize + serde::de::DeserializeOwned + 'static,
@@ -361,7 +375,7 @@ impl TrackedElementClientBoundingRect {
     pub(crate) fn track_client_rect(&self) {
         self.el.with_value(|maybe_signal| {
             if let Some(el) = maybe_signal.get_untracked() {
-                let el: web_sys::Element = el.into();
+                let el: web_sys::Element = el.as_element().unwrap();
                 let rect = el.get_bounding_client_rect();
                 self.set_left.set(rect.left());
                 self.set_top.set(rect.top());

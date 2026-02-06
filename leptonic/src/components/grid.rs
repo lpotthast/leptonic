@@ -4,10 +4,7 @@ use crate::Size;
 
 // TODO: Only allow rows as children.
 #[component]
-pub fn Grid(
-    gap: Size,
-    children: Children,
-) -> impl IntoView {
+pub fn Grid(gap: Size, children: Children) -> impl IntoView {
     view! {
         <leptonic-grid-container
             style=("--leptonic-grid-gap", format!("{gap}"))
@@ -19,10 +16,7 @@ pub fn Grid(
 
 // TODO: Only allow columns as children.
 #[component]
-pub fn Row(
-    #[prop(into, optional)] gap: Option<Size>,
-    children: Children,
-) -> impl IntoView {
+pub fn Row(#[prop(into, optional)] gap: Option<Size>, children: Children) -> impl IntoView {
     view! {
         <leptonic-grid-row
             style=gap.map(|gap| ("--leptonic-grid-gap", format!("{gap}")))

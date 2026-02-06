@@ -8,8 +8,8 @@ use web_sys::{Event, KeyboardEvent, MouseEvent, PointerEvent};
 use crate::contexts::WasmClosure;
 use crate::{
     components::{
-        modal::ModalRoot,
-        popover::PopoverRoot, prelude::ToastRoot, theme::Theme, theme::ThemeProvider,
+        modal::ModalRoot, popover::PopoverRoot, prelude::ToastRoot, theme::Theme,
+        theme::ThemeProvider,
     },
     contexts::{
         global_click_event::GlobalClickEvent,
@@ -38,7 +38,7 @@ pub struct Leptonic {
 }
 
 #[component]
-#[allow(clippy::too_many_lines)]
+#[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn Root<T>(
     /// Root directory of JS files used for dynamic script imports. Defaults to "js", as this is commonly used.
     /// Change this if you chose a non-standard location for `[package.metadata.leptonic] > js-dir`.
@@ -159,10 +159,7 @@ where
     }
 
     StoredValue::new_local(onclick);
-    provide_context(GlobalClickEvent::new(
-        g_click_event,
-        set_g_click_event,
-    ));
+    provide_context(GlobalClickEvent::new(g_click_event, set_g_click_event));
 
     // MOUSE UP - data currently not needed
     let (g_mouseup_event, set_g_mouseup_event) = signal_local::<Option<MouseEvent>>(None);
@@ -191,10 +188,7 @@ where
     }
 
     StoredValue::new_local(onresize);
-    provide_context(GlobalResizeEvent::new(
-        g_resize_event,
-        set_g_resize_event,
-    ));
+    provide_context(GlobalResizeEvent::new(g_resize_event, set_g_resize_event));
 
     // SCROLL
     let (g_scroll_event, set_g_scroll_event) = signal_local::<Option<Event>>(None);
@@ -207,10 +201,7 @@ where
     }
 
     StoredValue::new_local(onscroll);
-    provide_context(GlobalScrollEvent::new(
-        g_scroll_event,
-        set_g_scroll_event,
-    ));
+    provide_context(GlobalScrollEvent::new(g_scroll_event, set_g_scroll_event));
 
     let update_vh = move || {
         #[derive(Debug)]
@@ -254,14 +245,13 @@ where
     let is_mobile_device = Signal::derive(move || {
         use_window()
             .as_ref()
-            .map(|window| {
+            .is_some_and(|window| {
                 window
                     .navigator()
                     .user_agent()
                     .map(|agent| agent.to_lowercase().contains("mobi"))
                     .unwrap_or(false)
             })
-            .unwrap_or(false)
     });
 
     provide_context(Leptonic {
@@ -276,7 +266,7 @@ where
             <Script type_="module" src=format!("/{}/tiptap.js", runtime_js_dir)/>
         };
     } else {
-        let tiptap_js_module_includes = view! {};
+        let tiptap_js_module_includes = ();
     }}
 
     view! {

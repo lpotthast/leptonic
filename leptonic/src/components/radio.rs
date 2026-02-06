@@ -2,9 +2,11 @@ use leptos::context::Provider;
 use leptos::prelude::*;
 
 use crate::{
-    components::form_control::{FormControlContext, FormInput}, Out,
+    components::form_control::{FormControlContext, FormInput},
+    Out,
 };
 
+#[allow(clippy::type_complexity)]
 #[derive(Clone)]
 struct RadioGroupContext {
     states: StoredValue<Vec<(uuid::Uuid, Signal<bool>, Out<bool>)>>,
@@ -28,34 +30,31 @@ impl RadioGroupContext {
         } else {
             tracing::warn!(
                 "Could not deregister radio button {id}, as it is not currently registered."
-            )
+            );
         }
     }
 
     fn toggle(&self, id: uuid::Uuid, new_state: bool) {
         let mut found = false;
         self.states.with_value(|states| {
-            match new_state {
-                // Uncheck everything, there is nothing we can check...
-                false => {
-                    for (stored_id, _get, set) in states.iter() {
-                        if *stored_id == id {
-                            found = true;
-                            set.set(false);
-                        } else {
-                            set.set(false);
-                        }
+            if new_state {
+                // Check targeted, uncheck all other.
+                for (stored_id, _get, set) in states {
+                    if *stored_id == id {
+                        found = true;
+                        set.set(true);
+                    } else {
+                        set.set(false);
                     }
                 }
-                // Check targeted, uncheck all other.
-                true => {
-                    for (stored_id, _get, set) in states.iter() {
-                        if *stored_id == id {
-                            found = true;
-                            set.set(true);
-                        } else {
-                            set.set(false);
-                        }
+            } else {
+                // Uncheck everything, there is nothing we can check...
+                for (stored_id, _get, set) in states {
+                    if *stored_id == id {
+                        found = true;
+                        set.set(false);
+                    } else {
+                        set.set(false);
                     }
                 }
             }
@@ -69,9 +68,7 @@ impl RadioGroupContext {
 }
 
 #[component]
-pub fn RadioGroup(
-    children: Children,
-) -> impl IntoView {
+pub fn RadioGroup(children: Children) -> impl IntoView {
     let ctx = RadioGroupContext {
         states: StoredValue::new(Vec::new()),
     };
@@ -129,7 +126,7 @@ pub fn Radio(
 
         on_cleanup(move || {
             ctx.deregister(uuid);
-        })
+        });
     }
 
     let disabled = move || disabled.get().unwrap_or(false);
@@ -137,9 +134,9 @@ pub fn Radio(
     view! {
         <leptonic-radio
             role="radio"
-            aria-disabled=move || match disabled() { true => "true", false => "false" }
-            aria-checked=move || match checked.get() { true => "true", false => "false" }
-            data-value=move || match checked.get() { true => "true", false => "false" }
+            aria-disabled=move || if disabled() { "true" } else { "false" }
+            aria-checked=move || if checked.get() { "true" } else { "false" }
+            data-value=move || if checked.get() { "true" } else { "false" }
             tabindex="0"
             on:click=move |_e| {
                 if !disabled() {

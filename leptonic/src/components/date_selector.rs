@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 
 use crate::{
-    hooks::calendar::use_calendar,
+    hooks::use_calendar,
     utils::time::{GuideMode, InMonth},
     Out,
 };
@@ -21,7 +21,9 @@ pub fn DateSelector(
     #[prop(optional)] min: Option<time::OffsetDateTime>,
     #[prop(optional)] max: Option<time::OffsetDateTime>,
     // TODO (new): guide_mode should not be a signal!
-    #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: Signal<GuideMode>,
+    #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: Signal<
+        GuideMode,
+    >,
 ) -> impl IntoView {
     let calendar = use_calendar(value, min, max);
 

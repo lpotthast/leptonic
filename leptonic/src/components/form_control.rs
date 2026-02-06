@@ -1,6 +1,6 @@
-use std::fmt::Debug;
 use leptos::context::Provider;
 use leptos::prelude::*;
+use std::fmt::Debug;
 
 pub trait FormInput: Debug + Send + Sync {
     fn on_label_press(&self);
@@ -12,9 +12,7 @@ pub struct FormControlContext {
 }
 
 #[component]
-pub fn FormControl(
-    children: Children,
-) -> impl IntoView {
+pub fn FormControl(children: Children) -> impl IntoView {
     let input = RwSignal::new(None);
 
     let ctx = FormControlContext { input };

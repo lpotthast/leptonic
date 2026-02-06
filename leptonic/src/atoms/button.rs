@@ -1,11 +1,12 @@
-use leptos::html;
 use leptos::prelude::*;
+use leptos::tachys::html::class::class;
 use leptos_router::components::{AProps, ToHref, A};
 
+use crate::utils::classes::Classes;
 use crate::{
     hooks::{
         use_button, HoverEndEvent, HoverStartEvent, PressEvent, UseButtonInput, UseButtonReturn,
-        UseFocusInput, UseHoverInput, UsePressInput,
+        UseFocusRingInput, UseHoverInput, UsePressInput,
     },
     utils::aria::{AriaExpanded, AriaHasPopup},
 };
@@ -18,16 +19,15 @@ pub fn Button(
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: Signal<AriaExpanded>,
+    #[prop(into, optional)] classes: Classes,
     children: Children,
 ) -> impl IntoView {
-    let el: NodeRef<html::Button> = NodeRef::new();
-
     let UseButtonReturn {
-        attrs,
+        props,
         is_hovered: _,
         is_pressed: _,
+        is_focus_visible: _,
     } = use_button(UseButtonInput {
-        node_ref: el,
         disabled,
         aria_haspopup,
         aria_expanded,
@@ -35,9 +35,10 @@ pub fn Button(
             disabled,
             force_prevent_default: false,
             allow_propagation: false,
-            on_press: Callback::new(move |e| match on_press {
-                Some(on_press) => on_press.run(e),
-                None => {}
+            on_press: Callback::new(move |e| {
+                if let Some(on_press) = on_press {
+                    on_press.run(e);
+                }
             }),
             on_press_up: None,
             on_press_start: None,
@@ -48,8 +49,10 @@ pub fn Button(
             on_hover_start,
             on_hover_end,
         },
-        use_focus_input: UseFocusInput {
+        use_focus_ring_input: UseFocusRingInput {
             disabled,
+            within: false,
+            auto_focus: false,
             on_focus: None,
             on_blur: None,
             on_focus_change: None,
@@ -57,11 +60,7 @@ pub fn Button(
     });
 
     view! {
-        <button
-            node_ref=el
-            class="leptonic-btn"
-            {..attrs}
-        >
+        <button {..props.into_attrs()} class=classes>
             { children() }
         </button>
     }
@@ -111,6 +110,7 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
 
     #[prop(into, optional)] aria_expanded: Option<Signal<AriaExpanded>>,
+    #[prop(into, optional)] classes: Classes,
 
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
@@ -125,11 +125,11 @@ where
     let disabled = disabled.unwrap_or(Signal::from(false));
 
     let UseButtonReturn {
-        attrs,
+        props,
         is_hovered: _,
         is_pressed: _,
+        is_focus_visible: _,
     } = use_button(UseButtonInput {
-        node_ref: NodeRef::<html::Custom<&str>>::new(),
         disabled,
         aria_haspopup: aria_haspopup.unwrap_or_default(),
         aria_expanded: aria_expanded.unwrap_or_default(),
@@ -148,27 +148,15 @@ where
             on_hover_start,
             on_hover_end,
         },
-        use_focus_input: UseFocusInput {
+        use_focus_ring_input: UseFocusRingInput {
             disabled,
+            within: false,
+            auto_focus: false,
             on_focus: None,
             on_blur: None,
             on_focus_change: None,
         },
     });
-
-    /*
-    let default_class = "leptonic-btn";
-    let class: Option<Box<dyn IntoAttribute>> = class
-        .map(|c| {
-            c.into_attribute_boxed()
-                .prepend(Oco::Borrowed(default_class))
-        })
-        .or_else(|| Some(Attribute::String(Oco::Borrowed(default_class))))
-        .and_then(|new| {
-            let as_dyn: Box<dyn IntoAttribute> = Box::new(new);
-            Some(as_dyn)
-        });
-     */
 
     let target: Option<Oco<'static, str>> = Some(target.unwrap_or_default())
         .filter(|it| it != &LinkTarget::_Self)
@@ -185,8 +173,8 @@ where
         scroll: true,
         children,
     })
-    .attr("class", "leptonic-btn")
-    .add_any_attr(attrs)
+    .add_any_attr(class(classes))
+    .add_any_attr(props.into_attrs())
 }
 
 #[component]

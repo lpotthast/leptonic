@@ -6,6 +6,7 @@ use leptos_router::components::{ToHref, A};
 // TODO: Use router state again (leptos_router::location::State) (accepting a prop)
 #[component]
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::type_complexity)]
 pub fn Link<H>(
     /// Used to calculate the link's `href` attribute. Will be resolved relative
     /// to the current route.
@@ -30,7 +31,7 @@ where
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
     let UsePressReturn {
-        attrs,
+        props,
         is_pressed: _,
     } = use_press(UsePressInput {
         // Links cannot be disabled (for now).
@@ -51,7 +52,7 @@ where
     // TODO: propagate missing A props
     // TODO: do not wrap A, make this an atom
     view! {
-        <leptonic-link {..attrs} node_ref=el>
+        <leptonic-link {..props.into_attrs()} node_ref=el>
             <A href=href exact=exact>
                 { children() }
             </A>

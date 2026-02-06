@@ -49,9 +49,10 @@ fn select_previous<O: SelectOption + 'static>(
 ) {
     let previous = preselected.with_untracked(|current| match current {
         Some(current) => match available.iter().position(|it| it == current) {
-            Some(current_pos) => match current_pos >= 1 {
-                true => Some(available[current_pos - 1].clone()),
-                false => available.last().cloned(),
+            Some(current_pos) => if current_pos >= 1 {
+                Some(available[current_pos - 1].clone())
+            } else {
+                available.last().cloned()
             },
             None => available.last().cloned(),
         },
@@ -67,9 +68,10 @@ fn select_next<O: SelectOption + 'static>(
 ) {
     let next = preselected.with_untracked(|current| match current {
         Some(current) => match available.iter().position(|it| it == current) {
-            Some(current_pos) => match (current_pos + 1) < available.len() {
-                true => Some(available[current_pos + 1].clone()),
-                false => available.first().cloned(),
+            Some(current_pos) => if (current_pos + 1) < available.len() {
+                Some(available[current_pos + 1].clone())
+            } else {
+                available.first().cloned()
             },
             None => available.first().cloned(),
         },
@@ -81,6 +83,7 @@ fn select_next<O: SelectOption + 'static>(
 // TODO: class and style will now (as of leptos 0.7) appear on the wrapper element!
 #[component]
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::type_complexity)]
 pub fn Select<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
@@ -235,9 +238,10 @@ where
                     { move || render_option.render(selected.get()) }
 
                     <leptonic-select-show-trigger>
-                        {move || match show_options.get() {
-                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
-                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
+                        {move || if show_options.get() {
+                            view! { <Icon icon=icondata::BsCaretUpFill/>}
+                        } else {
+                            view! { <Icon icon=icondata::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
@@ -291,13 +295,14 @@ where
                             }
                         }).collect_view() }
 
-                        { move || match has_options.get() {
-                            true => None,
-                            false => Some(view! {
+                        { move || if has_options.get() {
+                            None
+                        } else {
+                            Some(view! {
                                 <leptonic-select-no-search-results>
                                     "No options..."
                                 </leptonic-select-no-search-results>
-                            }),
+                            })
                         } }
                     </Show>
                 </leptonic-select-options>
@@ -308,6 +313,7 @@ where
 
 #[component]
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::type_complexity)]
 pub fn OptionalSelect<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
@@ -463,18 +469,15 @@ where
                 aria-haspopup="listbox"
             >
                 <leptonic-select-selected on:click=move |_| toggle_show()>
-                    { move || match selected.get() {
-                        Some(selected) => Some(view! {
+                    { move || selected.get().map(|selected| view! {
                             <leptonic-select-option>
                                 { render_option.render(selected) }
                             </leptonic-select-option>
-                        }),
-                        None => None,
-                    }}
+                        })
+                    }
 
-                    { match allow_deselect.get() {
-                        false => None,
-                        true => Some(view! {
+                    { if allow_deselect.get() {
+                        Some(view! {
                             <leptonic-select-deselect-trigger on:click=move |e| {
                                 e.prevent_default();
                                 e.stop_propagation();
@@ -482,13 +485,16 @@ where
                             }>
                                 <Icon icon=icondata::BsXCircleFill/>
                             </leptonic-select-deselect-trigger>
-                        }),
+                        })
+                    } else {
+                        None
                     }}
 
                     <leptonic-select-show-trigger>
-                        {move || match show_options.get() {
-                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
-                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
+                        {move || if show_options.get() {
+                            view! { <Icon icon=icondata::BsCaretUpFill/>}
+                        } else {
+                            view! { <Icon icon=icondata::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
@@ -542,13 +548,14 @@ where
                             }
                         }).collect_view() }
 
-                        { move || match has_options.get() {
-                            true => None,
-                            false => Some(view! {
+                        { move || if has_options.get() {
+                            None
+                        } else {
+                            Some(view! {
                                 <div class="option">
                                     "No options..."
                                 </div>
-                            }),
+                            })
                         } }
                     </Show>
                 </leptonic-select-options>
@@ -559,6 +566,7 @@ where
 
 #[component]
 #[allow(clippy::too_many_lines)]
+#[allow(clippy::type_complexity)]
 pub fn Multiselect<O>(
     #[prop(optional, default=u64::MAX)] max: u64,
     #[prop(into)] options: Signal<Vec<O>>,
@@ -751,9 +759,10 @@ where
                     }
 
                     <leptonic-select-show-trigger>
-                        {move || match show_options.get() {
-                            true => view! { <Icon icon=icondata::BsCaretUpFill/>},
-                            false => view! { <Icon icon=icondata::BsCaretDownFill/>}
+                        {move || if show_options.get() {
+                            view! { <Icon icon=icondata::BsCaretUpFill/>}
+                        } else {
+                            view! { <Icon icon=icondata::BsCaretDownFill/>}
                         }}
                     </leptonic-select-show-trigger>
                 </leptonic-select-selected>
@@ -807,13 +816,14 @@ where
                             }
                         }).collect_view() }
 
-                        { move || match has_options.get() {
-                            true => None,
-                            false => Some(view! {
+                        { move || if has_options.get() {
+                            None
+                        } else {
+                            Some(view! {
                                 <div class="option">
                                     "No options..."
                                 </div>
-                            }),
+                            })
                         } }
                     </Show>
                 </leptonic-select-options>

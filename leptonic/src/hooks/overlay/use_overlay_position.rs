@@ -2,6 +2,7 @@ use std::marker::PhantomData;
 
 use educe::Educe;
 use leptos::prelude::*;
+use leptos::tachys::html::style::style;
 use leptos::tachys::html::style::Style;
 use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::{use_document, use_element_bounding};
@@ -94,11 +95,48 @@ where
 
 #[derive(Debug)]
 pub struct UseOverlayPositionReturn {
-    pub attrs: UseOverlayPositionAttrs,
+    /// Props for the overlay element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseOverlayPositionProps,
+}
+
+/// Props from `use_overlay_position` that can be converted to spreadable attributes.
+#[derive(Debug, Clone)]
+pub struct UseOverlayPositionProps {
+    pub position: Signal<(&'static str, String)>,
+    pub z_index: Signal<(&'static str, String)>,
+    pub top: Signal<(&'static str, String)>,
+    pub left: Signal<(&'static str, String)>,
+}
+
+impl UseOverlayPositionProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseOverlayPositionAttrs {
+        (
+            style(self.position),
+            style(self.z_index),
+            style(self.top),
+            style(self.left),
+        )
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseOverlayPositionAttrs {
+        (
+            style(self.position),
+            style(self.z_index),
+            style(self.top),
+            style(self.left),
+        )
+    }
 }
 
 pub type UseOverlayPositionAttrs = (
-    Style<Signal<(&'static str, String)>>,
+    Style<Signal<(&'static str, String)>>, // position: fixed
+    Style<Signal<(&'static str, String)>>, // z-index: 100000
+    Style<Signal<(&'static str, String)>>, // top: Xpx
+    Style<Signal<(&'static str, String)>>, // left: Xpx
 );
 
 pub fn use_overlay_position<Overlay, Target, M>(
@@ -113,7 +151,7 @@ where
 
     let container_width = move || match use_document().as_ref() {
         Some(document) => match document.body() {
-            Some(body) => body.client_width() as f64,
+            Some(body) => f64::from(body.client_width()),
             None => 0.0,
         },
         None => 0.0,
@@ -121,7 +159,7 @@ where
 
     let container_height = move || match use_document().as_ref() {
         Some(document) => match document.body() {
-            Some(body) => body.client_height() as f64,
+            Some(body) => f64::from(body.client_height()),
             None => 0.0,
         },
         None => 0.0,
@@ -135,16 +173,18 @@ where
         {
             original @ PhysicalPlacementX::OuterLeft => {
                 let space_left = target_bounding.left.get();
-                match overlay_bounding.width.get() > space_left {
-                    true => PhysicalPlacementX::OuterRight,
-                    false => original,
+                if overlay_bounding.width.get() > space_left {
+                    PhysicalPlacementX::OuterRight
+                } else {
+                    original
                 }
             }
             original @ PhysicalPlacementX::OuterRight => {
                 let space_right = container_width() - target_bounding.right.get();
-                match overlay_bounding.width.get() > space_right {
-                    true => PhysicalPlacementX::OuterLeft,
-                    false => original,
+                if overlay_bounding.width.get() > space_right {
+                    PhysicalPlacementX::OuterLeft
+                } else {
+                    original
                 }
             }
             other => other,
@@ -154,16 +194,18 @@ where
     let placement_y = Memo::new(move |_| match input.placement_y.get() {
         original @ PlacementY::Above => {
             let space_top = target_bounding.top.get();
-            match overlay_bounding.height.get() > space_top {
-                true => PlacementY::Below,
-                false => original,
+            if overlay_bounding.height.get() > space_top {
+                PlacementY::Below
+            } else {
+                original
             }
         }
         original @ PlacementY::Below => {
             let space_bottom = container_height() - target_bounding.bottom.get();
-            match overlay_bounding.height.get() > space_bottom {
-                true => PlacementY::Above,
-                false => original,
+            if overlay_bounding.height.get() > space_bottom {
+                PlacementY::Above
+            } else {
+                original
             }
         }
         other => other,
@@ -192,13 +234,11 @@ where
     });
 
     UseOverlayPositionReturn {
-        attrs: (
-            leptos::tachys::html::style::style(Signal::derive(move || {
-                let top = top.get();
-                let left = left.get();
-                let position = format!("fixed; z-index: 100000; top: {top}px; left: {left}px");
-                ("position", position)
-            })),
-        ),
+        props: UseOverlayPositionProps {
+            position: Signal::derive(|| ("position", String::from("fixed"))),
+            z_index: Signal::derive(|| ("z-index", String::from("100000"))),
+            top: Signal::derive(move || ("top", format!("{}px", top.get()))),
+            left: Signal::derive(move || ("left", format!("{}px", left.get()))),
+        },
     }
 }

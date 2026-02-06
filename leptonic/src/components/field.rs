@@ -1,9 +1,7 @@
 use leptos::prelude::*;
 
 #[component]
-pub fn Field(
-    children: Children,
-) -> impl IntoView {
+pub fn Field(children: Children) -> impl IntoView {
     view! {
         <leptonic-field>
             { children() }
@@ -12,9 +10,7 @@ pub fn Field(
 }
 
 #[component]
-pub fn FieldLabel(
-    children: Children,
-) -> impl IntoView {
+pub fn FieldLabel(children: Children) -> impl IntoView {
     view! {
         <leptonic-field-label>
             { children() }

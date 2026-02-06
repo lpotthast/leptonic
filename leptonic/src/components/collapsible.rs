@@ -5,16 +5,11 @@ use uuid::Uuid;
 
 use crate::components::icon::Icon;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum OnOpen {
+    #[default]
     DoNothing,
     CloseOthers,
-}
-
-impl Default for OnOpen {
-    fn default() -> Self {
-        Self::DoNothing
-    }
 }
 
 #[derive(Debug, Clone)]
@@ -24,12 +19,18 @@ pub struct CollapsiblesContext {
 }
 
 impl CollapsiblesContext {
+    /// # Panics
+    ///
+    /// Panics if the internal `RwLock` is poisoned.
     pub fn register(&mut self, ctx: CollapsibleContext) {
         let mut vec = self.collapsibles.write().unwrap();
         vec.push(ctx);
         drop(vec);
     }
 
+    /// # Panics
+    ///
+    /// Panics if the internal `RwLock` is poisoned.
     pub fn collapsible_changed(&self, id: Uuid, on_open: Option<OnOpen>, new_state: bool) {
         //debug!("Collapsibles:: collapsible_changed:: {id} {new_state}");
         match on_open.unwrap_or(self.default_on_open) {
@@ -155,9 +156,10 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
                 { (collapsible_header.children)() }
             </leptonic-collapsible-header>
 
-            { move ||  match ctx2.collapsible_ctx.show.get() {
-                true => view! { <Icon icon=icondata::BsCaretUpFill/>}.into_any(),
-                false => view! { <Icon icon=icondata::BsCaretDownFill/>}.into_any()
+            { move || if ctx2.collapsible_ctx.show.get() {
+                view! { <Icon icon=icondata::BsCaretUpFill/>}.into_any()
+            } else {
+                view! { <Icon icon=icondata::BsCaretDownFill/>}.into_any()
             } }
         </leptonic-collapsible-header-wrapper>
     }

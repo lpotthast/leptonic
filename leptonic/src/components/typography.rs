@@ -58,7 +58,7 @@ pub fn Code(
     let copy_btn = show_copy_button.then(|| {
         view!(
             <Button
-                attr:class="leptonic-code-copy-button"
+                classes="leptonic-code-copy-button"
                 variant=ButtonVariant::Flat
                 on_press=move |_| {
                     let text = code_text.get_value();

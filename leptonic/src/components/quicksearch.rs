@@ -68,7 +68,7 @@ fn QuicksearchModal(
     let cancel = Callback::new(move |_| on_cancel.run(()));
 
     view! {
-        <Modal show_when=show_when on_escape=move || on_cancel.run(()) class="quicksearch-modal">
+        <Modal show_when=show_when on_escape=move || on_cancel.run(()) classes="quicksearch-modal">
             <ModalHeader>
                 <TextInput
                     get=input

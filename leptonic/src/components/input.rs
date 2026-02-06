@@ -10,14 +10,13 @@ use crate::{
     Out,
 };
 
-fn prepare_autofocus<T>(
-    node_ref: NodeRef<T>,
-) where
+fn prepare_autofocus<T>(node_ref: NodeRef<T>)
+where
     T: ElementType + Clone + 'static,
-    <T as ElementType>::Output: JsCast + Clone + Deref<Target=HtmlElement>,
+    <T as ElementType>::Output: JsCast + Clone + Deref<Target = HtmlElement>,
 {
     node_ref.on_load(move |elem| {
-        let input_elem = elem.deref();
+        let input_elem = &*elem;
         let outcome = input_elem.focus();
         if let Err(err) = outcome {
             tracing::error!(?err, "Could not update autofocus.");
@@ -26,20 +25,19 @@ fn prepare_autofocus<T>(
 }
 
 // TODO: make this a hook!
-fn use_focus<T>(
-    focus: Signal<bool>,
-    node_ref: NodeRef<T>,
-) where
+fn use_focus<T>(focus: Signal<bool>, node_ref: NodeRef<T>)
+where
     T: ElementType + Clone + 'static,
-    <T as ElementType>::Output: JsCast + Clone + Deref<Target=HtmlElement>,
+    <T as ElementType>::Output: JsCast + Clone + Deref<Target = HtmlElement>,
 {
     Effect::new(move |_prev| {
         let focus = focus.get();
         let elem = node_ref.get();
         if let Some(elem) = elem {
-            let outcome = match focus {
-                true => elem.focus(),
-                false => elem.blur(),
+            let outcome = if focus {
+                elem.focus()
+            } else {
+                elem.blur()
             };
             if let Err(err) = outcome {
                 tracing::error!(?err, "Could not update focus to {}.", focus);
@@ -82,10 +80,13 @@ impl FormInput for TextInputContext {
 
 // TODO: id and class were previously placed on inner input. This is no longer possible with a spread id class.
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn TextInput(
     #[prop(into)] get: Signal<String>,
     #[prop(into, optional)] set: Option<Out<String>>,
-    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] placeholder: Signal<Oco<'static, str>>,
+    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] placeholder: Signal<
+        Oco<'static, str>,
+    >,
     #[prop(into, optional)] append: ViewFn,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
@@ -130,10 +131,13 @@ pub fn TextInput(
 
 // TODO: id and class were previously placed on inner input. This is no longer possible with a spread id class.
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn PasswordInput(
     #[prop(into)] get: Signal<String>,
     #[prop(into, optional)] set: Option<Out<String>>,
-    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] placeholder: Signal<Oco<'static, str>>,
+    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] placeholder: Signal<
+        Oco<'static, str>,
+    >,
     #[prop(optional, into)] append: ViewFn,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
@@ -169,13 +173,16 @@ pub fn PasswordInput(
 }
 
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn NumberInput(
     #[prop(into)] get: Signal<f64>,
     #[prop(into, optional)] set: Option<Out<f64>>,
     #[prop(into, optional)] min: Option<Signal<f64>>,
     #[prop(into, optional)] max: Option<Signal<f64>>,
     #[prop(into, optional, default = Signal::from(0.0))] step: Signal<f64>,
-    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] placeholder: Signal<Oco<'static, str>>,
+    #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] placeholder: Signal<
+        Oco<'static, str>,
+    >,
     #[prop(into, optional)] append: ViewFn,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,

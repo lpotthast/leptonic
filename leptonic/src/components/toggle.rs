@@ -2,9 +2,10 @@ use leptos::prelude::*;
 
 use crate::{components::icon::Icon, prelude::*};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ToggleSize {
     Small,
+    #[default]
     Normal,
     Big,
 }
@@ -25,11 +26,6 @@ impl std::fmt::Display for ToggleSize {
     }
 }
 
-impl Default for ToggleSize {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ToggleIcons {
@@ -80,13 +76,15 @@ pub fn Toggle(
                             let on_icon = icons.on;
                             view! {
                                 <span class="icon-positioner">
-                                    <Icon icon=off_icon attr:style=move || match state.get() {
-                                        true => "display: none",
-                                        false => "display: inherit",
+                                    <Icon icon=off_icon attr:style=move || if state.get() {
+                                        "display: none"
+                                    } else {
+                                        "display: inherit"
                                     } />
-                                    <Icon icon=on_icon attr:style=move || match state.get() {
-                                        true => "display: inherit",
-                                        false => "display: none",
+                                    <Icon icon=on_icon attr:style=move || if state.get() {
+                                        "display: inherit"
+                                    } else {
+                                        "display: none"
                                     } />
                                 </span>
                             }

@@ -18,11 +18,9 @@ pub fn Icon(
     #[prop(into, optional)]
     height: MaybeProp<TextProp>,
 
-    #[prop(optional)]
-    margin: Option<Margin>,
+    #[prop(optional)] margin: Option<Margin>,
 
-    #[prop(into, optional)]
-    aria_label: Option<Oco<'static, str>>,
+    #[prop(into, optional)] aria_label: Option<Oco<'static, str>>,
 ) -> impl IntoView
 where
 {
@@ -30,7 +28,10 @@ where
         let icon = icon.get();
         // TODO (new): Does into_any() do what we want? We deed it as svg() itself is now typed and alters the type whenever attributes are added.
         // TODO (new): We only add an arbitrary attribute here (aria-hidden) to get an `AnyViewWithAttrs`, on which we can conditionally add further attributes ...
-        let mut svg = svg::svg().inner_html(icon.data).into_any().attr("aria-hidden", "false");
+        let mut svg = svg::svg()
+            .inner_html(icon.data)
+            .into_any()
+            .attr("aria-hidden", "false");
         svg = match icon.style {
             Some(s) => svg.attr("style", s),
             None => svg,
@@ -46,14 +47,14 @@ where
         svg = svg.attr(
             "width",
             match (width.get(), icon.width) {
-                (Some(a), _) => Oco::from(a.get()),
+                (Some(a), _) => a.get(),
                 _ => Oco::from("1em"),
             },
         );
         svg = svg.attr(
             "height",
             match (height.get(), icon.height) {
-                (Some(a), _) => Oco::from(a.get()),
+                (Some(a), _) => a.get(),
                 _ => Oco::from("1em"),
             },
         );

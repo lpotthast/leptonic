@@ -4,9 +4,10 @@ use uuid::Uuid;
 
 use crate::components::icon::Icon;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, strum::EnumIter, Default)]
 pub enum ToastVariant {
     Success,
+    #[default]
     Info,
     Warn,
     Error,
@@ -29,11 +30,6 @@ impl std::fmt::Display for ToastVariant {
     }
 }
 
-impl Default for ToastVariant {
-    fn default() -> Self {
-        Self::Info
-    }
-}
 
 #[derive(Clone)]
 pub struct Toast {
@@ -179,6 +175,7 @@ pub enum ToastVerticalPosition {
 }
 
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn Toast(toast: Toast) -> impl IntoView {
     let manually_closable = match toast.timeout {
         ToastTimeout::None => true,
@@ -191,8 +188,8 @@ pub fn Toast(toast: Toast) -> impl IntoView {
             <leptonic-toast-header>
                 { toast.header.run() }
 
-                { match manually_closable {
-                    true => view! {
+                { if manually_closable {
+                    view! {
                         <div>
                             <Icon
                                 attr:class="dismiss"
@@ -200,8 +197,9 @@ pub fn Toast(toast: Toast) -> impl IntoView {
                                 on:click=move |_e| { expect_context::<Toasts>().try_remove(toast.id); }
                             />
                         </div>
-                    }.into_any(),
-                    false => ().into_any(),
+                    }.into_any()
+                } else {
+                    ().into_any()
                 } }
             </leptonic-toast-header>
             <leptonic-toast-message>

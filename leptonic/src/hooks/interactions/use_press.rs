@@ -1,6 +1,6 @@
 use educe::Educe;
 use leptos::ev;
-use leptos::ev::{on, On};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use leptos_use::use_event_listener;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -9,7 +9,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::{
-    current_target_contains_target, pointer_type::PointerType, ElementExt, EventExt,
+    current_target_contains_target, pointer_type::PointerType, ElementExt, EventExt, EventHandler,
     EventModifiers, EventTargetExt, Modifiers,
 };
 
@@ -30,16 +30,16 @@ pub struct PressEvent {
     pub pointer_type: PointerType,
 
     /// The target element of the press event.
-    //pub target: Option<web_sys::EventTarget>,
+    pub target: Option<send_wrapper::SendWrapper<web_sys::EventTarget>>,
 
-    /// Sates which modifier keys were held during the press event.
+    /// States which modifier keys were held during the press event.
     pub modifiers: Modifiers,
 
     /// By default, press events stop propagation to parent elements.
     /// In cases where a handler decides not to handle a specific event,
-    /// it can call `continuePropagation()` to allow a parent to handle it.
+    /// it can call `continue_propagation()` to allow a parent to handle it.
     #[educe(Debug(ignore))]
-    pub continue_propagation: Arc<dyn FnOnce() + Send + Sync + 'static>,
+    pub continue_propagation: Arc<dyn Fn() + Send + Sync + 'static>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -59,17 +59,69 @@ pub struct UsePressInput {
     pub on_press_end: Option<Callback<PressEvent>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UsePressReturn {
-    pub attrs: UsePressAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` for view spreading.
+    pub props: UsePressProps,
     pub is_pressed: Signal<bool>,
+}
+
+/// Props from `use_press` that can be extracted and merged programmatically.
+///
+/// Use [`UsePressProps::into_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
+/// spreading syntax (`<div {..props.into_attrs()}>`) (taking ownership).
+///
+/// Use [`UsePressProps::to_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
+/// spreading syntax (`<div {..props.to_attrs()}>`) (without takin ownership, requiring internal
+/// cloning).
+///
+/// # Example
+///
+/// ```ignore
+/// // Basic usage
+/// let press = use_press(input);
+/// view! { <button {..press.props.into_attrs()}>"Click"</button> }
+///
+/// // Merging multiple press hooks
+/// let press1 = use_press(input1);
+/// let press2 = use_press(input2);
+/// let merged = press1.props.merge(press2.props);
+/// view! { <button {..merged.into_attrs()}>"Both handlers fire"</button> }
+/// ```
+#[derive(Debug, Clone)]
+pub struct UsePressProps {
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_pointerdown: EventHandler<PointerEvent>,
+}
+
+impl UsePressProps {
+    /// Convert to spreadable attributes for Leptos views.
+    #[must_use]
+    pub fn to_attrs(&self) -> UsePressAttrs {
+        (
+            self.on_keydown.to_on(ev::keydown),
+            self.on_click.to_on(ev::click),
+            self.on_pointerdown.to_on(ev::pointerdown),
+        )
+    }
+
+    /// Convert to spreadable attributes for Leptos views.
+    #[must_use]
+    pub fn into_attrs(self) -> UsePressAttrs {
+        (
+            self.on_keydown.into_on(ev::keydown),
+            self.on_click.into_on(ev::click),
+            self.on_pointerdown.into_on(ev::pointerdown),
+        )
+    }
 }
 
 /// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UsePressAttrs = (
-    On<ev::keydown, Box<dyn Fn(KeyboardEvent) + Send + Sync + 'static>>,
-    On<ev::click, Box<dyn Fn(MouseEvent) + Send + Sync + 'static>>,
-    On<ev::pointerdown, Box<dyn Fn(PointerEvent) + Send + Sync + 'static>>,
+    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+    On<ev::click, SharedEventCallback<MouseEvent>>,
+    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
 );
 
 enum EventHandlers {
@@ -113,7 +165,7 @@ impl PressState {
     }
 }
 
-fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn FnOnce() + Send + Sync + 'static>) {
+fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 'static>) {
     let continue_propagation_state = Arc::new(AtomicBool::new(false));
     let state = continue_propagation_state.clone();
     let continue_propagation = Arc::new(move || {
@@ -127,6 +179,10 @@ enum EventRef<'a> {
     Keyboard(&'a KeyboardEvent),
 }
 
+/// # Panics
+///
+/// Panics if the press state is initialized while already active (debug assertion),
+/// or if the current target of the pointer event is not available.
 #[allow(clippy::too_many_lines)]
 pub fn use_press(input: UsePressInput) -> UsePressReturn {
     let (is_pressed, set_is_pressed) = signal(false);
@@ -134,7 +190,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     let state: StoredValue<Option<PressState>, LocalStorage> = StoredValue::new_local(None);
 
     let initialize_press_state = move |e: EventRef<'_>, event_handlers: EventHandlers| {
-        debug_assert_eq!(state.with_value(|s| s.is_none()), true, "Implicit cleanup ist not supported. Forgot to call cleanup() before initializing a new PressState?");
+        debug_assert!(state.with_value(Option::is_none), "Implicit cleanup ist not supported. Forgot to call cleanup() before initializing a new PressState?");
 
         state.set_value(Some(PressState {
             pointer_id: match e {
@@ -167,7 +223,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 let (continue_propagation_state, continue_propagation) = use_continue_propagation();
                 on_press_start.run(PressEvent {
                     pointer_type: s.pointer_type.clone(),
-                    //target: s.target.clone(),
+                    target: s.target.clone().map(send_wrapper::SendWrapper::new),
                     modifiers: match e {
                         EventRef::Pointer(e) => e.modifiers(),
                         EventRef::Keyboard(e) => e.modifiers(),
@@ -192,7 +248,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 let (continue_propagation_state, continue_propagation) = use_continue_propagation();
                 on_press_end.run(PressEvent {
                     pointer_type: s.pointer_type.clone(),
-                    //target: s.target.clone(),
+                    target: s.target.clone().map(send_wrapper::SendWrapper::new),
                     modifiers: match e {
                         EventRef::Pointer(e) => e.modifiers(),
                         EventRef::Keyboard(e) => e.modifiers(),
@@ -211,16 +267,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     };
 
     let trigger_press = move |s: &PressState, e: EventRef<'_>| {
-        debug_assert_eq!(
-            is_pressed.get_untracked(),
-            false,
+        debug_assert!(
+            !is_pressed.get_untracked(),
             "Only call trigger_press after triggering a trigger_press_end!"
         );
 
         let (continue_propagation_state, continue_propagation) = use_continue_propagation();
         input.on_press.run(PressEvent {
             pointer_type: s.pointer_type.clone(),
-            //target: s.target.clone(),
+            target: s.target.clone().map(send_wrapper::SendWrapper::new),
             modifiers: match e {
                 EventRef::Pointer(e) => e.modifiers(),
                 EventRef::Keyboard(e) => e.modifiers(),
@@ -235,7 +290,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     };
 
-    let on_key_up = Box::new(move |e: KeyboardEvent| {
+    let on_key_up = move |e: KeyboardEvent| {
         let handled = state.with_value(move |s| {
             if let Some(s) = s {
                 if !input.disabled.get_untracked()
@@ -244,8 +299,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     let key = e.key();
                     if e.target()
                         .and_then(|t| t.as_element())
-                        .map(|t| should_prevent_default_keyboard(t, key.as_str()))
-                        .unwrap_or(false)
+                        .is_some_and(|t| should_prevent_default_keyboard(t, key.as_str()))
                     {
                         e.prevent_default();
                     }
@@ -268,9 +322,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if handled {
             state.set_value(None);
         }
-    });
+    };
 
-    let on_key_down = Box::new(move |e: KeyboardEvent| {
+    let on_key_down_handler = move |e: KeyboardEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
         {
@@ -282,13 +336,12 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
         if e.target()
             .and_then(|t| t.as_element())
-            .map(|t| should_prevent_default_keyboard(t, &key))
-            .unwrap_or(false)
+            .is_some_and(|t| should_prevent_default_keyboard(t, &key))
         {
             e.prevent_default();
         }
 
-        if state.with_value(|s| s.is_none())
+        if state.with_value(Option::is_none)
             && !input.disabled.get_untracked()
             && is_valid_keyboard_event(&e, e.current_target().unwrap())
         {
@@ -298,7 +351,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     global_on_key_up_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         ev::keyup,
-                        on_key_up.clone(),
+                        on_key_up,
                     )),
                 },
             );
@@ -309,9 +362,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 }
             });
         }
-    });
+    };
 
-    let on_click = Box::new(move |e: MouseEvent| {
+    let on_click_handler = move |e: MouseEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
         {
@@ -325,10 +378,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if !input.allow_propagation {
             e.stop_propagation();
         }
-    });
+    };
 
     // Reset press state.
-    let on_pointer_move = Box::new(move |e: PointerEvent| {
+    let on_pointer_move = move |e: PointerEvent| {
         // Re-emit a "start" event, when we have a state.
         // This means: The user already started an interaction but let the pointer leave the target and let it re-enter.
         state.update_value(|s| {
@@ -339,7 +392,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 let is_over_target = e
                     .current_target()
                     .unwrap()
-                    .is_over(&e, s.target.as_ref().and_then(|t| t.as_element()).unwrap());
+                    .is_over(&e, s.target.as_ref().and_then(crate::utils::EventTargetExt::as_element).unwrap());
                 match (s.is_over_target, is_over_target) {
                     (true, false) => trigger_press_end(s, EventRef::Pointer(&e)),
                     (false, true) => trigger_press_start(s, EventRef::Pointer(&e)),
@@ -348,10 +401,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 s.is_over_target = is_over_target;
             }
         });
-    });
+    };
 
     // Finish a press.
-    let on_pointer_up = Box::new(move |e: PointerEvent| {
+    let on_pointer_up = move |e: PointerEvent| {
         if !e.current_target_contains_target() {
             return;
         }
@@ -369,7 +422,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 let is_over_target = e
                     .current_target()
                     .unwrap()
-                    .is_over(&e, s.target.as_ref().and_then(|t| t.as_element()).unwrap());
+                    .is_over(&e, s.target.as_ref().and_then(crate::utils::EventTargetExt::as_element).unwrap());
 
                 if is_over_target {
                     trigger_press(s, EventRef::Pointer(&e));
@@ -384,10 +437,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             }
         });
         state.set_value(None);
-    });
+    };
 
     // Cancel the ongoing press.
-    let on_pointer_cancel = Box::new(move |e: PointerEvent| {
+    let on_pointer_cancel = move |e: PointerEvent| {
         state.with_value(|s| {
             if let Some(s) = s.as_ref() {
                 trigger_press_end(s, EventRef::Pointer(&e));
@@ -400,10 +453,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             }
         });
         state.set_value(None);
-    });
+    };
 
     // Start a press.
-    let on_pointer_down = Box::new(move |e: PointerEvent| {
+    let on_pointer_down_handler = move |e: PointerEvent| {
         if e.button() != 0 {
             return;
         }
@@ -433,17 +486,17 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     global_on_pointer_move_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         ev::pointermove,
-                        on_pointer_move.clone(),
+                        on_pointer_move,
                     )),
                     global_on_pointer_up_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         ev::pointerup,
-                        on_pointer_up.clone(),
+                        on_pointer_up,
                     )),
                     global_on_pointer_cancel_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         ev::pointercancel,
-                        on_pointer_cancel.clone(),
+                        on_pointer_cancel,
                     )),
                 },
             );
@@ -454,18 +507,14 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 }
             });
         }
-    });
-
-    // TODO: How can we chain multiple event handlers for the same type?
-    // A: Make `On` mutable, allowing repurposing an already stored callback.
-    // B: Do not store `On` types. Only store boxed futures (trivial to chain). Always require `attrs()` when spreading attributes, which packages the handler in On types.
+    };
 
     UsePressReturn {
-        attrs: (
-            on(ev::keydown, on_key_down),
-            on(ev::click, on_click),
-            on(ev::pointerdown, on_pointer_down),
-        ),
+        props: UsePressProps {
+            on_keydown: EventHandler::new(on_key_down_handler),
+            on_click: EventHandler::new(on_click_handler),
+            on_pointerdown: EventHandler::new(on_pointer_down_handler),
+        },
         is_pressed: is_pressed.into(),
     }
 }
@@ -486,10 +535,11 @@ fn should_prevent_default_keyboard(element: web_sys::Element, key: &str) -> bool
     !element.is_anchor_link()
 }
 
-const NON_TEXT_INPUT_TYPES: [&'static str; 9] = [
+const NON_TEXT_INPUT_TYPES: [&str; 9] = [
     "checkbox", "radio", "range", "color", "file", "image", "button", "submit", "reset",
 ];
 
+#[allow(clippy::needless_pass_by_value)]
 fn is_valid_input_key(element: web_sys::HtmlInputElement, key: &str) -> bool {
     // Checkboxes and radio-buttons should only toggle with space, not enter.
     // TODO: Whats with custom implementations for checkboxes and radio buttons??
@@ -503,6 +553,7 @@ fn is_valid_input_key(element: web_sys::HtmlInputElement, key: &str) -> bool {
 }
 
 /// Accessibility for keyboards. Space and Enter only.
+#[allow(clippy::needless_pass_by_value)]
 fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: web_sys::EventTarget) -> bool {
     let key = e.key();
     let resembles_press = match key.as_str() {
@@ -521,14 +572,15 @@ fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: web_sys::EventTarg
             let is_content_editable = false; // TODO: element.isContentEditable
             let is_link = element.is_link();
 
-            !((is_input
-                && !is_valid_input_key(
-                    element.unchecked_into::<web_sys::HtmlInputElement>(),
-                    key.as_str(),
-                ))
-                || is_text_area
-                || is_content_editable)
-                && !(is_link && key.as_str() != "Enter") // Links should only trigger with Enter key
+            // Links should only trigger with Enter key
+            !(is_text_area
+                || is_content_editable
+                || is_input
+                    && !is_valid_input_key(
+                        element.unchecked_into::<web_sys::HtmlInputElement>(),
+                        key.as_str(),
+                    )
+                || is_link && key.as_str() != "Enter")
         }
         None => true,
     }

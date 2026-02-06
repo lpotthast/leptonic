@@ -1,7 +1,10 @@
 use leptos::prelude::*;
 
 use super::form_control::FormInput;
-use crate::{components::{form_control::FormControlContext, icon::Icon}, Out};
+use crate::{
+    components::{form_control::FormControlContext, icon::Icon},
+    Out,
+};
 
 #[derive(Debug, Clone, Copy)]
 pub struct CheckboxContext {
@@ -42,18 +45,19 @@ pub fn Checkbox(
     view! {
         <leptonic-checkbox
             role="checkbox"
-            aria-checked=move || match checked.get() { true => "true", false => "false" }
-            aria-disabled=move || match disabled.get() { true => "true", false => "false" }
+            aria-checked=move || if checked.get() { "true" } else { "false" }
+            aria-disabled=move || if disabled.get() { "true" } else { "false" }
             tabindex="0"
             on:click=move |_e| {
                 if !disabled.get_untracked() {
-                    set_checked.set(!checked.get_untracked())
+                    set_checked.set(!checked.get_untracked());
                 }
             }
         >
-            <Icon icon=checked_icon attr:style=move || match checked.get() {
-                true => "display: inherit",
-                false => "display: none",
+            <Icon icon=checked_icon attr:style=move || if checked.get() {
+                "display: inherit"
+            } else {
+                "display: none"
             } />
         </leptonic-checkbox>
     }

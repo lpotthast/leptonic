@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-use crate::hooks::interactions::use_press::{use_press, PressEvent, UsePressInput, UsePressReturn};
+use crate::hooks::{use_press, PressEvent, UsePressInput, UsePressReturn};
 
 #[component]
 pub fn Pressable(
@@ -9,7 +9,7 @@ pub fn Pressable(
     children: Children,
 ) -> impl IntoView {
     let UsePressReturn {
-        attrs,
+        props,
         is_pressed: _,
     } = use_press(UsePressInput {
         disabled,
@@ -24,7 +24,7 @@ pub fn Pressable(
     view! {
         <div
             style="display: contents"
-            {..attrs}
+            {..props.into_attrs()}
         >
             { children() }
         </div>

@@ -1,3 +1,5 @@
+use std::marker::PhantomData;
+
 use leptos::context::Provider;
 use leptos::html;
 use leptos::portal::Portal;
@@ -7,8 +9,8 @@ use crate::hooks::UseOverlayAttrs;
 use crate::{
     hooks::{
         use_overlay, use_overlay_position, use_overlay_trigger, PlacementX, PlacementY,
-        UseOverlayInput, UseOverlayPositionInput, UseOverlayPositionReturn,
-        UseOverlayReturn, UseOverlayTriggerInput, UseOverlayTriggerReturn,
+        UseOverlayInput, UseOverlayPositionInput, UseOverlayPositionReturn, UseOverlayReturn,
+        UseOverlayTriggerInput, UseOverlayTriggerReturn,
     },
     utils::{aria::AriaHasPopup, locale::WritingDirection},
 };
@@ -27,16 +29,17 @@ pub struct PopoverContext {
 #[component]
 pub fn Popover(#[prop(into)] disabled: Signal<bool>, children: Children) -> impl IntoView {
     let UseOverlayReturn {
-        attrs: overlay_attrs,
+        props: overlay_props,
         id,
         state,
         set_state,
     } = use_overlay(UseOverlayInput { disabled });
 
     let (trigger_el, set_trigger_el) = signal(None);
+    let overlay_attrs = overlay_props.into_attrs();
 
     view! {
-        <Provider value=PopoverContext { id, overlay_attrs, state, set_state, trigger_el, set_trigger_el }>
+        <Provider value=PopoverContext { state, set_state, id, overlay_attrs, trigger_el, set_trigger_el }>
             { children() }
         </Provider>
     }
@@ -50,7 +53,7 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
     ctx.set_trigger_el.set(Some(trigger_el));
 
     let UseOverlayTriggerReturn {
-        attrs: trigger_attrs,
+        props: trigger_props,
     } = use_overlay_trigger(UseOverlayTriggerInput {
         show: ctx.state.into(),
         overlay_id: ctx.id,
@@ -58,7 +61,7 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
     });
 
     view! {
-        <leptonic-popover-trigger {..trigger_attrs} node_ref=trigger_el>
+        <leptonic-popover-trigger {..trigger_props.into_attrs()} node_ref=trigger_el>
             { children() }
         </leptonic-popover-trigger>
     }
@@ -76,21 +79,21 @@ pub fn PopoverContent(
     let overlay_el: NodeRef<html::Custom<&str>> = NodeRef::new();
 
     let UseOverlayPositionReturn {
-        attrs: overlay_pos_attrs,
+        props: overlay_pos_props,
     } = use_overlay_position(UseOverlayPositionInput {
         overlay: overlay_el,
         target: ctx.trigger_el.get_untracked().expect("trigger present"),
         placement_x,
         placement_y,
         writing_direction,
-        phantom_data: Default::default(),
+        phantom_data: PhantomData,
     });
 
     view! {
         <Portal>
         {
             let overlay_attrs = ctx.overlay_attrs.clone();
-            let overlay_pos_attrs = overlay_pos_attrs.clone();
+            let overlay_pos_attrs = overlay_pos_props.to_attrs();
             let children = children.clone();
             let overlay_el = overlay_el;
             view! {

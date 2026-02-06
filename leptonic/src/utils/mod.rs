@@ -2,14 +2,29 @@ use leptos::prelude::document;
 
 pub mod aria;
 pub mod callback;
+pub mod classes;
 pub mod color;
+pub mod element_capture;
+pub mod event_handler;
+pub mod focus;
+pub mod formatters;
+pub mod i18n;
+pub mod live_announcer;
 pub mod locale;
 pub mod math;
+pub mod merge;
 pub mod pointer_type;
 pub mod scroll_behavior;
 pub mod signals;
+pub mod ssr;
+pub mod style;
+pub mod styles;
 pub(crate) mod text_selection;
 pub mod time;
+
+pub use element_capture::{element_capture, ElementCaptureAttr};
+pub use event_handler::EventHandler;
+pub use merge::{MergeWith, MergeWithExt};
 
 pub(crate) enum DomContainer {
     Node(web_sys::Node),
@@ -17,6 +32,7 @@ pub(crate) enum DomContainer {
 }
 
 impl DomContainer {
+    #[allow(clippy::needless_pass_by_value)]
     pub(crate) fn contains(&self, node: web_sys::Node) -> bool {
         match self {
             DomContainer::Node(node) => node.contains(Some(node)),
@@ -44,7 +60,7 @@ impl ElementExt for web_sys::Element {
 
     /// True for any element having `role="link"`.
     fn has_link_role(&self) -> bool {
-        self.get_attribute("role").as_ref().map(|a| a.as_str()) == Some("link")
+        self.get_attribute("role").as_deref() == Some("link")
     }
 
     /// True for any element of type `<a href=[...]>`.
@@ -101,7 +117,7 @@ impl EventTargetExt for web_sys::EventTarget {
     fn get_owner_document(&self) -> web_sys::Document {
         self.as_element()
             .and_then(|el| el.owner_document())
-            .unwrap_or_else(|| document())
+            .unwrap_or_else(document)
     }
 
     fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool {
@@ -171,6 +187,7 @@ impl From<web_sys::DomRect> for RectPrecise {
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy)]
 pub struct Modifiers {
     /// Whether the shift keyboard modifier was held during the event.
@@ -240,6 +257,18 @@ impl EventModifiers for web_sys::PointerEvent {
     }
 }
 
+/// Get the owner document of a node, falling back to the global document.
+/// This is useful for correctly handling elements in iframes or shadow DOM.
+pub fn get_owner_document(node: &web_sys::Node) -> web_sys::Document {
+    node.owner_document().unwrap_or_else(document)
+}
+
+/// Get the owner window of a node via its owner document.
+/// Returns None if the document has no default view.
+pub fn get_owner_window(node: &web_sys::Node) -> Option<web_sys::Window> {
+    node.owner_document()?.default_view()
+}
+
 impl EventExt for web_sys::PointerEvent {
     fn current_target_contains_target(&self) -> bool {
         current_target_contains_target(self.current_target().as_ref(), self.target().as_ref())
@@ -247,13 +276,13 @@ impl EventExt for web_sys::PointerEvent {
     }
 
     fn get_client_interaction_rect(&self) -> RectPrecise {
-        let offset_x = self.width() as f64 / 2.0;
-        let offset_y = self.height() as f64 / 2.0;
+        let offset_x = f64::from(self.width()) / 2.0;
+        let offset_y = f64::from(self.height()) / 2.0;
         RectPrecise {
-            top: self.client_y() as f64 - offset_y,
-            right: self.client_x() as f64 + offset_x,
-            bottom: self.client_y() as f64 + offset_y,
-            left: self.client_x() as f64 - offset_x,
+            top: f64::from(self.client_y()) - offset_y,
+            right: f64::from(self.client_x()) + offset_x,
+            bottom: f64::from(self.client_y()) + offset_y,
+            left: f64::from(self.client_x()) - offset_x,
         }
     }
 }

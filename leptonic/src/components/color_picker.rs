@@ -17,9 +17,7 @@ use leptos::html;
 use leptos::prelude::*;
 
 #[component]
-pub fn ColorPreview(
-    #[prop(into)] rgb: Signal<RGB8>,
-) -> impl IntoView {
+pub fn ColorPreview(#[prop(into)] rgb: Signal<RGB8>) -> impl IntoView {
     let background_color = move || {
         let RGB8 { r, g, b } = rgb.get();
         format!("rgb({r}, {g}, {b})")
@@ -49,7 +47,7 @@ pub fn ColorPalette(
     let background_simple = move || {
         let RGB8 { r, g, b } = rgb_from_hue_only.get();
         formatdoc!(
-            r#"
+            r"
             linear-gradient(to top,
                 rgb(0, 0, 0) 0%,
                 rgba(255, 255, 255, 0) 100%
@@ -59,7 +57,7 @@ pub fn ColorPalette(
                 rgb({r}, {g}, {b}) 100%
             ),
             rgb({r}, {g}, {b})
-        "#
+        "
         )
     };
 
@@ -90,9 +88,8 @@ pub fn ColorPalette(
     // Project the relative cursor position into the sliders value range.
     let projected_value_from_cursor_x =
         Memo::new(move |_| project_into_range(cursor.rel_mouse_pos.get().0, 1.0, 0.0, None));
-    let projected_value_from_cursor_y = Memo::new(move |_| {
-        1.0 - project_into_range(cursor.rel_mouse_pos.get().1, 1.0, 0.0, None)
-    });
+    let projected_value_from_cursor_y =
+        Memo::new(move |_| 1.0 - project_into_range(cursor.rel_mouse_pos.get().1, 1.0, 0.0, None));
 
     // While this knob is "listening", propagate the projected values.
     Effect::new(move |_| {

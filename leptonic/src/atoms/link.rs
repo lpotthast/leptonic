@@ -1,9 +1,7 @@
 use leptos::prelude::*;
 
 use crate::{
-    hooks::{
-        anchor_link::Href, use_anchor_link, UseAnchorLinkInput, UseAnchorLinkReturn, UsePressInput,
-    },
+    hooks::{use_anchor_link, Href, UseAnchorLinkInput, UseAnchorLinkReturn, UsePressInput},
     ScrollBehavior,
 };
 
@@ -29,8 +27,9 @@ pub fn AnchorLink(
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
     let UseAnchorLinkReturn {
-        attrs,
+        props,
         is_pressed: _,
+        is_focus_visible: _,
     } = use_anchor_link(UseAnchorLinkInput {
         href: Href::from_str(href).expect("valid href"),
         scroll_behavior: scroll_behavior.or(Some(ScrollBehavior::default())),
@@ -49,10 +48,10 @@ pub fn AnchorLink(
             on_press_end: None,
         },
     });
+    let attrs = props.into_attrs();
 
     view! {
         <a
-            class="leptonic-anchor-link"
             target="_self"
             {..attrs}
         >

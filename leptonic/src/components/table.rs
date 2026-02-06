@@ -3,9 +3,7 @@ use leptos::prelude::*;
 use crate::hooks::{use_press, PressEvent, UsePressInput, UsePressReturn};
 
 #[component]
-pub fn TableContainer(
-    children: Children,
-) -> impl IntoView {
+pub fn TableContainer(children: Children) -> impl IntoView {
     view! {
         <leptonic-table-container>
             {children()}
@@ -69,7 +67,7 @@ pub fn TableHeaderCell(
     #[prop(optional, into)] on_press: Option<Callback<PressEvent>>,
     children: Children,
 ) -> impl IntoView {
-    let UsePressReturn { attrs, .. } = use_press(UsePressInput {
+    let UsePressReturn { props, .. } = use_press(UsePressInput {
         disabled: false.into(),
         force_prevent_default: false,
         allow_propagation: false,
@@ -84,7 +82,7 @@ pub fn TableHeaderCell(
     });
 
     view! {
-        <leptonic-table-header-cell class:min-width=min_width.unwrap_or(false) {..attrs}>
+        <leptonic-table-header-cell class:min-width=min_width.unwrap_or(false) {..props.into_attrs()}>
             {children()}
         </leptonic-table-header-cell>
     }

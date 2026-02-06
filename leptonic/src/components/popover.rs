@@ -111,48 +111,45 @@ pub fn Popover(
 
     let pop_bounds_read_only: UseElementBoundingReturnReadOnly = pop_bounds.into();
 
-    let pop_style: Signal<String> = Signal::derive(move || match show.get() {
-        true => {
-            let left = match position_x {
-                Some(pos_x) => pos_x.run(pop_bounds_read_only),
-                None => {
+    let pop_style: Signal<String> = Signal::derive(move || if show.get() {
+        {
+            let left = if let Some(pos_x) = position_x {
+                pos_x.run(pop_bounds_read_only)
+            } else {
                     let x = match align_x {
-                        PopoverAlignX::Left => el_bounds.x.get(),
                         PopoverAlignX::Center => {
                             el_bounds.x.get() + (el_bounds.width.get() / 2.0)
                                 - (pop_bounds_read_only.width.get() / 2.0)
                         }
-                        PopoverAlignX::Right => el_bounds.x.get(),
+                        PopoverAlignX::Left | PopoverAlignX::Right => el_bounds.x.get(),
                     };
 
                     match align_x {
-                        PopoverAlignX::Left => format!("calc({}px - {})", x, margin),
-                        PopoverAlignX::Center => format!("{}px", x),
-                        PopoverAlignX::Right => format!("calc({}px + {})", x, margin),
+                        PopoverAlignX::Left => format!("calc({x}px - {margin})"),
+                        PopoverAlignX::Center => format!("{x}px"),
+                        PopoverAlignX::Right => format!("calc({x}px + {margin})"),
                     }
-                }
             };
 
-            let top = match position_y {
-                Some(pos_y) => pos_y.run(pop_bounds_read_only),
-                None => {
+            let top = if let Some(pos_y) = position_y {
+                pos_y.run(pop_bounds_read_only)
+            } else {
                     let y = match align_y {
                         PopoverAlignY::Top => el_bounds.y.get() - pop_bounds_read_only.height.get(),
-                        PopoverAlignY::Center => el_bounds.y.get(),
-                        PopoverAlignY::Bottom => el_bounds.y.get(),
+                        PopoverAlignY::Center | PopoverAlignY::Bottom => el_bounds.y.get(),
                     };
 
                     match align_y {
-                        PopoverAlignY::Top => format!("calc({}px - {})", y, margin),
-                        PopoverAlignY::Center => format!("{}px", y),
-                        PopoverAlignY::Bottom => format!("calc({}px + {})", y, margin),
+                        PopoverAlignY::Top => format!("calc({y}px - {margin})"),
+                        PopoverAlignY::Center => format!("{y}px"),
+                        PopoverAlignY::Bottom => format!("calc({y}px + {margin})"),
                     }
-                }
             };
 
-            format!("left: {}; top: {};", left, top)
+            format!("left: {left}; top: {top};")
         }
-        false => String::new(),
+    } else {
+        String::new()
     });
 
     let key = Uuid::now_v7();
@@ -161,7 +158,7 @@ pub fn Popover(
         key,
         children: Arc::new(move || {
             let v = view! {
-                <div class="leptonic-popover" node_ref=pop_el id=key.to_string() style=pop_style data-active=move || match show.get() { true => "true", false => "false" }> // id=id class=class style=style
+                <div class="leptonic-popover" node_ref=pop_el id=key.to_string() style=pop_style data-active=move || if show.get() { "true" } else { "false" }> // id=id class=class style=style
                     { (popover_content.children)() }
                 </div>
             };

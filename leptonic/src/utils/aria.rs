@@ -139,9 +139,10 @@ impl FromStr for AriaExpanded {
 
 impl From<bool> for AriaExpanded {
     fn from(value: bool) -> Self {
-        match value {
-            true => Self::True,
-            false => Self::False,
+        if value {
+            Self::True
+        } else {
+            Self::False
         }
     }
 }

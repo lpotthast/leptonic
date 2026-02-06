@@ -39,7 +39,7 @@ pub fn main() -> Result<()> {
         .context("Expected 'target_dir' to have a parent.")?
         .to_owned();
 
-    log(Level::Debug, format!("root_dir is: {root_dir:?}"));
+    log(Level::Debug, format!("root_dir is: {}", root_dir.display()));
 
     let cargo_lock_path = root_dir.join("Cargo.lock");
     let cargo_toml_path = root_dir.join("Cargo.toml");
@@ -101,8 +101,8 @@ fn copy_tiptap_files(js_dir: &PathBuf) {
 
 /// Parse the Cargo.toml file! Abort if the Cargo.toml has no config.
 fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMetadata>> {
-    let cargo_toml: Manifest<Value> =
-        Manifest::from_path_with_metadata(cargo_toml_path).with_context(|| {
+    let cargo_toml: Manifest<Value> = Manifest::from_path_with_metadata(cargo_toml_path)
+        .with_context(|| {
             format!(
                 "Could not parse Cargo.toml at '{}'",
                 cargo_toml_path.display()
@@ -121,22 +121,16 @@ fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMe
         .or_else(|| cargo_toml.workspace.as_ref()?.metadata.as_ref())
         .and_then(|metadata| metadata.get("leptonic"));
 
-    let meta = match leptonic_metadata {
-        Some(metadata) => {
-            // Found "leptonic" in either package or workspace metadata, proceed
-            log(
-                Level::Info,
-                format!(
-                    "Found 'leptonic' in metadata of package or workspace: {:?}",
-                    metadata
-                ),
-            );
-            metadata
-        }
-        None => {
-            log(Level::Debug, "Aborting. Cargo.toml in root dir does not contain a package or workspace or is missing the necessary metadata.");
-            return Ok(None);
-        }
+    let meta = if let Some(metadata) = leptonic_metadata {
+        // Found "leptonic" in either package or workspace metadata, proceed
+        log(
+            Level::Info,
+            format!("Found 'leptonic' in metadata of package or workspace: {metadata:?}",),
+        );
+        metadata
+    } else {
+        log(Level::Debug, "Aborting. Cargo.toml in root dir does not contain a package or workspace or is missing the necessary metadata.");
+        return Ok(None);
     };
 
     let table = meta
@@ -174,7 +168,7 @@ fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMe
 
 fn get_out_dir() -> Result<PathBuf> {
     let out_dir = PathBuf::from(std::env::var("OUT_DIR")?);
-    log(Level::Debug, format!("out_dir is: {out_dir:?}"));
+    log(Level::Debug, format!("out_dir is: {:?}", out_dir.display()));
     Ok(out_dir)
 }
 

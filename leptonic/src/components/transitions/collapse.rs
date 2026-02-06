@@ -1,16 +1,11 @@
-use leptos::prelude::*;
 use leptos::html::Div;
+use leptos::prelude::*;
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum CollapseAxis {
     X,
+    #[default]
     Y,
-}
-
-impl Default for CollapseAxis {
-    fn default() -> Self {
-        Self::Y
-    }
 }
 
 #[component]
@@ -25,11 +20,10 @@ pub fn Collapse(
         let show = show.get();
         let el_axis_dimension = content
             .get()
-            .map(|el| match axis {
+            .map_or(0, |el| match axis {
                 CollapseAxis::X => el.scroll_width(),
                 CollapseAxis::Y => el.scroll_height(),
-            })
-            .unwrap_or(0);
+            });
         match axis {
             CollapseAxis::X => format!(
                 "min-width: 0px; width: {}px",

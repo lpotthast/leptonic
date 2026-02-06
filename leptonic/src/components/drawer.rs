@@ -34,14 +34,16 @@ pub fn Drawer(
 ) -> impl IntoView {
     let memoized_shown = Memo::new(move |_| shown.get());
 
-    let (anim_state, set_anim_state) = signal(match memoized_shown.get_untracked() {
-        true => DrawerAnimationState::Shown,
-        false => DrawerAnimationState::Hidden,
+    let (anim_state, set_anim_state) = signal(if memoized_shown.get_untracked() {
+        DrawerAnimationState::Shown
+    } else {
+        DrawerAnimationState::Hidden
     });
 
-    let target_state = Signal::derive(move || match memoized_shown.get() {
-        true => DrawerAnimationState::Shown,
-        false => DrawerAnimationState::Hidden,
+    let target_state = Signal::derive(move || if memoized_shown.get() {
+        DrawerAnimationState::Shown
+    } else {
+        DrawerAnimationState::Hidden
     });
 
     let Pausable {

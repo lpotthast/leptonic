@@ -93,12 +93,13 @@ fn create_marks(
                     marks_at.push(Mark {
                         percentage: crate::utils::math::percentage_in_range(min, max, current),
                         in_range: in_range.run(current),
-                        name: match create_names {
-                            true => Some(Cow::Owned(match &value_display {
+                        name: if create_names {
+                            Some(Cow::Owned(match &value_display {
                                 Some(callback) => callback.run(current),
                                 None => format!("{current}"),
-                            })),
-                            false => None,
+                            }))
+                        } else {
+                            None
                         },
                     });
                     if max > min {
@@ -107,7 +108,7 @@ fn create_marks(
                         }
                     } else if current >= max - rounding_error_offset {
                         current -= step * step_multiplier;
-                    };
+                    }
                 }
                 marks_at
             }
@@ -219,8 +220,7 @@ impl SliderPopover {
                     Signal::derive(move || knob_is_hovered.get() || listening.get())
                 }
                 (true, false) => {
-                    let knob_is_hovered = use_element_hover(knob_el);
-                    knob_is_hovered
+                    use_element_hover(knob_el)
                 }
                 (false, true) => knob.listening.into(),
                 (false, false) => Signal::from(false),
@@ -289,9 +289,10 @@ pub fn Slider(
         max,
         step,
         range,
-        Callback::new(move |v| match max > min {
-            true => Signal::derive(move || v <= value.get()),
-            false => Signal::derive(move || v >= value.get()),
+        Callback::new(move |v| if max > min {
+            Signal::derive(move || v <= value.get())
+        } else {
+            Signal::derive(move || v >= value.get())
         }),
         marks,
         value_display,
@@ -452,9 +453,10 @@ pub fn RangeSlider(
         max,
         step,
         range,
-        Callback::new(move |v| match max > min {
-            true => Signal::derive(move || v >= value_a.get() && v <= value_b.get()),
-            false => Signal::derive(move || v <= value_a.get() && v >= value_b.get()),
+        Callback::new(move |v| if max > min {
+            Signal::derive(move || v >= value_a.get() && v <= value_b.get())
+        } else {
+            Signal::derive(move || v <= value_a.get() && v >= value_b.get())
         }),
         marks,
         value_display,

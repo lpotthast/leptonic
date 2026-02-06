@@ -4,12 +4,10 @@ use leptos::prelude::*;
 use leptos_router::components::ToHref;
 
 use crate::atoms::button::LinkTarget;
+use crate::utils::classes::Classes;
 use crate::{
     atoms,
-    hooks::{
-        interactions::use_hover::{HoverEndEvent, HoverStartEvent},
-        interactions::use_press::PressEvent,
-    },
+    hooks::{HoverEndEvent, HoverStartEvent, PressEvent},
     utils::aria::{AriaExpanded, AriaHasPopup},
 };
 
@@ -100,6 +98,7 @@ pub fn Button(
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: Signal<AriaExpanded>,
+    #[prop(into, optional)] classes: Classes,
     children: Children,
 ) -> impl IntoView {
     view! {
@@ -108,6 +107,7 @@ pub fn Button(
             disabled=disabled
             aria_haspopup=aria_haspopup
             aria_expanded=aria_expanded
+            classes=classes.add("leptonic-btn")
             attr:data-variant=move || variant.get().as_str()
             attr:data-color=move || color.get().as_str()
             attr:data-size=move || size.get().as_str()
@@ -137,6 +137,7 @@ pub fn ButtonWrapper(children: Children) -> impl IntoView {
 
 #[component]
 #[allow(clippy::needless_pass_by_value)] // title: Option<AttributeValue>
+#[allow(unused_variables)] // `active` is a planned prop not yet used
 pub fn LinkButton<H>(
     href: H,
     #[prop(into, optional)] target: Option<LinkTarget>,
@@ -149,6 +150,7 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] active: Option<Signal<bool>>, // TODO: Use
     #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
     #[prop(into, optional)] aria_expanded: Option<Signal<AriaExpanded>>,
+    #[prop(into, optional)] classes: Classes,
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
@@ -168,6 +170,7 @@ where
         children,
         on_hover_start,
         on_hover_end,
+        classes: classes.add("leptonic-btn"),
     })
     .into_view()
     .attr("data-variant", move || {

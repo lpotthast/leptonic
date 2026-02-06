@@ -26,7 +26,7 @@ pub struct UseCalendarReturn {
 impl UseCalendarReturn {
     pub fn select_previous_month(&self) {
         self.set_staging
-            .update(move |staging| *staging = start_of_previous_month(*staging))
+            .update(move |staging| *staging = start_of_previous_month(*staging));
     }
 
     pub fn select_next_month(&self) {
@@ -34,6 +34,9 @@ impl UseCalendarReturn {
             .update(move |staging| *staging = start_of_next_month(*staging));
     }
 
+    /// # Panics
+    ///
+    /// Panics if the year replacement fails unexpectedly.
     pub fn select_previous_year(&self) {
         let current = self.staging.get();
         let new_year = current.year() - 1;
@@ -42,6 +45,9 @@ impl UseCalendarReturn {
         self.years_start.set(new_year - 5);
     }
 
+    /// # Panics
+    ///
+    /// Panics if the year replacement fails unexpectedly.
     pub fn select_next_year(&self) {
         let current = self.staging.get();
         let new_year = current.year() + 1;
@@ -72,11 +78,18 @@ impl UseCalendarReturn {
         });
     }
 
+    /// # Panics
+    ///
+    /// Panics if the year replacement on the staging date fails.
     pub fn select_year(&self, year: Year) {
         self.set_staging
             .update(|staging| *staging = staging.save_replace_year(year.number).unwrap());
     }
 
+    /// # Panics
+    ///
+    /// Panics if the month index is invalid or the month replacement on the staging date fails.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn select_month(&self, month: Month) {
         self.set_staging.update(|staging| {
             *staging = staging
@@ -146,10 +159,11 @@ pub fn create_years(
     let now = time::OffsetDateTime::now_utc();
     let this_year = now.year();
     let staging_year = staging.year();
-    let min_year = min.map(|it| it.year()).unwrap_or(i32::MIN);
-    let max_year = max.map(|it| it.year()).unwrap_or(i32::MAX);
+    let min_year = min.map_or(i32::MIN, |it| it.year());
+    let max_year = max.map_or(i32::MAX, |it| it.year());
 
     for i in 0..amount {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         let year_number = starting_year + i as i32;
         years.push(Year {
             number: year_number,
@@ -161,6 +175,9 @@ pub fn create_years(
     years
 }
 
+/// # Panics
+///
+/// Panics if a month index cannot be converted or if date replacement fails.
 pub fn create_months(
     staging: time::OffsetDateTime,
     min: Option<&time::OffsetDateTime>,
@@ -190,6 +207,9 @@ pub fn create_months(
     months
 }
 
+/// # Panics
+///
+/// Panics if a day replacement on a date fails.
 pub fn create_weeks(
     staging: &time::OffsetDateTime,
     min: Option<&time::OffsetDateTime>,

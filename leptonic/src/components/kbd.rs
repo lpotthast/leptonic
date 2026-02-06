@@ -42,9 +42,10 @@ pub fn KbdShortcut<const N: usize>(
         <KbdShortcutRoot>
             { keys.into_iter().enumerate().map(|(i, key)| view! {
                 <KbdKey key=key/>
-                { match i == N - 1 {
-                    true => ().into_any(),
-                    false => view! { <KbdConcatenate with=concatenate_with.clone()/>}.into_any(),
+                { if i == N - 1 {
+                    ().into_any()
+                } else {
+                    view! { <KbdConcatenate with=concatenate_with.clone()/>}.into_any()
                 }}
             }).collect_view() }
         </KbdShortcutRoot>

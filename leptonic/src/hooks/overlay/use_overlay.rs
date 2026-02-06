@@ -11,7 +11,8 @@ pub struct UseOverlayInput {
 
 #[derive(Debug)]
 pub struct UseOverlayReturn {
-    pub attrs: UseOverlayAttrs,
+    /// Props for the overlay element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseOverlayProps,
 
     pub id: Oco<'static, str>,
 
@@ -20,20 +21,36 @@ pub struct UseOverlayReturn {
     pub set_state: WriteSignal<bool>,
 }
 
-/// These attributes must be spread onto the target element: `<foo {..attrs} />`
-pub type UseOverlayAttrs = (
-    Attr<attr::Id, String>,
-);
+/// Props from `use_overlay` that can be converted to spreadable attributes.
+#[derive(Debug, Clone)]
+pub struct UseOverlayProps {
+    pub id: String,
+}
 
-pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
+impl UseOverlayProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseOverlayAttrs {
+        (Attr(attr::Id, self.id.clone()),)
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseOverlayAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
+pub type UseOverlayAttrs = (Attr<attr::Id, String>,);
+
+pub fn use_overlay(_input: UseOverlayInput) -> UseOverlayReturn {
     let (state, set_state) = signal(false);
-    
+
     let id = uuid::Uuid::new_v4();
 
     UseOverlayReturn {
-        attrs: (
-            Attr(attr::Id, id.to_string()),
-        ),
+        props: UseOverlayProps { id: id.to_string() },
         id: Oco::Owned(id.to_string()),
         state,
         set_state,

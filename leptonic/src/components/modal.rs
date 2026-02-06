@@ -1,6 +1,7 @@
 use leptos::prelude::*;
 use uuid::Uuid;
 
+use crate::utils::classes::Classes;
 use crate::{
     hooks::{use_press, use_prevent_scroll, UsePressInput, UsePressReturn, UsePreventScrollInput},
     prelude::GlobalKeyboardEvent,
@@ -51,25 +52,25 @@ impl Modals {
 pub fn ModalRoot(children: Children) -> impl IntoView {
     let shown_modals = RwSignal::new(Vec::new());
     let ctx = Modals { shown_modals };
-    provide_context::<Modals>(ctx.clone());
+    provide_context::<Modals>(ctx);
 
     let has_modals = Memo::new(move |_| shown_modals.with(|modals| !modals.is_empty()));
 
     let disable_prevent_scroll = Signal::derive(move || !has_modals.get());
 
     let _ = use_prevent_scroll(UsePreventScrollInput {
-        disabled: disable_prevent_scroll.into(),
+        disabled: disable_prevent_scroll,
     });
 
     let UsePressReturn {
-        attrs,
+        props,
         is_pressed: _,
     } = use_press(UsePressInput {
         disabled: false.into(),
         force_prevent_default: true,
         allow_propagation: false,
         on_press: Callback::new(move |_| {
-            if let Some(modal_on_top) = shown_modals.get_untracked().into_iter().rev().next() {
+            if let Some(modal_on_top) = shown_modals.get_untracked().into_iter().next_back() {
                 if let Some(on_backdrop_interaction) = modal_on_top.on_backdrop_interaction {
                     on_backdrop_interaction.run(());
                 }
@@ -83,8 +84,8 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     view! {
         { children() }
 
-        <leptonic-modal-host data-has-modals=move || match has_modals.get() { true => "true", false => "false" }>
-            <leptonic-modal-backdrop {..attrs}/>
+        <leptonic-modal-host data-has-modals=move || if has_modals.get() { "true" } else { "false" }>
+            <leptonic-modal-backdrop {..props.into_attrs()}/>
 
             <leptonic-modals>
                 <For
@@ -98,10 +99,11 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
 }
 
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn Modal(
     #[prop(into)] show_when: Signal<bool>,
     #[prop(into, optional)] id: Option<String>,
-    #[prop(into, optional)] class: Option<String>,
+    #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] on_escape: Option<Callback<(), ()>>,
     #[prop(into, optional)] on_backdrop_interaction: Option<Callback<(), ()>>,
     children: ChildrenFn,
@@ -123,11 +125,12 @@ pub fn Modal(
     let should_be_shown = Memo::new(move |_| show_when.get());
 
     let id = StoredValue::new(id.unwrap_or_else(|| key.to_string()));
-    let class = StoredValue::new(class);
+    let classes = StoredValue::new(classes.clone());
 
     let modal_renderer = ViewFn::from(move || {
+        let classes = classes.get_value();
         view! {
-            <leptonic-modal id=id.get_value() class=class.get_value()>
+            <leptonic-modal id=id.get_value() class=classes>
                 { children() }
             </leptonic-modal>
         }
@@ -148,8 +151,6 @@ pub fn Modal(
     on_cleanup(move || {
         ctx.hide(key);
     });
-
-    ()
 }
 
 #[component]

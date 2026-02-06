@@ -1,58 +1,100 @@
-pub mod anchor_link;
-pub mod button;
-pub mod calendar;
-pub mod focus;
-pub mod interactions;
-pub mod menu;
-pub mod overlay;
-pub mod popover;
-pub mod tooltip;
+// =============================================================================
+// GLOBAL REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// The following deviations apply to all hooks in this module:
+//
+// ## DIFFERENT BEHAVIOR
+//
+// - Attribute merging (`mergeProps` equivalent)
+//   Rationale: React-aria provides a generic `mergeProps` function that merges
+//   two props objects at runtime by dynamically iterating over object keys.
+//   In Rust, this is not possible: *Attrs types are defined as tuples with
+//   statically known sizes. There is no way to combine two arbitrarily sized
+//   tuples at runtime and return a potentially differently sized tuple.
+//
+//   Leptonic uses explicit `merge_with_*` methods on *Return types instead of
+//   a generic merge function. These methods have full compile-time knowledge
+//   of both hook returns and can produce a correctly-typed merged result.
+//
+//   Example:
+//   ```rust
+//   let button = use_button(...);
+//   let menu_trigger = use_menu_trigger(...);
+//   let merged = menu_trigger.merge_with_button(button);
+//   view! { <button {..merged.attrs}>"Actions"</button> }
+//   ```
+//
+//   React-aria: `mergeProps(buttonProps, menuTriggerProps)` iterates over
+//   object keys at runtime, chaining handlers and merging attributes.
+//
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+//
+// - Element reference handling
+//   Rationale: All hooks use `IntoElementMaybeSignal` pattern instead of React
+//   refs. This integrates with leptos_use and handles Send+Sync requirements.
+//   React-aria: Uses React's useRef with RefObject<HTMLElement>.
+//
+// - Callback types
+//   Rationale: Uses `Callback<T>` from Leptos instead of React event handlers.
+//   React-aria: Uses React's (event: E) => void function signatures.
+//
+// =============================================================================
 
-pub use anchor_link::use_anchor_link;
-pub use anchor_link::UseAnchorLinkInput;
-pub use anchor_link::UseAnchorLinkAttrs;
-pub use anchor_link::UseAnchorLinkReturn;
-pub use button::use_button;
-pub use button::UseButtonInput;
-pub use button::UseButtonAttrs;
-pub use button::UseButtonReturn;
-pub use focus::use_focus::use_focus;
-pub use focus::use_focus::UseFocusInput;
-pub use focus::use_focus::UseFocusAttrs;
-pub use focus::use_focus::UseFocusReturn;
-pub use interactions::use_hover::use_hover;
-pub use interactions::use_hover::HoverEndEvent;
-pub use interactions::use_hover::HoverStartEvent;
-pub use interactions::use_hover::UseHoverInput;
-pub use interactions::use_hover::UseHoverAttrs;
-pub use interactions::use_hover::UseHoverReturn;
-pub use interactions::use_move::use_move;
-pub use interactions::use_move::MoveEndEvent;
-pub use interactions::use_move::MoveEvent;
-pub use interactions::use_move::MoveStartEvent;
-pub use interactions::use_move::UseMoveInput;
-pub use interactions::use_move::UseMoveAttrs;
-pub use interactions::use_move::UseMoveReturn;
-pub use interactions::use_press::use_press;
-pub use interactions::use_press::PressEvent;
-pub use interactions::use_press::UsePressInput;
-pub use interactions::use_press::UsePressAttrs;
-pub use interactions::use_press::UsePressReturn;
-pub use interactions::use_prevent_scroll::use_prevent_scroll;
-pub use interactions::use_prevent_scroll::UsePreventScrollInput;
-pub use interactions::use_prevent_scroll::UsePreventScrollAttrs;
-pub use interactions::use_prevent_scroll::UsePreventScrollReturn;
-pub use overlay::use_overlay::use_overlay;
-pub use overlay::use_overlay::UseOverlayInput;
-pub use overlay::use_overlay::UseOverlayAttrs;
-pub use overlay::use_overlay::UseOverlayReturn;
-pub use overlay::use_overlay_position::use_overlay_position;
-pub use overlay::use_overlay_position::PlacementX;
-pub use overlay::use_overlay_position::PlacementY;
-pub use overlay::use_overlay_position::UseOverlayPositionInput;
-pub use overlay::use_overlay_position::UseOverlayPositionAttrs;
-pub use overlay::use_overlay_position::UseOverlayPositionReturn;
-pub use overlay::use_overlay_trigger::use_overlay_trigger;
-pub use overlay::use_overlay_trigger::UseOverlayTriggerInput;
-pub use overlay::use_overlay_trigger::UseOverlayTriggerAttrs;
-pub use overlay::use_overlay_trigger::UseOverlayTriggerReturn;
+mod anchor_link;
+mod breadcrumbs;
+mod button;
+mod calendar;
+mod combobox;
+mod datepicker;
+mod disclosure;
+mod dnd;
+mod focus;
+mod form;
+mod grid;
+mod interactions;
+mod link;
+mod listbox;
+mod menu;
+mod merged;
+mod meter;
+mod overlay;
+mod progress;
+mod select;
+mod selection;
+mod separator;
+mod table;
+mod tabs;
+mod tag;
+mod toolbar;
+mod tooltip;
+mod tree;
+
+pub use anchor_link::*;
+pub use breadcrumbs::*;
+pub use button::*;
+pub use calendar::*;
+pub use combobox::*;
+pub use datepicker::*;
+pub use disclosure::*;
+pub use dnd::*;
+pub use focus::*;
+pub use form::*;
+pub use grid::*;
+pub use interactions::*;
+pub use link::*;
+pub use listbox::*;
+pub use menu::*;
+pub use merged::*;
+pub use meter::*;
+pub use overlay::*;
+pub use progress::*;
+pub use select::*;
+pub use selection::*;
+pub use separator::*;
+pub use table::*;
+pub use tabs::*;
+pub use tag::*;
+pub use toolbar::*;
+pub use tooltip::*;
+pub use tree::*;

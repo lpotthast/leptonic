@@ -9,6 +9,7 @@ use crate::{
 };
 
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn DateTimeInput(
     #[prop(into, optional, default = Signal::from(Oco::Borrowed("")))] label: Signal<
         Oco<'static, str>,
@@ -30,9 +31,10 @@ pub fn DateTimeInput(
 ) -> impl IntoView {
     let id = id.map(Oco::into_owned);
 
-    let class = class
-        .map(|it| Oco::from(format!("leptonic-input datetime-selected {it}")))
-        .unwrap_or_else(|| Oco::from("leptonic-input datetime-selected "));
+    let class = class.map_or_else(
+        || Oco::from("leptonic-input datetime-selected "),
+        |it| Oco::from(format!("leptonic-input datetime-selected {it}")),
+    );
 
     let style = margin.map(|it| format!("--margin: {it}"));
 

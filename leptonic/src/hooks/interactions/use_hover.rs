@@ -1,10 +1,10 @@
 use leptos::ev;
-use leptos::ev::{on, On};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use web_sys::PointerEvent;
 
-use crate::utils::{pointer_type::PointerType, EventExt};
+use crate::utils::{pointer_type::PointerType, EventExt, EventHandler};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useHover.ts
 
@@ -36,18 +36,53 @@ pub struct UseHoverInput {
     pub on_hover_end: Option<Callback<HoverEndEvent>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UseHoverReturn {
-    /// Properties which must be spread on an element.
-    pub attrs: UseHoverAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseHoverProps,
 
     /// Whether the element is currently hovered.
     pub is_hovered: Signal<bool>,
 }
 
+/// Props from `use_hover` that can be extracted and merged programmatically.
+///
+/// Use [`UseHoverProps::into_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
+/// spreading syntax (`<div {..props.into_attrs()}>`) (taking ownership).
+///
+/// Use [`UseHoverProps::to_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
+/// spreading syntax (`<div {..props.to_attrs()}>`) (without taking ownership, requiring internal
+/// cloning).
+#[derive(Debug, Clone)]
+pub struct UseHoverProps {
+    pub on_pointerenter: EventHandler<PointerEvent>,
+    pub on_pointerleave: EventHandler<PointerEvent>,
+}
+
+impl UseHoverProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseHoverAttrs {
+        (
+            self.on_pointerenter.to_on(ev::pointerenter),
+            self.on_pointerleave.to_on(ev::pointerleave),
+        )
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseHoverAttrs {
+        (
+            self.on_pointerenter.into_on(ev::pointerenter),
+            self.on_pointerleave.into_on(ev::pointerleave),
+        )
+    }
+}
+
+/// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UseHoverAttrs = (
-    On<ev::pointerenter, Box<dyn Fn(PointerEvent) + Send + Sync + 'static>>,
-    On<ev::pointerleave, Box<dyn Fn(PointerEvent) + Send + Sync + 'static>>,
+    On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
+    On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
 );
 
 #[derive(Debug, Clone)]
@@ -55,6 +90,9 @@ struct HoverState {
     pointer_type: PointerType,
 }
 
+/// # Panics
+///
+/// Panics if the hover state is expected to be present but is not.
 pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     let state = StoredValue::new(Option::<HoverState>::None);
     let (is_hovered, set_is_hovered) = signal(false);
@@ -72,7 +110,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             if let Some(on_hover_start) = input.on_hover_start {
                 on_hover_start.run(HoverStartEvent {
                     pointer_type: pointer_type.clone(),
-                    current_target: current_target.map(|it| SendWrapper::new(it)),
+                    current_target: current_target.map(SendWrapper::new),
                 });
             }
 
@@ -89,7 +127,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         if let Some(on_hover_end) = input.on_hover_end {
             on_hover_end.run(HoverEndEvent {
                 pointer_type: s.pointer_type,
-                current_target: current_target.map(|it| SendWrapper::new(it)),
+                current_target: current_target.map(SendWrapper::new),
             });
         }
 
@@ -97,24 +135,24 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         state.set_value(None);
     };
 
-    let on_pointer_enter = Box::new(move |e: PointerEvent| {
+    let on_pointer_enter = move |e: PointerEvent| {
         if input.disabled.get_untracked() {
             return;
         }
 
         trigger_hover_start(PointerType::from(e.pointer_type()), e.current_target());
-    });
+    };
 
-    let on_pointer_leave = Box::new(move |e: PointerEvent| {
+    let on_pointer_leave = move |e: PointerEvent| {
         if input.disabled.get_untracked()
-            || state.with_value(|s| s.is_none())
+            || state.with_value(Option::is_none)
             || !e.current_target_contains_target()
         {
             return;
         }
 
         trigger_hover_end(e.current_target());
-    });
+    };
 
     let cancel_hover_when_disabled = Effect::new(move |_| {
         if input.disabled.get() {
@@ -129,10 +167,10 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     });
 
     UseHoverReturn {
-        attrs: (
-            on(ev::pointerenter, on_pointer_enter),
-            on(ev::pointerleave, on_pointer_leave),
-        ),
+        props: UseHoverProps {
+            on_pointerenter: EventHandler::new(on_pointer_enter),
+            on_pointerleave: EventHandler::new(on_pointer_leave),
+        },
         is_hovered: is_hovered.into(),
     }
 }

@@ -50,17 +50,12 @@ pub struct AlertContent {
     pub children: Children,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum AlertIconSlot {
     None,
+    #[default]
     Prepend,
     Append,
-}
-
-impl Default for AlertIconSlot {
-    fn default() -> Self {
-        Self::Prepend
-    }
 }
 
 // TODO (new): Is the usage of into_any() ok? Should we do this differently?
@@ -142,9 +137,7 @@ pub fn Alert(
 }
 
 #[component]
-pub fn AlertIcon(
-    variant: AlertVariant,
-) -> impl IntoView {
+pub fn AlertIcon(variant: AlertVariant) -> impl IntoView {
     match variant {
         AlertVariant::Success => view! { <Icon icon=icondata::BsCheckCircleFill /> },
         AlertVariant::Info => view! { <Icon icon=icondata::BsInfoCircleFill /> },

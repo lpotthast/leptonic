@@ -65,11 +65,7 @@ where
 }
 
 #[component]
-pub fn ThemeToggle<T>(
-    off: T,
-    on: T,
-    #[prop(optional)] variant: ToggleVariant,
-) -> impl IntoView
+pub fn ThemeToggle<T>(off: T, on: T, #[prop(optional)] variant: ToggleVariant) -> impl IntoView
 where
     T: Theme + 'static,
 {
@@ -79,9 +75,10 @@ where
     let toggle = Toggle(ToggleProps {
         state: Signal::derive(move || theme_context.theme.get() == on),
         set_state: Some(Into::into(move |val: bool| {
-            theme_context.set_theme.update(|current| match val {
-                true => *current = on,
-                false => *current = off,
+            theme_context.set_theme.update(|current| if val {
+                *current = on;
+            } else {
+                *current = off;
             });
         })),
         active: None,

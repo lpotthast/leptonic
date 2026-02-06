@@ -1,5 +1,5 @@
-use std::sync::Arc;
 use std::fmt::Debug;
+use std::sync::Arc;
 
 use leptos::prelude::*;
 use uuid::Uuid;
@@ -29,17 +29,16 @@ impl Debug for TabData {
 pub fn Tab(
     // TODO: Can / should we accept a String instead?
     #[prop(optional)] id: Option<Uuid>,
-    
+
     /// Uniquely identifies this tab.
     #[prop(into)]
     name: Oco<'static, str>,
-    
+
     #[prop(into)] label: ViewFn,
-    
+
     #[prop(optional)] mount: Option<Mount>,
 
-    #[prop(optional, default = Arc::new(|| view! {}.into_any()))]
-    children: ChildrenFn,
+    #[prop(optional, default = Arc::new(|| ().into_any()))] children: ChildrenFn,
 
     /// Called whenever the tab comes into view.
     #[prop(into, optional)]

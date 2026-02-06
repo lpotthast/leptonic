@@ -31,6 +31,7 @@ pub enum InMonth {
     Next,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Day {
     pub id: Uuid,
@@ -44,29 +45,19 @@ pub struct Day {
     pub is_now: bool,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GuideMode {
+    #[default]
     CalendarFirst,
     YearFirst,
 }
 
-impl Default for GuideMode {
-    fn default() -> Self {
-        Self::CalendarFirst
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Type {
     Date,
     Time,
+    #[default]
     DateTime,
-}
-
-impl Default for Type {
-    fn default() -> Self {
-        Self::DateTime
-    }
 }
 
 pub trait SaveReplaceYear
@@ -77,10 +68,18 @@ where
 
     /// Replacing the year might fail if this date represents Feb 29 and the new year is normal!
     /// In that case, we fall back to the 28th of February.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the year replacement fails even after attempting a fallback.
     fn save_replace_year(self, year: i32) -> Result<Self, Self::Error>;
 
     /// Replacing the month might fail if this date represents March 31 and the new month is April, which only has 30 days!
     /// In that case, we fall back to the last day of the requested month.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the month replacement fails even after attempting a fallback.
     fn save_replace_month(self, month: time::Month) -> Result<Self, Self::Error>;
 }
 
@@ -103,6 +102,10 @@ impl SaveReplaceYear for time::OffsetDateTime {
     }
 }
 
+/// # Panics
+///
+/// Panics if the calendar date construction fails or if the number of days
+/// cannot be represented as a `u8`.
 pub fn whole_days_in(year: i32, month: time::Month) -> u8 {
     let duration = time::Date::from_calendar_date(
         match month {
@@ -134,6 +137,10 @@ pub fn is_in_range(
 }
 
 /// Might decrease the year to x-1 if in January of year x.
+///
+/// # Panics
+///
+/// Panics if replacing the day, year, or month on the date fails.
 pub fn start_of_previous_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
     let start = dt.replace_day(1).unwrap();
     match start.month() {
@@ -147,6 +154,10 @@ pub fn start_of_previous_month(dt: time::OffsetDateTime) -> time::OffsetDateTime
 }
 
 /// Might advance the year to x+1 if in December of year x.
+///
+/// # Panics
+///
+/// Panics if replacing the day, year, or month on the date fails.
 pub fn start_of_next_month(dt: time::OffsetDateTime) -> time::OffsetDateTime {
     let start = dt.replace_day(1).unwrap();
     match start.month() {
