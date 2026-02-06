@@ -16,13 +16,14 @@ pub fn generate(path: impl AsRef<Path>) -> Result<()> {
 
     if path.exists() {
         std::fs::remove_dir_all(path)
-            .with_context(|| format!("Could not remove path '{path:?}'"))?;
+            .with_context(|| format!("Could not remove path '{}'", path.display()))?;
     }
-    std::fs::create_dir_all(path).with_context(|| format!("Could not create path '{path:?}'"))?;
+    std::fs::create_dir_all(path)
+        .with_context(|| format!("Could not create path '{}'", path.display()))?;
 
     SCSS_DIR
         .extract(path)
-        .with_context(|| format!("Could not extract theme into '{path:?}'"))?;
+        .with_context(|| format!("Could not extract theme into '{}'", path.display()))?;
 
     let themes_file_path = path.join("leptonic-themes.scss");
     let mut file = std::fs::OpenOptions::new()
