@@ -78,6 +78,36 @@ where
     pub on_cell_action: Option<Callback<K>>,
 }
 
+/// Shared grid state passed to dependent hooks like `use_grid_cell`.
+///
+/// Analogous to react-aria's `gridMap` `WeakMap`, but uses an explicit struct
+/// passed from `use_grid` to child hooks instead of a mutable `WeakMap` lookup.
+#[derive(Clone)]
+pub struct UseGridState<K>
+where
+    K: Hash + Eq + Clone + Send + Sync + 'static,
+{
+    /// The keyboard delegate for navigation.
+    pub keyboard_delegate: GridKeyboardDelegate<K>,
+    /// The selection state.
+    pub selection: UseSelectionStateReturn<K>,
+    /// The currently focused key.
+    pub focused_key: Signal<Option<K>>,
+    /// Set the focused key.
+    pub set_focused_key: Callback<Option<K>>,
+    /// Whether the grid is disabled.
+    pub is_disabled: Signal<bool>,
+    /// The selection mode.
+    pub selection_mode: SelectionMode,
+    /// The selection behavior.
+    pub selection_behavior: SelectionBehavior,
+    /// Callback when a cell is activated (Enter key on a cell key).
+    pub on_cell_action: Option<Callback<K>>,
+}
+
+// Manual Copy impl to avoid the derive macro adding an unnecessary `K: Copy` bound.
+impl<K: Hash + Eq + Clone + Send + Sync + 'static> Copy for UseGridState<K> {}
+
 /// The return value of the `use_grid` hook.
 pub struct UseGridReturn<K>
 where
@@ -85,6 +115,8 @@ where
 {
     /// Props for the grid container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
     pub props: UseGridProps,
+    /// Shared state to pass to child hooks (`use_grid_cell`, `use_grid_row`).
+    pub state: UseGridState<K>,
     /// The selection state, delegated to `use_selection_state`.
     pub selection: UseSelectionStateReturn<K>,
     /// The currently focused key.
@@ -174,9 +206,9 @@ pub type UseGridAttrs = (
 ///
 /// - Selection is delegated to `use_selection_state` instead of react-aria's
 ///   `useGridSelectionState` + `useSelectableCollection`.
-/// - No `gridMap` equivalent — child hooks (`use_grid_row`, `use_grid_cell`)
-///   will use Leptos `provide_context` instead (to be addressed in child hook
-///   refactoring).
+/// - No `gridMap` `WeakMap` equivalent — child hooks (`use_grid_cell`) receive
+///   a `UseGridState<K>` struct explicitly instead of looking up shared state
+///   from a mutable `WeakMap`.
 /// - No virtualization (`is_virtualized`, `aria-rowcount`, `aria-colcount`).
 /// - No selection announcements (`useGridSelectionAnnouncement`).
 /// - No RTL direction swapping in keyboard navigation.
@@ -245,13 +277,7 @@ where
     });
 
     // --- Tabindex: -1 when grid has internal focus, 0 otherwise ---
-    let tabindex = Signal::derive(move || {
-        if is_focused.get() {
-            "-1"
-        } else {
-            "0"
-        }
-    });
+    let tabindex = Signal::derive(move || if is_focused.get() { "-1" } else { "0" });
 
     // --- ARIA attributes ---
     let aria_multiselectable = match selection_mode {
@@ -428,6 +454,17 @@ where
         }
     };
 
+    let state = UseGridState {
+        keyboard_delegate: delegate,
+        selection,
+        focused_key: focused_key.into(),
+        set_focused_key,
+        is_disabled,
+        selection_mode,
+        selection_behavior: input.selection_behavior,
+        on_cell_action,
+    };
+
     UseGridReturn {
         props: UseGridProps {
             id: grid_id,
@@ -442,6 +479,7 @@ where
             on_blur: EventHandler::new(handle_blur),
             on_mousedown: EventHandler::new(handle_mousedown),
         },
+        state,
         selection,
         focused_key: focused_key.into(),
         set_focused_key,

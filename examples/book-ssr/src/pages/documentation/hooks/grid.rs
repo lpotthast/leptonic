@@ -49,7 +49,6 @@ pub fn PageUseGrid() -> impl IntoView {
     });
 
     let focused_key = grid.focused_key;
-    let selection = grid.selection;
 
     view! {
         <Article>
@@ -74,32 +73,21 @@ pub fn PageUseGrid() -> impl IntoView {
                 {colors.iter().enumerate().map(|(row_idx, row)| {
                     row.iter().enumerate().map(|(col_idx, color)| {
                         let color = *color;
-                        let cell_key = format!("{row_idx}-{col_idx}");
-                        let cell_key_for_focus = cell_key.clone();
-                        let cell_key_for_click = cell_key.clone();
-
-                        let is_selected = selection.is_key_selected(cell_key.clone());
-                        let is_focused = Signal::derive(move || {
-                            focused_key.get().as_ref() == Some(&cell_key_for_focus)
-                        });
 
                         let cell = use_grid_cell(UseGridCellInput {
-                            cell_key: cell_key.clone(),
+                            state: grid.state,
+                            key: format!("{row_idx}-{col_idx}"),
                             row_index: row_idx,
                             column_index: col_idx,
-                            is_selected,
-                            is_focused,
-                            is_disabled: Signal::derive(|| false),
-                            on_selection_change: Some(Callback::new(move |_selected: bool| {
-                                selection.toggle.run(cell_key_for_click.clone());
-                            })),
-                            on_navigate: None,
-                            on_action: None,
+                            focus_mode: CellFocusMode::Cell,
                         });
+
+                        let is_selected = cell.is_selected;
+                        let is_focused = cell.is_focused;
 
                         view! {
                             <div
-                                {..cell.cell_props.into_attrs()}
+                                {..cell.props.into_attrs()}
                                 style=format!("position: relative; width: 50px; height: 50px; background: {}; border-radius: 4px; cursor: pointer;", color)
                                 style:outline=move || if is_focused.get() { "3px solid #000" } else { "none" }
                                 style:outline-offset="2px"
@@ -158,9 +146,20 @@ let grid = use_grid(UseGridInput {
     ..Default::default()
 });
 
+// Per cell:
+let cell = use_grid_cell(UseGridCellInput {
+    state: grid.state,
+    key: "0-0".to_string(),
+    row_index: 0,
+    column_index: 0,
+    focus_mode: CellFocusMode::Cell,
+});
+
 view! {
     <div {..grid.props.into_attrs()}>
-        // Grid cells...
+        <div {..cell.props.into_attrs()}>
+            "Cell content"
+        </div>
     </div>
 }"#}
             </Code>
@@ -185,6 +184,16 @@ view! {
                 <li><code>"GridFocusMode::Cell"</code> " - All arrows navigate cells in 2D."</li>
             </ul>
 
+            <h2 id="cell-focus-modes" class="anchor">
+                "Cell Focus Modes"
+                <AnchorLink href="#cell-focus-modes" description="Direct link to cell focus modes"/>
+            </h2>
+
+            <ul>
+                <li><code>"CellFocusMode::Cell"</code> " - Focus the cell element itself (default)."</li>
+                <li><code>"CellFocusMode::Child"</code> " - Automatically focus the first focusable child within the cell."</li>
+            </ul>
+
             <h2 id="selection-modes" class="anchor">
                 "Selection Modes"
                 <AnchorLink href="#selection-modes" description="Direct link to selection modes"/>
@@ -203,7 +212,7 @@ view! {
 
             <ul>
                 <li><code>"Arrow Up/Down"</code> " - Move between rows (or cells in Cell mode)"</li>
-                <li><code>"Arrow Left/Right"</code> " - Move between cells within a row"</li>
+                <li><code>"Arrow Left/Right"</code> " - Move between cells within a row (or focusable children within a cell)"</li>
                 <li><code>"Home"</code> " - First cell in row (Ctrl+Home for absolute first)"</li>
                 <li><code>"End"</code> " - Last cell in row (Ctrl+End for absolute last)"</li>
                 <li><code>"Page Up/Down"</code> " - Jump by page (if supported)"</li>
@@ -241,6 +250,7 @@ view! {
                 Toc::Leaf { title: "Demo", link: "#demo" },
                 Toc::Leaf { title: "Grid vs Grid List", link: "#grid-vs-grid-list" },
                 Toc::Leaf { title: "Focus Modes", link: "#focus-modes" },
+                Toc::Leaf { title: "Cell Focus Modes", link: "#cell-focus-modes" },
                 Toc::Leaf { title: "Selection Modes", link: "#selection-modes" },
                 Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard-navigation" },
                 Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },

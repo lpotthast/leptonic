@@ -126,7 +126,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseSelectionState
 }
 
 /// The return value of the `use_selection_state` hook.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct UseSelectionStateReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
@@ -161,6 +161,9 @@ where
     /// Whether selection is disabled.
     pub is_disabled: Signal<bool>,
 }
+
+// Manual Copy impl to avoid the derive macro adding an unnecessary `K: Copy` bound.
+impl<K: Hash + Eq + Clone + Send + Sync + 'static> Copy for UseSelectionStateReturn<K> {}
 
 impl<K: Hash + Eq + Clone + Send + Sync + 'static> UseSelectionStateReturn<K> {
     /// Returns a reactive `Signal<bool>` that tracks whether the given key is selected.

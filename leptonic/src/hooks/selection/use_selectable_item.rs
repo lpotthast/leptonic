@@ -1,11 +1,11 @@
-use leptos::attr::Attribute;
-use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
+use leptos::ev;
 use std::hash::Hash;
 use web_sys::{FocusEvent, MouseEvent};
 
 use super::use_selection_state::{Selection, SelectionBehavior, SelectionMode};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableItem.ts
 
@@ -49,10 +49,43 @@ where
     pub allow_drag: bool,
 }
 
+/// Props from `use_selectable_item` that can be extracted and merged programmatically.
+#[derive(Clone)]
+pub struct UseSelectableItemProps {
+    /// Handler for click events.
+    pub on_click: EventHandler<MouseEvent>,
+    /// Handler for focus events.
+    pub on_focus: EventHandler<FocusEvent>,
+    /// Handler for mouseenter events (hover focus).
+    pub on_mouseenter: EventHandler<MouseEvent>,
+}
+
+impl UseSelectableItemProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSelectableItemAttrs {
+        (
+            self.on_click.to_on(ev::click),
+            self.on_focus.to_on(ev::focus),
+            self.on_mouseenter.to_on(ev::mouseenter),
+        )
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSelectableItemAttrs {
+        (
+            self.on_click.into_on(ev::click),
+            self.on_focus.into_on(ev::focus),
+            self.on_mouseenter.into_on(ev::mouseenter),
+        )
+    }
+}
+
 /// The return value of the `use_selectable_item` hook.
 pub struct UseSelectableItemReturn {
-    /// Props for the item element.
-    pub item_props: UseSelectableItemAttrs,
+    /// Props for the item element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseSelectableItemProps,
 
     /// Whether this item is currently selected.
     pub is_selected: Signal<bool>,
@@ -99,7 +132,7 @@ pub type UseSelectableItemAttrs = (
 ///         aria-selected=move || item.is_selected.get()
 ///         class:selected=move || item.is_selected.get()
 ///         class:focused=move || item.is_focused.get()
-///         {..item.item_props}
+///         {..item.props.into_attrs()}
 ///     >
 ///         "Apple"
 ///     </li>
@@ -181,11 +214,11 @@ where
     };
 
     UseSelectableItemReturn {
-        item_props: (
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::focus, handle_focus).into_cloneable(),
-            on(ev::mouseenter, handle_mouseenter).into_cloneable(),
-        ),
+        props: UseSelectableItemProps {
+            on_click: EventHandler::new(handle_click),
+            on_focus: EventHandler::new(handle_focus),
+            on_mouseenter: EventHandler::new(handle_mouseenter),
+        },
         is_selected,
         is_focused,
         is_disabled: is_disabled_input,
