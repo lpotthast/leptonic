@@ -22,7 +22,7 @@ pub mod styles;
 pub(crate) mod text_selection;
 pub mod time;
 
-pub use element_capture::{element_capture, ElementCaptureAttr};
+pub use element_capture::{CapturedElement, ElementCaptureAttr};
 pub use event_handler::EventHandler;
 pub use merge::{MergeWith, MergeWithExt};
 

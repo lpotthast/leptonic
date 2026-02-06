@@ -427,40 +427,38 @@ element, e.g. for focus management or dimension retrieval.
 
 Hooks should NOT require users to manually declare and bind `NodeRef`s to the element to which props are spread as well.
 
-Hooks should use our custom, spreadable `ElementCaptureAttr` attribute, which allows us to dynamically capture the
-concrete DOM element our hook is operating on by leveraging the fact that we are spreading onto the element we are
-interested in:
+Hooks should use `CapturedElement`, which bundles a `StoredValue` for the DOM element with a `Trigger` for reactive
+tracking. This ensures that Effects reading the element via `CapturedElement::get()` automatically re-run when the
+element is captured — which is critical when the element lives inside a reactive boundary like `<Show>` or is rendered
+during client-side navigation:
 
 ```rust
-use leptonic::utils::element_capture::{element_capture, ElementCaptureAttr};
+use leptonic::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 
 fn use_foo() -> UseFooReturn {
-    // Declare late-bound storage.
-    let element_storage: StoredValue<Option<SendWrapper<web_sys::Element>>> = StoredValue::new(None);
+    let element = CapturedElement::new();
 
-    // Access element storage in Effect (runs after capture).
+    // Reactive read — Effect re-runs when the element is captured.
     Effect::new(move |_| {
-        if let Some(el) = element_storage.get_value() {
-            if let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>() {
-                let _ = html_el.focus();
-            }
+        let Some(el) = element.get() else { return };
+        if let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>() {
+            let _ = html_el.focus();
         }
     });
 
     // Include in attrs tuple
-    // H.
     UseFooReturn {
         props: UseFooProps {
-            element_capture: element_capture(move |el| {
-                // Capture the element after mount.
-                element_storage.set_value(Some(SendWrapper::new(el)));
-            })
+            element_capture: element.attr(),
         }
     }
 }
 ```
 
-**Timing**: `Attribute::build()` runs synchronously during view construction, before Effects.
+**Timing**: `Attribute::build()` runs synchronously during view construction. During SSR hydration the element is
+captured before Effects run. However, inside reactive boundaries (`<Show>`, `<Suspense>`, etc.) during client-side
+navigation, the element may be captured *after* Effects have already run once. `CapturedElement` handles this by
+notifying a `Trigger`, causing dependent Effects to re-run.
 
 **Reference**: `use_menu_item`
 

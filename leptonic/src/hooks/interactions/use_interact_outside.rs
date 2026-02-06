@@ -1,4 +1,4 @@
-use crate::utils::{element_capture, ElementCaptureAttr};
+use crate::utils::{CapturedElement, ElementCaptureAttr};
 use leptos::prelude::*;
 use leptos_use::{use_event_listener_with_options, UseEventListenerOptions};
 use send_wrapper::SendWrapper;
@@ -96,9 +96,7 @@ pub type UseInteractOutsideAttrs = (ElementCaptureAttr,);
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsideReturn {
-    // Storage for the captured element - will be populated by ElementCaptureAttr
-    let element_storage: StoredValue<Option<SendWrapper<web_sys::Element>>> =
-        StoredValue::new(None);
+    let element = CapturedElement::new();
 
     let is_pointer_down: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
 
@@ -106,16 +104,19 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
     let on_interact_outside_start = input.on_interact_outside_start;
     let disabled = input.disabled;
 
-    // Set up pointer down listener to track interaction start
+    // Set up pointer down listener to track interaction start.
+    // Uses `element.get()` (reactive) so the Effect re-runs when the element
+    // is captured — critical for client-side navigation where the element may
+    // not exist yet when the Effect first runs.
     Effect::new(move |_| {
         if disabled.get() {
             return;
         }
 
-        // Get document from the captured element's owner document
-        // This correctly handles elements in iframes or shadow DOM
-        let document = element_storage
-            .read_value()
+        // Get document from the captured element's owner document.
+        // This correctly handles elements in iframes or shadow DOM.
+        let document = element
+            .get()
             .as_ref()
             .and_then(|el| el.owner_document());
 
@@ -134,7 +135,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                 }
 
                 if on_interact_outside.is_some()
-                    && is_valid_event(&e, element_storage.read_value().as_ref())
+                    && is_valid_event(&e, element.get_untracked().as_ref())
                 {
                     if let Some(on_interact_outside_start) = on_interact_outside_start {
                         on_interact_outside_start.run(e);
@@ -156,7 +157,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                 }
 
                 if is_pointer_down.get_value()
-                    && is_valid_event(&e, element_storage.read_value().as_ref())
+                    && is_valid_event(&e, element.get_untracked().as_ref())
                 {
                     if let Some(on_interact_outside) = on_interact_outside {
                         on_interact_outside.run(e.unchecked_into::<PointerEvent>());
@@ -170,9 +171,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
 
     UseInteractOutsideReturn {
         props: UseInteractOutsideProps {
-            element_capture: element_capture(move |el| {
-                element_storage.set_value(Some(SendWrapper::new(el)));
-            }),
+            element_capture: element.attr(),
         },
     }
 }

@@ -7,11 +7,10 @@ use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use leptos_use::use_event_listener;
-use send_wrapper::SendWrapper;
 use web_sys::PointerEvent;
 
 use super::use_move::MoveAxis;
-use crate::utils::element_capture::{element_capture, ElementCaptureAttr};
+use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::{EventHandler, EventTargetExt};
 
 /// Event fired when movement starts.
@@ -269,11 +268,8 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
     let (pixel_position, set_pixel_position) = signal((0.0, 0.0));
     let (is_moving, set_is_moving) = signal(false);
 
-    // Element storage via ElementCaptureAttr
-    let container_element: StoredValue<Option<SendWrapper<web_sys::Element>>, LocalStorage> =
-        StoredValue::new_local(None);
-    let movable_element: StoredValue<Option<SendWrapper<web_sys::Element>>, LocalStorage> =
-        StoredValue::new_local(None);
+    let container_element = CapturedElement::new();
+    let movable_element = CapturedElement::new();
 
     // Drag state
     let state: StoredValue<Option<MoveWithinState>, LocalStorage> = StoredValue::new_local(None);
@@ -291,9 +287,11 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
     let calculate_position =
         move |page_x: f64, page_y: f64, drag_offset: (f64, f64)| -> Option<(f64, f64, f64, f64)> {
             let container_rect = container_element
-                .with_value(|el| el.as_ref().map(|e| e.get_bounding_client_rect()))?;
+                .get_untracked()
+                .map(|e| e.get_bounding_client_rect())?;
             let movable_rect = movable_element
-                .with_value(|el| el.as_ref().map(|e| e.get_bounding_client_rect()))?;
+                .get_untracked()
+                .map(|e| e.get_bounding_client_rect())?;
 
             let container_left = container_rect.left();
             let container_top = container_rect.top();
@@ -473,18 +471,20 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
             // Calculate drag offset (difference between pointer and element origin)
             let drag_offset = if is_container_click {
                 // When clicking container, center the movable element on the pointer
-                let movable_rect = movable_element
-                    .with_value(|el| el.as_ref().map(|e| e.get_bounding_client_rect()));
-                if let Some(rect) = movable_rect {
+                if let Some(rect) = movable_element
+                    .get_untracked()
+                    .map(|e| e.get_bounding_client_rect())
+                {
                     (rect.width() / 2.0, rect.height() / 2.0)
                 } else {
                     (0.0, 0.0)
                 }
             } else {
                 // When dragging movable, offset is pointer position relative to movable element
-                let movable_rect = movable_element
-                    .with_value(|el| el.as_ref().map(|e| e.get_bounding_client_rect()));
-                if let Some(rect) = movable_rect {
+                if let Some(rect) = movable_element
+                    .get_untracked()
+                    .map(|e| e.get_bounding_client_rect())
+                {
                     (client_x - rect.left(), client_y - rect.top())
                 } else {
                     (0.0, 0.0)
@@ -578,8 +578,13 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
 
         // Calculate pixel position from normalized
         if let Some((container_rect, movable_rect)) = container_element
-            .with_value(|c| c.as_ref().map(|e| e.get_bounding_client_rect()))
-            .zip(movable_element.with_value(|m| m.as_ref().map(|e| e.get_bounding_client_rect())))
+            .get_untracked()
+            .map(|e| e.get_bounding_client_rect())
+            .zip(
+                movable_element
+                    .get_untracked()
+                    .map(|e| e.get_bounding_client_rect()),
+            )
         {
             let container_width = container_rect.width();
             let container_height = container_rect.height();
@@ -620,18 +625,14 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
 
     // Build container props
     let container_props = UseMoveWithinContainerProps {
-        element_capture: element_capture(move |el| {
-            container_element.set_value(Some(SendWrapper::new(el)));
-        }),
+        element_capture: container_element.attr(),
         on_pointerdown: EventHandler::new(on_container_pointer_down),
     };
 
     // Build movable props
     let movable_props = UseMoveWithinMovableProps {
         on_pointerdown: EventHandler::new(on_movable_pointer_down),
-        element_capture: element_capture(move |el| {
-            movable_element.set_value(Some(SendWrapper::new(el)));
-        }),
+        element_capture: movable_element.attr(),
     };
 
     UseMoveWithinReturn {

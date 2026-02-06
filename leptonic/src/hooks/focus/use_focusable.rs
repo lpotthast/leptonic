@@ -3,14 +3,13 @@ use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
-use send_wrapper::SendWrapper;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::hooks::focus::use_focus::{use_focus, UseFocusInput};
 use crate::hooks::interactions::use_keyboard::{
     use_keyboard, KeyboardEventWrapper, UseKeyboardInput,
 };
-use crate::utils::element_capture::{element_capture, ElementCaptureAttr};
+use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_element;
 use crate::utils::EventHandler;
 
@@ -83,9 +82,9 @@ impl Default for UseFocusableInput {
 /// // Later, programmatically focus the element
 /// focus_handle.focus();
 /// ```
-#[derive(Clone)]
+#[derive(Copy, Clone)]
 pub struct FocusHandle {
-    element_storage: StoredValue<Option<SendWrapper<web_sys::Element>>>,
+    element: CapturedElement,
 }
 
 impl FocusHandle {
@@ -94,7 +93,7 @@ impl FocusHandle {
     /// This uses `focus_safely` which prevents scrolling.
     /// If the element hasn't been captured yet (e.g., during SSR), this is a no-op.
     pub fn focus(&self) {
-        if let Some(el) = self.element_storage.get_value() {
+        if let Some(el) = self.element.get_untracked() {
             focus_element(&el, true);
         }
     }
@@ -106,13 +105,21 @@ impl FocusHandle {
         self.focus();
     }
 
-    /// Returns whether the element has been captured.
+    /// Returns whether the element has been captured (non-reactive).
     ///
     /// The element is captured when the view is built (attrs are spread).
     /// During SSR, this will always return false.
     #[must_use]
     pub fn has_element(&self) -> bool {
-        self.element_storage.get_value().is_some()
+        self.element.get_untracked().is_some()
+    }
+
+    /// Reactively read the captured element.
+    ///
+    /// Tracks changes, so calling this inside an Effect will cause the
+    /// Effect to re-run when the element is captured.
+    pub fn get_element(&self) -> Option<send_wrapper::SendWrapper<web_sys::Element>> {
+        self.element.get()
     }
 }
 
@@ -244,12 +251,10 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
     let auto_focus = input.auto_focus;
     let exclude_from_tab_order = input.exclude_from_tab_order;
 
-    // Storage for the captured element - will be populated by ElementCaptureAttr
-    let element_storage: StoredValue<Option<SendWrapper<web_sys::Element>>> =
-        StoredValue::new(None);
+    let element = CapturedElement::new();
 
     // Create the focus handle
-    let focus_handle = FocusHandle { element_storage };
+    let focus_handle = FocusHandle { element };
 
     // Use the focus hook
     let focus = use_focus(UseFocusInput {
@@ -266,9 +271,10 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
         on_key_up: input.on_key_up,
     });
 
-    // Handle auto-focus
+    // Handle auto-focus.
+    // Uses `get_element()` (reactive) so the Effect re-runs when the element
+    // is captured — critical for client-side navigation.
     if auto_focus {
-        let auto_focus_handle = focus_handle.clone();
         let auto_focus_done: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
 
         Effect::new(move |_| {
@@ -276,8 +282,8 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
                 return;
             }
 
-            if auto_focus_handle.has_element() {
-                auto_focus_handle.focus();
+            if focus_handle.get_element().is_some() {
+                focus_handle.focus();
                 auto_focus_done.set_value(true);
             }
         });
@@ -301,9 +307,7 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
             on_blur: focus.props.on_blur,
             on_keydown: keyboard.props.on_keydown,
             on_keyup: keyboard.props.on_keyup,
-            element_capture: element_capture(move |el| {
-                element_storage.set_value(Some(SendWrapper::new(el)));
-            }),
+            element_capture: element.attr(),
         },
         focus_handle,
     }

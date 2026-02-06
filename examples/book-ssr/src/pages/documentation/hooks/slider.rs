@@ -56,7 +56,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
         ..
     } = use_slider_thumb(UseSliderThumbInput {
         state: step_state,
-        track_ref: step_track_ref,
+        track: step_track_ref,
         index: 0,
         name: None,
         aria_label: None,

@@ -45,7 +45,7 @@ use crate::hooks::interactions::use_move::{
     use_move, MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
 };
 use crate::hooks::SliderOrientation;
-use crate::utils::element_capture::{element_capture, ElementCaptureAttr};
+use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::EventHandler;
 use leptos::attr;
 use leptos::attr::Attr;
@@ -53,16 +53,8 @@ use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use leptos::tachys::html::style::{style, Style};
-use send_wrapper::SendWrapper;
 use uuid::Uuid;
 use web_sys::PointerEvent;
-
-/// Reactive handle to the captured track element.
-///
-/// This is returned by `use_slider` and should be passed to `use_slider_thumb`.
-/// The element is captured via `ElementCaptureAttr` when the track props are spread
-/// onto a DOM element.
-pub type SliderTrackRef = StoredValue<Option<SendWrapper<web_sys::Element>>>;
 
 /// Input parameters for the `use_slider` hook.
 #[derive(Clone)]
@@ -97,8 +89,8 @@ pub struct UseSliderReturn {
     pub track_props: UseSliderTrackProps,
 
     /// Reactive handle to the captured track element.
-    /// Pass this to `use_slider_thumb` for each thumb.
-    pub track_ref: SliderTrackRef,
+    /// Pass this to `use_slider_thumb`.
+    pub track_ref: CapturedElement,
 }
 
 #[derive(Debug, Clone)]
@@ -259,11 +251,11 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
     let output_id = format!("slider-output-{base_id}");
 
     let state = input.state;
-    // Create internal storage for the track element, captured via ElementCaptureAttr
-    let track_element: SliderTrackRef = StoredValue::new(None);
     let orientation = state.orientation;
     let disabled = state.disabled;
     let is_rtl = input.is_rtl;
+
+    let track_element = CapturedElement::new();
 
     // Generate thumb IDs for the output's "for" attribute
     let thumb_ids: Vec<String> = (0..state.num_thumbs)
@@ -289,8 +281,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
                 return;
             }
 
-            let track_el = track_element.with_value(|el| el.as_ref().map(|el| (*el).clone()));
-            if let Some(track) = track_el {
+            if let Some(track) = track_element.get_untracked().as_deref().cloned() {
                 let rect = track.get_bounding_client_rect();
 
                 // Convert page coordinates to client coordinates relative to track
@@ -340,8 +331,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
         }),
         on_move: Callback::new(move |e: MoveEvent| {
             if let Some(idx) = dragging_thumb_index.get_value() {
-                let track_el = track_element.with_value(|el| el.as_ref().map(|el| (*el).clone()));
-                if let Some(track) = track_el {
+                if let Some(track) = track_element.get_untracked().as_deref().cloned() {
                     let orientation = orientation.get_untracked();
 
                     let rect = track.get_bounding_client_rect();
@@ -403,9 +393,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             role: "presentation",
             style_touch_action: "none",
             on_pointerdown: track_move_props.props.on_pointerdown,
-            element_capture: element_capture(move |el| {
-                track_element.set_value(Some(SendWrapper::new(el)));
-            }),
+            element_capture: track_element.attr(),
         },
         track_ref: track_element,
     }

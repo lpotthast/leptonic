@@ -1,7 +1,11 @@
 use crate::atoms::focus_ring::FocusRing;
 use crate::hooks::*;
 use crate::utils::classes::Classes;
-use crate::utils::styles::{Style::{Position, Left, Top, Bottom, Height, Width, Transform}, Styles};
+use crate::utils::styles::{
+    Style::{Bottom, Height, Left, Position, Top, Transform, Width},
+    Styles,
+};
+use crate::utils::CapturedElement;
 use leptos::prelude::*;
 use std::borrow::Cow;
 use std::sync::atomic::AtomicUsize;
@@ -14,7 +18,7 @@ struct SliderCtx {
     _label_props: UseSliderLabelProps,
     output_props: UseSliderOutputProps,
     track_props: UseSliderTrackProps,
-    track_ref: SliderTrackRef,
+    track: CapturedElement,
 
     next_thumb_idx: Arc<AtomicUsize>,
 }
@@ -67,7 +71,7 @@ pub fn Slider(
         _label_props: label_props,
         output_props,
         track_props,
-        track_ref,
+        track: track_ref,
         next_thumb_idx: Arc::new(AtomicUsize::new(0)),
     });
 
@@ -132,14 +136,10 @@ pub fn SliderTrackFill(
                     }))
                     .add((Height, move || match ctx.state.orientation.get() {
                         SliderOrientation::Horizontal => Some("100%".into()),
-                        SliderOrientation::Vertical => {
-                            Some(format!("{percentage}%"))
-                        }
+                        SliderOrientation::Vertical => Some(format!("{percentage}%")),
                     }))
                     .add((Width, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => {
-                            Some(format!("{percentage}%"))
-                        }
+                        SliderOrientation::Horizontal => Some(format!("{percentage}%")),
                         SliderOrientation::Vertical => Some("100%".into()),
                     }));
                 view! {
@@ -208,7 +208,7 @@ pub fn SliderThumb(
         thumb_id: _,
     } = use_slider_thumb(UseSliderThumbInput {
         state: ctx.state,
-        track_ref: ctx.track_ref,
+        track: ctx.track,
         index: ctx.next_thumb_idx(), // NOTE: Assumes that `<SliderThumb>`s are rendered in order of their appearance in the view! macro.
         name: None,
         aria_label,

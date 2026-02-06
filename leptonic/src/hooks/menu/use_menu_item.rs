@@ -140,7 +140,7 @@ where
     });
 
     // Effect to focus the element when is_focused becomes true
-    let focus_handle = focusable.focus_handle.clone();
+    let focus_handle = focusable.focus_handle;
     Effect::new(move |prev_focused: Option<bool>| {
         let currently_focused = is_focused.get();
         let was_focused = prev_focused.unwrap_or(false);

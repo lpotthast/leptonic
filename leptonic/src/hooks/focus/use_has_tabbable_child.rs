@@ -1,8 +1,7 @@
 use leptos::prelude::*;
-use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 
-use crate::utils::element_capture::{element_capture, ElementCaptureAttr};
+use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/useHasTabbableChild.ts
 //
@@ -96,18 +95,18 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
 
     let disabled = input.disabled;
 
-    // Storage for the captured element - will be populated by ElementCaptureAttr
-    let element_storage: StoredValue<Option<SendWrapper<web_sys::Element>>> =
-        StoredValue::new(None);
+    let element = CapturedElement::new();
 
-    // Check for tabbable children when element changes
+    // Check for tabbable children when element is captured or disabled changes.
+    // Uses `element.get()` (reactive) so the Effect re-runs when the element
+    // is captured — critical for client-side navigation.
     Effect::new(move |_| {
         if disabled.get() {
             set_has_tabbable_child.set(false);
             return;
         }
 
-        let Some(el) = element_storage.get_value() else {
+        let Some(el) = element.get() else {
             set_has_tabbable_child.set(false);
             return;
         };
@@ -119,9 +118,7 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
     UseHasTabbableChildReturn {
         has_tabbable_child: has_tabbable_child.into(),
         props: UseHasTabbableChildProps {
-            element_capture: element_capture(move |el| {
-                element_storage.set_value(Some(SendWrapper::new(el)));
-            }),
+            element_capture: element.attr(),
         },
     }
 }

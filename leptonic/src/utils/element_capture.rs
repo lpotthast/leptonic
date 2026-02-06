@@ -5,35 +5,102 @@
 //! where hooks can automatically capture their element without requiring users to manually create
 //! and pass `NodeRef` instances.
 //!
-//! # Example
+//! # `CapturedElement`
+//!
+//! The preferred way to use element capture in hooks is through [`CapturedElement`], which bundles
+//! a `StoredValue` for DOM element storage with a `Trigger` for reactive tracking. This ensures
+//! that Effects reading the element via [`CapturedElement::get()`] automatically re-run when the
+//! element is captured — which is critical when the element lives inside a reactive boundary
+//! like `<Show>` or is rendered during client-side navigation.
 //!
 //! ```ignore
-//! // Hook creates internal storage
-//! let element_storage: StoredValue<Option<SendWrapper<web_sys::Element>>> =
-//!     StoredValue::new(None);
+//! let element = CapturedElement::new();
 //!
-//! // Return attrs tuple with element capture at the end
+//! // In an Effect — reactive read causes re-run when the element is captured.
+//! Effect::new(move |_| {
+//!     let Some(el) = element.get() else { return };
+//!     // ... use el ...
+//! });
+//!
+//! // In the return value — spread the attr onto the target element.
 //! UseHookReturn {
 //!     attrs: (
 //!         Attr(attr::Role, "menuitem"),
-//!         // ... other attrs ...
-//!         element_capture(move |el| {
-//!             element_storage.set_value(Some(SendWrapper::new(el)));
-//!         }),
+//!         element.attr(),
 //!     ),
 //! }
 //! ```
 //!
-//! # Timing Guarantee
+//! # Timing
 //!
-//! The `Attribute::build()` method is called synchronously during view construction,
-//! so the element is captured before any Effects run. This allows Effects to safely
-//! access the captured element.
+//! The `Attribute::build()` method is called synchronously during view construction.
+//! During SSR hydration this means the element is captured before Effects run. However,
+//! when the element is inside a reactive boundary (`<Show>`, `<Suspense>`, etc.) and
+//! the page is rendered via client-side navigation, the element may be captured *after*
+//! Effects have already run once. `CapturedElement` handles this case by notifying a
+//! `Trigger`, causing dependent Effects to re-run.
 
+use leptos::prelude::*;
 use leptos::tachys::html::attribute::{Attribute, NamedAttributeKey, NextAttribute};
 use send_wrapper::SendWrapper;
 use std::future::Future;
 use std::sync::Arc;
+
+/// A reactive element reference populated by an [`ElementCaptureAttr`].
+///
+/// Bundles a `StoredValue` for the DOM element with a `Trigger` so that
+/// Effects reading the element via [`get()`](CapturedElement::get) automatically
+/// re-run when the element is captured (or re-captured after a `<Show>` toggle).
+#[derive(Debug, Copy, Clone)]
+pub struct CapturedElement {
+    storage: StoredValue<Option<SendWrapper<web_sys::Element>>>,
+    trigger: Trigger,
+}
+
+impl CapturedElement {
+    /// Creates a new, empty `CapturedElement`.
+    ///
+    /// Call [`attr()`](CapturedElement::attr) to obtain the [`ElementCaptureAttr`]
+    /// that should be spread onto the target element.
+    pub fn new() -> Self {
+        Self {
+            storage: StoredValue::new(None),
+            trigger: Trigger::new(),
+        }
+    }
+
+    /// Reactively read the captured element.
+    ///
+    /// Tracks the internal `Trigger`, so calling this inside an `Effect` will
+    /// cause the Effect to re-run when the element is captured or re-captured.
+    pub fn get(&self) -> Option<SendWrapper<web_sys::Element>> {
+        self.trigger.track();
+        self.storage.get_value()
+    }
+
+    /// Read the captured element without reactive tracking.
+    ///
+    /// Use this inside event handlers where tracking is not needed.
+    pub fn get_untracked(&self) -> Option<SendWrapper<web_sys::Element>> {
+        self.storage.get_value()
+    }
+
+    /// Create the [`ElementCaptureAttr`] to spread onto the target element.
+    pub fn attr(&self) -> ElementCaptureAttr {
+        let storage = self.storage;
+        let trigger = self.trigger;
+        ElementCaptureAttr::new(move |el| {
+            storage.set_value(Some(SendWrapper::new(el)));
+            trigger.notify();
+        })
+    }
+}
+
+impl Default for CapturedElement {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 /// Callback type for element capture.
 pub type ElementCaptureCallback = Arc<dyn Fn(web_sys::Element) + Send + Sync>;
@@ -56,9 +123,16 @@ impl std::fmt::Debug for ElementCaptureAttr {
 }
 
 impl ElementCaptureAttr {
-    /// Creates a new element capture attribute.
+    /// Creates an element capture attribute with the given callback.
+    ///
+    /// The callback will be invoked with the DOM element when the view is built.
+    /// This is useful for hooks that need direct DOM access (e.g., for focus management).
     ///
     /// On the server (SSR), this creates a no-op attribute since there's no DOM.
+    ///
+    /// **Prefer [`CapturedElement`]** over using this directly — it bundles
+    /// reactive storage and a `Trigger` so that Effects automatically re-run
+    /// when the element is captured.
     pub fn new<F>(callback: F) -> Self
     where
         F: Fn(web_sys::Element) + Send + Sync + 'static,
@@ -149,48 +223,19 @@ impl NextAttribute for ElementCaptureAttr {
     }
 }
 
-/// Creates an element capture attribute with the given callback.
-///
-/// The callback will be invoked with the DOM element when the view is built.
-/// This is useful for hooks that need direct DOM access (e.g., for focus management).
-///
-/// # Example
-///
-/// ```ignore
-/// use leptos::prelude::*;
-/// use leptonic::utils::element_capture;
-/// use send_wrapper::SendWrapper;
-///
-/// let element_storage: StoredValue<Option<SendWrapper<web_sys::Element>>> =
-///     StoredValue::new(None);
-///
-/// let attrs = (
-///     Attr(attr::Role, "button"),
-///     element_capture(move |el| {
-///         element_storage.set_value(Some(SendWrapper::new(el)));
-///     }),
-/// );
-/// ```
-pub fn element_capture<F>(callback: F) -> ElementCaptureAttr
-where
-    F: Fn(web_sys::Element) + Send + Sync + 'static,
-{
-    ElementCaptureAttr::new(callback)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn element_capture_attr_has_zero_html_length() {
-        let attr = element_capture(|_| {});
+        let attr = ElementCaptureAttr::new(|_| {});
         assert_eq!(attr.html_len(), 0);
     }
 
     #[test]
     fn element_capture_attr_produces_no_html() {
-        let attr = element_capture(|_| {});
+        let attr = ElementCaptureAttr::new(|_| {});
         let mut buf = String::new();
         let mut class = String::new();
         let mut style = String::new();
@@ -204,7 +249,7 @@ mod tests {
 
     #[test]
     fn element_capture_attr_has_no_keys() {
-        let attr = element_capture(|_| {});
+        let attr = ElementCaptureAttr::new(|_| {});
         assert!(attr.keys().is_empty());
     }
 }

@@ -1,4 +1,3 @@
-use crate::hooks::form::use_slider::SliderTrackRef;
 use crate::hooks::form::use_slider_state::UseSliderStateReturn;
 use crate::hooks::interactions::use_move::{
     use_move, MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
@@ -6,6 +5,7 @@ use crate::hooks::interactions::use_move::{
 use crate::hooks::{
     use_focus_ring, SliderOrientation, UseFocusRingInput, UseFocusRingReturn, ValidationState,
 };
+use crate::utils::CapturedElement;
 use leptos::attr;
 use leptos::attr::{Attr, Attribute};
 use leptos::ev;
@@ -22,7 +22,7 @@ pub struct UseSliderThumbInput {
     pub state: UseSliderStateReturn,
 
     /// Reactive handle to the track element (from `use_slider`'s return).
-    pub track_ref: SliderTrackRef,
+    pub track: CapturedElement,
 
     /// The index of this thumb in the slider.
     pub index: usize,
@@ -177,7 +177,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
     let state = input.state;
     let orientation = state.orientation;
-    let track_ref = input.track_ref;
+    let track_ref = input.track;
     let index = input.index;
     let is_disabled = input.disabled;
     let is_rtl = input.is_rtl;
@@ -262,8 +262,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         }),
         on_move_start: Callback::new(move |_: MoveStartEvent| {
             // Initialize pixel position from current thumb percent
-            let track_el = track_ref.with_value(|el| el.as_ref().map(|el| (*el).clone()));
-            if let Some(track) = track_el {
+            if let Some(track) = track_ref.get_untracked().as_deref().cloned() {
                 let rect = track.get_bounding_client_rect();
                 let size = match orientation.get() {
                     SliderOrientation::Horizontal => rect.width(),
@@ -278,8 +277,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             state.set_focused_thumb.run(Some(index));
         }),
         on_move: Callback::new(move |e: MoveEvent| {
-            let track_el = track_ref.with_value(|el| el.as_ref().map(|el| (*el).clone()));
-            if let Some(track) = track_el {
+            if let Some(track) = track_ref.get_untracked().as_deref().cloned() {
                 let orientation = orientation.get_untracked();
 
                 let rect = track.get_bounding_client_rect();
@@ -353,14 +351,24 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
         match (key.as_str(), shift, is_rtl) {
             // Right arrow / Up arrow (increment by step)
-            ("ArrowRight", false, false) | ("ArrowLeft", false, true) | ("ArrowUp", false, _) => increment(step),
+            ("ArrowRight", false, false) | ("ArrowLeft", false, true) | ("ArrowUp", false, _) => {
+                increment(step)
+            }
             // Right arrow (shifted) / Up arrow (shifted) / Page up (increment by page)
-            ("ArrowRight", true, false) | ("ArrowLeft", true, true) | ("ArrowUp", true, _) | ("PageUp", _, _) => increment(page_size),
+            ("ArrowRight", true, false)
+            | ("ArrowLeft", true, true)
+            | ("ArrowUp", true, _)
+            | ("PageUp", _, _) => increment(page_size),
 
             // Left arrow / Down arrow (decrement by step)
-            ("ArrowLeft", false, false) | ("ArrowRight", false, true) | ("ArrowDown", false, _) => decrement(step),
+            ("ArrowLeft", false, false) | ("ArrowRight", false, true) | ("ArrowDown", false, _) => {
+                decrement(step)
+            }
             // Left arrow (shifted) / Down arrow (shifted) / Page down (decrement by page)
-            ("ArrowLeft", true, false) | ("ArrowRight", true, true) | ("ArrowDown", true, _) | ("PageDown", _, _) => decrement(page_size),
+            ("ArrowLeft", true, false)
+            | ("ArrowRight", true, true)
+            | ("ArrowDown", true, _)
+            | ("PageDown", _, _) => decrement(page_size),
 
             // Home/End
             ("Home", _, _) => set_to_min(),

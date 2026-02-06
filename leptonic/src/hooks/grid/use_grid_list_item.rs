@@ -10,7 +10,7 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use crate::hooks::focus::use_focus_manager::{FocusManager, FocusManagerOptions};
 use crate::hooks::selection::use_selectable_item::{use_selectable_item, UseSelectableItemInput};
 use crate::hooks::selection::use_selection_state::SelectionMode;
-use crate::utils::element_capture::{element_capture, ElementCaptureAttr};
+use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::EventHandler;
 
 use super::use_grid_list::UseGridListState;
@@ -205,13 +205,10 @@ where
     let is_disabled = selectable.is_disabled;
 
     // --- Element capture + FocusManager for within-row child navigation ---
-    let scope_storage: StoredValue<Option<SendWrapper<web_sys::Element>>> = StoredValue::new(None);
+    let scope_element = CapturedElement::new();
 
-    let focus_manager = FocusManager::new(move || scope_storage.get_value().map(SendWrapper::take));
-
-    let el_capture = element_capture(move |el| {
-        scope_storage.set_value(Some(SendWrapper::new(el)));
-    });
+    let focus_manager =
+        FocusManager::new(move || scope_element.get_untracked().map(SendWrapper::take));
 
     // --- ARIA attributes ---
     let aria_selected = Signal::derive(move || {
@@ -307,7 +304,7 @@ where
         gridcell_props: UseGridListItemGridCellProps {
             role: "gridcell",
             aria_colindex: "1",
-            element_capture: el_capture,
+            element_capture: scope_element.attr(),
         },
         is_selected,
         is_focused,

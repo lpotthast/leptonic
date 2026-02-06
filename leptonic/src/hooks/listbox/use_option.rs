@@ -181,7 +181,7 @@ where
 
     // Effect to focus the element when is_focused becomes true (real focus mode only)
     if !should_use_virtual_focus {
-        let focus_handle = focusable.focus_handle.clone();
+        let focus_handle = focusable.focus_handle;
         Effect::new(move |prev_focused: Option<bool>| {
             let currently_focused = is_focused.get();
             let was_focused = prev_focused.unwrap_or(false);

@@ -1,9 +1,8 @@
-use leptos::prelude::*;
 use send_wrapper::SendWrapper;
 use std::sync::Arc;
 use wasm_bindgen::JsCast;
 
-use crate::utils::element_capture::{element_capture, ElementCaptureAttr};
+use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/FocusScope.tsx
 //
@@ -371,17 +370,14 @@ pub type UseFocusManagerAttrs = (ElementCaptureAttr,);
 /// }
 /// ```
 pub fn use_focus_manager(_input: UseFocusManagerInput) -> UseFocusManagerReturn {
-    // Storage for the captured scope element - will be populated by ElementCaptureAttr
-    let scope_storage: StoredValue<Option<SendWrapper<web_sys::Element>>> = StoredValue::new(None);
+    let scope_element = CapturedElement::new();
 
     UseFocusManagerReturn {
         focus_manager: FocusManager::new(move || {
-            scope_storage.get_value().map(SendWrapper::take)
+            scope_element.get_untracked().map(SendWrapper::take)
         }),
         props: UseFocusManagerProps {
-            element_capture: element_capture(move |el| {
-                scope_storage.set_value(Some(SendWrapper::new(el)));
-            }),
+            element_capture: scope_element.attr(),
         },
     }
 }
