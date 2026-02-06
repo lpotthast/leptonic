@@ -22,24 +22,26 @@ pub fn PageUseOverlay() -> impl IntoView {
     let (overlay_content, set_overlay_content) = signal(String::from("overlay"));
 
     let UseOverlayReturn {
-        attrs: overlay_attrs,
+        props: overlay_props,
         id,
         state,
         set_state,
     } = use_overlay(UseOverlayInput {
         disabled: false.into(),
     });
+    let overlay_attrs = overlay_props.into_attrs();
 
     let UseOverlayTriggerReturn {
-        attrs: trigger_attrs,
+        props: trigger_props,
     } = use_overlay_trigger(UseOverlayTriggerInput {
         show: state.into(),
         overlay_id: id,
         overlay_type: AriaHasPopup::Menu,
     });
+    let trigger_attrs = trigger_props.into_attrs();
 
     let UseOverlayPositionReturn {
-        attrs: overlay_pos_attrs,
+        props: overlay_pos_props,
     } = use_overlay_position(UseOverlayPositionInput {
         overlay: overlay_el,
         target: trigger_el,
@@ -48,13 +50,14 @@ pub fn PageUseOverlay() -> impl IntoView {
         writing_direction: WritingDirection::Ltr.into(),
         phantom_data: Default::default(),
     });
+    let overlay_pos_attrs = overlay_pos_props.to_attrs();
 
     let UseButtonReturn {
-        attrs: btn_attrs,
+        props: btn_props,
         is_hovered,
         is_pressed,
+        is_focus_visible: _,
     } = use_button(UseButtonInput {
-        node_ref: trigger_el,
         disabled: false.into(),
         aria_haspopup: AriaHasPopup::default().into(),
         aria_expanded: AriaExpanded::default().into(),
@@ -74,13 +77,16 @@ pub fn PageUseOverlay() -> impl IntoView {
             on_hover_start: None,
             on_hover_end: None,
         },
-        use_focus_input: UseFocusInput {
+        use_focus_ring_input: UseFocusRingInput {
             disabled: false.into(),
+            within: false,
+            auto_focus: false,
             on_focus: None,
             on_blur: None,
             on_focus_change: None,
         },
     });
+    let btn_attrs = btn_props.into_attrs();
     view! {
         <Article>
             <h1 id="use_overlay" class="anchor">

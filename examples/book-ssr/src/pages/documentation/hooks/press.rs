@@ -31,7 +31,7 @@ pub fn PageUsePress() -> impl IntoView {
         })
     });
 
-    let UsePressReturn { attrs, is_pressed } = use_press(UsePressInput {
+    let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
         disabled: disabled.into(),
         force_prevent_default: false,
         allow_propagation: false,
@@ -71,7 +71,7 @@ pub fn PageUsePress() -> impl IntoView {
                 "..."
             </Code>
 
-            <button {..attrs}>
+            <button {..props.into_attrs()}>
                 "Press me"
             </button>
 

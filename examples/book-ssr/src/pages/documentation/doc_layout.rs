@@ -37,15 +37,106 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Hooks"
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::hooks::UsePress.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
-                <Link href=routes::doc::hooks::UseMove.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
-                <Link href=routes::doc::hooks::UseHover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
-                <Link href=routes::doc::hooks::UseFocus.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus"</Link>
-                <Link href=routes::doc::hooks::UseButton.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
-                <Link href=routes::doc::hooks::UseOverlay.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
-                <Link href=routes::doc::hooks::UseAnchorLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_anchor_link"</Link>
-            </Stack>
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsCursor margin=Margin::Right(Size::Em(1.0))></Icon> "Interactions"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::hooks::UsePress.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
+                    <Link href=routes::doc::hooks::UseMove.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
+                    <Link href=routes::doc::hooks::UseMoveWithin.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move_within"</Link>
+                    <Link href=routes::doc::hooks::UseHover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
+                    <Link href=routes::doc::hooks::UseKeyboard.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_keyboard"</Link>
+                    <Link href=routes::doc::hooks::UseLongPress.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_long_press"</Link>
+                    <Link href=routes::doc::hooks::UseInteractOutside.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_interact_outside"</Link>
+                    <Link href=routes::doc::hooks::UseScrollWheel.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_scroll_wheel"</Link>
+                    <Link href=routes::doc::hooks::UsePreventScroll.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_prevent_scroll"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsEye margin=Margin::Right(Size::Em(1.0))></Icon> "Focus"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::hooks::UseFocus.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus"</Link>
+                    <Link href=routes::doc::hooks::UseFocusWithin.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus_within"</Link>
+                    <Link href=routes::doc::hooks::UseFocusable.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focusable"</Link>
+                    <Link href=routes::doc::hooks::UseFocusRing.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus_ring"</Link>
+                    <Link href=routes::doc::hooks::UseFocusManager.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus_manager"</Link>
+                    <Link href=routes::doc::hooks::UseHasTabbableChild.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_has_tabbable_child"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsUiChecks margin=Margin::Right(Size::Em(1.0))></Icon> "Forms"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::hooks::UseLabel.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_label"</Link>
+                    <Link href=routes::doc::hooks::UseTextField.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_text_field"</Link>
+                    <Link href=routes::doc::hooks::UseCheckbox.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_checkbox"</Link>
+                    <Link href=routes::doc::hooks::UseRadio.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_radio"</Link>
+                    <Link href=routes::doc::hooks::UseSwitch.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_switch"</Link>
+                    <Link href=routes::doc::hooks::UseSlider.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_slider"</Link>
+                    <Link href=routes::doc::hooks::Selection.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"selection"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsWindowStack margin=Margin::Right(Size::Em(1.0))></Icon> "Overlays"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::hooks::UseOverlay.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
+                    <Link href=routes::doc::hooks::UsePopover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_popover"</Link>
+                    <Link href=routes::doc::hooks::UseModal.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_modal"</Link>
+                    <Link href=routes::doc::hooks::UseTooltip.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_tooltip"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsList margin=Margin::Right(Size::Em(1.0))></Icon> "Selection"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::hooks::UseMenu.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_menu"</Link>
+                    <Link href=routes::doc::hooks::UseListbox.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_listbox"</Link>
+                    <Link href=routes::doc::hooks::UseSelect.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_select"</Link>
+                    <Link href=routes::doc::hooks::UseCombobox.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_combobox"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsGrid margin=Margin::Right(Size::Em(1.0))></Icon> "Data Display"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::hooks::UseTabs.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_tabs"</Link>
+                    <Link href=routes::doc::hooks::UseTable.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_table"</Link>
+                    <Link href=routes::doc::hooks::UseGrid.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_grid"</Link>
+                    <Link href=routes::doc::hooks::UseTree.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_tree"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsInfoCircle margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::hooks::UseProgressBar.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_progress_bar"</Link>
+                    <Link href=routes::doc::hooks::UseMeter.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_meter"</Link>
+                </Stack>
+            </DrawerSection>
+
+            <DrawerSection level=2 header=move || view! {
+                <Icon icon=icondata::BsPuzzle margin=Margin::Right(Size::Em(1.0))></Icon> "Other"
+            }>
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::hooks::UseButton.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_button"</Link>
+                    <Link href=routes::doc::hooks::UseAnchorLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_anchor_link"</Link>
+                    <Link href=routes::doc::hooks::UseLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_link"</Link>
+                    <Link href=routes::doc::hooks::UseBreadcrumbs.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_breadcrumbs"</Link>
+                    <Link href=routes::doc::hooks::UseDisclosure.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_disclosure"</Link>
+                    <Link href=routes::doc::hooks::UseSeparator.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_separator"</Link>
+                    <Link href=routes::doc::hooks::UseTag.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_tag"</Link>
+                    <Link href=routes::doc::hooks::UseToolbar.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_toolbar"</Link>
+                    <Link href=routes::doc::hooks::Dnd.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"drag & drop"</Link>
+                </Stack>
+            </DrawerSection>
         </DrawerSection>
 
         <DrawerSection level=1 header=move || view! {
@@ -55,6 +146,8 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=routes::doc::atoms::Button.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
                 <Link href=routes::doc::atoms::Popover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
                 <Link href=routes::doc::atoms::AnchorLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"AnchorLink"</Link>
+                <Link href=routes::doc::atoms::FocusScope.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"FocusScope"</Link>
+                <Link href=routes::doc::atoms::FocusRing.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"FocusRing"</Link>
             </Stack>
         </DrawerSection>
 

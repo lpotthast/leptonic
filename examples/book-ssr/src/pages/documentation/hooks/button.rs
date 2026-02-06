@@ -1,9 +1,9 @@
 use indoc::indoc;
-use leptos::html;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};
+use leptos::html;
 use leptos::prelude::*;
 use leptos_use::use_window;
 
@@ -14,8 +14,12 @@ use crate::pages::documentation::toc::Toc;
 pub fn PageUseButton() -> impl IntoView {
     let el: NodeRef<html::Div> = NodeRef::new();
 
-    let UseButtonReturn { attrs, is_hovered, is_pressed } = use_button(UseButtonInput {
-        node_ref: el,
+    let UseButtonReturn {
+        props,
+        is_hovered: _,
+        is_pressed: _,
+        is_focus_visible: _,
+    } = use_button(UseButtonInput {
         disabled: false.into(),
         aria_haspopup: AriaHasPopup::default().into(),
         aria_expanded: AriaExpanded::default().into(),
@@ -37,13 +41,16 @@ pub fn PageUseButton() -> impl IntoView {
             on_hover_start: None,
             on_hover_end: None,
         },
-        use_focus_input: UseFocusInput {
+        use_focus_ring_input: UseFocusRingInput {
             disabled: false.into(),
+            within: false,
+            auto_focus: false,
             on_focus: None,
             on_blur: None,
             on_focus_change: None,
         },
     });
+    let attrs = props.into_attrs();
 
     view! {
         <Article>
@@ -58,21 +65,14 @@ pub fn PageUseButton() -> impl IntoView {
                 {indoc!(r#"
                     let el: NodeRef<html::Div> = NodeRef::new();
 
-                    let UseButtonReturn { props } = use_button(UseButtonInput {
-                        node_ref: el,
+                    let UseButtonReturn { props, is_hovered, is_pressed, is_focus_visible } = use_button(UseButtonInput {
                         disabled: false.into(),
                         aria_haspopup: AriaHasPopup::default().into(),
                         aria_expanded: AriaExpanded::default().into(),
-
-                        use_focus_input: UseFocusInput {
-                            disabled: false.into(),
-                            on_focus: None,
-                            on_blur: None,
-                            on_focus_change: None,
-                        },
-
                         use_press_input: UsePressInput {
                             disabled: false.into(),
+                            force_prevent_default: false,
+                            allow_propagation: false,
                             on_press: Callback::new(move |_e| {
                                 if let Some(window) = use_window().as_ref() {
                                     let _ = window.alert_with_message("Pressed!");
@@ -82,17 +82,22 @@ pub fn PageUseButton() -> impl IntoView {
                             on_press_start: None,
                             on_press_end: None,
                         },
+                        use_hover_input: UseHoverInput {
+                            disabled: false.into(),
+                            on_hover_start: None,
+                            on_hover_end: None,
+                        },
+                        use_focus_ring_input: UseFocusRingInput {
+                            disabled: false.into(),
+                            within: false,
+                            auto_focus: false,
+                        },
                     });
 
                     view! {
                         <div
-                            {..props.attrs}
+                            {..props.into_attrs()}
                             node_ref=el
-                            on:keydown=props.on_key_down
-                            on:click=props.on_click
-                            on:pointerdown=props.on_pointer_down
-                            on:focus=props.on_focus
-                            on:blur=props.on_blur
                             style="
                                 display: inline-flex;
                                 border: 0.1em solid green;

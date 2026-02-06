@@ -1,3 +1,5 @@
+#![recursion_limit = "256"]
+
 use leptos_routes::routes;
 
 pub mod app;
@@ -33,9 +35,12 @@ pub mod routes {
             #[route("/use-move")]
             pub mod use_move {}
 
+            #[route("/use-move-within")]
+            pub mod use_move_within {}
+
             #[route("/use-hover")]
             pub mod use_hover {}
-            
+
             #[route("/use-focus")]
             pub mod use_focus {}
 
@@ -47,6 +52,117 @@ pub mod routes {
 
             #[route("/use-anchor-link")]
             pub mod use_anchor_link {}
+
+            #[route("/use-keyboard")]
+            pub mod use_keyboard {}
+
+            #[route("/use-long-press")]
+            pub mod use_long_press {}
+
+            #[route("/use-interact-outside")]
+            pub mod use_interact_outside {}
+
+            #[route("/use-scroll-wheel")]
+            pub mod use_scroll_wheel {}
+
+            #[route("/use-prevent-scroll")]
+            pub mod use_prevent_scroll {}
+
+            #[route("/use-focus-within")]
+            pub mod use_focus_within {}
+
+            #[route("/use-focusable")]
+            pub mod use_focusable {}
+
+            #[route("/use-focus-ring")]
+            pub mod use_focus_ring {}
+
+            #[route("/use-focus-manager")]
+            pub mod use_focus_manager {}
+
+            #[route("/use-has-tabbable-child")]
+            pub mod use_has_tabbable_child {}
+
+            #[route("/selection")]
+            pub mod selection {}
+
+            #[route("/use-label")]
+            pub mod use_label {}
+
+            #[route("/use-checkbox")]
+            pub mod use_checkbox {}
+
+            #[route("/use-radio")]
+            pub mod use_radio {}
+
+            #[route("/use-text-field")]
+            pub mod use_text_field {}
+
+            #[route("/use-switch")]
+            pub mod use_switch {}
+
+            #[route("/use-slider")]
+            pub mod use_slider {}
+
+            #[route("/use-modal")]
+            pub mod use_modal {}
+
+            #[route("/use-tooltip")]
+            pub mod use_tooltip {}
+
+            #[route("/use-menu")]
+            pub mod use_menu {}
+
+            #[route("/use-listbox")]
+            pub mod use_listbox {}
+
+            #[route("/use-select")]
+            pub mod use_select {}
+
+            #[route("/use-combobox")]
+            pub mod use_combobox {}
+
+            #[route("/use-tabs")]
+            pub mod use_tabs {}
+
+            #[route("/use-table")]
+            pub mod use_table {}
+
+            #[route("/dnd")]
+            pub mod dnd {}
+
+            #[route("/use-disclosure")]
+            pub mod use_disclosure {}
+
+            #[route("/use-progress-bar")]
+            pub mod use_progress_bar {}
+
+            #[route("/use-breadcrumbs")]
+            pub mod use_breadcrumbs {}
+
+            #[route("/use-link")]
+            pub mod use_link {}
+
+            #[route("/use-meter")]
+            pub mod use_meter {}
+
+            #[route("/use-separator")]
+            pub mod use_separator {}
+
+            #[route("/use-tag")]
+            pub mod use_tag {}
+
+            #[route("/use-toolbar")]
+            pub mod use_toolbar {}
+
+            #[route("/use-tree")]
+            pub mod use_tree {}
+
+            #[route("/use-grid")]
+            pub mod use_grid {}
+
+            #[route("/use-popover")]
+            pub mod use_popover {}
         }
 
         #[route("/atoms")]
@@ -60,6 +176,12 @@ pub mod routes {
 
             #[route("/anchor-link")]
             pub mod anchor_link {}
+
+            #[route("/focus-scope")]
+            pub mod focus_scope {}
+
+            #[route("/focus-ring")]
+            pub mod focus_ring {}
         }
 
         #[route("/components")]

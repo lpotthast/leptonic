@@ -24,7 +24,7 @@ pub fn PageUseFocus() -> impl IntoView {
         })
     });
 
-    let UseFocusReturn { attrs } = use_focus(UseFocusInput {
+    let UseFocusReturn { props } = use_focus(UseFocusInput {
         disabled: disabled.into(),
         on_focus: Some(Callback::new(move |e| {
             set_events.update(|events| {
@@ -58,7 +58,7 @@ pub fn PageUseFocus() -> impl IntoView {
 
             <div
                 tabindex=1
-                {..attrs}
+                {..props.into_attrs()}
                 style="display: inline-flex;
                 border: 0.1em solid green;
                 padding: 0.5em 1em;"

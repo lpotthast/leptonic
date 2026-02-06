@@ -1,7 +1,6 @@
 use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
-use leptonic::hooks::anchor_link::Href;
 use leptonic::hooks::*;
 use leptonic::ScrollBehavior;
 use leptos::prelude::*;
@@ -15,7 +14,9 @@ pub fn PageUseAnchorLink() -> impl IntoView {
 
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
-    let UseAnchorLinkReturn { attrs, is_pressed } = use_anchor_link(UseAnchorLinkInput {
+    let UseAnchorLinkReturn {
+        props, is_pressed, ..
+    } = use_anchor_link(UseAnchorLinkInput {
         href: Href::from_str(Oco::Borrowed("#my-anchor-element")).expect("valid href"),
         scroll_behavior: Some(ScrollBehavior::Smooth),
         disabled: disabled.into(),
@@ -33,6 +34,7 @@ pub fn PageUseAnchorLink() -> impl IntoView {
             on_press_end: None,
         },
     });
+    let attrs = props.into_attrs();
 
     view! {
         <Article>

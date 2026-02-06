@@ -8,6 +8,8 @@ use leptos_use::use_media_query;
 
 use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
 use crate::pages::documentation::atoms::button::PageAtomButton;
+use crate::pages::documentation::atoms::focus_ring::PageAtomFocusRing;
+use crate::pages::documentation::atoms::focus_scope::PageAtomFocusScope;
 use crate::pages::documentation::atoms::popover::PageAtomPopover;
 use crate::pages::documentation::components::feedback::alert::PageAlert;
 use crate::pages::documentation::components::feedback::chip::PageChip;
@@ -45,13 +47,51 @@ use crate::pages::documentation::getting_started::installation::PageInstallation
 use crate::pages::documentation::getting_started::overview::PageOverview;
 use crate::pages::documentation::getting_started::themes::PageThemes;
 use crate::pages::documentation::hooks::anchor_link::PageUseAnchorLink;
+use crate::pages::documentation::hooks::breadcrumbs::PageUseBreadcrumbs;
 use crate::pages::documentation::hooks::button::PageUseButton;
-use crate::pages::documentation::hooks::hover::PageUseHover;
-use crate::pages::documentation::hooks::overlay::PageUseOverlay;
-use crate::pages::documentation::hooks::press::PageUsePress;
-use crate::pages::documentation::hooks::r#move::PageUseMove;
-use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
+use crate::pages::documentation::hooks::checkbox::PageUseCheckboxHook;
+use crate::pages::documentation::hooks::combobox::PageUseCombobox;
+use crate::pages::documentation::hooks::disclosure::PageUseDisclosure;
+use crate::pages::documentation::hooks::dnd::PageUseDnd;
 use crate::pages::documentation::hooks::focus::PageUseFocus;
+use crate::pages::documentation::hooks::focus_manager::PageUseFocusManager;
+use crate::pages::documentation::hooks::focus_ring::PageUseFocusRing;
+use crate::pages::documentation::hooks::focus_within::PageUseFocusWithin;
+use crate::pages::documentation::hooks::focusable::PageUseFocusable;
+use crate::pages::documentation::hooks::grid::PageUseGrid;
+use crate::pages::documentation::hooks::has_tabbable_child::PageUseHasTabbableChild;
+use crate::pages::documentation::hooks::hover::PageUseHover;
+use crate::pages::documentation::hooks::interact_outside::PageUseInteractOutside;
+use crate::pages::documentation::hooks::keyboard::PageUseKeyboard;
+use crate::pages::documentation::hooks::label::PageUseLabel;
+use crate::pages::documentation::hooks::link::PageUseLink;
+use crate::pages::documentation::hooks::listbox::PageUseListbox;
+use crate::pages::documentation::hooks::long_press::PageUseLongPress;
+use crate::pages::documentation::hooks::menu::PageUseMenuHook;
+use crate::pages::documentation::hooks::meter::PageUseMeter;
+use crate::pages::documentation::hooks::modal::PageUseModalHook;
+use crate::pages::documentation::hooks::move_within::PageUseMoveWithin;
+use crate::pages::documentation::hooks::overlay::PageUseOverlay;
+use crate::pages::documentation::hooks::popover::PageUsePopoverHook;
+use crate::pages::documentation::hooks::press::PageUsePress;
+use crate::pages::documentation::hooks::prevent_scroll::PageUsePreventScroll;
+use crate::pages::documentation::hooks::progress::PageUseProgressBar;
+use crate::pages::documentation::hooks::r#move::PageUseMove;
+use crate::pages::documentation::hooks::radio::PageUseRadioHook;
+use crate::pages::documentation::hooks::scroll_wheel::PageUseScrollWheel;
+use crate::pages::documentation::hooks::select::PageUseSelectHook;
+use crate::pages::documentation::hooks::selection::PageUseSelection;
+use crate::pages::documentation::hooks::separator::PageUseSeparatorHook;
+use crate::pages::documentation::hooks::slider::PageUseSliderHook;
+use crate::pages::documentation::hooks::switch::PageUseSwitchHook;
+use crate::pages::documentation::hooks::table::PageUseTableHook;
+use crate::pages::documentation::hooks::tabs::PageUseTabsHook;
+use crate::pages::documentation::hooks::tag::PageUseTag;
+use crate::pages::documentation::hooks::text_field::PageUseTextField;
+use crate::pages::documentation::hooks::toolbar::PageUseToolbar;
+use crate::pages::documentation::hooks::tooltip::PageUseTooltipHook;
+use crate::pages::documentation::hooks::tree::PageUseTree;
+use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
 use crate::routes;
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
@@ -111,17 +151,57 @@ pub fn App() -> impl IntoView {
                             <ParentRoute path=routes::doc::Hooks.path() view=||view! { <Outlet/> }>
                                 <Route path=routes::doc::hooks::UsePress.path() view=PageUsePress/>
                                 <Route path=routes::doc::hooks::UseMove.path() view=PageUseMove/>
+                                <Route path=routes::doc::hooks::UseMoveWithin.path() view=PageUseMoveWithin/>
                                 <Route path=routes::doc::hooks::UseHover.path() view=PageUseHover/>
                                 <Route path=routes::doc::hooks::UseFocus.path() view=PageUseFocus/>
                                 <Route path=routes::doc::hooks::UseButton.path() view=PageUseButton/>
                                 <Route path=routes::doc::hooks::UseOverlay.path() view=PageUseOverlay/>
                                 <Route path=routes::doc::hooks::UseAnchorLink.path() view=PageUseAnchorLink/>
+                                <Route path=routes::doc::hooks::UseKeyboard.path() view=PageUseKeyboard/>
+                                <Route path=routes::doc::hooks::UseLongPress.path() view=PageUseLongPress/>
+                                <Route path=routes::doc::hooks::UseInteractOutside.path() view=PageUseInteractOutside/>
+                                <Route path=routes::doc::hooks::UseScrollWheel.path() view=PageUseScrollWheel/>
+                                <Route path=routes::doc::hooks::UsePreventScroll.path() view=PageUsePreventScroll/>
+                                <Route path=routes::doc::hooks::UseFocusWithin.path() view=PageUseFocusWithin/>
+                                <Route path=routes::doc::hooks::UseFocusable.path() view=PageUseFocusable/>
+                                <Route path=routes::doc::hooks::UseFocusRing.path() view=PageUseFocusRing/>
+                                <Route path=routes::doc::hooks::UseFocusManager.path() view=PageUseFocusManager/>
+                                <Route path=routes::doc::hooks::UseHasTabbableChild.path() view=PageUseHasTabbableChild/>
+                                <Route path=routes::doc::hooks::Selection.path() view=PageUseSelection/>
+                                <Route path=routes::doc::hooks::UseLabel.path() view=PageUseLabel/>
+                                <Route path=routes::doc::hooks::UseCheckbox.path() view=PageUseCheckboxHook/>
+                                <Route path=routes::doc::hooks::UseRadio.path() view=PageUseRadioHook/>
+                                <Route path=routes::doc::hooks::UseTextField.path() view=PageUseTextField/>
+                                <Route path=routes::doc::hooks::UseSwitch.path() view=PageUseSwitchHook/>
+                                <Route path=routes::doc::hooks::UseSlider.path() view=PageUseSliderHook/>
+                                <Route path=routes::doc::hooks::UseModal.path() view=PageUseModalHook/>
+                                <Route path=routes::doc::hooks::UseTooltip.path() view=PageUseTooltipHook/>
+                                <Route path=routes::doc::hooks::UseMenu.path() view=PageUseMenuHook/>
+                                <Route path=routes::doc::hooks::UseListbox.path() view=PageUseListbox/>
+                                <Route path=routes::doc::hooks::UseSelect.path() view=PageUseSelectHook/>
+                                <Route path=routes::doc::hooks::UseCombobox.path() view=PageUseCombobox/>
+                                <Route path=routes::doc::hooks::UseTabs.path() view=PageUseTabsHook/>
+                                <Route path=routes::doc::hooks::UseTable.path() view=PageUseTableHook/>
+                                <Route path=routes::doc::hooks::Dnd.path() view=PageUseDnd/>
+                                <Route path=routes::doc::hooks::UseDisclosure.path() view=PageUseDisclosure/>
+                                <Route path=routes::doc::hooks::UseProgressBar.path() view=PageUseProgressBar/>
+                                <Route path=routes::doc::hooks::UseBreadcrumbs.path() view=PageUseBreadcrumbs/>
+                                <Route path=routes::doc::hooks::UseLink.path() view=PageUseLink/>
+                                <Route path=routes::doc::hooks::UseMeter.path() view=PageUseMeter/>
+                                <Route path=routes::doc::hooks::UseSeparator.path() view=PageUseSeparatorHook/>
+                                <Route path=routes::doc::hooks::UseTag.path() view=PageUseTag/>
+                                <Route path=routes::doc::hooks::UseToolbar.path() view=PageUseToolbar/>
+                                <Route path=routes::doc::hooks::UseTree.path() view=PageUseTree/>
+                                <Route path=routes::doc::hooks::UseGrid.path() view=PageUseGrid/>
+                                <Route path=routes::doc::hooks::UsePopover.path() view=PageUsePopoverHook/>
                             </ParentRoute>
 
                             <ParentRoute path=routes::doc::Atoms.path() view=||view! { <Outlet/> }>
                                 <Route path=routes::doc::atoms::Button.path() view=PageAtomButton/>
                                 <Route path=routes::doc::atoms::Popover.path() view=PageAtomPopover/>
                                 <Route path=routes::doc::atoms::AnchorLink.path() view=PageAtomAnchorLink/>
+                                <Route path=routes::doc::atoms::FocusScope.path() view=PageAtomFocusScope/>
+                                <Route path=routes::doc::atoms::FocusRing.path() view=PageAtomFocusRing/>
                             </ParentRoute>
 
                             <ParentRoute path=routes::doc::Components.path() view=||view! { <Outlet/> }>

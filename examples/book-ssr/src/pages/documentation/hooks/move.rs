@@ -1,8 +1,5 @@
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
-use leptonic::contexts::global_pointer_event::{
-    GlobalPointerCancelEvent, GlobalPointerDownEvent, GlobalPointerMoveEvent, GlobalPointerUpEvent,
-};
 use leptonic::hooks::*;
 use leptos::html;
 use leptos::prelude::*;
@@ -26,18 +23,14 @@ pub fn PageUseMove() -> impl IntoView {
     let (left, set_left) = signal(0.0);
     let (top, set_top) = signal(0.0);
 
-    let global_pointer_up = expect_context::<GlobalPointerUpEvent>().read_signal;
-    let global_pointer_down = expect_context::<GlobalPointerDownEvent>().read_signal;
-    let global_pointer_cancel = expect_context::<GlobalPointerCancelEvent>().read_signal;
-    let global_pointer_move = expect_context::<GlobalPointerMoveEvent>().read_signal;
-
     let container: NodeRef<html::Div> = NodeRef::new();
     let container_bounding = use_element_bounding(container);
 
     let draggable: NodeRef<html::Div> = NodeRef::new();
     let draggable_bounding = use_element_bounding(draggable);
 
-    let UseMoveReturn { attrs } = use_move(UseMoveInput {
+    let UseMoveReturn { props } = use_move(UseMoveInput {
+        axis: None.into(),
         on_move_start: Callback::new(move |_e| {
             set_events.update(move |events| {
                 events.push_overwrite(Oco::Borrowed("MoveStart"));
@@ -72,10 +65,6 @@ pub fn PageUseMove() -> impl IntoView {
                 events.push_overwrite(Oco::Borrowed("MoveEnd"));
             });
         }),
-        global_pointer_up: global_pointer_up.into(),
-        global_pointer_down: global_pointer_down.into(),
-        global_pointer_cancel: global_pointer_cancel.into(),
-        global_pointer_move: global_pointer_move.into(),
     });
 
     let string = Memo::new(move |_| {
@@ -113,7 +102,7 @@ pub fn PageUseMove() -> impl IntoView {
                 color: var(--typography-code-color);
             ">
                 <div
-                    {..attrs}
+                    {..props.into_attrs()}
                     node_ref=draggable
                     style=move || format!("
                         border: 0.1em solid green;

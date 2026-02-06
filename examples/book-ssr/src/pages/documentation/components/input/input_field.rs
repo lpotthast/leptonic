@@ -176,7 +176,7 @@ pub fn PageInput() -> impl IntoView {
                 set=set_placeholder_input
                 placeholder=Oco::Borrowed("This is a placeholder")
             />
-            <Button 
+            <Button
                 variant=ButtonVariant::Flat
                 size=ButtonSize::Small
                 on_press=move |_| set_placeholder_input.set(String::new())

@@ -31,7 +31,7 @@ pub fn PageUseHover() -> impl IntoView {
         })
     });
 
-    let UseHoverReturn { attrs, is_hovered } = use_hover(UseHoverInput {
+    let UseHoverReturn { props, is_hovered } = use_hover(UseHoverInput {
         disabled: disabled.into(),
         on_hover_start: Some(Callback::new(move |e| {
             set_events.update(|events| {
@@ -59,7 +59,7 @@ pub fn PageUseHover() -> impl IntoView {
             </Code>
 
             <div
-                {..attrs}
+                {..props.into_attrs()}
                 style="display: inline-flex;
                 border: 0.1em solid green;
                 padding: 0.5em 1em;"
