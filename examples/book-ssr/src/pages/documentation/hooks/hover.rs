@@ -43,6 +43,7 @@ pub fn PageUseHover() -> impl IntoView {
                 events.push_overwrite(Oco::Owned(format!("HoverEnd: {e:?}")));
             });
         })),
+        on_hover_change: None,
     });
 
     view! {

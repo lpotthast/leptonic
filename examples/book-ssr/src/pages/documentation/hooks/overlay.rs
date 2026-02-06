@@ -76,6 +76,7 @@ pub fn PageUseOverlay() -> impl IntoView {
             disabled: false.into(),
             on_hover_start: None,
             on_hover_end: None,
+            on_hover_change: None,
         },
         use_focus_ring_input: UseFocusRingInput {
             disabled: false.into(),

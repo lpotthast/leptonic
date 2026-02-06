@@ -48,6 +48,7 @@ pub fn Button(
             disabled,
             on_hover_start,
             on_hover_end,
+            on_hover_change: None,
         },
         use_focus_ring_input: UseFocusRingInput {
             disabled,
@@ -147,6 +148,7 @@ where
             disabled,
             on_hover_start,
             on_hover_end,
+            on_hover_change: None,
         },
         use_focus_ring_input: UseFocusRingInput {
             disabled,

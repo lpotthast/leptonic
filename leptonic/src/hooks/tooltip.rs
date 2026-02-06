@@ -98,6 +98,7 @@ pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
                 on_close.run(());
             })
         }),
+        on_hover_change: None,
     });
 
     UseTooltipReturn {

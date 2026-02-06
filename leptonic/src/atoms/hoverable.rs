@@ -17,6 +17,7 @@ pub fn Hoverable(
         disabled: disabled.unwrap_or(false.into()),
         on_hover_start,
         on_hover_end,
+        on_hover_change: None,
     });
     let (on_pointerenter, on_pointerleave) = hover_props.into_attrs();
 
