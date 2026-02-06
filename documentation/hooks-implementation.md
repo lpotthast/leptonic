@@ -373,6 +373,46 @@ fn use_foo() -> UseFooReturn {
 }
 ```
 
+### ARIA Attribute Types
+
+ARIA attributes must use string types (`&'static str`, `Option<&'static str>`, or custom enums from `utils/aria.rs`),
+**never `bool`**.
+
+**Why:** Leptos renders `bool` values with standard HTML boolean-attribute semantics (attribute present when `true`,
+absent when `false`). ARIA attributes require explicit string values like `"true"` or `"false"` per the
+[WAI-ARIA spec](https://www.w3.org/TR/wai-aria-1.2/). Using `bool` causes the attribute to silently not render in
+the DOM — the code compiles, no runtime warning is logged, and the accessibility attribute is simply missing.
+
+**Pattern for reactive boolean ARIA attributes:**
+
+```rust
+// WRONG: aria-disabled will silently not render
+pub aria_disabled: Signal<bool>,
+
+// CORRECT: renders as aria-disabled="true" or aria-disabled="false"
+pub aria_disabled: Signal<&'static str>,
+
+// Derive from a bool signal:
+let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+```
+
+**Pattern for optional ARIA attributes** (attribute absent when not applicable):
+
+```rust
+// Use Option to suppress the attribute entirely when None
+pub aria_selected: Signal<Option<&'static str>>,
+
+let aria_selected = Signal::derive(move || {
+    if selection_mode == SelectionMode::None {
+        None                // attribute absent from DOM
+    } else if is_selected.get() {
+        Some("true")        // aria-selected="true"
+    } else {
+        Some("false")       // aria-selected="false"
+    }
+});
+```
+
 ### Element Capture Pattern
 
 Many hooks cannot solely rely on returning spreadable props. They often need direct programmatic access to DOM

@@ -136,7 +136,7 @@ pub struct UseGridProps {
     pub aria_label: Option<String>,
     pub aria_labelledby: Option<String>,
     pub aria_multiselectable: Option<&'static str>,
-    pub aria_disabled: Signal<bool>,
+    pub aria_disabled: Signal<&'static str>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
@@ -189,7 +189,7 @@ pub type UseGridAttrs = (
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaMultiselectable, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<bool>>,
+    Attr<attr::AriaDisabled, Signal<&'static str>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -286,7 +286,7 @@ where
         SelectionMode::None => None,
     };
 
-    let aria_disabled = Signal::derive(move || is_disabled.get());
+    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
 
     // --- Keyboard handler ---
     let handle_keydown = move |e: KeyboardEvent| {

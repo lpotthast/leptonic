@@ -123,7 +123,7 @@ pub struct UseSliderThumbInputProps {
     name: Option<&'static str>,
     value: Signal<f64>,
     disabled: Signal<bool>,
-    aria_hidden: bool,
+    aria_hidden: &'static str,
 }
 
 impl UseSliderThumbInputProps {
@@ -144,7 +144,7 @@ pub type UseSliderThumbInputAttrs = (
     Attr<attr::Name, Option<&'static str>>,
     Attr<attr::Value, Signal<f64>>,
     Attr<attr::Disabled, Signal<bool>>,
-    Attr<attr::AriaHidden, bool>,
+    Attr<attr::AriaHidden, &'static str>,
 );
 
 /// Provides the behavior and accessibility implementation for a slider thumb.
@@ -456,7 +456,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             name: input.name,
             value,
             disabled: is_disabled,
-            aria_hidden: true,
+            aria_hidden: "true",
         },
         is_dragging: is_dragging.into(),
         is_focused: is_focused.into(),

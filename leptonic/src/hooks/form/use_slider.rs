@@ -107,7 +107,7 @@ pub struct UseSliderGroupProps {
     id: String,
     aria_label: Option<&'static str>,
     aria_labelledby: Option<String>,
-    aria_disabled: Signal<bool>,
+    aria_disabled: Signal<&'static str>,
 }
 
 impl UseSliderGroupProps {
@@ -128,7 +128,7 @@ pub type UseSliderGroupAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDisabled, Signal<bool>>,
+    Attr<attr::AriaDisabled, Signal<&'static str>>,
 );
 
 #[derive(Debug, Clone)]
@@ -391,7 +391,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             id: group_id,
             aria_label: input.aria_label,
             aria_labelledby: input.aria_labelledby,
-            aria_disabled: disabled,
+            aria_disabled: Signal::derive(move || if disabled.get() { "true" } else { "false" }),
         },
         label_props: UseSliderLabelProps { id: label_id },
         output_props: UseSliderOutputProps {
