@@ -1,10 +1,25 @@
 use crate::utils::{element_capture, ElementCaptureAttr};
 use leptos::prelude::*;
-use leptos_use::use_event_listener;
+use leptos_use::{use_event_listener_with_options, UseEventListenerOptions};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::PointerEvent;
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useInteractOutside.ts
+//
+// ## DEVIATIONS FROM REACT-ARIA
+//
+// ### Omitted
+// - Legacy mouse/touch fallback (`process.env.NODE_ENV === 'test'` branch) — WASM always has `PointerEvent`.
+//
+// ### Different
+// - Click handler passes `MouseEvent` as `PointerEvent` via `unchecked_into` (matches react-aria's
+//   JS loose typing — PointerEvent-specific fields return defaults).
+// - Document containment uses native `Node.contains()` instead of react-aria's shadow-DOM-aware
+//   `nodeContains()`. The `composedPath()` check handles the primary shadow DOM case.
+//
+// ### Leptos-specific
+// - Uses `ElementCaptureAttr` instead of `RefObject`.
 
 /// Input parameters for the `use_interact_outside` hook.
 #[derive(Clone)]
@@ -59,25 +74,22 @@ pub type UseInteractOutsideAttrs = (ElementCaptureAttr,);
 /// This two-phase approach allows drag interactions that start inside but end outside
 /// to not trigger the outside interaction handler.
 ///
+/// Both listeners use the capture phase so that outside-click detection works even when
+/// child elements call `stopPropagation()`.
+///
 /// # Example
 ///
 /// ```ignore
-/// use std::marker::PhantomData;
-///
-/// let element_ref = NodeRef::<html::Div>::new();
-///
-/// use_interact_outside(UseInteractOutsideInput {
-///     element: element_ref,
+/// let interact_outside = use_interact_outside(UseInteractOutsideInput {
 ///     disabled: Signal::derive(|| false),
 ///     on_interact_outside_start: None,
 ///     on_interact_outside: Some(Callback::new(|_| {
 ///         // Close the popover/dialog
 ///     })),
-///     phantom_data: PhantomData,
 /// });
 ///
 /// view! {
-///     <div node_ref=element_ref>
+///     <div {..interact_outside.props.into_attrs()}>
 ///         "Click outside to close"
 ///     </div>
 /// }
@@ -113,7 +125,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
 
         let on_interact_outside_start = on_interact_outside_start;
 
-        let _cleanup_pointerdown = use_event_listener(
+        let _cleanup_pointerdown = use_event_listener_with_options(
             document.clone(),
             leptos::ev::pointerdown,
             move |e: PointerEvent| {
@@ -121,18 +133,21 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                     return;
                 }
 
-                if is_valid_event(&e, element_storage.read_value().as_ref()) {
+                if on_interact_outside.is_some()
+                    && is_valid_event(&e, element_storage.read_value().as_ref())
+                {
                     if let Some(on_interact_outside_start) = on_interact_outside_start {
                         on_interact_outside_start.run(e);
                     }
                     is_pointer_down.set_value(true);
                 }
             },
+            UseEventListenerOptions::default().capture(true),
         );
 
         let on_interact_outside = on_interact_outside;
 
-        let _cleanup_click = use_event_listener(
+        let _cleanup_click = use_event_listener_with_options(
             document,
             leptos::ev::click,
             move |e: web_sys::MouseEvent| {
@@ -140,22 +155,16 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                     return;
                 }
 
-                // Convert MouseEvent to check validity (click doesn't give us PointerEvent)
                 if is_pointer_down.get_value()
-                    && is_valid_mouse_event(&e, element_storage.read_value().as_ref())
+                    && is_valid_event(&e, element_storage.read_value().as_ref())
                 {
                     if let Some(on_interact_outside) = on_interact_outside {
-                        // Create a synthetic PointerEvent for the callback
-                        // In practice, we just need to pass something - the event details
-                        // are usually not important for the "close on outside click" use case
-                        let pointer_event = PointerEvent::new("pointerup").ok();
-                        if let Some(pe) = pointer_event {
-                            on_interact_outside.run(pe);
-                        }
+                        on_interact_outside.run(e.unchecked_into::<PointerEvent>());
                     }
                 }
                 is_pointer_down.set_value(false);
             },
+            UseEventListenerOptions::default().capture(true),
         );
     });
 
@@ -168,8 +177,14 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
     }
 }
 
-/// Check if a pointer event is valid (outside the element and meets other criteria).
-fn is_valid_event(event: &PointerEvent, element: Option<&SendWrapper<web_sys::Element>>) -> bool {
+/// Check if a pointer/mouse event is valid (outside the element and meets other criteria).
+///
+/// Works for both `PointerEvent` (from pointerdown) and `MouseEvent` (from click) because
+/// `PointerEvent` derefs to `MouseEvent` in the web-sys type hierarchy.
+fn is_valid_event(
+    event: &web_sys::MouseEvent,
+    element: Option<&SendWrapper<web_sys::Element>>,
+) -> bool {
     // Only handle primary button (left click)
     if event.button() > 0 {
         return false;
@@ -224,60 +239,5 @@ fn is_valid_event(event: &PointerEvent, element: Option<&SendWrapper<web_sys::El
     }
 
     // Event is outside the element
-    true
-}
-
-/// Check if a mouse event is valid (outside the element).
-fn is_valid_mouse_event(
-    event: &web_sys::MouseEvent,
-    element: Option<&SendWrapper<web_sys::Element>>,
-) -> bool {
-    // Only handle primary button
-    if event.button() > 0 {
-        return false;
-    }
-
-    // Check if target is still in the document
-    if let Some(target) = event.target() {
-        if let Some(target_node) = target.dyn_ref::<web_sys::Node>() {
-            let owner_document = target_node.owner_document();
-            if let Some(doc) = owner_document {
-                if let Some(doc_element) = doc.document_element() {
-                    if !doc_element.contains(Some(target_node)) {
-                        return false;
-                    }
-                }
-            }
-        }
-
-        // Check if target is within a top layer element
-        if let Some(target_el) = target.dyn_ref::<web_sys::Element>() {
-            if target_el
-                .closest("[data-react-aria-top-layer]")
-                .ok()
-                .flatten()
-                .is_some()
-            {
-                return false;
-            }
-        }
-    }
-
-    // Check if we have an element to compare against
-    let Some(el) = element else {
-        return false;
-    };
-    // Dereference SendWrapper to get the actual element
-    let el: &web_sys::Element = el;
-
-    // Check if the event target is outside our element
-    if let Some(target) = event.target() {
-        if let Some(target_node) = target.dyn_ref::<web_sys::Node>() {
-            if el.contains(Some(target_node)) {
-                return false;
-            }
-        }
-    }
-
     true
 }

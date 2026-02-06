@@ -12,7 +12,7 @@ pub fn PageUseInteractOutside() -> impl IntoView {
     let (disabled, set_disabled) = signal(false);
 
     let interact_outside = use_interact_outside(UseInteractOutsideInput {
-        disabled: Signal::derive(move || disabled.get()),
+        disabled: disabled.into(),
         on_interact_outside_start: None,
         on_interact_outside: Some(Callback::new(move |_| {
             set_outside_click_count.update(|count| *count += 1);
@@ -30,9 +30,7 @@ pub fn PageUseInteractOutside() -> impl IntoView {
             <p>"Hook for detecting interactions (clicks, touches) outside a specified element. Commonly used for closing dropdowns, modals, and popovers."</p>
 
             <Code>
-                {r#"use std::marker::PhantomData;
-
-let (is_open, set_is_open) = signal(true);
+                {r#"let (is_open, set_is_open) = signal(true);
 
 let interact_outside = use_interact_outside(UseInteractOutsideInput {
     disabled: Signal::derive(|| false),
@@ -40,7 +38,6 @@ let interact_outside = use_interact_outside(UseInteractOutsideInput {
     on_interact_outside: Some(Callback::new(move |_| {
         set_is_open.set(false);
     })),
-    phantom_data: PhantomData,
 });
 
 view! {
@@ -97,11 +94,9 @@ view! {
             </h2>
 
             <ul>
-                <li><code>"element"</code> " - The element to monitor (accepts NodeRef directly)"</li>
                 <li><code>"disabled"</code> " - Whether to disable the detection"</li>
                 <li><code>"on_interact_outside_start"</code> " - Optional callback when interaction starts outside"</li>
                 <li><code>"on_interact_outside"</code> " - Callback when outside interaction completes"</li>
-                <li><code>"phantom_data"</code> " - Required for type inference (use PhantomData)"</li>
             </ul>
 
             <h2 id="use-cases" class="anchor">
