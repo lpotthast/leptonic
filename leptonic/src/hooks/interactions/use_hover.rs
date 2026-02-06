@@ -282,24 +282,19 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         trigger_hover_end();
     };
 
-    let cancel_hover_when_disabled = Effect::new(move |_| {
+    let _cancel_hover_when_disabled = Effect::new(move |_| {
         if input.disabled.get() {
             trigger_hover_end();
         }
     });
 
     on_cleanup(move || {
-        cancel_hover_when_disabled.dispose();
-
         // Clean up any active global listeners.
         state.with_value(|s| {
             if let Some(s) = s.as_ref() {
                 s.cleanup_global_listeners();
             }
         });
-
-        is_hovered.dispose();
-        set_is_hovered.dispose();
     });
 
     UseHoverReturn {
