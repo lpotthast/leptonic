@@ -2,5 +2,8 @@
 # `leptonic` depends on some `leptos-use` functions requiring this opt-in. This may change in the future.
 rustflags = ["--cfg=web_sys_unstable_apis"]
 
+[target.aarch64-apple-darwin]
+rustflags = ["-C", "link-arg=-fuse-ld=lld"]
+
 [env]
 LEPTOS_OUTPUT_NAME = "book-ssr"
