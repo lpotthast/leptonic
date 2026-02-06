@@ -29,6 +29,13 @@ Hooks follow the `use_*` naming convention.
 - A hook adding "move" functionality is named `use_move`.
 - ...
 
+## Module Organization
+
+Each hook must be implemented in its own module (file). Do not combine multiple hooks in a single file,
+even when they are closely related (e.g., `use_grid_list` and `use_grid_list_item` belong in separate files).
+
+Related hooks are grouped under a common directory with a `mod.rs` that re-exports all public items via `pub use`.
+
 ## Hook `*Input`, `*Return`, `*Props` and `*Attrs` Types
 
 Any hook, like `use_press` for example, at least declares the following additional types (prefixed with their hook
