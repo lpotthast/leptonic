@@ -4,6 +4,7 @@ use leptos::tachys::renderer::dom::Element;
 use leptos::tachys::renderer::Rndr;
 use leptos::typed_builder::TypedBuilder;
 use reactive_graph::effect::RenderEffect;
+use reactive_graph::signal::ReadSignal;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 
@@ -88,10 +89,13 @@ impl ClassList {
 /// /// Root component defines the initial classes using a builder pattern.
 /// #[component]
 /// fn ProvidingClasses() -> impl IntoView {
-///     let show_second = Signal::new(true);
+///     let (show_second, _) = signal(true);
 ///     view! {
 ///         <ExtendingClasses classes="single-class"/>
-///         <ExtendingClasses classes=Classes::builder().with("first").with(("second", show_second)).build()/>
+///         <ExtendingClasses classes=Classes::builder()
+///             .with("first")
+///             .with(("second", show_second))
+///             .build()/>
 ///     }
 /// }
 /// ```
@@ -356,6 +360,13 @@ impl From<String> for ClassEntry {
 
 impl From<(&'static str, bool)> for ClassEntry {
     fn from((name, when): (&'static str, bool)) -> Self {
+        ClassEntry::reactive(name, when)
+    }
+}
+
+impl From<(&'static str, ReadSignal<bool>)> for ClassEntry {
+    fn from((name, when): (&'static str, ReadSignal<bool>)) -> Self {
+        let when: Signal<bool> = when.into();
         ClassEntry::reactive(name, when)
     }
 }

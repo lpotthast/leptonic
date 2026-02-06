@@ -1,3 +1,5 @@
+pub use crate::utils::style::Style;
+pub use crate::utils::style::Style::*;
 use leptos::attr::IntoAttributeValue;
 use leptos::prelude::{Get, Signal};
 use leptos::tachys::html::style::IntoStyle;
@@ -5,12 +7,10 @@ use leptos::tachys::renderer::dom::Element;
 use leptos::tachys::renderer::Rndr;
 use leptos::typed_builder::TypedBuilder;
 use reactive_graph::effect::RenderEffect;
+use reactive_graph::signal::ReadSignal;
 use smallvec::SmallVec;
 use std::borrow::Cow;
 use std::sync::Arc;
-
-pub use crate::utils::style::Style;
-pub use crate::utils::style::Style::*;
 
 /// Fast FNV-1a hash for quick string comparison.
 /// Used to avoid full string comparison when checking if styles changed.
@@ -100,12 +100,12 @@ impl StyleList {
 /// /// Root component defines the initial styles using a builder pattern.
 /// #[component]
 /// fn ProvidingStyles() -> impl IntoView {
-///     let color = RwSignal::new(Some("blue".to_string()));
+///     let (color, _) = signal(Some("blue".to_string()));
 ///     view! {
 ///         <ExtendingStyles styles=("color", "red")/>
 ///         <ExtendingStyles styles=Styles::builder()
 ///             .with(("padding", "10px"))
-///             .with(("color", color.into()))
+///             .with(("color", color))
 ///             .build()
 ///         />
 ///     }
@@ -436,6 +436,20 @@ impl From<String> for StyleEntry {
 // Reactive: (&str, Signal<Option<StyleValue>>)
 impl From<(&'static str, Signal<Option<StyleValue>>)> for StyleEntry {
     fn from((property, value): (&'static str, Signal<Option<StyleValue>>)) -> Self {
+        StyleEntry::reactive(property, value)
+    }
+}
+
+impl From<(&'static str, ReadSignal<Option<StyleValue>>)> for StyleEntry {
+    fn from((property, value): (&'static str, ReadSignal<Option<StyleValue>>)) -> Self {
+        let value: Signal<Option<StyleValue>> = value.into();
+        StyleEntry::reactive(property, value)
+    }
+}
+
+impl From<(&'static str, ReadSignal<Option<String>>)> for StyleEntry {
+    fn from((property, value): (&'static str, ReadSignal<Option<String>>)) -> Self {
+        let value: Signal<Option<StyleValue>> = Signal::derive(move || value.get().map(Into::into));
         StyleEntry::reactive(property, value)
     }
 }
