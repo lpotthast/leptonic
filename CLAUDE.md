@@ -32,6 +32,7 @@ just clippy            # Run clippy with strict flags (-Dclippy::all -Dclippy::p
 just test              # Run tests for all crates
 just sort              # Sort dependencies in Cargo.toml files
 just leptosfmt         # Format Leptos view macros
+just serve             # Run the book-ssr documentation app for manual testing
 ```
 
 **Single crate commands (faster feedback loop):**
@@ -43,12 +44,11 @@ cargo test -p leptonic test_name           # Run a specific test
 cargo clippy -p leptonic -- -Dclippy::all -Dclippy::pedantic  # Clippy on leptonic only
 ```
 
-**Running examples:**
+**Running the documentation app (primary manual testing target):**
 
 ```bash
-cd examples/book-ssr && cargo leptos watch     # Main documentation site (SSR)
-cd examples/leptonic-template-csr && trunk serve    # CSR template
-cd examples/leptonic-template-ssr && cargo leptos watch   # SSR template
+just serve                                          # Recommended: runs book-ssr at https://127.0.0.1:4100
+cd examples/book-ssr && cargo leptos serve          # Equivalent manual command
 ```
 
 ## Architecture
@@ -83,6 +83,20 @@ See [documentation/hooks-implementation.md](documentation/hooks-implementation.m
 - Event handler patterns (Copy requirements, cleanup, dynamic listeners)
 - React-aria deviation documentation format
 - Book-SSR documentation page structure
+
+## Book-SSR (Documentation App)
+
+The `examples/book-ssr/` directory contains the primary documentation site for leptonic and serves as the main app for
+manual testing during development. It is named "book" following Rust ecosystem convention (like "The Rust Book").
+
+- **Running**: `just serve` (or `cd examples/book-ssr && cargo leptos serve`). Available at `https://127.0.0.1:4100`.
+- **Quality bar**: Must always compile and have zero clippy lints.
+- **Dependency**: Uses `leptonic` via path dependency with `features = ["full"]`.
+- **Not a workspace member**: Excluded from the root workspace; managed via the root Justfile.
+- **Page structure**: Pages live in `src/pages/documentation/`, organized by layer — `hooks/`, `atoms/`, `components/`
+  (components further split into `input/`, `layout/`, `feedback/`, `general/`, `animation/`).
+- **When adding or modifying hooks, atoms, or components**: The corresponding book-ssr documentation page should be
+  updated or created to demonstrate the change.
 
 ## Feature Flags
 
@@ -125,9 +139,8 @@ js-dir = "public/js"           # Where to output JS dependencies (for tiptap)
 
 - `leptonic/` - Core component library
 - `leptonic-theme/` - Theme generation and SCSS
-- `examples/` - Git submodules with template projects (book-ssr, template-csr, template-ssr, template-tauri)
-
-Examples are git submodules. Clone with `--recurse-submodules`.
+- `examples/book-ssr/` - Documentation app and primary manual testing target
+- `examples/leptonic-template-*` - Starter templates (git submodules)
 
 ## Testing
 
