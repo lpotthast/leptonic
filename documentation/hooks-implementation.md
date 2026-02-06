@@ -74,6 +74,12 @@ We do not support a react-aria like generic `mergeProps` function.
 
 Most hooks support a `disabled` input. This should always be a `Signal<bool>` for reactive enabling/disabling.
 
+## Shared State
+
+Many concepts, e.g. "sliders" with their respective `use_slider_*` hooks, need to share state between hooks.
+Instead of adding the same fields to each hook's *Input type, create a `use_{concept_name}_state` hook returning
+a shared state struct. This can then be passed explicitly to dependent hooks.
+
 ## EventHandler Abstraction
 
 `EventHandler<E>` is a chainable and clonable wrapper for event handler functions.
