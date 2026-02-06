@@ -117,31 +117,6 @@ pub struct UseSliderStateReturn {
 }
 
 /// Creates sharable state for a multi-thumb slider component.
-///
-/// # Example
-///
-/// ```rust
-/// # use leptonic::hooks::use_slider_state;
-/// # use leptonic::hooks::UseSliderStateInput;
-///
-/// // Single thumb slider
-/// let state = use_slider_state(UseSliderStateInput {
-///     default_values: vec![50.0],
-///     min_value: 0.0,
-///     max_value: 100.0,
-///     step: 1.0,
-///     ..Default::default()
-/// });
-///
-/// // Range slider with two thumbs
-/// let state = use_slider_state(UseSliderStateInput {
-///     default_values: vec![20.0, 80.0],
-///     min_value: 0.0,
-///     max_value: 100.0,
-///     step: 1.0,
-///     ..Default::default()
-/// });
-/// ```
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_slider_state(input: UseSliderStateInput) -> UseSliderStateReturn {
     let min_value = input.min_value;
