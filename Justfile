@@ -53,7 +53,7 @@ msrv:
 
 # Serve the Book example
 serve:
-  cd ./examples/book && trunk serve
+  cd ./examples/book-ssr && cargo leptos serve
 
 # Check which process is occupying the given port.
 # This can help you find out which process to kill if some process has gone rogue.
