@@ -6,7 +6,7 @@ use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
-use crate::hooks::{use_grid_cell, UseGridCellInput};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableCell.ts
 
 /// Input parameters for the `use_table_cell` hook.
@@ -69,7 +69,7 @@ pub type UseTableCellAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
-    leptos::attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 /// Provides the behavior and accessibility for a table cell.
@@ -100,18 +100,6 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
     let on_focus = input.on_focus;
     let on_focus_next = input.on_focus_next;
     let on_focus_previous = input.on_focus_previous;
-
-    let _s = use_grid_cell(UseGridCellInput {
-        cell_key: String::new(),
-        row_index: 0,
-        column_index: 0,
-        is_selected: Signal::default(),
-        is_focused,
-        is_disabled,
-        on_navigate: None,
-        on_action: None,
-        on_selection_change: None,
-    });
 
     // Compute tabindex
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
