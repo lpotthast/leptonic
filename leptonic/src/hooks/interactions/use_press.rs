@@ -3,7 +3,7 @@ use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use leptos_use::use_event_listener;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
@@ -12,6 +12,7 @@ use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 use crate::utils::{
     current_target_contains_target,
     pointer_type::PointerType,
+    use_continue_propagation,
     virtual_click::{is_virtual_click, is_virtual_pointer_event},
     ElementExt, EventExt, EventHandler, EventModifiers, EventTargetExt, Modifiers,
 };
@@ -201,21 +202,71 @@ impl PressState {
             }
         }
     }
-}
 
-fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 'static>) {
-    let continue_propagation_state = Arc::new(AtomicBool::new(false));
-    let state = continue_propagation_state.clone();
-    let continue_propagation = Arc::new(move || {
-        state.store(true, Ordering::Release);
-    });
-    (continue_propagation_state, continue_propagation)
+    fn restore_text_selection_if_needed(&self, allow_text_selection_on_press: bool) {
+        if !allow_text_selection_on_press {
+            if let Some(target) = self.target.as_ref() {
+                if let Some(target) = target.as_element() {
+                    target.restore_text_selection();
+                }
+            }
+        }
+    }
+
+    fn is_pointer_over_target(&self, e: &PointerEvent) -> bool {
+        e.current_target().unwrap().is_over(
+            e,
+            self.target
+                .as_ref()
+                .and_then(EventTargetExt::as_element)
+                .unwrap(),
+        )
+    }
 }
 
 enum EventRef<'a> {
     Pointer(&'a PointerEvent),
     Keyboard(&'a KeyboardEvent),
     Mouse(&'a MouseEvent),
+}
+
+impl EventRef<'_> {
+    fn modifiers(&self) -> Modifiers {
+        match self {
+            EventRef::Pointer(e) => e.modifiers(),
+            EventRef::Keyboard(e) => e.modifiers(),
+            EventRef::Mouse(e) => e.modifiers(),
+        }
+    }
+
+    fn stop_propagation(&self) {
+        match self {
+            EventRef::Pointer(e) => e.stop_propagation(),
+            EventRef::Keyboard(e) => e.stop_propagation(),
+            EventRef::Mouse(e) => e.stop_propagation(),
+        }
+    }
+
+    fn target(&self) -> Option<web_sys::EventTarget> {
+        match self {
+            EventRef::Pointer(e) => e.target(),
+            EventRef::Keyboard(e) => e.target(),
+            EventRef::Mouse(e) => e.target(),
+        }
+    }
+}
+
+fn fire_press_callback(callback: Callback<PressEvent>, state: &PressState, event: &EventRef<'_>) {
+    let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+    callback.run(PressEvent {
+        pointer_type: state.pointer_type.clone(),
+        target: state.target.clone().map(send_wrapper::SendWrapper::new),
+        modifiers: event.modifiers(),
+        continue_propagation,
+    });
+    if !continue_propagation_state.load(Ordering::Acquire) {
+        event.stop_propagation();
+    }
 }
 
 fn is_mac() -> bool {
@@ -263,11 +314,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 EventRef::Keyboard(_e) => PointerType::Keyboard,
                 EventRef::Mouse(_e) => PointerType::Virtual,
             },
-            target: match e {
-                EventRef::Pointer(e) => e.target(),
-                EventRef::Keyboard(e) => e.target(),
-                EventRef::Mouse(e) => e.target(),
-            },
+            target: e.target(),
             is_over_target: match e {
                 EventRef::Pointer(e) => e
                     .current_target()
@@ -289,24 +336,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         s.did_fire_press_start = true;
 
         if let Some(on_press_start) = input.on_press_start {
-            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-            on_press_start.run(PressEvent {
-                pointer_type: s.pointer_type.clone(),
-                target: s.target.clone().map(send_wrapper::SendWrapper::new),
-                modifiers: match e {
-                    EventRef::Pointer(e) => e.modifiers(),
-                    EventRef::Keyboard(e) => e.modifiers(),
-                    EventRef::Mouse(e) => e.modifiers(),
-                },
-                continue_propagation,
-            });
-            if !continue_propagation_state.load(Ordering::Acquire) {
-                match e {
-                    EventRef::Pointer(e) => e.stop_propagation(),
-                    EventRef::Keyboard(e) => e.stop_propagation(),
-                    EventRef::Mouse(e) => e.stop_propagation(),
-                }
-            }
+            fire_press_callback(on_press_start, s, &e);
         }
 
         if let Some(on_press_change) = input.on_press_change {
@@ -325,24 +355,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         s.did_fire_press_start = false;
 
         if let Some(on_press_end) = input.on_press_end {
-            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-            on_press_end.run(PressEvent {
-                pointer_type: s.pointer_type.clone(),
-                target: s.target.clone().map(send_wrapper::SendWrapper::new),
-                modifiers: match e {
-                    EventRef::Pointer(e) => e.modifiers(),
-                    EventRef::Keyboard(e) => e.modifiers(),
-                    EventRef::Mouse(e) => e.modifiers(),
-                },
-                continue_propagation,
-            });
-            if !continue_propagation_state.load(Ordering::Acquire) {
-                match e {
-                    EventRef::Pointer(e) => e.stop_propagation(),
-                    EventRef::Keyboard(e) => e.stop_propagation(),
-                    EventRef::Mouse(e) => e.stop_propagation(),
-                }
-            }
+            fire_press_callback(on_press_end, s, &e);
         }
 
         if let Some(on_press_change) = input.on_press_change {
@@ -352,47 +365,13 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         set_is_pressed.set(false);
 
         if was_pressed {
-            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-            input.on_press.run(PressEvent {
-                pointer_type: s.pointer_type.clone(),
-                target: s.target.clone().map(send_wrapper::SendWrapper::new),
-                modifiers: match e {
-                    EventRef::Pointer(e) => e.modifiers(),
-                    EventRef::Keyboard(e) => e.modifiers(),
-                    EventRef::Mouse(e) => e.modifiers(),
-                },
-                continue_propagation,
-            });
-            if !continue_propagation_state.load(Ordering::Acquire) {
-                match e {
-                    EventRef::Pointer(e) => e.stop_propagation(),
-                    EventRef::Keyboard(e) => e.stop_propagation(),
-                    EventRef::Mouse(e) => e.stop_propagation(),
-                }
-            }
+            fire_press_callback(input.on_press, s, &e);
         }
     };
 
     let trigger_press_up = move |s: &PressState, e: EventRef<'_>| {
         if let Some(on_press_up) = input.on_press_up {
-            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-            on_press_up.run(PressEvent {
-                pointer_type: s.pointer_type.clone(),
-                target: s.target.clone().map(send_wrapper::SendWrapper::new),
-                modifiers: match e {
-                    EventRef::Pointer(e) => e.modifiers(),
-                    EventRef::Keyboard(e) => e.modifiers(),
-                    EventRef::Mouse(e) => e.modifiers(),
-                },
-                continue_propagation,
-            });
-            if !continue_propagation_state.load(Ordering::Acquire) {
-                match e {
-                    EventRef::Pointer(e) => e.stop_propagation(),
-                    EventRef::Keyboard(e) => e.stop_propagation(),
-                    EventRef::Mouse(e) => e.stop_propagation(),
-                }
-            }
+            fire_press_callback(on_press_up, s, &e);
         }
     };
 
@@ -401,13 +380,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             if let Some(s) = s {
                 s.clear_click_timeout();
                 trigger_press_end(s, e, false);
-                if !input.allow_text_selection_on_press {
-                    if let Some(target) = s.target.as_ref() {
-                        if let Some(target) = target.as_element() {
-                            target.restore_text_selection();
-                        }
-                    }
-                }
+                s.restore_text_selection_if_needed(input.allow_text_selection_on_press);
                 s.cleanup_event_handlers();
             }
         });
@@ -561,16 +534,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     s.clear_click_timeout();
                     trigger_press_up(s, EventRef::Mouse(&e));
                     trigger_press_end(s, EventRef::Mouse(&e), true);
-
-                    // Restore text selection
-                    if !input.allow_text_selection_on_press {
-                        if let Some(target) = s.target.as_ref() {
-                            if let Some(target) = target.as_element() {
-                                target.restore_text_selection();
-                            }
-                        }
-                    }
-
+                    s.restore_text_selection_if_needed(input.allow_text_selection_on_press);
                     s.cleanup_event_handlers();
                 }
             });
@@ -607,26 +571,13 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 if e.pointer_id() != s.pointer_id {
                     return;
                 }
-                let is_over_target = e.current_target().unwrap().is_over(
-                    &e,
-                    s.target
-                        .as_ref()
-                        .and_then(EventTargetExt::as_element)
-                        .unwrap(),
-                );
+                let is_over_target = s.is_pointer_over_target(&e);
 
                 if input.should_cancel_on_pointer_exit && s.is_over_target && !is_over_target {
                     // Cancel the entire press when configured to do so.
                     trigger_press_end(s, EventRef::Pointer(&e), false);
                     s.cleanup_event_handlers();
-                    // Restore text selection
-                    if !input.allow_text_selection_on_press {
-                        if let Some(target) = s.target.as_ref() {
-                            if let Some(target) = target.as_element() {
-                                target.restore_text_selection();
-                            }
-                        }
-                    }
+                    s.restore_text_selection_if_needed(input.allow_text_selection_on_press);
                 } else {
                     match (s.is_over_target, is_over_target) {
                         (true, false) => trigger_press_end(s, EventRef::Pointer(&e), false),
@@ -661,20 +612,8 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 return false;
             };
 
-            let is_over_target = e.current_target().unwrap().is_over(
-                &e,
-                s.target
-                    .as_ref()
-                    .and_then(EventTargetExt::as_element)
-                    .unwrap(),
-            );
-
-            if !is_over_target {
-                // Pointer is not over the target — cancel the press.
-                return true;
-            }
-
-            false
+            // Pointer is not over the target — cancel the press.
+            !s.is_pointer_over_target(&e)
         });
 
         if should_clear {

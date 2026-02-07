@@ -1,3 +1,6 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+
 use leptos::prelude::document;
 
 pub mod aria;
@@ -269,6 +272,16 @@ pub fn get_owner_document(node: &web_sys::Node) -> web_sys::Document {
 /// Returns None if the document has no default view.
 pub fn get_owner_window(node: &web_sys::Node) -> Option<web_sys::Window> {
     node.owner_document()?.default_view()
+}
+
+pub(crate) fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 'static>)
+{
+    let continue_propagation_state = Arc::new(AtomicBool::new(false));
+    let state = continue_propagation_state.clone();
+    let continue_propagation = Arc::new(move || {
+        state.store(true, Ordering::Release);
+    });
+    (continue_propagation_state, continue_propagation)
 }
 
 impl EventExt for web_sys::PointerEvent {

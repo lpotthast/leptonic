@@ -2,7 +2,6 @@ use educe::Educe;
 use leptos::prelude::*;
 use leptos_use::use_event_listener;
 use send_wrapper::SendWrapper;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
@@ -11,7 +10,7 @@ use crate::hooks::interactions::use_press::{
     use_press, PressEvent, UsePressAttrs, UsePressInput, UsePressProps,
 };
 use crate::utils::pointer_type::PointerType;
-use crate::utils::Modifiers;
+use crate::utils::{use_continue_propagation, Modifiers};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useLongPress.ts
 
@@ -91,15 +90,6 @@ pub type UseLongPressAttrs = UsePressAttrs;
 struct LongPressState {
     /// The timer handle for the threshold timeout.
     timeout_handle: Option<i32>,
-}
-
-fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 'static>) {
-    let continue_propagation_state = Arc::new(AtomicBool::new(false));
-    let state = continue_propagation_state.clone();
-    let continue_propagation = Arc::new(move || {
-        state.store(true, Ordering::Release);
-    });
-    (continue_propagation_state, continue_propagation)
 }
 
 /// Handles long press interactions across mouse and touch devices.
