@@ -49,6 +49,7 @@ pub fn AnchorLink(
             on_press_start: None,
             on_press_end: None,
             on_press_change: None,
+            on_double_press: None,
         },
     });
     let attrs = props.into_attrs();

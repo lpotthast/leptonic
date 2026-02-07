@@ -320,6 +320,7 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
         on_press_start: Some(on_press_start),
         on_press_end: Some(on_press_end),
         on_press_change: None,
+        on_double_press: None,
     });
 
     // Cleanup on unmount

@@ -251,6 +251,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             on_press_up: None,
             on_press_end: None,
             on_press_change: None,
+            on_double_press: None,
         });
         (
             press.props.on_keydown,

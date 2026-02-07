@@ -74,6 +74,7 @@ pub fn PageUseOverlay() -> impl IntoView {
             on_press_start: None,
             on_press_end: None,
             on_press_change: None,
+            on_double_press: None,
         },
         use_hover_input: UseHoverInput {
             disabled: false.into(),

@@ -154,6 +154,7 @@ where
         on_focus: state.set_focused_key,
         should_select_on_press_up: false,
         allow_drag: false,
+        on_double_click: state.on_row_action,
     });
 
     let is_selected = selectable.is_selected;
@@ -176,20 +177,9 @@ where
     // Index is 1-based for ARIA.
     let aria_rowindex = (input.row_index + 1).to_string();
 
-    // --- Double-click handler (row action) ---
-    let on_row_action = state.on_row_action;
-    let key_for_dblclick = input.key.clone();
-    let row_dblclick = EventHandler::new(move |_e: MouseEvent| {
-        if state.is_disabled.get_untracked() {
-            return;
-        }
-        if let Some(action) = on_row_action {
-            action.run(key_for_dblclick.clone());
-        }
-    });
-
     // --- Compose handlers from selectable_item ---
     let on_click = selectable.props.on_click;
+    let on_dblclick = selectable.props.on_dblclick;
     let on_focus = selectable.props.on_focus;
     let on_mouseenter = selectable.props.on_mouseenter;
 
@@ -201,7 +191,7 @@ where
             aria_selected,
             aria_disabled: Signal::derive(move || if is_disabled.get() { "true" } else { "false" }),
             on_click,
-            on_dblclick: row_dblclick,
+            on_dblclick,
             on_focus,
             on_mouseenter,
         },

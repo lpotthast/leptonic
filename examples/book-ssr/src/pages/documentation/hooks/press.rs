@@ -12,6 +12,7 @@ use crate::pages::documentation::toc::Toc;
 #[component]
 pub fn PageUsePress() -> impl IntoView {
     let (count, set_count) = signal(0);
+    let (dbl_count, set_dbl_count) = signal(0);
     let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = signal(false);
 
@@ -54,6 +55,12 @@ pub fn PageUsePress() -> impl IntoView {
             });
         })),
         on_press_change: None,
+        on_double_press: Some(Callback::new(move |e| {
+            set_dbl_count.update(|c| *c += 1);
+            set_events.update(|events| {
+                events.push_overwrite(Oco::Owned(format!("DoublePress: {e:?}")));
+            });
+        })),
     });
 
     view! {
@@ -118,6 +125,10 @@ pub fn PageUsePress() -> impl IntoView {
                 1 => " time",
                 _ => " times",
             } }</p>
+            <p>"Was double-pressed: " { move || dbl_count.get() } { move || match dbl_count.get() {
+                1 => " time",
+                _ => " times",
+            } }</p>
 
             <p>"Last " { move || events.with(|events| events.occupied_len()) } " events: "</p>
 
@@ -147,6 +158,7 @@ pub fn PageUsePress() -> impl IntoView {
                 <li>"Text selection prevention during press interactions"</li>
                 <li>"Safari drag cancellation workaround"</li>
                 <li>"iOS pointer capture release for correct touch events"</li>
+                <li>"Double-press detection via native dblclick"</li>
                 <li>"macOS Meta key workaround for stuck key states"</li>
             </ul>
         </Article>

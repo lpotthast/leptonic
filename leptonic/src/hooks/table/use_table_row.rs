@@ -7,6 +7,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::use_table::TableSelectionMode;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableRow.ts
 
@@ -74,7 +75,7 @@ pub type UseTableRowAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
-    leptos::attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 /// Provides the behavior and accessibility for a table row.
@@ -150,14 +151,14 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     };
 
     // Handle double-click for action
-    let handle_dblclick = move |_e: web_sys::MouseEvent| {
+    let handle_dblclick = EventHandler::new(move |_e: web_sys::MouseEvent| {
         if is_disabled.get_untracked() {
             return;
         }
         if let Some(on_action) = on_action {
             on_action.run(());
         }
-    };
+    });
 
     // Handle keyboard
     let handle_keydown = move |e: KeyboardEvent| {
@@ -224,7 +225,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
             Attr(attr::AriaDisabled, aria_disabled),
             Attr(attr::Tabindex, tabindex),
             on(ev::click, handle_click).into_cloneable(),
-            on(ev::dblclick, handle_dblclick).into_cloneable(),
+            handle_dblclick.into_on(ev::dblclick),
             on(ev::keydown, handle_keydown).into_cloneable(),
             on_focus,
             on_blur,

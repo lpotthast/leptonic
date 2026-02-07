@@ -65,6 +65,7 @@ pub struct UseGridListItemRowProps {
     pub aria_label: Option<String>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
+    pub on_dblclick: EventHandler<MouseEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_mouseenter: EventHandler<MouseEvent>,
 }
@@ -88,6 +89,7 @@ impl UseGridListItemRowProps {
             Attr(attr::AriaLabel, self.aria_label),
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),
+            self.on_dblclick.into_on(ev::dblclick),
             self.on_focus.into_on(ev::focus),
             self.on_mouseenter.into_on(ev::mouseenter),
         )
@@ -104,6 +106,7 @@ pub type UseGridListItemRowAttrs = (
     Attr<attr::AriaLabel, Option<String>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
+    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::mouseenter, SharedEventCallback<MouseEvent>>,
 );
@@ -198,6 +201,7 @@ where
         on_focus: state.set_focused_key,
         should_select_on_press_up: false,
         allow_drag: false,
+        on_double_click: None,
     });
 
     let is_selected = selectable.is_selected;
@@ -278,6 +282,7 @@ where
 
     // --- Compose handlers ---
     let on_click = selectable.props.on_click;
+    let on_dblclick = selectable.props.on_dblclick;
     let on_keydown = row_keydown;
     let on_focus = selectable.props.on_focus.chain(row_focus);
     let on_mouseenter = selectable.props.on_mouseenter;
@@ -292,6 +297,7 @@ where
             aria_label: input.text_value,
             on_keydown,
             on_click,
+            on_dblclick,
             on_focus,
             on_mouseenter,
         },

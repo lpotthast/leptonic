@@ -18,6 +18,13 @@ use crate::utils::{
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
+//
+// ## DEVIATIONS FROM REACT-ARIA
+//
+// React-aria's `usePress` does not handle double-click. Double-click behavior
+// lives in `useSelectableItem` (where double-click triggers an action). We add
+// `on_double_press` here as a convenience so that any pressable element can opt
+// into double-press handling without requiring a full selection model.
 
 #[derive(Debug)]
 pub enum PressEvents {
@@ -76,6 +83,9 @@ pub struct UsePressInput {
     /// Called when the press state changes. Receives `true` when press starts,
     /// `false` when press ends.
     pub on_press_change: Option<Callback<bool>>,
+
+    /// Called when the element receives a native `dblclick` event.
+    pub on_double_press: Option<Callback<PressEvent>>,
 }
 
 #[derive(Debug, Clone)]
@@ -113,6 +123,7 @@ pub struct UsePressProps {
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_dragstart: EventHandler<web_sys::DragEvent>,
+    pub on_dblclick: EventHandler<MouseEvent>,
 }
 
 impl UsePressProps {
@@ -124,6 +135,7 @@ impl UsePressProps {
             self.on_click.to_on(ev::click),
             self.on_pointerdown.to_on(ev::pointerdown),
             self.on_dragstart.to_on(ev::dragstart),
+            self.on_dblclick.to_on(ev::dblclick),
         )
     }
 
@@ -135,6 +147,7 @@ impl UsePressProps {
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_dragstart.into_on(ev::dragstart),
+            self.on_dblclick.into_on(ev::dblclick),
         )
     }
 }
@@ -145,6 +158,7 @@ pub type UsePressAttrs = (
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<web_sys::DragEvent>>,
+    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
 );
 
 enum EventHandlers {
@@ -748,12 +762,34 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         ));
     };
 
+    // Handle native dblclick for on_double_press.
+    let on_dblclick_handler = move |e: MouseEvent| {
+        let Some(on_double_press) = input.on_double_press else {
+            return;
+        };
+        if input.disabled.get_untracked() {
+            return;
+        }
+
+        let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+        on_double_press.run(PressEvent {
+            pointer_type: PointerType::Mouse,
+            target: e.target().map(send_wrapper::SendWrapper::new),
+            modifiers: e.modifiers(),
+            continue_propagation,
+        });
+        if !input.allow_propagation && !continue_propagation_state.load(Ordering::Acquire) {
+            e.stop_propagation();
+        }
+    };
+
     UsePressReturn {
         props: UsePressProps {
             on_keydown: EventHandler::new(on_key_down_handler),
             on_click: EventHandler::new(on_click_handler),
             on_pointerdown: EventHandler::new(on_pointer_down_handler),
             on_dragstart: EventHandler::new(on_dragstart_handler),
+            on_dblclick: EventHandler::new(on_dblclick_handler),
         },
         is_pressed: is_pressed.into(),
     }

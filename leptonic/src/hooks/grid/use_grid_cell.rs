@@ -187,6 +187,7 @@ where
         on_focus: state.set_focused_key,
         should_select_on_press_up: false,
         allow_drag: false,
+        on_double_click: state.on_cell_action,
     });
 
     let is_selected = selectable.is_selected;

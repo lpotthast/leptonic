@@ -8,6 +8,12 @@ use super::use_selection_state::{Selection, SelectionBehavior, SelectionMode};
 use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableItem.ts
+//
+// ## DEVIATIONS FROM REACT-ARIA
+//
+// In react-aria's `useSelectableItem`, double-click triggers the `onAction`
+// callback provided to the collection (e.g. `useListBox`). We expose it (`on_double_click`)
+// directly on the item input so callers can wire it without a full collection.
 
 /// Input parameters for the `use_selectable_item` hook.
 #[derive(Clone, Copy)]
@@ -39,6 +45,9 @@ where
     /// Callback to select this item.
     pub on_select: Callback<K>,
 
+    /// Called when the item is activated (e.g., by a double-click).
+    pub on_double_click: Option<Callback<K>>,
+
     /// Callback to set focused key.
     pub on_focus: Callback<Option<K>>,
 
@@ -52,11 +61,9 @@ where
 /// Props from `use_selectable_item` that can be extracted and merged programmatically.
 #[derive(Clone)]
 pub struct UseSelectableItemProps {
-    /// Handler for click events.
     pub on_click: EventHandler<MouseEvent>,
-    /// Handler for focus events.
+    pub on_dblclick: EventHandler<MouseEvent>,
     pub on_focus: EventHandler<FocusEvent>,
-    /// Handler for mouseenter events (hover focus).
     pub on_mouseenter: EventHandler<MouseEvent>,
 }
 
@@ -66,6 +73,7 @@ impl UseSelectableItemProps {
     pub fn to_attrs(&self) -> UseSelectableItemAttrs {
         (
             self.on_click.to_on(ev::click),
+            self.on_dblclick.to_on(ev::dblclick),
             self.on_focus.to_on(ev::focus),
             self.on_mouseenter.to_on(ev::mouseenter),
         )
@@ -76,6 +84,7 @@ impl UseSelectableItemProps {
     pub fn into_attrs(self) -> UseSelectableItemAttrs {
         (
             self.on_click.into_on(ev::click),
+            self.on_dblclick.into_on(ev::dblclick),
             self.on_focus.into_on(ev::focus),
             self.on_mouseenter.into_on(ev::mouseenter),
         )
@@ -100,6 +109,7 @@ pub struct UseSelectableItemReturn {
 /// Attributes for a selectable item element.
 pub type UseSelectableItemAttrs = (
     On<ev::click, SharedEventCallback<MouseEvent>>,
+    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::mouseenter, SharedEventCallback<MouseEvent>>,
 );
@@ -203,6 +213,18 @@ where
         on_focus.run(Some(key_for_focus.clone()));
     };
 
+    // Handle double-click (action)
+    let on_double_click = input.on_double_click;
+    let key_for_dblclick = key.clone();
+    let handle_dblclick = move |_e: MouseEvent| {
+        if is_disabled_input.get_untracked() {
+            return;
+        }
+        if let Some(on_action) = on_double_click {
+            on_action.run(key_for_dblclick.clone());
+        }
+    };
+
     // Handle mouse enter (for hover focus)
     let key_for_hover = key.clone();
     let handle_mouseenter = move |_e: MouseEvent| {
@@ -216,6 +238,7 @@ where
     UseSelectableItemReturn {
         props: UseSelectableItemProps {
             on_click: EventHandler::new(handle_click),
+            on_dblclick: EventHandler::new(handle_dblclick),
             on_focus: EventHandler::new(handle_focus),
             on_mouseenter: EventHandler::new(handle_mouseenter),
         },
