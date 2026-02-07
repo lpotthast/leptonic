@@ -256,7 +256,12 @@ impl EventRef<'_> {
     }
 }
 
-fn fire_press_callback(callback: Callback<PressEvent>, state: &PressState, event: &EventRef<'_>) {
+fn fire_press_callback(
+    callback: Callback<PressEvent>,
+    state: &PressState,
+    event: &EventRef<'_>,
+    allow_propagation: bool,
+) {
     let (continue_propagation_state, continue_propagation) = use_continue_propagation();
     callback.run(PressEvent {
         pointer_type: state.pointer_type.clone(),
@@ -264,7 +269,7 @@ fn fire_press_callback(callback: Callback<PressEvent>, state: &PressState, event
         modifiers: event.modifiers(),
         continue_propagation,
     });
-    if !continue_propagation_state.load(Ordering::Acquire) {
+    if !allow_propagation && !continue_propagation_state.load(Ordering::Acquire) {
         event.stop_propagation();
     }
 }
@@ -336,7 +341,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         s.did_fire_press_start = true;
 
         if let Some(on_press_start) = input.on_press_start {
-            fire_press_callback(on_press_start, s, &e);
+            fire_press_callback(on_press_start, s, &e, input.allow_propagation);
         }
 
         if let Some(on_press_change) = input.on_press_change {
@@ -355,7 +360,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         s.did_fire_press_start = false;
 
         if let Some(on_press_end) = input.on_press_end {
-            fire_press_callback(on_press_end, s, &e);
+            fire_press_callback(on_press_end, s, &e, input.allow_propagation);
         }
 
         if let Some(on_press_change) = input.on_press_change {
@@ -365,13 +370,13 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         set_is_pressed.set(false);
 
         if was_pressed {
-            fire_press_callback(input.on_press, s, &e);
+            fire_press_callback(input.on_press, s, &e, input.allow_propagation);
         }
     };
 
     let trigger_press_up = move |s: &PressState, e: EventRef<'_>| {
         if let Some(on_press_up) = input.on_press_up {
-            fire_press_callback(on_press_up, s, &e);
+            fire_press_callback(on_press_up, s, &e, input.allow_propagation);
         }
     };
 
