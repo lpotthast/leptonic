@@ -153,6 +153,8 @@ where
         text_value,
     });
 
+    let is_focused = item.is_focused;
+
     let data_selected = Signal::derive(move || {
         if item.is_selected.get() {
             Some("true")
@@ -161,7 +163,7 @@ where
         }
     });
     let data_focused = Signal::derive(move || {
-        if item.is_focused.get() {
+        if is_focused.get() {
             Some("true")
         } else {
             None

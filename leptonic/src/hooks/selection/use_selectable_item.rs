@@ -56,6 +56,17 @@ where
 
     /// Whether to allow drag operations.
     pub allow_drag: bool,
+
+    /// Optional callback to programmatically focus this item's DOM element.
+    ///
+    /// When provided, an Effect is created that calls this callback each time
+    /// `is_focused` transitions from `false` to `true`.
+    ///
+    /// For grid cells with child focus mode, this can be a custom function
+    /// that focuses a child element instead of the cell itself.
+    ///
+    /// Mirrors react-aria's `useSelectableItem` `focus` parameter.
+    pub focus: Option<Callback<()>>,
 }
 
 /// Props from `use_selectable_item` that can be extracted and merged programmatically.
@@ -177,6 +188,18 @@ where
     // Compute whether this item is focused
     let key_for_focused = key.clone();
     let is_focused = Signal::derive(move || focused_key.get().as_ref() == Some(&key_for_focused));
+
+    // --- DOM focus synchronization (mirrors react-aria useSelectableItem) ---
+    if let Some(focus_fn) = input.focus {
+        Effect::new(move |prev_focused: Option<bool>| {
+            let currently_focused = is_focused.get();
+            let was_focused = prev_focused.unwrap_or(false);
+            if currently_focused && !was_focused {
+                focus_fn.run(());
+            }
+            currently_focused
+        });
+    }
 
     // Handle click
     let key_for_click = key.clone();

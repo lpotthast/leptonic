@@ -171,6 +171,8 @@ where
         row_index,
     });
 
+    let is_focused = row.is_focused;
+
     let data_selected = Signal::derive(move || {
         if row.is_selected.get() {
             Some("true")
@@ -179,7 +181,7 @@ where
         }
     });
     let data_focused = Signal::derive(move || {
-        if row.is_focused.get() {
+        if is_focused.get() {
             Some("true")
         } else {
             None
@@ -245,6 +247,8 @@ where
         focus_mode,
     });
 
+    let is_focused = cell.is_focused;
+
     let data_selected = Signal::derive(move || {
         if cell.is_selected.get() {
             Some("true")
@@ -253,7 +257,7 @@ where
         }
     });
     let data_focused = Signal::derive(move || {
-        if cell.is_focused.get() {
+        if is_focused.get() {
             Some("true")
         } else {
             None

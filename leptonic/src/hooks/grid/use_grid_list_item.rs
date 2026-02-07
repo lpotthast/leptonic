@@ -11,6 +11,7 @@ use crate::hooks::focus::use_focus_manager::{FocusManager, FocusManagerOptions};
 use crate::hooks::selection::use_selectable_item::{use_selectable_item, UseSelectableItemInput};
 use crate::hooks::selection::use_selection_state::SelectionMode;
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
+use crate::utils::focus::focus_element;
 use crate::utils::EventHandler;
 
 use super::use_grid_list::UseGridListState;
@@ -63,6 +64,7 @@ pub struct UseGridListItemRowProps {
     pub aria_selected: Signal<Option<&'static str>>,
     pub aria_disabled: Signal<&'static str>,
     pub aria_label: Option<String>,
+    pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
@@ -87,6 +89,7 @@ impl UseGridListItemRowProps {
             Attr(attr::AriaSelected, self.aria_selected),
             Attr(attr::AriaDisabled, self.aria_disabled),
             Attr(attr::AriaLabel, self.aria_label),
+            self.element_capture,
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),
             self.on_dblclick.into_on(ev::dblclick),
@@ -104,6 +107,7 @@ pub type UseGridListItemRowAttrs = (
     Attr<attr::AriaSelected, Signal<Option<&'static str>>>,
     Attr<attr::AriaDisabled, Signal<&'static str>>,
     Attr<attr::AriaLabel, Option<String>>,
+    ElementCaptureAttr,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::dblclick, SharedEventCallback<MouseEvent>>,
@@ -188,6 +192,16 @@ where
     let state = input.state;
     let selection_mode = state.selection_mode;
 
+    // --- Row element capture for DOM focus synchronization ---
+    let row_element = CapturedElement::new();
+
+    let row_element_for_focus = row_element;
+    let focus_fn = Callback::new(move |()| {
+        if let Some(el) = row_element_for_focus.get_untracked() {
+            focus_element(&SendWrapper::take(el), true);
+        }
+    });
+
     // --- Delegate selection to use_selectable_item ---
     let selectable = use_selectable_item(UseSelectableItemInput {
         key: input.key.clone(),
@@ -202,6 +216,7 @@ where
         should_select_on_press_up: false,
         allow_drag: false,
         on_double_click: None,
+        focus: Some(focus_fn),
     });
 
     let is_selected = selectable.is_selected;
@@ -295,6 +310,7 @@ where
             aria_selected,
             aria_disabled: Signal::derive(move || if is_disabled.get() { "true" } else { "false" }),
             aria_label: input.text_value,
+            element_capture: row_element.attr(),
             on_keydown,
             on_click,
             on_dblclick,

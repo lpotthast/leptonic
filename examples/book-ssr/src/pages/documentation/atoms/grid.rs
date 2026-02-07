@@ -1,6 +1,7 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
+use leptonic::atoms::focus_ring::FocusRing;
 use leptonic::atoms::grid::{
     Grid as GridAtom, GridCell as GridCellAtom, GridRow as GridRowAtom,
     GridRowGroup as GridRowGroupAtom,
@@ -9,419 +10,254 @@ use leptonic::atoms::grid_list::{GridList, GridListItem};
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::{
-    GridCollection, GridFocusMode, GridRow as GridRowData, SelectionBehavior, SelectionMode,
+    EscapeKeyBehavior, GridCollection, GridFocusMode, GridRow as GridRowData, Selection,
+    SelectionBehavior, SelectionMode,
 };
+use leptonic::utils::styles::Style::{
+    AlignItems, Background, Border, BorderBottom, BorderRadius, Cursor, Display, FlexDirection,
+    FontFamily, FontSize, Gap, Height, MarginTop, MaxWidth, Outline, OutlineOffset, Overflow,
+    Padding, UserSelect, Width,
+};
+use leptonic::utils::styles::Styles;
 use leptos::prelude::*;
 use std::collections::HashSet;
+
+fn cell_style(color: &str) -> Styles {
+    Styles::builder()
+        .with((Width, "50px"))
+        .with((Height, "50px"))
+        .with((BorderRadius, "4px"))
+        .with((Cursor, "pointer"))
+        .with((
+            "transition",
+            "transform 0.15s, outline-color 0.15s, box-shadow 0.15s",
+        ))
+        .with((Outline, "3px solid transparent"))
+        .with((OutlineOffset, "2px"))
+        .with((Background, color.to_string()))
+        .build()
+}
+
+fn row_style() -> Styles {
+    Styles::from([(Display, "flex"), (Gap, "8px")])
+}
+
+fn grid_layout_style() -> Styles {
+    Styles::from([(Display, "flex"), (FlexDirection, "column"), (Gap, "8px")])
+}
+
+fn list_item_style() -> Styles {
+    Styles::builder()
+        .with((Display, "flex"))
+        .with((AlignItems, "center"))
+        .with((Padding, "10px 14px"))
+        .with((Cursor, "pointer"))
+        .with((UserSelect, "none"))
+        .with(("transition", "background-color 0.15s, outline-color 0.15s"))
+        .with((Outline, "2px solid transparent"))
+        .with((OutlineOffset, "-2px"))
+        .with((BorderBottom, "1px solid #e0e0e0"))
+        .with((Gap, "10px"))
+        .build()
+}
+
+fn state_display_style() -> Styles {
+    Styles::from([
+        (MarginTop, "1em"),
+        (Padding, "0.75em 1em"),
+        (Background, "#f5f5f5"),
+        (BorderRadius, "6px"),
+        (FontSize, "0.9em"),
+        (FontFamily, "monospace"),
+    ])
+}
 
 #[component]
 fn GridDemo(children: Children) -> impl IntoView {
     view! {
         <div style="padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-            { children() }
+            {children()}
         </div>
+    }
+}
+
+fn format_selection(sel: &Selection<String>) -> String {
+    match sel {
+        Selection::Keys(keys) => {
+            if keys.is_empty() {
+                "None".to_string()
+            } else {
+                let mut sorted: Vec<_> = keys.iter().collect();
+                sorted.sort();
+                sorted.into_iter().cloned().collect::<Vec<_>>().join(", ")
+            }
+        }
+        Selection::All => "All".to_string(),
     }
 }
 
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn PageAtomGrid() -> impl IntoView {
-    let (action_log, set_action_log) = signal(String::new());
-
     view! {
         <Article>
             <h1 id="grid" class="anchor">
-                "Grid"
+                "Grid Atoms"
                 <AnchorLink href="#grid" description="Direct link to article header"/>
             </h1>
 
             <p>
-                "The Grid atoms wrap the grid hooks into composable components. "
-                "Two patterns are supported:"
+                "The grid atoms wrap the "
+                <a href="/documentation/hooks/grid">"grid hooks"</a>
+                " into composable components. Two patterns are supported:"
             </p>
             <ul>
-                <li><strong>"2D Grid"</strong>" — "<code>"Grid > GridRowGroup > GridRow > GridCell"</code>" for multi-column layouts"</li>
-                <li><strong>"1D Grid List"</strong>" — "<code>"GridList > GridListItem"</code>" for single-column lists with grid semantics"</li>
+                <li><strong>"2D Grid"</strong>" — "<code>"Grid > GridRowGroup > GridRow > GridCell"</code>" for multi-column layouts (color pickers, calendars)"</li>
+                <li><strong>"1D Grid List"</strong>" — "<code>"GridList > GridListItem"</code>" for single-column lists with grid keyboard semantics (file lists, card galleries)"</li>
             </ul>
             <p>
                 "Both provide full keyboard navigation, selection, and ARIA accessibility. "
-                "Style via "<code>"data-selected"</code>", "<code>"data-focused"</code>", and "<code>"data-disabled"</code>" data attributes."
+                "Style via "<code>"data-selected"</code>", "<code>"data-focused"</code>", and "<code>"data-disabled"</code>" data attributes on each row, cell, or list item."
             </p>
 
-            // ---- 2D Grid ----
+            // ---- 2D Grid Demo ----
 
             <h2 id="grid-2d" class="anchor">
                 "2D Grid"
                 <AnchorLink href="#grid-2d" description="Direct link to 2D grid"/>
             </h2>
 
-            <p>"A 3×4 color palette grid with cell-mode focus and single selection."</p>
+            <p>"A color palette grid with multi-selection. Click cells to select, arrow keys to navigate, Space to toggle, Escape to clear, Ctrl+A to select all."</p>
+
+            <ColorPaletteDemo/>
 
             <Code>
                 {indoc!(r#"
                     use leptonic::atoms::grid::*;
+                    use leptonic::hooks::*;
 
                     let collection = Signal::stored(GridCollection::new(vec![
-                        GridRowData { key: "row-0", cells: vec!["0-0", "0-1", "0-2", "0-3"] },
-                        GridRowData { key: "row-1", cells: vec!["1-0", "1-1", "1-2", "1-3"] },
-                        GridRowData { key: "row-2", cells: vec!["2-0", "2-1", "2-2", "2-3"] },
+                        GridRow { key: "row-0".into(), cells: vec!["0-0".into(), "0-1".into()] },
+                        GridRow { key: "row-1".into(), cells: vec!["1-0".into(), "1-1".into()] },
                     ]));
 
+                    let (selected, set_selected) = signal(Selection::<String>::default());
+
                     view! {
-                        <Grid collection selection_mode=SelectionMode::Single label="Colors".to_string()>
+                        <Grid
+                            collection
+                            selection_mode=SelectionMode::Multiple
+                            selection_behavior=SelectionBehavior::Toggle
+                            focus_mode=GridFocusMode::Cell
+                            selected_keys=selected
+                            on_selection_change=Callback::new(move |sel| set_selected.set(sel))
+                            label="Color Palette".to_string()
+                        >
                             <GridRowGroup>
-                                // GridRow + GridCell for each row/cell...
+                                <GridRow item_key="row-0".to_string() row_index=0>
+                                    <GridCell item_key="0-0".to_string() row_index=0 column_index=0>
+                                        "Cell content"
+                                    </GridCell>
+                                </GridRow>
                             </GridRowGroup>
                         </Grid>
                     }
                 "#)}
             </Code>
 
-            {
-                let colors: &[&[&str]] = &[
-                    &["#f44336", "#e91e63", "#9c27b0", "#673ab7"],
-                    &["#3f51b5", "#2196f3", "#03a9f4", "#00bcd4"],
-                    &["#009688", "#4caf50", "#8bc34a", "#cddc39"],
-                ];
-
-                let collection: Signal<GridCollection<String>> = Signal::stored(GridCollection::new(
-                    colors
-                        .iter()
-                        .enumerate()
-                        .map(|(ri, row)| GridRowData {
-                            key: format!("row-{ri}"),
-                            cells: (0..row.len()).map(|ci| format!("{ri}-{ci}")).collect(),
-                        })
-                        .collect(),
-                ));
-
-                view! {
-                    <GridDemo>
-                        <GridAtom
-                            collection
-                            selection_mode=SelectionMode::Single
-                            selection_behavior=SelectionBehavior::Toggle
-                            focus_mode=GridFocusMode::Cell
-                            label="Color Palette".to_string()
-                        >
-                            <GridRowGroupAtom>
-                                {
-                                    colors
-                                        .iter()
-                                        .enumerate()
-                                        .map(|(ri, row)| {
-                                            let cells = row
-                                                .iter()
-                                                .enumerate()
-                                                .map(|(ci, color)| {
-                                                    let color = *color;
-                                                    view! {
-                                                        <GridCellAtom<String>
-                                                            item_key=format!("{ri}-{ci}")
-                                                            row_index=ri
-                                                            column_index=ci
-                                                            styles=format!(
-                                                                "width: 48px; height: 48px; background: {color}; border-radius: 6px; \
-                                                                 cursor: pointer; outline: 2px solid transparent; outline-offset: 2px; \
-                                                                 transition: outline-color 0.15s;"
-                                                            )
-                                                        >
-                                                            ""
-                                                        </GridCellAtom<String>>
-                                                    }
-                                                })
-                                                .collect_view();
-                                            view! {
-                                                <GridRowAtom<String> item_key=format!("row-{ri}") row_index=ri styles="display: flex; gap: 4px; margin-bottom: 4px;">
-                                                    {cells}
-                                                </GridRowAtom<String>>
-                                            }
-                                        })
-                                        .collect_view();
-                                }
-                            </GridRowGroupAtom>
-                        </GridAtom>
-                        <p style="font-size: 0.85em; color: #666; margin-top: 0.5em;">
-                            "Click a cell to select it. Use arrow keys to navigate. Space to toggle selection."
-                        </p>
-                    </GridDemo>
-                }
-            }
-
-            <style>
-                "[data-selected='true'] { outline-color: white !important; box-shadow: 0 0 0 2px var(--brand-color, #2196f3); }"
-                "[data-focused='true'] { outline-color: var(--brand-color, #2196f3) !important; }"
-            </style>
-
-            // ---- Multi-Selection Grid ----
-
-            <h2 id="multi-select" class="anchor">
-                "Multi-Selection Grid"
-                <AnchorLink href="#multi-select" description="Direct link to multi-selection"/>
-            </h2>
-
-            <p>"Use "<code>"SelectionMode::Multiple"</code>" for multi-select. Ctrl+click or Shift+arrows to extend selection. Ctrl+A to select all. Escape to clear."</p>
-
-            {
-                let items: &[&[&str]] = &[
-                    &["Alpha", "Beta", "Gamma"],
-                    &["Delta", "Epsilon", "Zeta"],
-                    &["Eta", "Theta", "Iota"],
-                ];
-
-                let collection: Signal<GridCollection<String>> = Signal::stored(GridCollection::new(
-                    items
-                        .iter()
-                        .enumerate()
-                        .map(|(ri, row)| GridRowData {
-                            key: format!("row-{ri}"),
-                            cells: (0..row.len()).map(|ci| format!("{ri}-{ci}")).collect(),
-                        })
-                        .collect(),
-                ));
-
-                let rows = items
-                    .iter()
-                    .enumerate()
-                    .map(|(ri, row)| {
-                        let cells = row
-                            .iter()
-                            .enumerate()
-                            .map(|(ci, label)| {
-                                let label = *label;
-                                view! {
-                                    <GridCellAtom<String>
-                                        item_key=format!("{ri}-{ci}")
-                                        row_index=ri
-                                        column_index=ci
-                                        styles="padding: 8px 16px; border: 1px solid #ccc; border-radius: 4px; \
-                                                cursor: pointer; min-width: 80px; text-align: center; \
-                                                transition: background-color 0.15s;"
-                                    >
-                                        {label}
-                                    </GridCellAtom<String>>
-                                }
-                            })
-                            .collect_view();
-                        view! {
-                            <GridRowAtom<String> item_key=format!("row-{ri}") row_index=ri styles="display: flex; gap: 4px; margin-bottom: 4px;">
-                                {cells}
-                            </GridRowAtom<String>>
-                        }
-                    })
-                    .collect_view();
-
-                view! {
-                    <GridDemo>
-                        <GridAtom
-                            collection
-                            selection_mode=SelectionMode::Multiple
-                            selection_behavior=SelectionBehavior::Toggle
-                            focus_mode=GridFocusMode::Cell
-                            label="Greek Letters".to_string()
-                        >
-                            <GridRowGroupAtom>
-                                {rows}
-                            </GridRowGroupAtom>
-                        </GridAtom>
-                        <p style="font-size: 0.85em; color: #666; margin-top: 0.5em;">
-                            "Ctrl+click to toggle multiple cells. Ctrl+A to select all. Escape to clear."
-                        </p>
-                    </GridDemo>
-                }
-            }
-
-            // ---- 1D Grid List ----
+            // ---- Grid List Demo ----
 
             <h2 id="grid-list" class="anchor">
-                "1D Grid List"
+                "Grid List"
                 <AnchorLink href="#grid-list" description="Direct link to grid list"/>
             </h2>
 
-            <p>"A single-column list with grid semantics. Navigate with ArrowUp/ArrowDown."</p>
+            <p>
+                "A 1D list with grid keyboard navigation. Arrow Up/Down to navigate, Space to toggle selection, Enter or double-click to trigger the row action."
+            </p>
+
+            <FileListDemo/>
 
             <Code>
                 {indoc!(r#"
                     use leptonic::atoms::grid_list::*;
+                    use leptonic::hooks::*;
 
-                    let items = vec!["Apple", "Banana", "Cherry", "Date", "Elderberry"];
-                    let all_keys: Signal<Vec<String>> = Signal::stored(
-                        items.iter().map(|s| s.to_string()).collect::<Vec<_>>()
-                    ).into();
+                    let all_keys = Signal::stored(vec![
+                        "file-1".to_string(), "file-2".to_string(),
+                    ]);
+                    let (selected, set_selected) = signal(Selection::<String>::default());
 
                     view! {
-                        <GridList all_keys selection_mode=SelectionMode::Single label="Fruits".to_string()>
-                            // GridListItem for each item...
+                        <GridList
+                            all_keys
+                            selection_mode=SelectionMode::Multiple
+                            selection_behavior=SelectionBehavior::Toggle
+                            selected_keys=selected
+                            on_selection_change=Callback::new(move |sel| set_selected.set(sel))
+                            on_action=Callback::new(|key: String| { /* handle action */ })
+                            label="Files".to_string()
+                        >
+                            <GridListItem item_key="file-1".to_string() row_index=0
+                                text_value="Document.pdf".to_string()
+                            >
+                                "Document.pdf"
+                            </GridListItem>
                         </GridList>
                     }
                 "#)}
             </Code>
 
-            {
-                let items = ["Apple", "Banana", "Cherry", "Date", "Elderberry"];
-                let all_keys: Signal<Vec<String>> = Signal::stored(
-                    items.iter().map(|s| (*s).to_string()).collect::<Vec<_>>()
-                );
+            // ---- Data Attributes ----
 
-                view! {
-                    <GridDemo>
-                        <GridList
-                            all_keys
-                            selection_mode=SelectionMode::Single
-                            selection_behavior=SelectionBehavior::Toggle
-                            label="Fruits".to_string()
-                            styles="max-width: 300px;"
-                        >
-                            {items
-                                .iter()
-                                .enumerate()
-                                .map(|(idx, item)| {
-                                    let key = item.to_string();
-                                    let text = item.to_string();
-                                    view! {
-                                        <GridListItem<String>
-                                            item_key=key.clone()
-                                            row_index=idx
-                                            text_value=text.clone()
-                                            styles="padding: 8px 12px; border: 1px solid #ddd; margin-bottom: 2px; \
-                                                    border-radius: 4px; cursor: pointer; transition: background-color 0.15s;"
-                                        >
-                                            {text}
-                                        </GridListItem<String>>
-                                    }
-                                })
-                                .collect_view()}
-                        </GridList>
-                        <p style="font-size: 0.85em; color: #666; margin-top: 0.5em;">
-                            "Use ArrowUp/ArrowDown to navigate. Space to toggle selection."
-                        </p>
-                    </GridDemo>
-                }
-            }
-
-            // ---- Grid List with Actions ----
-
-            <h2 id="actions" class="anchor">
-                "Grid List with Actions"
-                <AnchorLink href="#actions" description="Direct link to actions"/>
+            <h2 id="data-attributes" class="anchor">
+                "Data Attributes"
+                <AnchorLink href="#data-attributes" description="Direct link to data attributes"/>
             </h2>
 
-            <p>"Pass "<code>"on_action"</code>" to handle Enter key or double-click activation."</p>
+            <p>"All row, cell, and list item atoms expose data attributes for CSS styling. This is the key advantage of atoms over raw hooks — you can target these attributes with standard CSS selectors."</p>
 
-            {
-                let items = ["Open file", "Save file", "Close file"];
-                let all_keys: Signal<Vec<String>> = Signal::stored(
-                    items.iter().map(|s| (*s).to_string()).collect::<Vec<_>>()
-                );
+            <Code>
+                {indoc!(r#"
+                    /* Focused indicator — visible outline */
+                    [data-focused="true"] {
+                        outline: 3px solid #1976d2;
+                        outline-offset: 2px;
+                    }
 
-                view! {
-                    <GridDemo>
-                        <GridList
-                            all_keys
-                            selection_mode=SelectionMode::Single
-                            selection_behavior=SelectionBehavior::Replace
-                            on_action=Callback::new(move |key: String| {
-                                set_action_log.set(format!("Action: {key}"));
-                            })
-                            label="Commands".to_string()
-                            styles="max-width: 300px;"
-                        >
-                            {items
-                                .iter()
-                                .enumerate()
-                                .map(|(idx, item)| {
-                                    let key = item.to_string();
-                                    let text = item.to_string();
-                                    view! {
-                                        <GridListItem<String>
-                                            item_key=key.clone()
-                                            row_index=idx
-                                            text_value=text.clone()
-                                            styles="padding: 8px 12px; border: 1px solid #ddd; margin-bottom: 2px; \
-                                                    border-radius: 4px; cursor: pointer;"
-                                        >
-                                            {text}
-                                        </GridListItem<String>>
-                                    }
-                                })
-                                .collect_view()}
-                        </GridList>
-                        <div style="margin-top: 0.5em; font-size: 0.9em; font-family: monospace;">
-                            { move || action_log.get() }
-                        </div>
-                        <p style="font-size: 0.85em; color: #666; margin-top: 0.5em;">
-                            "Press Enter or double-click an item to trigger its action."
-                        </p>
-                    </GridDemo>
-                }
-            }
+                    /* Selected indicator — background highlight */
+                    [data-selected="true"] {
+                        background-color: rgba(25, 118, 210, 0.15);
+                    }
 
-            // ---- Disabled Items ----
+                    /* Disabled items — faded out */
+                    [data-disabled="true"] {
+                        opacity: 0.4;
+                        cursor: not-allowed;
+                    }
+                "#)}
+            </Code>
 
-            <h2 id="disabled" class="anchor">
-                "Disabled Items"
-                <AnchorLink href="#disabled" description="Direct link to disabled items"/>
+            // ---- Selection Modes ----
+
+            <h2 id="selection-modes" class="anchor">
+                "Selection Modes"
+                <AnchorLink href="#selection-modes" description="Direct link to selection modes"/>
             </h2>
 
-            <p>
-                "Use "<code>"disabled_keys"</code>" on the container to disable specific items, "
-                "or the "<code>"disabled"</code>" prop on individual "<code>"GridListItem"</code>" components. "
-                "Disabled items are skipped during keyboard navigation and cannot be selected."
-            </p>
+            <ul>
+                <li><code>"SelectionMode::None"</code>" — Focus-only, no selection"</li>
+                <li><code>"SelectionMode::Single"</code>" — One item at a time"</li>
+                <li><code>"SelectionMode::Multiple"</code>" — Multiple items (Shift+Arrow extends, Ctrl+A selects all)"</li>
+            </ul>
 
-            {
-                let items = ["Enabled A", "Disabled B", "Enabled C", "Disabled D", "Enabled E"];
-                let all_keys: Signal<Vec<String>> = Signal::stored(
-                    items.iter().map(|s| (*s).to_string()).collect::<Vec<_>>()
-                );
-                let disabled_keys: Signal<HashSet<String>> = Signal::stored(
-                    ["Disabled B".to_string(), "Disabled D".to_string()]
-                        .into_iter()
-                        .collect::<HashSet<String>>(),
-                );
+            <p>"Combined with "<code>"SelectionBehavior"</code>":"</p>
+            <ul>
+                <li><code>"SelectionBehavior::Toggle"</code>" — Click toggles individual items"</li>
+                <li><code>"SelectionBehavior::Replace"</code>" — Click replaces the selection (hold Ctrl to toggle)"</li>
+            </ul>
 
-                view! {
-                    <GridDemo>
-                        <GridList
-                            all_keys
-                            disabled_keys
-                            selection_mode=SelectionMode::Multiple
-                            selection_behavior=SelectionBehavior::Toggle
-                            label="Mixed Items".to_string()
-                            styles="max-width: 300px;"
-                        >
-                            {items
-                                .iter()
-                                .enumerate()
-                                .map(|(idx, item)| {
-                                    let key = item.to_string();
-                                    let text = item.to_string();
-                                    view! {
-                                        <GridListItem<String>
-                                            item_key=key.clone()
-                                            row_index=idx
-                                            text_value=text.clone()
-                                            styles="padding: 8px 12px; border: 1px solid #ddd; margin-bottom: 2px; \
-                                                    border-radius: 4px; cursor: pointer;"
-                                        >
-                                            {text}
-                                        </GridListItem<String>>
-                                    }
-                                })
-                                .collect_view()}
-                        </GridList>
-                        <p style="font-size: 0.85em; color: #666; margin-top: 0.5em;">
-                            "\"Disabled B\" and \"Disabled D\" are skipped during navigation."
-                        </p>
-                    </GridDemo>
-                }
-            }
-
-            <style>
-                "[data-disabled='true'] { opacity: 0.4; cursor: not-allowed !important; }"
-                "[data-selected='true'][role='row'] { background-color: rgba(33, 150, 243, 0.15); }"
-                "[data-focused='true'][role='row'] { outline: 2px solid var(--brand-color, #2196f3); outline-offset: -2px; }"
-            </style>
+            <p>"See the "<a href="/documentation/hooks/grid">"hooks page"</a>" for a detailed reference on keyboard navigation and ARIA attributes."</p>
 
             // ---- API Reference ----
 
@@ -430,76 +266,269 @@ pub fn PageAtomGrid() -> impl IntoView {
                 <AnchorLink href="#api" description="Direct link to API"/>
             </h2>
 
-            <h3>"Grid (2D)"</h3>
+            <h3 id="api-grid">"Grid"</h3>
             <ul>
-                <li><code>"collection: Signal<GridCollection<K>>"</code>" - Grid structure (rows and cells)"</li>
-                <li><code>"disabled_keys: Option<Signal<HashSet<K>>>"</code>" - Disabled row/cell keys"</li>
-                <li><code>"focus_mode: GridFocusMode"</code>" - Row or Cell focus mode"</li>
-                <li><code>"selection_mode: SelectionMode"</code>" - None, Single, or Multiple"</li>
-                <li><code>"selection_behavior: SelectionBehavior"</code>" - Toggle or Replace"</li>
-                <li><code>"selected_keys: Option<Signal<Selection<K>>>"</code>" - Controlled selection"</li>
-                <li><code>"on_selection_change: Option<Callback<Selection<K>>>"</code>" - Selection callback"</li>
-                <li><code>"disabled: Option<Signal<bool>>"</code>" - Disable entire grid"</li>
-                <li><code>"escape_key_behavior: EscapeKeyBehavior"</code>" - ClearSelection or None"</li>
-                <li><code>"should_focus_wrap: bool"</code>" - Wrap arrow navigation"</li>
-                <li><code>"on_row_action / on_cell_action: Option<Callback<K>>"</code>" - Enter key callbacks"</li>
-                <li><code>"label / labelled_by"</code>" - ARIA labeling"</li>
+                <li><code>"collection: Signal<GridCollection<K>>"</code>" — Grid structure (rows and cells)"</li>
+                <li><code>"selection_mode: SelectionMode"</code>" — None, Single, or Multiple"</li>
+                <li><code>"selection_behavior: SelectionBehavior"</code>" — Toggle or Replace"</li>
+                <li><code>"focus_mode: GridFocusMode"</code>" — Row or Cell focus mode"</li>
+                <li><code>"selected_keys: Option<Signal<Selection<K>>>"</code>" — Controlled selection"</li>
+                <li><code>"on_selection_change: Option<Callback<Selection<K>>>"</code>" — Selection callback"</li>
+                <li><code>"disabled_keys: Option<Signal<HashSet<K>>>"</code>" — Disabled row/cell keys"</li>
+                <li><code>"disabled: Option<Signal<bool>>"</code>" — Disable entire grid"</li>
+                <li><code>"escape_key_behavior: EscapeKeyBehavior"</code>" — ClearSelection or None"</li>
+                <li><code>"should_focus_wrap: bool"</code>" — Wrap arrow key navigation"</li>
+                <li><code>"on_row_action / on_cell_action: Option<Callback<K>>"</code>" — Enter key callbacks"</li>
+                <li><code>"label / labelled_by"</code>" — ARIA labeling"</li>
+                <li><code>"classes: Classes, styles: Styles"</code>" — CSS styling"</li>
             </ul>
 
-            <h3>"GridRowGroup"</h3>
+            <h3 id="api-grid-row-group">"GridRowGroup"</h3>
             <p>"Structural wrapper. Props: "<code>"classes"</code>", "<code>"styles"</code>"."</p>
 
-            <h3>"GridRow"</h3>
+            <h3 id="api-grid-row">"GridRow"</h3>
             <ul>
-                <li><code>"item_key: K"</code>" - Row key (must match collection)"</li>
-                <li><code>"row_index: usize"</code>" - 0-based row index"</li>
+                <li><code>"item_key: K"</code>" — Row key (must match collection)"</li>
+                <li><code>"row_index: usize"</code>" — 0-based row index"</li>
+                <li><code>"classes: Classes, styles: Styles"</code>" — CSS styling"</li>
             </ul>
 
-            <h3>"GridCell"</h3>
+            <h3 id="api-grid-cell">"GridCell"</h3>
             <ul>
-                <li><code>"item_key: K"</code>" - Cell key (must match collection)"</li>
-                <li><code>"row_index: usize"</code>" - 0-based row index"</li>
-                <li><code>"column_index: usize"</code>" - 0-based column index"</li>
-                <li><code>"focus_mode: CellFocusMode"</code>" - Cell (default) or Child"</li>
+                <li><code>"item_key: K"</code>" — Cell key (must match collection)"</li>
+                <li><code>"row_index: usize"</code>" — 0-based row index"</li>
+                <li><code>"column_index: usize"</code>" — 0-based column index"</li>
+                <li><code>"focus_mode: CellFocusMode"</code>" — Cell (default) or Child"</li>
+                <li><code>"classes: Classes, styles: Styles"</code>" — CSS styling"</li>
             </ul>
 
-            <h3>"GridList (1D)"</h3>
+            <h3 id="api-grid-list">"GridList"</h3>
             <ul>
-                <li><code>"all_keys: Signal<Vec<K>>"</code>" - Ordered list of all row keys"</li>
-                <li><code>"disabled_keys: Option<Signal<HashSet<K>>>"</code>" - Disabled keys"</li>
-                <li><code>"selection_mode / selection_behavior"</code>" - Selection configuration"</li>
-                <li><code>"on_action: Option<Callback<K>>"</code>" - Enter key / double-click callback"</li>
-                <li>"Same ARIA and behavior props as Grid"</li>
+                <li><code>"all_keys: Signal<Vec<K>>"</code>" — Ordered list of all row keys"</li>
+                <li><code>"disabled_keys: Option<Signal<HashSet<K>>>"</code>" — Disabled keys"</li>
+                <li>"Same selection, ARIA, and behavior props as Grid"</li>
+                <li><code>"on_action: Option<Callback<K>>"</code>" — Enter key / double-click callback"</li>
             </ul>
 
-            <h3>"GridListItem"</h3>
+            <h3 id="api-grid-list-item">"GridListItem"</h3>
             <ul>
-                <li><code>"item_key: K"</code>" - Item key"</li>
-                <li><code>"row_index: usize"</code>" - 0-based row index"</li>
-                <li><code>"disabled: Option<Signal<bool>>"</code>" - Per-item disabled state"</li>
-                <li><code>"text_value: Option<String>"</code>" - Accessible text label"</li>
-            </ul>
-
-            <h3>"Data Attributes"</h3>
-            <p>"All row, cell, and list item atoms expose these data attributes for styling:"</p>
-            <ul>
-                <li><code>"data-selected=\"true\""</code>" - Present when the item is selected"</li>
-                <li><code>"data-focused=\"true\""</code>" - Present when the item has keyboard focus"</li>
-                <li><code>"data-disabled=\"true\""</code>" - Present when the item is disabled"</li>
+                <li><code>"item_key: K"</code>" — Item key"</li>
+                <li><code>"row_index: usize"</code>" — 0-based row index"</li>
+                <li><code>"disabled: Option<Signal<bool>>"</code>" — Per-item disabled state"</li>
+                <li><code>"text_value: Option<String>"</code>" — Accessible text label"</li>
+                <li><code>"classes: Classes, styles: Styles"</code>" — CSS styling"</li>
             </ul>
 
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "Grid", link: "#grid" },
+                Toc::Leaf { title: "Grid Atoms", link: "#grid" },
                 Toc::Leaf { title: "2D Grid", link: "#grid-2d" },
-                Toc::Leaf { title: "Multi-Selection Grid", link: "#multi-select" },
-                Toc::Leaf { title: "1D Grid List", link: "#grid-list" },
-                Toc::Leaf { title: "Grid List with Actions", link: "#actions" },
-                Toc::Leaf { title: "Disabled Items", link: "#disabled" },
+                Toc::Leaf { title: "Grid List", link: "#grid-list" },
+                Toc::Leaf { title: "Data Attributes", link: "#data-attributes" },
+                Toc::Leaf { title: "Selection Modes", link: "#selection-modes" },
                 Toc::Leaf { title: "API Reference", link: "#api" },
             ]
         }/>
+    }
+}
+
+#[component]
+#[allow(clippy::too_many_lines)]
+fn ColorPaletteDemo() -> impl IntoView {
+    let colors = [
+        ["#f44336", "#e91e63", "#9c27b0", "#673ab7"],
+        ["#3f51b5", "#2196f3", "#03a9f4", "#00bcd4"],
+        ["#009688", "#4caf50", "#8bc34a", "#cddc39"],
+    ];
+
+    let collection: Signal<GridCollection<String>> = Signal::stored(GridCollection::new(
+        colors
+            .iter()
+            .enumerate()
+            .map(|(ri, row)| GridRowData {
+                key: format!("row-{ri}"),
+                cells: (0..row.len()).map(|ci| format!("{ri}-{ci}")).collect(),
+            })
+            .collect(),
+    ));
+
+    let (selected, set_selected) = signal(Selection::<String>::default());
+    let (last_action, set_last_action) = signal::<Option<String>>(None);
+
+    view! {
+        <GridDemo>
+            <GridAtom
+                collection
+                selection_mode=SelectionMode::Multiple
+                selection_behavior=SelectionBehavior::Toggle
+                focus_mode=GridFocusMode::Cell
+                selected_keys=selected
+                on_selection_change=Callback::new(move |sel| set_selected.set(sel))
+                escape_key_behavior=EscapeKeyBehavior::ClearSelection
+                on_row_action=Callback::new(move |key: String| {
+                    set_last_action.set(Some(key));
+                })
+                label="Color Palette".to_string()
+            >
+                <GridRowGroupAtom styles=grid_layout_style()>
+                    {colors
+                        .into_iter()
+                        .enumerate()
+                        .map(move |(ri, row)| {
+                            view! {
+                                <GridRowAtom<String> item_key=format!("row-{ri}") row_index=ri styles=row_style()>
+                                    {
+                                        row
+                                            .into_iter()
+                                            .enumerate()
+                                            .map(move |(ci, color)| {
+                                                view! {
+                                                    <FocusRing>
+                                                        <GridCellAtom<String>
+                                                            item_key=format!("{ri}-{ci}")
+                                                            row_index=ri
+                                                            column_index=ci
+                                                            styles=cell_style(color)
+                                                        >
+                                                            ""
+                                                        </GridCellAtom<String>>
+                                                    </FocusRing>
+                                                }
+                                            })
+                                            .collect_view()
+                                    }
+                                </GridRowAtom<String>>
+                            }
+                        })
+                        .collect_view()}
+                </GridRowGroupAtom>
+            </GridAtom>
+
+            <div style=state_display_style()>
+                <div>
+                    <strong>"Selected: "</strong>
+                    {move || format_selection(&selected.get())}
+                </div>
+                <div style="margin-top: 0.25em;">
+                    <strong>"Last row action: "</strong>
+                    {move || last_action.get().unwrap_or_else(|| "None".to_string())}
+                </div>
+            </div>
+        </GridDemo>
+
+        <style>
+            "article [role='gridcell'][data-focused='true'] { outline-color: #000 !important; }"
+            "article [role='gridcell'][data-selected='true'] { transform: scale(0.85); box-shadow: 0 0 0 3px white, 0 0 0 5px #1976d2; }"
+        </style>
+    }
+}
+
+#[component]
+#[allow(clippy::too_many_lines)]
+fn FileListDemo() -> impl IntoView {
+    let items = [
+        ("doc-1", "Document.pdf", "pdf"),
+        ("img-1", "Photo.jpg", "img"),
+        ("sheet-1", "Spreadsheet.xlsx", "xls"),
+        ("pres-1", "Presentation.pptx", "ppt"),
+        ("arch-1", "Archive.zip", "zip"),
+    ];
+
+    let all_keys: Signal<Vec<String>> = Signal::stored(
+        items
+            .iter()
+            .map(|(k, _, _)| (*k).to_string())
+            .collect::<Vec<_>>(),
+    );
+
+    let (selected, set_selected) = signal(Selection::<String>::default());
+    let (last_action, set_last_action) = signal::<Option<String>>(None);
+
+    let disabled_keys: Signal<HashSet<String>> = Signal::stored(
+        ["arch-1".to_string()]
+            .into_iter()
+            .collect::<HashSet<String>>(),
+    );
+
+    let list_container_style = Styles::from([
+        (Border, "1px solid #ccc"),
+        (BorderRadius, "6px"),
+        (Overflow, "hidden"),
+        (MaxWidth, "360px"),
+    ]);
+
+    view! {
+        <GridDemo>
+            <GridList
+                all_keys
+                disabled_keys
+                selection_mode=SelectionMode::Multiple
+                selection_behavior=SelectionBehavior::Toggle
+                selected_keys=selected
+                on_selection_change=Callback::new(move |sel| set_selected.set(sel))
+                escape_key_behavior=EscapeKeyBehavior::ClearSelection
+                on_action=Callback::new(move |key: String| {
+                    set_last_action.set(Some(key));
+                })
+                label="Files".to_string()
+                styles=list_container_style
+            >
+                {items
+                    .iter()
+                    .enumerate()
+                    .map(|(idx, (key, label, icon))| {
+                        let key = (*key).to_string();
+                        let label = *label;
+                        let icon = *icon;
+                        view! {
+                            <GridListItem<String>
+                                item_key=key
+                                row_index=idx
+                                text_value=label.to_string()
+                                styles=list_item_style()
+                            >
+                                <span style="width: 24px; text-align: center; font-size: 1.1em;">
+                                    {file_icon(icon)}
+                                </span>
+                                <span>{label}</span>
+                            </GridListItem<String>>
+                        }
+                    })
+                    .collect_view()}
+            </GridList>
+
+            <p style="font-size: 0.85em; color: #666; margin-top: 0.5em;">
+                "\"Archive.zip\" is disabled — it is skipped during keyboard navigation and cannot be selected."
+            </p>
+
+            <div style=state_display_style()>
+                <div>
+                    <strong>"Selected: "</strong>
+                    {move || format_selection(&selected.get())}
+                </div>
+                <div style="margin-top: 0.25em;">
+                    <strong>"Last action: "</strong>
+                    {move || last_action.get().unwrap_or_else(|| "None".to_string())}
+                </div>
+            </div>
+        </GridDemo>
+
+        <style>
+            "article [role='row'][data-focused='true'] { outline-color: #1976d2 !important; }"
+            "article [role='row'][data-selected='true'] { background-color: #e3f2fd; }"
+            "article [role='row'][data-disabled='true'] { opacity: 0.4; cursor: not-allowed !important; }"
+        </style>
+    }
+}
+
+fn file_icon(kind: &str) -> &'static str {
+    match kind {
+        "pdf" => "\u{1F4C4}",
+        "img" => "\u{1F5BC}",
+        "xls" | "ppt" => "\u{1F4CA}",
+        "zip" => "\u{1F4E6}",
+        _ => "\u{1F4C1}",
     }
 }

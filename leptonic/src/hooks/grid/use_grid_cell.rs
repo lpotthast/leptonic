@@ -11,6 +11,7 @@ use crate::hooks::focus::use_focus_manager::{FocusManager, FocusManagerOptions};
 use crate::hooks::selection::use_selectable_item::{use_selectable_item, UseSelectableItemInput};
 use crate::hooks::selection::use_selection_state::SelectionMode;
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
+use crate::utils::focus::focus_element;
 use crate::utils::EventHandler;
 
 use super::use_grid::UseGridState;
@@ -174,6 +175,29 @@ where
     let cell_focus_mode = input.focus_mode;
     let selection_mode = state.selection_mode;
 
+    // --- Element capture + FocusManager for within-cell navigation ---
+    let scope_element = CapturedElement::new();
+
+    // --- Focus callback for DOM focus synchronization ---
+    let scope_element_for_focus = scope_element;
+    let focus_fn = Callback::new(move |()| {
+        if let Some(el) = scope_element_for_focus.get_untracked() {
+            let el = SendWrapper::take(el);
+            // Don't move focus if it's already within this cell
+            // (e.g., user clicked a focusable child). Mirrors react-aria's
+            // `!nodeContains(ref.current, document.activeElement)` check.
+            if let Some(active) = web_sys::window()
+                .and_then(|w| w.document())
+                .and_then(|d| d.active_element())
+            {
+                if el.contains(Some(&active)) && *active != *el {
+                    return;
+                }
+            }
+            focus_element(&el, true);
+        }
+    });
+
     // --- Delegate selection to use_selectable_item ---
     let selectable = use_selectable_item(UseSelectableItemInput {
         key: input.key.clone(),
@@ -188,14 +212,12 @@ where
         should_select_on_press_up: false,
         allow_drag: false,
         on_double_click: state.on_cell_action,
+        focus: Some(focus_fn),
     });
 
     let is_selected = selectable.is_selected;
     let is_focused = selectable.is_focused;
     let is_disabled = selectable.is_disabled;
-
-    // --- Element capture + FocusManager for within-cell navigation ---
-    let scope_element = CapturedElement::new();
 
     let focus_manager =
         FocusManager::new(move || scope_element.get_untracked().map(SendWrapper::take));
