@@ -10,6 +10,7 @@ use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
 use crate::pages::documentation::atoms::button::PageAtomButton;
 use crate::pages::documentation::atoms::focus_ring::PageAtomFocusRing;
 use crate::pages::documentation::atoms::focus_scope::PageAtomFocusScope;
+use crate::pages::documentation::atoms::grid::PageAtomGrid;
 use crate::pages::documentation::atoms::popover::PageAtomPopover;
 use crate::pages::documentation::atoms::slider::PageAtomSlider;
 use crate::pages::documentation::components::feedback::alert::PageAlert;
@@ -203,6 +204,7 @@ pub fn App() -> impl IntoView {
                                 <Route path=routes::doc::atoms::AnchorLink.path() view=PageAtomAnchorLink/>
                                 <Route path=routes::doc::atoms::FocusScope.path() view=PageAtomFocusScope/>
                                 <Route path=routes::doc::atoms::FocusRing.path() view=PageAtomFocusRing/>
+                                <Route path=routes::doc::atoms::Grid.path() view=PageAtomGrid/>
                                 <Route path=routes::doc::atoms::Slider.path() view=PageAtomSlider/>
                             </ParentRoute>
 

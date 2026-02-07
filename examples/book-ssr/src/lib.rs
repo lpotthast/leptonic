@@ -183,6 +183,9 @@ pub mod routes {
             #[route("/focus-ring")]
             pub mod focus_ring {}
 
+            #[route("/grid")]
+            pub mod grid {}
+
             #[route("/slider")]
             pub mod slider {}
         }

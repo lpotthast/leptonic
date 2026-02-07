@@ -334,9 +334,7 @@ fn GridListDemo() -> impl IntoView {
         ("file-5", "Archive.zip"),
     ];
 
-    let all_keys = Signal::stored(
-        items.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>(),
-    );
+    let all_keys = Signal::stored(items.iter().map(|(k, _)| k.to_string()).collect::<Vec<_>>());
 
     let (list_selected, set_list_selected) = signal(Selection::<String>::default());
     let (last_action, set_last_action) = signal::<Option<String>>(None);
