@@ -55,6 +55,10 @@ msrv:
 serve:
   cd ./examples/book-ssr && cargo leptos serve
 
+# Serve the Book example
+serve-release:
+  cd ./examples/book-ssr && cargo leptos serve --release
+
 # Check which process is occupying the given port.
 # This can help you find out which process to kill if some process has gone rogue.
 check-port port:
