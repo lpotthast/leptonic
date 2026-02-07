@@ -352,7 +352,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         match (key.as_str(), shift, is_rtl) {
             // Right arrow / Up arrow (increment by step)
             ("ArrowRight", false, false) | ("ArrowLeft", false, true) | ("ArrowUp", false, _) => {
-                increment(step)
+                increment(step);
             }
             // Right arrow (shifted) / Up arrow (shifted) / Page up (increment by page)
             ("ArrowRight", true, false)
@@ -362,7 +362,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
             // Left arrow / Down arrow (decrement by step)
             ("ArrowLeft", false, false) | ("ArrowRight", false, true) | ("ArrowDown", false, _) => {
-                decrement(step)
+                decrement(step);
             }
             // Left arrow (shifted) / Down arrow (shifted) / Page down (decrement by page)
             ("ArrowLeft", true, false)

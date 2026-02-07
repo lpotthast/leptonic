@@ -148,6 +148,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=routes::doc::atoms::AnchorLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"AnchorLink"</Link>
                 <Link href=routes::doc::atoms::FocusScope.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"FocusScope"</Link>
                 <Link href=routes::doc::atoms::FocusRing.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"FocusRing"</Link>
+                <Link href=routes::doc::atoms::Slider.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
             </Stack>
         </DrawerSection>
 

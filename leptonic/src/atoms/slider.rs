@@ -20,6 +20,8 @@ struct SliderCtx {
     track_props: UseSliderTrackProps,
     track: CapturedElement,
 
+    is_rtl: bool,
+
     next_thumb_idx: Arc<AtomicUsize>,
 }
 
@@ -38,6 +40,11 @@ pub fn Slider(
     #[prop(into, optional, default = 1.0)] step: f64,
     #[prop(into, optional)] orientation: Signal<SliderOrientation>,
     #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] on_change: Option<Callback<Vec<f64>>>,
+    #[prop(into, optional)] on_change_end: Option<Callback<Vec<f64>>>,
+    #[prop(into, optional)] aria_label: Option<&'static str>,
+    #[prop(into, optional)] aria_labelledby: Option<String>,
+    #[prop(into, optional)] is_rtl: bool,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: Children,
@@ -49,8 +56,8 @@ pub fn Slider(
         step,
         disabled,
         orientation,
-        on_change: None,
-        on_change_end: None,
+        on_change,
+        on_change_end,
     });
 
     let UseSliderReturn {
@@ -61,9 +68,9 @@ pub fn Slider(
         output_props,
     } = use_slider(UseSliderInput {
         state,
-        is_rtl: false,
-        aria_label: None,
-        aria_labelledby: None,
+        aria_label,
+        aria_labelledby,
+        is_rtl,
     });
 
     provide_context(SliderCtx {
@@ -72,15 +79,13 @@ pub fn Slider(
         output_props,
         track_props,
         track: track_ref,
+        is_rtl,
         next_thumb_idx: Arc::new(AtomicUsize::new(0)),
     });
 
     view! {
         <div {..group_props.into_attrs()} class=classes style=styles>
             { children() }
-
-            // Hidden input for form submission
-            //<input {..input_props} />
         </div>
     }
 }
@@ -117,89 +122,102 @@ pub fn SliderTrackFill(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let ctx = expect_context::<SliderCtx>();
-    move || {
-        let values = ctx.state.values.get();
-        let styles = styles.clone();
-        match values.len() {
-            1 => {
-                let percentage = values[0];
-                let styles = styles
-                    .add((Position, "absolute"))
-                    .add((Left, "0"))
-                    .add((Top, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => Some("0".into()),
-                        SliderOrientation::Vertical => None,
-                    }))
-                    .add((Bottom, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => None,
-                        SliderOrientation::Vertical => Some("0".into()),
-                    }))
-                    .add((Height, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => Some("100%".into()),
-                        SliderOrientation::Vertical => Some(format!("{percentage}%")),
-                    }))
-                    .add((Width, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => Some(format!("{percentage}%")),
-                        SliderOrientation::Vertical => Some("100%".into()),
-                    }));
-                view! {
-                    // Left fill for single thumb.
-                    //  background: var(--brand-color); border-radius: 4px;
-                    <div class=classes.clone() style=styles/>
-                }
-                .into_any()
+    let values = ctx.state.values;
+
+    match ctx.state.num_thumbs {
+        1 => {
+            let percentage = Signal::derive(move || values.get().first().copied().unwrap_or(0.0));
+            let styles = styles
+                .add((Position, "absolute"))
+                .add((Left, "0"))
+                .add((Top, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => Some("0".into()),
+                    SliderOrientation::Vertical => None,
+                }))
+                .add((Bottom, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => None,
+                    SliderOrientation::Vertical => Some("0".into()),
+                }))
+                .add((Height, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => Some("100%".into()),
+                    SliderOrientation::Vertical => Some(format!("{}%", percentage.get())),
+                }))
+                .add((Width, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => Some(format!("{}%", percentage.get())),
+                    SliderOrientation::Vertical => Some("100%".into()),
+                }));
+            view! {
+                <div class=classes style=styles/>
             }
-            2 => {
-                let value1 = values[0];
-                let value2 = values[1];
-                let first_percentage = value1;
-                let difference = value2 - value1;
-                let styles = styles
-                    .add((Position, "absolute"))
-                    .add((Top, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => Some("0".into()),
-                        SliderOrientation::Vertical => None,
-                    }))
-                    .add((Bottom, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => None,
-                        SliderOrientation::Vertical => Some(format!("{first_percentage}%")),
-                    }))
-                    .add((Left, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => Some(format!("{first_percentage}%")),
-                        SliderOrientation::Vertical => Some("0".into()),
-                    }))
-                    .add((Height, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => Some("100%".into()),
-                        SliderOrientation::Vertical => Some(format!("{difference}%")),
-                    }))
-                    .add((Width, move || match ctx.state.orientation.get() {
-                        SliderOrientation::Horizontal => Some(format!("{difference}%")),
-                        SliderOrientation::Vertical => Some("100%".into()),
-                    }));
-                view! {
-                    // Fill between for two thumbs.
-                    // background: #4a90d9; border-radius: 4px;
-                    <div class=classes.clone() style=styles/>
-                }
-                .into_any()
+            .into_any()
+        }
+        2 => {
+            let first_percentage =
+                Signal::derive(move || values.get().first().copied().unwrap_or(0.0));
+            let difference = Signal::derive(move || {
+                let values = values.get();
+                let v1 = values.first().copied().unwrap_or(0.0);
+                let v2 = values.get(1).copied().unwrap_or(0.0);
+                v2 - v1
+            });
+            let styles = styles
+                .add((Position, "absolute"))
+                .add((Top, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => Some("0".into()),
+                    SliderOrientation::Vertical => None,
+                }))
+                .add((Bottom, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => None,
+                    SliderOrientation::Vertical => Some(format!("{}%", first_percentage.get())),
+                }))
+                .add((Left, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => Some(format!("{}%", first_percentage.get())),
+                    SliderOrientation::Vertical => Some("0".into()),
+                }))
+                .add((Height, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => Some("100%".into()),
+                    SliderOrientation::Vertical => Some(format!("{}%", difference.get())),
+                }))
+                .add((Width, move || match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => Some(format!("{}%", difference.get())),
+                    SliderOrientation::Vertical => Some("100%".into()),
+                }));
+            view! {
+                <div class=classes style=styles/>
             }
-            _ => ().into_any(),
+            .into_any()
+        }
+        n => {
+            tracing::warn!("SliderTrackFill: {n}-thumb fill not yet supported");
+            ().into_any()
         }
     }
 }
 
 #[component]
 pub fn SliderThumb(
+    #[prop(into, optional)] index: Option<usize>,
+    #[prop(into, optional)] name: Option<&'static str>,
     #[prop(into, optional)] aria_label: Option<Cow<'static, str>>,
+    #[prop(into, optional)] aria_labelledby: Option<&'static str>,
+    #[prop(into, optional)] aria_describedby: Option<&'static str>,
+    #[prop(into, optional)] aria_details: Option<&'static str>,
+    #[prop(into, optional)] aria_errormessage: Option<&'static str>,
+    #[prop(into, optional)] validation_state: Option<ValidationState>,
+    #[prop(into, optional)] decimal_places: Option<usize>,
+    #[prop(into, optional)] is_required: bool,
+    #[prop(into, optional)] is_rtl: Option<bool>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let ctx = expect_context::<SliderCtx>();
 
+    let thumb_index = index.unwrap_or_else(|| ctx.next_thumb_idx());
+
     let UseSliderThumbReturn {
         thumb_props,
         input_props,
-        is_dragging: _,
+        is_dragging,
         is_focused: _,
         is_focus_visible: _,
         percentage,
@@ -209,18 +227,26 @@ pub fn SliderThumb(
     } = use_slider_thumb(UseSliderThumbInput {
         state: ctx.state,
         track: ctx.track,
-        index: ctx.next_thumb_idx(), // NOTE: Assumes that `<SliderThumb>`s are rendered in order of their appearance in the view! macro.
-        name: None,
+        index: thumb_index,
+        name,
         aria_label,
-        aria_labelledby: None,
+        aria_labelledby,
         disabled: ctx.state.disabled,
-        validation_state: ValidationState::Valid,
-        is_rtl: false,
-        decimal_places: None,
-        is_required: false,
-        aria_describedby: None,
-        aria_details: None,
-        aria_errormessage: None,
+        validation_state: validation_state.unwrap_or(ValidationState::Valid),
+        is_rtl: is_rtl.unwrap_or(ctx.is_rtl),
+        decimal_places,
+        is_required,
+        aria_describedby,
+        aria_details,
+        aria_errormessage,
+    });
+
+    let data_dragging = Signal::derive(move || {
+        if is_dragging.get() {
+            Some("true")
+        } else {
+            None
+        }
     });
 
     let styles = styles
@@ -230,25 +256,21 @@ pub fn SliderThumb(
             SliderOrientation::Vertical => None,
         }))
         .add((Left, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => None,
+            SliderOrientation::Horizontal => Some(format!("{}%", percentage.get())),
             SliderOrientation::Vertical => Some("50%".into()),
+        }))
+        .add((Bottom, move || match ctx.state.orientation.get() {
+            SliderOrientation::Horizontal => None,
+            SliderOrientation::Vertical => Some(format!("{}%", percentage.get())),
         }))
         .add((Transform, move || match ctx.state.orientation.get() {
             SliderOrientation::Horizontal => Some("translate(-50%, -50%)".into()),
             SliderOrientation::Vertical => Some("translate(-50%, 50%)".into()),
-        }))
-        .add((Left, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => Some(format!("{left}%", left = percentage.get())),
-            SliderOrientation::Vertical => None,
-        }))
-        .add((Bottom, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => None,
-            SliderOrientation::Vertical => Some(format!("{bottom}%", bottom = percentage.get())),
         }));
 
     view! {
         <FocusRing>
-            <div {..thumb_props} class=classes style=styles>
+            <div {..thumb_props} class=classes style=styles attr:data-dragging=data_dragging>
                 <input {..input_props.into_attrs()}/>
             </div>
         </FocusRing>
