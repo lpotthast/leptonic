@@ -12,6 +12,8 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
+use super::EventTargetExt;
+
 // We store a global map of elements that are currently transitioning,
 // mapped to a set of CSS properties that are transitioning for that element.
 // This is necessary rather than a simple count of transitions because of browser
@@ -63,19 +65,10 @@ fn setup_global_events() {
                     // In that case, the cancel event would have nowhere to bubble to so we
                     // need to handle it directly.
                     let target_clone = target.clone();
-                    let on_cancel: Closure<dyn FnMut(web_sys::TransitionEvent)> =
-                        Closure::once(move |e: web_sys::TransitionEvent| {
-                            let property_name = e.property_name();
-                            handle_transition_end(&target_clone, &property_name);
-                        });
-                    let opts = web_sys::AddEventListenerOptions::new();
-                    opts.set_once(true);
-                    let _ = target.add_event_listener_with_callback_and_add_event_listener_options(
-                        "transitioncancel",
-                        on_cancel.as_ref().unchecked_ref(),
-                        &opts,
-                    );
-                    on_cancel.forget();
+                    target.listen_once("transitioncancel", move |e: web_sys::TransitionEvent| {
+                        let property_name = e.property_name();
+                        handle_transition_end(&target_clone, &property_name);
+                    });
 
                     set
                 } else {

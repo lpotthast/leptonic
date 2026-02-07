@@ -11,7 +11,7 @@ use crate::hooks::interactions::use_press::{use_press, PressEvent, UsePressInput
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_element;
 use crate::utils::pointer_type::PointerType;
-use crate::utils::Modifiers;
+use crate::utils::{EventTargetExt, Modifiers};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useLongPress.ts
 //
@@ -312,23 +312,7 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
             // For touch, prevent the context menu on the event target (not the document).
             if e.pointer_type == PointerType::Touch {
                 if let Some(target) = e.target.as_ref() {
-                    let target_et: &web_sys::EventTarget = target.as_ref();
-
-                    // Add a one-time contextmenu prevention listener on the target element.
-                    let prevent_context_menu = Closure::once(Box::new(move |e: MouseEvent| {
-                        e.prevent_default();
-                    })
-                        as Box<dyn FnOnce(MouseEvent)>);
-
-                    let options = web_sys::AddEventListenerOptions::new();
-                    options.set_once(true);
-                    let _ = target_et
-                        .add_event_listener_with_callback_and_add_event_listener_options(
-                            "contextmenu",
-                            prevent_context_menu.as_ref().unchecked_ref(),
-                            &options,
-                        );
-                    prevent_context_menu.forget();
+                    target.prevent_default_once("contextmenu");
                 }
             }
         })

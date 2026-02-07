@@ -90,6 +90,12 @@ pub(crate) trait EventTargetExt {
     fn as_container(&self) -> Option<DomContainer>;
     fn get_owner_document(&self) -> web_sys::Document;
     fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool;
+    /// Adds a one-time event listener for the given event name.
+    fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
+    where
+        E: wasm_bindgen::convert::FromWasmAbi + 'static;
+    /// Adds a one-time event listener that calls `prevent_default()` on the event.
+    fn prevent_default_once(&self, event_name: &str);
 }
 
 impl EventTargetExt for web_sys::EventTarget {
@@ -129,6 +135,30 @@ impl EventTargetExt for web_sys::EventTarget {
         let el_rect = element.get_bounding_client_rect().into();
         let point_rect = e.get_client_interaction_rect();
         overlapping(el_rect, point_rect)
+    }
+
+    fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
+    where
+        E: wasm_bindgen::convert::FromWasmAbi + 'static,
+    {
+        use wasm_bindgen::closure::Closure;
+        use wasm_bindgen::JsCast;
+
+        let closure = Closure::once(Box::new(callback) as Box<dyn FnOnce(E)>);
+        let options = web_sys::AddEventListenerOptions::new();
+        options.set_once(true);
+        let _ = self.add_event_listener_with_callback_and_add_event_listener_options(
+            event_name,
+            closure.as_ref().unchecked_ref(),
+            &options,
+        );
+        closure.forget();
+    }
+
+    fn prevent_default_once(&self, event_name: &str) {
+        self.listen_once(event_name, |e: web_sys::Event| {
+            e.prevent_default();
+        });
     }
 }
 
