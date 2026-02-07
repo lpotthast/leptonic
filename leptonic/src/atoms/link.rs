@@ -54,14 +54,11 @@ pub fn AnchorLink(
     let attrs = props.into_attrs();
 
     view! {
-        <a
-            target="_self"
-            {..attrs}
-        >
-            { match children {
+        <a target="_self" {..attrs}>
+            {match children {
                 Some(children) => children().into_any(),
                 None => "#".into_any(),
-            } }
+            }}
         </a>
     }
 }

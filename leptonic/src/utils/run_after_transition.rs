@@ -6,7 +6,6 @@
 /// cause jank in the middle of CSS transitions.
 use std::cell::{Cell, RefCell};
 
-
 // Loosely based on https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/utils/src/runAfterTransition.ts
 
 use wasm_bindgen::closure::Closure;

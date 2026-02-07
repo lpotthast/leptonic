@@ -83,17 +83,12 @@ pub fn DateTimeInput(
     };
 
     let time_selector = move || {
-        view! {
-            "TODO: Implement the time selector!"
-            // <CrudOffsetDatetimeTimeSelector
-            //     value={this.value.clone().unwrap_or_else(|| time::OffsetDateTime::now_utc())}
-            // />
-        }
+        view! { "TODO: Implement the time selector!" }
     };
 
     view! {
         <leptonic-input-field style=style>
-            { prepend.run() }
+            {prepend.run()}
             <input
                 id=id
                 class=class
@@ -101,25 +96,32 @@ pub fn DateTimeInput(
                 tabindex="0"
                 type="text"
                 prop:disabled=move || disabled.get()
-                prop:value=move || get.get().map(|it| it.format(&Rfc3339).expect("Formatting to Rfc3339 to be non-fallible.")).unwrap_or_default()
+                prop:value=move || {
+                    get
+                        .get()
+                        .map(|it| {
+                            it.format(&Rfc3339).expect("Formatting to Rfc3339 to be non-fallible.")
+                        })
+                        .unwrap_or_default()
+                }
                 on:click=move |_| set_open.update(|open| *open = !*open)
                 on:focusin=move |_| set_in_focus.set(true)
                 on:focusout=move |_| set_in_focus.set(false)
                 on:keydown=on_key_down
-            />
-            <div class="datetime-dropdown-menu-ref">
+            /> <div class="datetime-dropdown-menu-ref">
                 <Show when=move || open.get() fallback=|| ()>
                     <div class="datetime-dropdown-menu">
-                        {
-                            match input_type {
-                                Type::Date => date_selector().into_any(),
-                                Type::Time => time_selector().into_any(),
-                                Type::DateTime => view! {
+                        {match input_type {
+                            Type::Date => date_selector().into_any(),
+                            Type::Time => time_selector().into_any(),
+                            Type::DateTime => {
+                                view! {
                                     {date_selector()}
                                     {time_selector()}
-                                }.into_any(),
+                                }
+                                    .into_any()
                             }
-                        }
+                        }}
                     </div>
                 </Show>
             </div>

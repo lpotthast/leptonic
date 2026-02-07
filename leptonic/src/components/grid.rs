@@ -6,11 +6,10 @@ use crate::Size;
 #[component]
 pub fn Grid(gap: Size, children: Children) -> impl IntoView {
     view! {
-        <leptonic-grid-container
-            style=("--leptonic-grid-gap", format!("{gap}"))
-        >
-            { children() }
-        </leptonic-grid-container>
+        <leptonic-grid-container style=(
+            "--leptonic-grid-gap",
+            format!("{gap}"),
+        )>{children()}</leptonic-grid-container>
     }
 }
 
@@ -18,11 +17,8 @@ pub fn Grid(gap: Size, children: Children) -> impl IntoView {
 #[component]
 pub fn Row(#[prop(into, optional)] gap: Option<Size>, children: Children) -> impl IntoView {
     view! {
-        <leptonic-grid-row
-            style=gap.map(|gap| ("--leptonic-grid-gap", format!("{gap}")))
-        >
-            { children() }
-        </leptonic-grid-row>
+        <leptonic-grid-row style=gap
+            .map(|gap| ("--leptonic-grid-gap", format!("{gap}")))>{children()}</leptonic-grid-row>
     }
 }
 
@@ -55,7 +51,7 @@ pub fn Col(
             data-lg=lg
             data-xl=xl
         >
-            { children() }
+            {children()}
         </leptonic-grid-col>
     }
 }

@@ -23,10 +23,7 @@ pub fn ColorPreview(#[prop(into)] rgb: Signal<RGB8>) -> impl IntoView {
         format!("rgb({r}, {g}, {b})")
     };
 
-    view! {
-        <leptonic-color-preview style:background-color=background_color>
-        </leptonic-color-preview>
-    }
+    view! { <leptonic-color-preview style:background-color=background_color></leptonic-color-preview> }
 }
 
 #[component]
@@ -100,7 +97,8 @@ pub fn ColorPalette(
     });
 
     view! {
-        <div class="leptonic-color-palette"
+        <div
+            class="leptonic-color-palette"
             node_ref=palette_el
             style:background=background_simple
             // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
@@ -124,8 +122,12 @@ pub fn ColorPalette(
             on:touchend=move |_e| set_knob_listening.set(false)
         >
             <leptonic-color-palette-knob-wrapper style="">
-                <leptonic-color-palette-knob data-variant="round" style:left=knob_left style:bottom=knob_bottom style=("--color-palette-knob-background-color", knob_background_color)>
-                </leptonic-color-palette-knob>
+                <leptonic-color-palette-knob
+                    data-variant="round"
+                    style:left=knob_left
+                    style:bottom=knob_bottom
+                    style=("--color-palette-knob-background-color", knob_background_color)
+                ></leptonic-color-palette-knob>
             </leptonic-color-palette-knob-wrapper>
         </div>
     }
@@ -152,8 +154,11 @@ pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>
     };
     view! {
         <leptonic-hue-slider>
-            <Slider min=0.0 max=360.0
-                value=hue set_value=set_hue
+            <Slider
+                min=0.0
+                max=360.0
+                value=hue
+                set_value=set_hue
                 marks=SliderMarks::None
                 popover=SliderPopover::Never
                 attr:class="hue-slider"
@@ -185,56 +190,57 @@ pub fn ColorPicker(
     view! {
         <leptonic-color-picker>
             <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; height: 20em;">
-                <ColorPreview rgb=rgb attr:style="width: 20%; height: 100%;"/>
-                <ColorPalette hsv=hsv
+                <ColorPreview rgb=rgb attr:style="width: 20%; height: 100%;" />
+                <ColorPalette
+                    hsv=hsv
                     set_saturation=set_saturation
                     set_value=set_value
                     attr:style="width: 80%; height: 100%;"
                 />
             </div>
 
-            <HueSlider hue=hue set_hue=set_hue/>
+            <HueSlider hue=hue set_hue=set_hue />
 
             <div style="display: flex; flex-direction: row;">
                 <Field attr:style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"Hue"</FieldLabel>
-                    <NumberInput min=0.0 max=360.0 step=1.0
-                        get=hue
-                        set=set_hue
-                    />
+                    <NumberInput min=0.0 max=360.0 step=1.0 get=hue set=set_hue />
                 </Field>
                 <Field attr:style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"Saturation"</FieldLabel>
-                    <NumberInput min=0.0 max=1.0 step=0.01
-                        get=saturation
-                        set=set_saturation
-                    />
+                    <NumberInput min=0.0 max=1.0 step=0.01 get=saturation set=set_saturation />
                 </Field>
                 <Field attr:style="width: 32%; margin-right: 0%;">
                     <FieldLabel>"Value"</FieldLabel>
-                    <NumberInput min=0.0 max=1.0 step=0.01
-                        get=value
-                        set=set_value
-                    />
+                    <NumberInput min=0.0 max=1.0 step=0.01 get=value set=set_value />
                 </Field>
             </div>
 
             <div style="display: flex; flex-direction: row;">
                 <Field attr:style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"R"</FieldLabel>
-                    <NumberInput min=0.0 max=255.0 step=1.0
+                    <NumberInput
+                        min=0.0
+                        max=255.0
+                        step=1.0
                         get=Signal::derive(move || f64::from(rgb.get().r))
                     />
                 </Field>
                 <Field attr:style="width: 32%; margin-right: 2%;">
                     <FieldLabel>"G"</FieldLabel>
-                    <NumberInput min=0.0 max=255.0 step=1.0
+                    <NumberInput
+                        min=0.0
+                        max=255.0
+                        step=1.0
                         get=Signal::derive(move || f64::from(rgb.get().g))
                     />
                 </Field>
                 <Field attr:style="width: 32%; margin-right: 0%;">
                     <FieldLabel>"B"</FieldLabel>
-                    <NumberInput min=0.0 max=255.0 step=1.0
+                    <NumberInput
+                        min=0.0
+                        max=255.0
+                        step=1.0
                         get=Signal::derive(move || f64::from(rgb.get().b))
                     />
                 </Field>

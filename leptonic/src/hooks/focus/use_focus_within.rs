@@ -172,7 +172,9 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
                 .as_ref()
                 .and_then(|t| t.dyn_ref::<web_sys::Node>())
                 .and_then(web_sys::Node::owner_document);
-            let active_element = document.as_ref().and_then(web_sys::Document::active_element);
+            let active_element = document
+                .as_ref()
+                .and_then(web_sys::Document::active_element);
             let target_element = target.and_then(|t| t.as_element());
 
             if active_element != target_element {

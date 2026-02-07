@@ -57,7 +57,7 @@ where
     view! {
         <leptonic-link {..props.into_attrs()} node_ref=el>
             <A href=href exact=exact>
-                { children() }
+                {children()}
             </A>
         </leptonic-link>
     }
@@ -106,9 +106,12 @@ where
                 href=move || href.to_href()()
                 target=format!("{target}")
                 prop:disabled=move || disabled.get()
-                rel={ match target { LinkExtTarget::Blank => Some("noopener"), _ => None } }
+                rel=match target {
+                    LinkExtTarget::Blank => Some("noopener"),
+                    _ => None,
+                }
             >
-                { children() }
+                {children()}
             </a>
         </leptonic-link>
     }

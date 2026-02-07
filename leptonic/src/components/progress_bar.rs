@@ -18,11 +18,7 @@ pub fn ProgressBar(
             .get()
             .map(|it| f64::max(it, 0.0))
             .map(|pos_progress| {
-                let percentage = if max == 0.0 {
-                    0.0
-                } else {
-                    pos_progress / max
-                };
+                let percentage = if max == 0.0 { 0.0 } else { pos_progress / max };
                 percentage.clamp(0.0, 1.0)
             })
     });
@@ -48,10 +44,10 @@ pub fn ProgressBar(
 
                 <Show when=move || percentage_done.get().is_some() fallback=|| ()>
                     <leptonic-progress-info>
-                        { move || match percentage_done.get() {
+                        {move || match percentage_done.get() {
                             Some(percentage_done) => format!("{:.2} %", (percentage_done * 100.0)),
-                            None => String::new()
-                        } }
+                            None => String::new(),
+                        }}
                     </leptonic-progress-info>
                 </Show>
             </leptonic-progress-bar-background>

@@ -17,7 +17,7 @@ pub fn Quicksearch(
     let (show_modal, set_show_modal) = signal(false);
     view! {
         <leptonic-quicksearch>
-            { trigger.render(set_show_modal) }
+            {trigger.render(set_show_modal)}
             <QuicksearchModal
                 show_when=show_modal
                 query=query
@@ -33,9 +33,9 @@ pub fn QuicksearchTrigger(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <leptonic-quicksearch-trigger on:click=move |_| set_quicksearch.set(true)>
-            { children() }
-        </leptonic-quicksearch-trigger>
+        <leptonic-quicksearch-trigger on:click=move |_| {
+            set_quicksearch.set(true)
+        }>{children()}</leptonic-quicksearch-trigger>
     }
 }
 
@@ -80,19 +80,26 @@ fn QuicksearchModal(
             </ModalHeader>
             <ModalBody attr:style="overflow: auto;">
                 <leptonic-quicksearch-results>
-                    { move || options().into_iter().map(|option| view! {
-                        <leptonic-quicksearch-result on:click=move |_| {
-                                option.on_select.run(());
-                                on_cancel.run(());
-                            }>
-                            { option.view.produce() }
-                        </leptonic-quicksearch-result>
-                    }).collect_view() }
+                    {move || {
+                        options()
+                            .into_iter()
+                            .map(|option| {
+                                view! {
+                                    <leptonic-quicksearch-result on:click=move |_| {
+                                        option.on_select.run(());
+                                        on_cancel.run(());
+                                    }>{option.view.produce()}</leptonic-quicksearch-result>
+                                }
+                            })
+                            .collect_view()
+                    }}
                 </leptonic-quicksearch-results>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>
-                    <Button on_press=cancel color=ButtonColor::Secondary>"Cancel"</Button>
+                    <Button on_press=cancel color=ButtonColor::Secondary>
+                        "Cancel"
+                    </Button>
                 </ButtonWrapper>
             </ModalFooter>
         </Modal>

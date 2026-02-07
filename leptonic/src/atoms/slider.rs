@@ -85,7 +85,7 @@ pub fn Slider(
 
     view! {
         <div {..group_props.into_attrs()} class=classes style=styles>
-            { children() }
+            {children()}
         </div>
     }
 }
@@ -110,7 +110,7 @@ pub fn SliderTrack(
     let track_attrs = ctx.track_props.into_attrs();
     view! {
         <div {..track_attrs} class=classes style=styles>
-            { children() }
+            {children()}
         </div>
     }
 }
@@ -146,9 +146,7 @@ pub fn SliderTrackFill(
                     SliderOrientation::Horizontal => Some(format!("{}%", percentage.get())),
                     SliderOrientation::Vertical => Some("100%".into()),
                 }));
-            view! {
-                <div class=classes style=styles/>
-            }
+            view! { <div class=classes style=styles /> }
             .into_any()
         }
         2 => {
@@ -182,9 +180,7 @@ pub fn SliderTrackFill(
                     SliderOrientation::Horizontal => Some(format!("{}%", difference.get())),
                     SliderOrientation::Vertical => Some("100%".into()),
                 }));
-            view! {
-                <div class=classes style=styles/>
-            }
+            view! { <div class=classes style=styles /> }
             .into_any()
         }
         n => {
@@ -271,7 +267,7 @@ pub fn SliderThumb(
     view! {
         <FocusRing>
             <div {..thumb_props} class=classes style=styles attr:data-dragging=data_dragging>
-                <input {..input_props.into_attrs()}/>
+                <input {..input_props.into_attrs()} />
             </div>
         </FocusRing>
     }

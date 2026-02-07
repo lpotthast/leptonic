@@ -173,9 +173,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         }
 
         let key = e.key();
-        if activation_mode == TabsActivationMode::Manual
-            && (key == "Enter" || key == " ")
-        {
+        if activation_mode == TabsActivationMode::Manual && (key == "Enter" || key == " ") {
             e.prevent_default();
             if let Some(on_select) = on_select {
                 on_select.run(());

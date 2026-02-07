@@ -19,9 +19,7 @@ pub fn FormControl(children: Children) -> impl IntoView {
 
     view! {
         <leptonic-form-control>
-            <Provider value=ctx>
-                { children() }
-            </Provider>
+            <Provider value=ctx>{children()}</Provider>
         </leptonic-form-control>
     }
 }

@@ -74,9 +74,7 @@ pub fn RadioGroup(children: Children) -> impl IntoView {
     };
     view! {
         <leptonic-radio-group role="radiogroup">
-            <Provider value=ctx>
-                { children() }
-            </Provider>
+            <Provider value=ctx>{children()}</Provider>
         </leptonic-radio-group>
     }
 }
@@ -141,7 +139,10 @@ pub fn Radio(
             on:click=move |_e| {
                 if !disabled() {
                     match &group_ctx {
-                        Some(group_ctx) => group_ctx.toggle(opt_uuid.expect("to be present"), !checked.get_untracked()),
+                        Some(group_ctx) => {
+                            group_ctx
+                                .toggle(opt_uuid.expect("to be present"), !checked.get_untracked())
+                        }
                         None => ctx.toggle(),
                     }
                 }

@@ -251,14 +251,14 @@ pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
     let handle_drag_end = move |e: DragEvent| {
         set_is_dragging.set(false);
 
-        let drop_effect = e
-            .data_transfer()
-            .map_or(DropEffect::None, |dt| match dt.drop_effect().as_str() {
-                "copy" => DropEffect::Copy,
-                "move" => DropEffect::Move,
-                "link" => DropEffect::Link,
-                _ => DropEffect::None,
-            });
+        let drop_effect =
+            e.data_transfer()
+                .map_or(DropEffect::None, |dt| match dt.drop_effect().as_str() {
+                    "copy" => DropEffect::Copy,
+                    "move" => DropEffect::Move,
+                    "link" => DropEffect::Link,
+                    _ => DropEffect::None,
+                });
 
         if let Some(on_end) = on_drag_end {
             on_end.run(DragEndEvent {

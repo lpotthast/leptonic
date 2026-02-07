@@ -79,10 +79,11 @@ where
     };
 
     view! {
-        <leptonic-icon aria_label=aria_label style=margin.map(|it| {
-            ("--margin", format!("{it}"))
-        })>
-            { svg }
+        <leptonic-icon
+            aria_label=aria_label
+            style=margin.map(|it| { ("--margin", format!("{it}")) })
+        >
+            {svg}
         </leptonic-icon>
     }
 }

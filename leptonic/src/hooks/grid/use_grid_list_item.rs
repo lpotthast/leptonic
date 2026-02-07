@@ -288,13 +288,7 @@ where
             tabindex,
             aria_rowindex,
             aria_selected,
-            aria_disabled: Signal::derive(move || {
-                if is_disabled.get() {
-                    "true"
-                } else {
-                    "false"
-                }
-            }),
+            aria_disabled: Signal::derive(move || if is_disabled.get() { "true" } else { "false" }),
             aria_label: input.text_value,
             on_keydown,
             on_click,

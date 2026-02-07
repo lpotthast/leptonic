@@ -25,11 +25,8 @@ pub fn Pressable(
     });
 
     view! {
-        <div
-            style="display: contents"
-            {..props.into_attrs()}
-        >
-            { children() }
+        <div style="display: contents" {..props.into_attrs()}>
+            {children()}
         </div>
     }
 }

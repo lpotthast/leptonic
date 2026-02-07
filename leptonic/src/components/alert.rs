@@ -69,69 +69,77 @@ pub fn Alert(
     #[prop(optional)] default_icon_slot: AlertIconSlot,
 ) -> impl IntoView {
     view! {
-        <leptonic-alert data-variant=variant.to_str()>
-            {
-                match alert_prepend {
-                    Some(slot) => view! {
-                        <leptonic-alert-prepend style=slot.style>
-                            { (slot.children)() }
-                        </leptonic-alert-prepend>
-                    }.into_any(),
-                    None => match default_icon_slot {
-                        AlertIconSlot::Prepend => view! {
-                            <leptonic-alert-prepend>
-                                <AlertIcon variant />
-                            </leptonic-alert-prepend>
-                        }.into_any(),
-                        AlertIconSlot::Append | AlertIconSlot::None => view! {
-                            <leptonic-alert-prepend />
-                        }.into_any(),
-                    },
+        <leptonic-alert data-variant=variant
+            .to_str()>
+            {match alert_prepend {
+                Some(slot) => {
+                    view! {
+                        <leptonic-alert-prepend style=slot
+                            .style>{(slot.children)()}</leptonic-alert-prepend>
+                    }
+                        .into_any()
                 }
-            }
-
+                None => {
+                    match default_icon_slot {
+                        AlertIconSlot::Prepend => {
+                            view! {
+                                <leptonic-alert-prepend>
+                                    <AlertIcon variant />
+                                </leptonic-alert-prepend>
+                            }
+                                .into_any()
+                        }
+                        AlertIconSlot::Append | AlertIconSlot::None => {
+                            view! { <leptonic-alert-prepend /> }.into_any()
+                        }
+                    }
+                }
+            }}
             <leptonic-alert-center>
-                {
-                    match alert_title {
-                        Some(slot) => view! {
-                            <leptonic-alert-title style=slot.style>
-                                {(slot.children)()}
-                            </leptonic-alert-title>
-                        }.into_any() ,
-                        None => ().into_any(),
+                {match alert_title {
+                    Some(slot) => {
+                        view! {
+                            <leptonic-alert-title style=slot
+                                .style>{(slot.children)()}</leptonic-alert-title>
+                        }
+                            .into_any()
                     }
-                }
-                {
-                    match alert_content {
-                        Some(slot) => view! {
-                            <leptonic-alert-content>
-                                {(slot.children)()}
-                            </leptonic-alert-content>
-                        }.into_any() ,
-                        None => ().into_any(),
+                    None => ().into_any(),
+                }}
+                {match alert_content {
+                    Some(slot) => {
+                        view! {
+                            <leptonic-alert-content>{(slot.children)()}</leptonic-alert-content>
+                        }
+                            .into_any()
                     }
-                }
+                    None => ().into_any(),
+                }}
             </leptonic-alert-center>
-
-            {
-                match alert_append {
-                    Some(slot) => view! {
-                        <leptonic-alert-append style=slot.style>
-                            { (slot.children)() }
-                        </leptonic-alert-append>
-                    }.into_any(),
-                    None => match default_icon_slot {
-                        AlertIconSlot::Prepend | AlertIconSlot::None => view! {
-                            <leptonic-alert-append />
-                        }.into_any(),
-                        AlertIconSlot::Append => view! {
-                            <leptonic-alert-append>
-                                <AlertIcon variant />
-                            </leptonic-alert-append>
-                        }.into_any(),
-                    },
+            {match alert_append {
+                Some(slot) => {
+                    view! {
+                        <leptonic-alert-append style=slot
+                            .style>{(slot.children)()}</leptonic-alert-append>
+                    }
+                        .into_any()
                 }
-            }
+                None => {
+                    match default_icon_slot {
+                        AlertIconSlot::Prepend | AlertIconSlot::None => {
+                            view! { <leptonic-alert-append /> }.into_any()
+                        }
+                        AlertIconSlot::Append => {
+                            view! {
+                                <leptonic-alert-append>
+                                    <AlertIcon variant />
+                                </leptonic-alert-append>
+                            }
+                                .into_any()
+                        }
+                    }
+                }
+            }}
         </leptonic-alert>
     }
 }

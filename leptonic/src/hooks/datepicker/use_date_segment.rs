@@ -334,8 +334,7 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
                 }
             }
             digit
-                if digit.len() == 1
-                    && digit.chars().next().is_some_and(|c| c.is_ascii_digit()) =>
+                if digit.len() == 1 && digit.chars().next().is_some_and(|c| c.is_ascii_digit()) =>
             {
                 e.prevent_default();
                 let digit_val: i32 = digit.parse().unwrap();

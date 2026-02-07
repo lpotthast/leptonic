@@ -26,7 +26,6 @@ impl std::fmt::Display for ToggleSize {
     }
 }
 
-
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct ToggleIcons {
     pub off: icondata::Icon,
@@ -67,29 +66,45 @@ pub fn Toggle(
                 class:disabled=move || disabled.get().unwrap_or(false)
                 data-size=size.as_str()
                 data-variant=variant.as_str()
-                on:click=move |_| { if let Some(set) = &set_state { set.set(!state.get_untracked()) } }
+                on:click=move |_| {
+                    if let Some(set) = &set_state {
+                        set.set(!state.get_untracked())
+                    }
+                }
             >
                 <span class="slider round" class:on=move || state.get()>
-                    {
-                        move || icons.as_ref().map(|icons| {
-                            let off_icon = icons.off;
-                            let on_icon = icons.on;
-                            view! {
-                                <span class="icon-positioner">
-                                    <Icon icon=off_icon attr:style=move || if state.get() {
-                                        "display: none"
-                                    } else {
-                                        "display: inherit"
-                                    } />
-                                    <Icon icon=on_icon attr:style=move || if state.get() {
-                                        "display: inherit"
-                                    } else {
-                                        "display: none"
-                                    } />
-                                </span>
-                            }
-                        })
-                    }
+                    {move || {
+                        icons
+                            .as_ref()
+                            .map(|icons| {
+                                let off_icon = icons.off;
+                                let on_icon = icons.on;
+                                view! {
+                                    <span class="icon-positioner">
+                                        <Icon
+                                            icon=off_icon
+                                            attr:style=move || {
+                                                if state.get() {
+                                                    "display: none"
+                                                } else {
+                                                    "display: inherit"
+                                                }
+                                            }
+                                        />
+                                        <Icon
+                                            icon=on_icon
+                                            attr:style=move || {
+                                                if state.get() {
+                                                    "display: inherit"
+                                                } else {
+                                                    "display: none"
+                                                }
+                                            }
+                                        />
+                                    </span>
+                                }
+                            })
+                    }}
                 </span>
             </leptonic-toggle>
         </leptonic-toggle-wrapper>

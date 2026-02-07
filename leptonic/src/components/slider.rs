@@ -170,25 +170,29 @@ fn create_marks(
 fn Marks(marks: Signal<Vec<Mark>>) -> impl IntoView {
     view! {
         <div class="marks">
-            {
-                move || marks.get().into_iter()
+            {move || {
+                marks
+                    .get()
+                    .into_iter()
                     .map(|mark| {
                         let style = format!("left: {}%", mark.percentage * 100.0);
                         view! {
-                            <div class="mark" class:in-range=move || mark.in_range.get() style=style>
-                                { match &mark.name {
-                                    Some(name) => view! {
-                                        <div class="title">
-                                            {name.clone()}
-                                        </div>
-                                    }.into_any(),
-                                    None => ().into_any()
-                                } }
+                            <div
+                                class="mark"
+                                class:in-range=move || mark.in_range.get()
+                                style=style
+                            >
+                                {match &mark.name {
+                                    Some(name) => {
+                                        view! { <div class="title">{name.clone()}</div> }.into_any()
+                                    }
+                                    None => ().into_any(),
+                                }}
                             </div>
                         }
                     })
                     .collect_view()
-            }
+            }}
         </div>
     }
 }
@@ -219,9 +223,7 @@ impl SliderPopover {
                     let listening = knob.listening;
                     Signal::derive(move || knob_is_hovered.get() || listening.get())
                 }
-                (true, false) => {
-                    use_element_hover(knob_el)
-                }
+                (true, false) => use_element_hover(knob_el),
                 (false, true) => knob.listening.into(),
                 (false, false) => Signal::from(false),
             },
@@ -289,10 +291,12 @@ pub fn Slider(
         max,
         step,
         range,
-        Callback::new(move |v| if max > min {
-            Signal::derive(move || v <= value.get())
-        } else {
-            Signal::derive(move || v >= value.get())
+        Callback::new(move |v| {
+            if max > min {
+                Signal::derive(move || v <= value.get())
+            } else {
+                Signal::derive(move || v >= value.get())
+            }
         }),
         marks,
         value_display,
@@ -347,13 +351,18 @@ pub fn Slider(
                                 }}
                             </PopoverContent>
 
-                            <div class="knob" class:is-dragged=move || knob.listening.get() tabindex=0 style=move || knob.style.get() />
+                            <div
+                                class="knob"
+                                class:is-dragged=move || knob.listening.get()
+                                tabindex=0
+                                style=move || knob.style.get()
+                            />
                         </Popover>
                     </div>
                 </div>
             </div>
 
-            <Marks marks=marks/>
+            <Marks marks=marks />
 
         </leptonic-slider>
     }
@@ -453,10 +462,12 @@ pub fn RangeSlider(
         max,
         step,
         range,
-        Callback::new(move |v| if max > min {
-            Signal::derive(move || v >= value_a.get() && v <= value_b.get())
-        } else {
-            Signal::derive(move || v <= value_a.get() && v >= value_b.get())
+        Callback::new(move |v| {
+            if max > min {
+                Signal::derive(move || v >= value_a.get() && v <= value_b.get())
+            } else {
+                Signal::derive(move || v <= value_a.get() && v >= value_b.get())
+            }
         }),
         marks,
         value_display,
@@ -543,7 +554,12 @@ pub fn RangeSlider(
                                 }}
                             </PopoverContent>
 
-                            <div class="knob" class:is-dragged=move || knob_a.listening.get() tabindex=0 style=move || knob_a.style.get() />
+                            <div
+                                class="knob"
+                                class:is-dragged=move || knob_a.listening.get()
+                                tabindex=0
+                                style=move || knob_a.style.get()
+                            />
                         </Popover>
                     </div>
                     <div class="range" style=move || range_style.get()></div>
@@ -559,13 +575,18 @@ pub fn RangeSlider(
                                 }}
                             </PopoverContent>
 
-                            <div class="knob" class:is-dragged=move || knob_b.listening.get() tabindex=0 style=move || knob_b.style.get() />
+                            <div
+                                class="knob"
+                                class:is-dragged=move || knob_b.listening.get()
+                                tabindex=0
+                                style=move || knob_b.style.get()
+                            />
                         </Popover>
                     </div>
                 </div>
             </div>
 
-            <Marks marks=marks/>
+            <Marks marks=marks />
         </leptonic-slider>
     }
 }

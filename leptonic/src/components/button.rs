@@ -112,27 +112,19 @@ pub fn Button(
             attr:data-color=move || color.get().as_str()
             attr:data-size=move || size.get().as_str()
         >
-            { children() }
+            {children()}
         </atoms::button::Button>
     }
 }
 
 #[component]
 pub fn ButtonGroup(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-btn-group>
-            { children() }
-        </leptonic-btn-group>
-    }
+    view! { <leptonic-btn-group>{children()}</leptonic-btn-group> }
 }
 
 #[component]
 pub fn ButtonWrapper(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-btn-wrapper>
-            { children() }
-        </leptonic-btn-wrapper>
-    }
+    view! { <leptonic-btn-wrapper>{children()}</leptonic-btn-wrapper> }
 }
 
 #[component]

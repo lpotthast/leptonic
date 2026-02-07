@@ -54,11 +54,10 @@ pub fn Checkbox(
                 }
             }
         >
-            <Icon icon=checked_icon attr:style=move || if checked.get() {
-                "display: inherit"
-            } else {
-                "display: none"
-            } />
+            <Icon
+                icon=checked_icon
+                attr:style=move || if checked.get() { "display: inherit" } else { "display: none" }
+            />
         </leptonic-checkbox>
     }
 }

@@ -19,7 +19,7 @@ pub fn Label(
 
     view! {
         <label {..label_props.into_attrs()} class=classes style=styles>
-            { children() }
+            {children()}
         </label>
     }
 }

@@ -55,11 +55,8 @@ where
     provide_context(ThemeContext { theme, set_theme });
 
     view! {
-        <leptonic-theme-provider
-            data-theme=move || theme.get().name()
-            style="display: contents;"
-        >
-            { children() }
+        <leptonic-theme-provider data-theme=move || theme.get().name() style="display: contents;">
+            {children()}
         </leptonic-theme-provider>
     }
 }
@@ -75,10 +72,12 @@ where
     let toggle = Toggle(ToggleProps {
         state: Signal::derive(move || theme_context.theme.get() == on),
         set_state: Some(Into::into(move |val: bool| {
-            theme_context.set_theme.update(|current| if val {
-                *current = on;
-            } else {
-                *current = off;
+            theme_context.set_theme.update(|current| {
+                if val {
+                    *current = on;
+                } else {
+                    *current = off;
+                }
             });
         })),
         active: None,
@@ -91,9 +90,5 @@ where
         }),
     });
 
-    view! {
-        <leptonic-theme-toggle>
-            { toggle }
-        </leptonic-theme-toggle>
-    }
+    view! { <leptonic-theme-toggle>{toggle}</leptonic-theme-toggle> }
 }

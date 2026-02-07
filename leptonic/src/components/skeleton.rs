@@ -29,10 +29,10 @@ pub fn Skeleton(
             style=("--width", format!("{width}"))
             style=("--el-width", Signal::derive(move || format!("{}px", el_width.get())))
         >
-            { match children {
+            {match children {
                 Some(children) => children().into_any(),
                 None => ().into_any(),
-            } }
+            }}
         </leptonic-skeleton>
     }
 }

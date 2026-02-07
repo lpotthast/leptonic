@@ -121,8 +121,8 @@ pub fn TabsContent(children: Children) -> impl IntoView {
     let children = children();
 
     view! {
-        <TabSelectors tabs=ctx.tabs history=ctx.history set_history=ctx.set_history/>
-        { children }
+        <TabSelectors tabs=ctx.tabs history=ctx.history set_history=ctx.set_history />
+        {children}
     }
 }
 
@@ -143,9 +143,12 @@ pub fn TabSelectors(
                     view! {
                         <TabSelector
                             is_active=move || history.get().get_active() == Some(&n1.clone())
-                            set_active=move || set_history.update(|history| history.push(n2.clone()))
+                            set_active=move || {
+                                set_history.update(|history| history.push(n2.clone()))
+                            }
                             name=tab.name.clone()
-                            label=tab.label.clone() />
+                            label=tab.label.clone()
+                        />
                     }
                 }
             />
@@ -171,7 +174,7 @@ where
             on:click=move |_event| set_active()
             role="tab"
         >
-            { label.run() }
+            {label.run()}
         </leptonic-tab-selector>
     }
 }

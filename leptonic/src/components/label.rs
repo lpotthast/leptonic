@@ -34,9 +34,5 @@ pub fn Label(children: Children, #[prop(into, optional)] disabled: Signal<bool>)
         on_press_change: None,
     });
 
-    view! {
-        <leptonic-label {..props.into_attrs()}>
-            { children() }
-        </leptonic-label>
-    }
+    view! { <leptonic-label {..props.into_attrs()}>{children()}</leptonic-label> }
 }

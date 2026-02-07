@@ -7,29 +7,17 @@ use crate::Language;
 
 #[component]
 pub fn KbdKey(key: Key) -> impl IntoView {
-    view! {
-        <leptonic-kbd-key>
-            { key.display(Language::En) }
-        </leptonic-kbd-key>
-    }
+    view! { <leptonic-kbd-key>{key.display(Language::En)}</leptonic-kbd-key> }
 }
 
 #[component]
 pub fn KbdConcatenate(#[prop(into, optional)] with: Option<Cow<'static, str>>) -> impl IntoView {
-    view! {
-        <leptonic-kbd-concatenate>
-            { with.unwrap_or(Cow::Borrowed("+")) }
-        </leptonic-kbd-concatenate>
-    }
+    view! { <leptonic-kbd-concatenate>{with.unwrap_or(Cow::Borrowed("+"))}</leptonic-kbd-concatenate> }
 }
 
 #[component]
 pub fn KbdShortcutRoot(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-kbd-shortcut>
-            {children()}
-        </leptonic-kbd-shortcut>
-    }
+    view! { <leptonic-kbd-shortcut>{children()}</leptonic-kbd-shortcut> }
 }
 
 #[component]
@@ -40,14 +28,20 @@ pub fn KbdShortcut<const N: usize>(
     let concatenate_with = concatenate_with.unwrap_or(Cow::Borrowed("+"));
     view! {
         <KbdShortcutRoot>
-            { keys.into_iter().enumerate().map(|(i, key)| view! {
-                <KbdKey key=key/>
-                { if i == N - 1 {
-                    ().into_any()
-                } else {
-                    view! { <KbdConcatenate with=concatenate_with.clone()/>}.into_any()
-                }}
-            }).collect_view() }
+            {keys
+                .into_iter()
+                .enumerate()
+                .map(|(i, key)| {
+                    view! {
+                        <KbdKey key=key />
+                        {if i == N - 1 {
+                            ().into_any()
+                        } else {
+                            view! { <KbdConcatenate with=concatenate_with.clone() /> }.into_any()
+                        }}
+                    }
+                })
+                .collect_view()}
         </KbdShortcutRoot>
     }
 }

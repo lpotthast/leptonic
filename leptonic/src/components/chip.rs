@@ -45,14 +45,23 @@ pub fn Chip(
 
     // TODO: use use_press instead of on:click.
     view! {
-        <leptonic-chip data-color=move || color.get().as_str()>
-            { children() }
-            { match dismissible {
-                Some(callback) => view! {
-                    <Icon attr:class="dismiss" icon=icondata::BsXCircleFill on:click=move |e| callback.set(e) />
-                }.into_any(),
+        <leptonic-chip data-color=move || {
+            color.get().as_str()
+        }>
+            {children()}
+            {match dismissible {
+                Some(callback) => {
+                    view! {
+                        <Icon
+                            attr:class="dismiss"
+                            icon=icondata::BsXCircleFill
+                            on:click=move |e| callback.set(e)
+                        />
+                    }
+                        .into_any()
+                }
                 None => ().into_any(),
-            } }
+            }}
         </leptonic-chip>
     }
 }

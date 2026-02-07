@@ -65,7 +65,7 @@ pub fn Button(
 
     view! {
         <button {..props.into_attrs()} class=classes>
-            { children() }
+            {children()}
         </button>
     }
 }
@@ -187,9 +187,5 @@ where
 
 #[component]
 pub fn ButtonWrapper(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-btn-wrapper>
-            { children() }
-        </leptonic-btn-wrapper>
-    }
+    view! { <leptonic-btn-wrapper>{children()}</leptonic-btn-wrapper> }
 }

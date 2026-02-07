@@ -39,9 +39,14 @@ pub fn Popover(#[prop(into)] disabled: Signal<bool>, children: Children) -> impl
     let overlay_attrs = overlay_props.into_attrs();
 
     view! {
-        <Provider value=PopoverContext { state, set_state, id, overlay_attrs, trigger_el, set_trigger_el }>
-            { children() }
-        </Provider>
+        <Provider value=PopoverContext {
+            state,
+            set_state,
+            id,
+            overlay_attrs,
+            trigger_el,
+            set_trigger_el,
+        }>{children()}</Provider>
     }
 }
 
@@ -62,7 +67,7 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
 
     view! {
         <leptonic-popover-trigger {..trigger_props.into_attrs()} node_ref=trigger_el>
-            { children() }
+            {children()}
         </leptonic-popover-trigger>
     }
 }
@@ -91,23 +96,23 @@ pub fn PopoverContent(
 
     view! {
         <Portal>
-        {
-            let overlay_attrs = ctx.overlay_attrs.clone();
-            let overlay_pos_attrs = overlay_pos_props.to_attrs();
-            let children = children.clone();
-            let overlay_el = overlay_el;
-            view! {
-                <Show when=move || ctx.state.get()>
-                    <leptonic-popover-content
-                        {..overlay_attrs.clone()}
-                        {..overlay_pos_attrs.clone()}
-                        node_ref=overlay_el
-                    >
-                        { children() }
-                    </leptonic-popover-content>
-                </Show>
+            {
+                let overlay_attrs = ctx.overlay_attrs.clone();
+                let overlay_pos_attrs = overlay_pos_props.to_attrs();
+                let children = children.clone();
+                let overlay_el = overlay_el;
+                view! {
+                    <Show when=move || ctx.state.get()>
+                        <leptonic-popover-content
+                            {..overlay_attrs.clone()}
+                            {..overlay_pos_attrs.clone()}
+                            node_ref=overlay_el
+                        >
+                            {children()}
+                        </leptonic-popover-content>
+                    </Show>
+                }
             }
-        }
         </Portal>
     }
 }

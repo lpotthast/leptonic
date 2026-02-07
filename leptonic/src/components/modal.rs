@@ -85,10 +85,12 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     });
 
     view! {
-        { children() }
+        {children()}
 
-        <leptonic-modal-host data-has-modals=move || if has_modals.get() { "true" } else { "false" }>
-            <leptonic-modal-backdrop {..props.into_attrs()}/>
+        <leptonic-modal-host data-has-modals=move || {
+            if has_modals.get() { "true" } else { "false" }
+        }>
+            <leptonic-modal-backdrop {..props.into_attrs()} />
 
             <leptonic-modals>
                 <For
@@ -134,7 +136,7 @@ pub fn Modal(
         let classes = classes.get_value();
         view! {
             <leptonic-modal id=id.get_value() class=classes>
-                { children() }
+                {children()}
             </leptonic-modal>
         }
     });
@@ -158,36 +160,20 @@ pub fn Modal(
 
 #[component]
 pub fn ModalHeader(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-modal-header>
-            { children() }
-        </leptonic-modal-header>
-    }
+    view! { <leptonic-modal-header>{children()}</leptonic-modal-header> }
 }
 
 #[component]
 pub fn ModalTitle(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-modal-title>
-            { children() }
-        </leptonic-modal-title>
-    }
+    view! { <leptonic-modal-title>{children()}</leptonic-modal-title> }
 }
 
 #[component]
 pub fn ModalBody(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-modal-body>
-            { children() }
-        </leptonic-modal-body>
-    }
+    view! { <leptonic-modal-body>{children()}</leptonic-modal-body> }
 }
 
 #[component]
 pub fn ModalFooter(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-modal-footer>
-            { children() }
-        </leptonic-modal-footer>
-    }
+    view! { <leptonic-modal-footer>{children()}</leptonic-modal-footer> }
 }

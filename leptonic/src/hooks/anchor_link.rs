@@ -200,10 +200,12 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             role: AriaRole::Link.into_attribute_value(),
             hreflang: href.0,
             aria_label: input.description,
-            aria_disabled: Signal::derive(move || if input.disabled.get() {
-                "true"
-            } else {
-                "false"
+            aria_disabled: Signal::derive(move || {
+                if input.disabled.get() {
+                    "true"
+                } else {
+                    "false"
+                }
             }),
             on_keydown: press_props.on_keydown,
             on_click: press_props.on_click,

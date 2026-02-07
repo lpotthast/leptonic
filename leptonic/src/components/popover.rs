@@ -39,7 +39,7 @@ pub(crate) fn PopoverRoot(children: Children) -> impl IntoView {
 
     let children = children();
     view! {
-        { children }
+        {children}
 
         <leptonic-popover-host>
             <For
@@ -111,11 +111,12 @@ pub fn Popover(
 
     let pop_bounds_read_only: UseElementBoundingReturnReadOnly = pop_bounds.into();
 
-    let pop_style: Signal<String> = Signal::derive(move || if show.get() {
-        {
-            let left = if let Some(pos_x) = position_x {
-                pos_x.run(pop_bounds_read_only)
-            } else {
+    let pop_style: Signal<String> = Signal::derive(move || {
+        if show.get() {
+            {
+                let left = if let Some(pos_x) = position_x {
+                    pos_x.run(pop_bounds_read_only)
+                } else {
                     let x = match align_x {
                         PopoverAlignX::Center => {
                             el_bounds.x.get() + (el_bounds.width.get() / 2.0)
@@ -129,11 +130,11 @@ pub fn Popover(
                         PopoverAlignX::Center => format!("{x}px"),
                         PopoverAlignX::Right => format!("calc({x}px + {margin})"),
                     }
-            };
+                };
 
-            let top = if let Some(pos_y) = position_y {
-                pos_y.run(pop_bounds_read_only)
-            } else {
+                let top = if let Some(pos_y) = position_y {
+                    pos_y.run(pop_bounds_read_only)
+                } else {
                     let y = match align_y {
                         PopoverAlignY::Top => el_bounds.y.get() - pop_bounds_read_only.height.get(),
                         PopoverAlignY::Center | PopoverAlignY::Bottom => el_bounds.y.get(),
@@ -144,12 +145,13 @@ pub fn Popover(
                         PopoverAlignY::Center => format!("{y}px"),
                         PopoverAlignY::Bottom => format!("calc({y}px + {margin})"),
                     }
-            };
+                };
 
-            format!("left: {left}; top: {top};")
+                format!("left: {left}; top: {top};")
+            }
+        } else {
+            String::new()
         }
-    } else {
-        String::new()
     });
 
     let key = Uuid::now_v7();
@@ -158,8 +160,15 @@ pub fn Popover(
         key,
         children: Arc::new(move || {
             let v = view! {
-                <div class="leptonic-popover" node_ref=pop_el id=key.to_string() style=pop_style data-active=move || if show.get() { "true" } else { "false" }> // id=id class=class style=style
-                    { (popover_content.children)() }
+                // id=id class=class style=style
+                <div
+                    class="leptonic-popover"
+                    node_ref=pop_el
+                    id=key.to_string()
+                    style=pop_style
+                    data-active=move || if show.get() { "true" } else { "false" }
+                >
+                    {(popover_content.children)()}
                 </div>
             };
             v.into_any()
@@ -171,8 +180,12 @@ pub fn Popover(
     });
 
     view! {
-        <div class="leptonic-has-popover" node_ref=el on:click=move |_| set_clicked.set(!clicked.get_untracked())>
-            { children() }
+        <div
+            class="leptonic-has-popover"
+            node_ref=el
+            on:click=move |_| set_clicked.set(!clicked.get_untracked())
+        >
+            {children()}
         </div>
     }
 }

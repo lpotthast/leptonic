@@ -4,7 +4,5 @@ use leptos::prelude::*;
 
 #[component]
 pub fn Separator() -> impl IntoView {
-    view! {
-        <hr class="leptonic-separator solid" />
-    }
+    view! { <hr class="leptonic-separator solid" /> }
 }

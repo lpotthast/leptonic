@@ -18,11 +18,7 @@ pub fn Ul(#[prop(default=vec![])] li: Vec<Li>) -> impl IntoView {
             <For
                 each=move || { li.clone().into_iter().enumerate() }
                 key=move |(index, _e)| *index
-                children=move |(_index, e)| view!{
-                    <li>
-                        { (e.children)() }
-                    </li>
-                }
+                children=move |(_index, e)| view! { <li>{(e.children)()}</li> }
             />
         </ul>
     }
@@ -56,29 +52,25 @@ pub fn Code(
     });
 
     let copy_btn = show_copy_button.then(|| {
-        view!(
+        view! {
             <Button
                 classes="leptonic-code-copy-button"
                 variant=ButtonVariant::Flat
                 on_press=move |_| {
                     let text = code_text.get_value();
-                    copy_to_clipboard(
-                        text.as_str(),
-                        on_success,
-                        on_err
-                    );
-                }>
-                <Icon icon=icondata::VsCopy/>
+                    copy_to_clipboard(text.as_str(), on_success, on_err);
+                }
+            >
+                <Icon icon=icondata::VsCopy />
             </Button>
-        )
+        }
     });
 
     view! {
         <leptonic-code inline=inline.map(|it| it.to_string())>
-            <leptonic-code-text inline=inline.map(|it| it.to_string()) >
-                { code_text.get_value() }
-            </leptonic-code-text>
-            { copy_btn }
+            <leptonic-code-text inline=inline
+                .map(|it| it.to_string())>{code_text.get_value()}</leptonic-code-text>
+            {copy_btn}
         </leptonic-code>
     }
 }

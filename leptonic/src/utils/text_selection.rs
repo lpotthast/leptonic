@@ -192,10 +192,7 @@ fn restore_text_selection_standard(element: &web_sys::Element) {
     let _ = element.remove_attribute(DATA_SAVED_USER_SELECT);
 
     // Clean up empty style attributes to avoid leaving behind `style=""`.
-    if element
-        .get_attribute("style")
-        .is_some_and(|s| s.is_empty())
-    {
+    if element.get_attribute("style").is_some_and(|s| s.is_empty()) {
         element.remove_attribute("style").ok();
     }
 }

@@ -34,11 +34,7 @@ where
         let focus = focus.get();
         let elem = node_ref.get();
         if let Some(elem) = elem {
-            let outcome = if focus {
-                elem.focus()
-            } else {
-                elem.blur()
-            };
+            let outcome = if focus { elem.focus() } else { elem.blur() };
             if let Err(err) = outcome {
                 tracing::error!(?err, "Could not update focus to {}.", focus);
             }
@@ -119,12 +115,24 @@ pub fn TextInput(
                 type="text"
                 prop:disabled=move || disabled.get()
                 prop:value=move || get.get()
-                on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { on_focus_change.set(false); }
-                on:focus=move |_e| { on_focus_change.set(true); }
+                on:change=move |e| {
+                    if let Some(set) = &set {
+                        set.set(event_target::<HtmlInputElement>(&e).value())
+                    }
+                }
+                on:keyup=move |e| {
+                    if let Some(set) = &set {
+                        set.set(event_target::<HtmlInputElement>(&e).value())
+                    }
+                }
+                on:blur=move |_e| {
+                    on_focus_change.set(false);
+                }
+                on:focus=move |_e| {
+                    on_focus_change.set(true);
+                }
             />
-            { append.run() }
+            {append.run()}
         </leptonic-input>
     }
 }
@@ -162,12 +170,24 @@ pub fn PasswordInput(
                 type="password"
                 prop:disabled=move || disabled.get()
                 prop:value=move || get.get()
-                on:change=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set) = &set { set.set(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { on_focus_change.set(false); }
-                on:focus=move |_e| { on_focus_change.set(true); }
+                on:change=move |e| {
+                    if let Some(set) = &set {
+                        set.set(event_target::<HtmlInputElement>(&e).value())
+                    }
+                }
+                on:keyup=move |e| {
+                    if let Some(set) = &set {
+                        set.set(event_target::<HtmlInputElement>(&e).value())
+                    }
+                }
+                on:blur=move |_e| {
+                    on_focus_change.set(false);
+                }
+                on:focus=move |_e| {
+                    on_focus_change.set(true);
+                }
             />
-            { append.run() }
+            {append.run()}
         </leptonic-input>
     }
 }
@@ -219,12 +239,24 @@ pub fn NumberInput(
                 step=step
                 prop:disabled=move || disabled.get()
                 prop:value=move || get.get()
-                on:change=move |e| { if let Some(set_value) = &set_value { set_value(event_target::<HtmlInputElement>(&e).value()) } }
-                on:keyup=move |e| { if let Some(set_value) = &set_value { set_value(event_target::<HtmlInputElement>(&e).value()) } }
-                on:blur=move |_e| { on_focus_change.set(false); }
-                on:focus=move |_e| { on_focus_change.set(true); }
+                on:change=move |e| {
+                    if let Some(set_value) = &set_value {
+                        set_value(event_target::<HtmlInputElement>(&e).value())
+                    }
+                }
+                on:keyup=move |e| {
+                    if let Some(set_value) = &set_value {
+                        set_value(event_target::<HtmlInputElement>(&e).value())
+                    }
+                }
+                on:blur=move |_e| {
+                    on_focus_change.set(false);
+                }
+                on:focus=move |_e| {
+                    on_focus_change.set(true);
+                }
             />
-            { append.run() }
+            {append.run()}
         </leptonic-input>
     }
 }

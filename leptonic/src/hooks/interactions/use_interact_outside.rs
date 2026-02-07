@@ -115,10 +115,7 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
 
         // Get document from the captured element's owner document.
         // This correctly handles elements in iframes or shadow DOM.
-        let document = element
-            .get()
-            .as_ref()
-            .and_then(|el| el.owner_document());
+        let document = element.get().as_ref().and_then(|el| el.owner_document());
 
         let Some(document) = document else {
             return;

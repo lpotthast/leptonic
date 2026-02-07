@@ -18,12 +18,10 @@ pub fn Collapse(
 
     let style = Signal::derive(move || {
         let show = show.get();
-        let el_axis_dimension = content
-            .get()
-            .map_or(0, |el| match axis {
-                CollapseAxis::X => el.scroll_width(),
-                CollapseAxis::Y => el.scroll_height(),
-            });
+        let el_axis_dimension = content.get().map_or(0, |el| match axis {
+            CollapseAxis::X => el.scroll_width(),
+            CollapseAxis::Y => el.scroll_height(),
+        });
         match axis {
             CollapseAxis::X => format!(
                 "min-width: 0px; width: {}px",
@@ -37,13 +35,14 @@ pub fn Collapse(
     });
 
     view! {
-        <div class="leptonic-collapse"
-            class:width=move || {axis == CollapseAxis::X}
-            class:height=move || {axis == CollapseAxis::Y}
+        <div
+            class="leptonic-collapse"
+            class:width=move || { axis == CollapseAxis::X }
+            class:height=move || { axis == CollapseAxis::Y }
             style=move || style.get()
         >
             <div class="content" class:show=move || show.get() node_ref=content>
-                { children() }
+                {children()}
             </div>
         </div>
     }

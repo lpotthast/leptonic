@@ -30,7 +30,6 @@ impl std::fmt::Display for ToastVariant {
     }
 }
 
-
 #[derive(Clone)]
 pub struct Toast {
     pub id: Uuid,
@@ -142,16 +141,14 @@ pub fn ToastRoot(children: Children) -> impl IntoView {
     provide_context::<Toasts>(Toasts { toasts, set_toasts });
 
     view! {
-        { children() }
+        {children()}
 
         <leptonic-toasts>
             <For
                 each=move || toasts.get()
                 key=|toast| toast.id
                 children=move |toast| {
-                    view! {
-                        <Toast toast/>
-                    }
+                    view! { <Toast toast /> }
                 }
             />
         </leptonic-toasts>
@@ -186,25 +183,25 @@ pub fn Toast(toast: Toast) -> impl IntoView {
     view! {
         <leptonic-toast id=toast.id.to_string() data-variant=toast.variant.as_str()>
             <leptonic-toast-header>
-                { toast.header.run() }
-
-                { if manually_closable {
+                {toast.header.run()}
+                {if manually_closable {
                     view! {
                         <div>
                             <Icon
                                 attr:class="dismiss"
                                 icon=icondata::BsXCircleFill
-                                on:click=move |_e| { expect_context::<Toasts>().try_remove(toast.id); }
+                                on:click=move |_e| {
+                                    expect_context::<Toasts>().try_remove(toast.id);
+                                }
                             />
                         </div>
-                    }.into_any()
+                    }
+                        .into_any()
                 } else {
                     ().into_any()
-                } }
+                }}
             </leptonic-toast-header>
-            <leptonic-toast-message>
-                { toast.body.run() }
-            </leptonic-toast-message>
+            <leptonic-toast-message>{toast.body.run()}</leptonic-toast-message>
         </leptonic-toast>
     }
 }

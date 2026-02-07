@@ -4,11 +4,7 @@ use crate::hooks::{use_press, PressEvent, UsePressInput, UsePressReturn};
 
 #[component]
 pub fn TableContainer(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-table-container>
-            {children()}
-        </leptonic-table-container>
-    }
+    view! { <leptonic-table-container>{children()}</leptonic-table-container> }
 }
 
 #[component]
@@ -29,36 +25,22 @@ pub fn Table(
 
 #[component]
 pub fn TableHeader(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-table-header>{children()}</leptonic-table-header>
-    }
+    view! { <leptonic-table-header>{children()}</leptonic-table-header> }
 }
 
 #[component]
 pub fn TableBody(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-table-body>
-            {children()}
-        </leptonic-table-body>
-    }
+    view! { <leptonic-table-body>{children()}</leptonic-table-body> }
 }
 
 #[component]
 pub fn TableFooter(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-table-footer>
-            {children()}
-        </leptonic-table-footer>
-    }
+    view! { <leptonic-table-footer>{children()}</leptonic-table-footer> }
 }
 
 #[component]
 pub fn TableRow(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-table-row>
-            {children()}
-        </leptonic-table-row>
-    }
+    view! { <leptonic-table-row>{children()}</leptonic-table-row> }
 }
 
 #[component]
@@ -85,7 +67,10 @@ pub fn TableHeaderCell(
     });
 
     view! {
-        <leptonic-table-header-cell class:min-width=min_width.unwrap_or(false) {..props.into_attrs()}>
+        <leptonic-table-header-cell
+            class:min-width=min_width.unwrap_or(false)
+            {..props.into_attrs()}
+        >
             {children()}
         </leptonic-table-header-cell>
     }
@@ -93,9 +78,5 @@ pub fn TableHeaderCell(
 
 #[component]
 pub fn TableCell(children: Children) -> impl IntoView {
-    view! {
-        <leptonic-table-cell>
-            {children()}
-        </leptonic-table-cell>
-    }
+    view! { <leptonic-table-cell>{children()}</leptonic-table-cell> }
 }

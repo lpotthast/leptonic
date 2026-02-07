@@ -349,14 +349,14 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
         set_is_drop_target.set(false);
         set_drag_counter.set(0);
 
-        let drop_effect = e
-            .data_transfer()
-            .map_or(DropEffect::None, |dt| match dt.drop_effect().as_str() {
-                "copy" => DropEffect::Copy,
-                "move" => DropEffect::Move,
-                "link" => DropEffect::Link,
-                _ => DropEffect::None,
-            });
+        let drop_effect =
+            e.data_transfer()
+                .map_or(DropEffect::None, |dt| match dt.drop_effect().as_str() {
+                    "copy" => DropEffect::Copy,
+                    "move" => DropEffect::Move,
+                    "link" => DropEffect::Link,
+                    _ => DropEffect::None,
+                });
 
         if let Some(on_drop) = on_drop {
             let items = get_items_from_event(&e);

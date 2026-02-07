@@ -24,152 +24,212 @@ pub fn TiptapEditor(
 
     view! {
         <leptonic-tiptap-editor>
-            { move || match disabled.get() {
-                false => view! {
-                    <leptonic-tiptap-menu>
-                        { move || selection_state.with(|state| view! {
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.h1)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H1)
-                            >
-                                "H1"
-                            </Button>
+            {move || match disabled.get() {
+                false => {
+                    view! {
+                        <leptonic-tiptap-menu>
+                            {move || {
+                                selection_state
+                                    .with(|state| {
+                                        view! {
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.h1))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H1)
+                                            >
+                                                "H1"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.h2)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H2)
-                            >
-                                "H2"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.h2))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H2)
+                                            >
+                                                "H2"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.h3)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H3)
-                            >
-                                "H3"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.h3))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H3)
+                                            >
+                                                "H3"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.h4)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H4)
-                            >
-                                "H4"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.h4))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H4)
+                                            >
+                                                "H4"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.h5)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H5)
-                            >
-                                "H5"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.h5))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H5)
+                                            >
+                                                "H5"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.h6)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H6)
-                            >
-                                "H6"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.h6))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::H6)
+                                            >
+                                                "H6"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.paragraph)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Paragraph)
-                            >
-                                <Icon icon=icondata::BsParagraph/>
-                                "Paragraph"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.paragraph))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Paragraph)
+                                            >
+                                                <Icon icon=icondata::BsParagraph />
+                                                "Paragraph"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.bold)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Bold)
-                            >
-                                <Icon icon=icondata::BsTypeBold/>
-                                "Bold"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.bold))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Bold)
+                                            >
+                                                <Icon icon=icondata::BsTypeBold />
+                                                "Bold"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.italic)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Italic)
-                            >
-                                <Icon icon=icondata::BsTypeItalic/>
-                                "Italic"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.italic))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Italic)
+                                            >
+                                                <Icon icon=icondata::BsTypeItalic />
+                                                "Italic"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.strike)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Strike)
-                            >
-                                <Icon icon=icondata::BsTypeStrikethrough/>
-                                "Strike"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.strike))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Strike)
+                                            >
+                                                <Icon icon=icondata::BsTypeStrikethrough />
+                                                "Strike"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.blockquote)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Blockquote)
-                            >
-                                <Icon icon=icondata::BsBlockquoteLeft/>
-                                "Blockquote"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.blockquote))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Blockquote)
+                                            >
+                                                <Icon icon=icondata::BsBlockquoteLeft />
+                                                "Blockquote"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.highlight)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Highlight)
-                            >
-                                <Icon icon=icondata::BsBrightnessAltHigh/>
-                                "Highlight"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.highlight))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::Highlight)
+                                            >
+                                                <Icon icon=icondata::BsBrightnessAltHigh />
+                                                "Highlight"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.align_left)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::AlignLeft)
-                            >
-                                <Icon icon=icondata::BsTextLeft/>
-                                "left"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.align_left))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::AlignLeft)
+                                            >
+                                                <Icon icon=icondata::BsTextLeft />
+                                                "left"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.align_center)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::AlignCenter)
-                            >
-                                <Icon icon=icondata::BsTextCenter/>
-                                "center"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.align_center))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| {
+                                                    set_msg.set(TiptapInstanceMsg::AlignCenter)
+                                                }
+                                            >
+                                                <Icon icon=icondata::BsTextCenter />
+                                                "center"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.align_right)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::AlignRight)
-                            >
-                                <Icon icon=icondata::BsTextRight/>
-                                "right"
-                            </Button>
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.align_right))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| set_msg.set(TiptapInstanceMsg::AlignRight)
+                                            >
+                                                <Icon icon=icondata::BsTextRight />
+                                                "right"
+                                            </Button>
 
-                            <Button
-                                classes=Classes::builder().with("leptonic-tiptap-btn").with(("active", state.align_justify)).build()
-                                size=ButtonSize::Small
-                                on_press=move |_| set_msg.set(TiptapInstanceMsg::AlignJustify)
-                            >
-                                <Icon icon=icondata::BsJustify/>
-                                "justify"
-                            </Button>
-                        }) }
-                    </leptonic-tiptap-menu>
-                }.into_any(),
+                                            <Button
+                                                classes=Classes::builder()
+                                                    .with("leptonic-tiptap-btn")
+                                                    .with(("active", state.align_justify))
+                                                    .build()
+                                                size=ButtonSize::Small
+                                                on_press=move |_| {
+                                                    set_msg.set(TiptapInstanceMsg::AlignJustify)
+                                                }
+                                            >
+                                                <Icon icon=icondata::BsJustify />
+                                                "justify"
+                                            </Button>
+                                        }
+                                    })
+                            }}
+                        </leptonic-tiptap-menu>
+                    }
+                        .into_any()
+                }
                 true => ().into_any(),
-            } }
+            }}
             <TiptapInstance
                 id=instance_id.to_string()
                 msg=msg

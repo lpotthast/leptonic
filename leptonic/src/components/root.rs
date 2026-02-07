@@ -243,15 +243,13 @@ where
 
     // Reference: https://developer.mozilla.org/en-US/docs/Web/HTTP/Browser_detection_using_the_user_agent
     let is_mobile_device = Signal::derive(move || {
-        use_window()
-            .as_ref()
-            .is_some_and(|window| {
-                window
-                    .navigator()
-                    .user_agent()
-                    .map(|agent| agent.to_lowercase().contains("mobi"))
-                    .unwrap_or(false)
-            })
+        use_window().as_ref().is_some_and(|window| {
+            window
+                .navigator()
+                .user_agent()
+                .map(|agent| agent.to_lowercase().contains("mobi"))
+                .unwrap_or(false)
+        })
     });
 
     provide_context(Leptonic {
@@ -270,14 +268,12 @@ where
     }}
 
     view! {
-        { tiptap_js_module_includes }
+        {tiptap_js_module_includes}
 
         <ThemeProvider theme=signal_ls("theme", default_theme)>
             <PopoverRoot>
                 <ToastRoot>
-                    <ModalRoot>
-                        { children() }
-                    </ModalRoot>
+                    <ModalRoot>{children()}</ModalRoot>
                 </ToastRoot>
             </PopoverRoot>
         </ThemeProvider>

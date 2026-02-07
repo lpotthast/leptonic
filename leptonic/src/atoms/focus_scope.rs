@@ -132,21 +132,19 @@ pub fn FocusScope(
 
                     // Check if focus is within the scope
                     let document = web_sys::window().and_then(|w| w.document());
-                    let active_element = document.as_ref().and_then(web_sys::Document::active_element);
-
-                    let is_within = active_element
+                    let active_element = document
                         .as_ref()
-                        .is_some_and(|active| {
-                            if let Some(active_node) = active.dyn_ref::<web_sys::Node>() {
-                                scope_element
-                                    .dyn_ref::<web_sys::Node>()
-                                    .is_some_and(|scope_node| {
-                                        scope_node.contains(Some(active_node))
-                                    })
-                            } else {
-                                false
-                            }
-                        });
+                        .and_then(web_sys::Document::active_element);
+
+                    let is_within = active_element.as_ref().is_some_and(|active| {
+                        if let Some(active_node) = active.dyn_ref::<web_sys::Node>() {
+                            scope_element
+                                .dyn_ref::<web_sys::Node>()
+                                .is_some_and(|scope_node| scope_node.contains(Some(active_node)))
+                        } else {
+                            false
+                        }
+                    });
 
                     if !is_within {
                         return;
@@ -181,9 +179,5 @@ pub fn FocusScope(
         }
     });
 
-    view! {
-        <div node_ref=scope_ref>
-            {children()}
-        </div>
-    }
+    view! { <div node_ref=scope_ref>{children()}</div> }
 }

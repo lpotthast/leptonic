@@ -136,7 +136,11 @@ pub struct RGBA8 {
 
 impl From<HSV> for RGB8 {
     // Expectations: 0 ≤ H < 360, 0 ≤ S ≤ 1 and 0 ≤ V ≤ 1:
-    #[allow(clippy::many_single_char_names, clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    #[allow(
+        clippy::many_single_char_names,
+        clippy::cast_possible_truncation,
+        clippy::cast_sign_loss
+    )]
     fn from(hsv: HSV) -> Self {
         let (h, s, v) = (hsv.hue, hsv.saturation, hsv.value);
 
@@ -175,7 +179,11 @@ impl From<RGB8> for HSV {
     fn from(rgb: RGB8) -> Self {
         let RGB8 { r, g, b } = rgb;
 
-        let (r, g, b) = (f64::from(r) / 255.0, f64::from(g) / 255.0, f64::from(b) / 255.0);
+        let (r, g, b) = (
+            f64::from(r) / 255.0,
+            f64::from(g) / 255.0,
+            f64::from(b) / 255.0,
+        );
 
         let c_max = f64::max(r, f64::max(g, b));
         let c_min = f64::min(r, f64::min(g, b));
@@ -193,11 +201,7 @@ impl From<RGB8> for HSV {
             unreachable!()
         };
 
-        let saturation = if c_max == 0.0 {
-            0.0
-        } else {
-            delta / c_max
-        };
+        let saturation = if c_max == 0.0 { 0.0 } else { delta / c_max };
 
         let value = c_max;
 

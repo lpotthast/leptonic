@@ -160,9 +160,7 @@ where
 
     // Derive is_focused from parent's focused_key for proper reactivity
     let key_for_focus = key.clone();
-    let is_focused = Signal::derive(move || {
-        focused_key.get().as_ref() == Some(&key_for_focus)
-    });
+    let is_focused = Signal::derive(move || focused_key.get().as_ref() == Some(&key_for_focus));
 
     // Combine local and global disabled state
     let is_disabled = Signal::derive(move || local_disabled.get() || state.is_disabled.get());

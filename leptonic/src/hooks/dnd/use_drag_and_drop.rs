@@ -61,7 +61,6 @@ pub struct DroppableOptions {
     pub on_drop: Option<Callback<DropEvent>>,
 }
 
-
 /// Input parameters for the `use_drag_and_drop` hook.
 #[derive(Clone)]
 pub struct UseDragAndDropInput {

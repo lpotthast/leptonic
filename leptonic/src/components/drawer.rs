@@ -40,10 +40,12 @@ pub fn Drawer(
         DrawerAnimationState::Hidden
     });
 
-    let target_state = Signal::derive(move || if memoized_shown.get() {
-        DrawerAnimationState::Shown
-    } else {
-        DrawerAnimationState::Hidden
+    let target_state = Signal::derive(move || {
+        if memoized_shown.get() {
+            DrawerAnimationState::Shown
+        } else {
+            DrawerAnimationState::Hidden
+        }
     });
 
     let Pausable {
@@ -104,7 +106,7 @@ pub fn Drawer(
             class:hidden=move || anim_state.get() == DrawerAnimationState::Hidden
             data-side=side.to_str()
         >
-            { children() }
+            {children()}
         </leptonic-drawer>
     }
 }
