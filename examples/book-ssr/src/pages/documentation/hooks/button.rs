@@ -27,6 +27,8 @@ pub fn PageUseButton() -> impl IntoView {
             disabled: false.into(),
             force_prevent_default: false,
             allow_propagation: false,
+            allow_text_selection_on_press: false,
+            should_cancel_on_pointer_exit: false,
             on_press: Callback::new(move |_e| {
                 if let Some(window) = use_window().as_ref() {
                     let _ = window.alert_with_message("Pressed!");
@@ -35,6 +37,7 @@ pub fn PageUseButton() -> impl IntoView {
             on_press_up: None,
             on_press_start: None,
             on_press_end: None,
+            on_press_change: None,
         },
         use_hover_input: UseHoverInput {
             disabled: false.into(),
@@ -74,6 +77,8 @@ pub fn PageUseButton() -> impl IntoView {
                             disabled: false.into(),
                             force_prevent_default: false,
                             allow_propagation: false,
+                            allow_text_selection_on_press: false,
+                            should_cancel_on_pointer_exit: false,
                             on_press: Callback::new(move |_e| {
                                 if let Some(window) = use_window().as_ref() {
                                     let _ = window.alert_with_message("Pressed!");
@@ -82,6 +87,7 @@ pub fn PageUseButton() -> impl IntoView {
                             on_press_up: None,
                             on_press_start: None,
                             on_press_end: None,
+                            on_press_change: None,
                         },
                         use_hover_input: UseHoverInput {
                             disabled: false.into(),

@@ -19,8 +19,10 @@ pub mod signals;
 pub mod ssr;
 pub mod style;
 pub mod styles;
+pub(crate) mod run_after_transition;
 pub(crate) mod text_selection;
 pub mod time;
+pub(crate) mod virtual_click;
 
 pub use element_capture::{CapturedElement, ElementCaptureAttr};
 pub use event_handler::EventHandler;

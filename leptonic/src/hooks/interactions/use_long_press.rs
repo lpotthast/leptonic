@@ -323,10 +323,13 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
         disabled: input.disabled,
         force_prevent_default: false,
         allow_propagation: true,
+        allow_text_selection_on_press: false,
+        should_cancel_on_pointer_exit: false,
         on_press: Callback::new(|_| {}), // We don't use the regular press event
         on_press_up: None,
         on_press_start: Some(on_press_start),
         on_press_end: Some(on_press_end),
+        on_press_change: None,
     });
 
     // Cleanup on unmount

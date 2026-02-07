@@ -35,6 +35,8 @@ pub fn Button(
             disabled,
             force_prevent_default: false,
             allow_propagation: false,
+            allow_text_selection_on_press: false,
+            should_cancel_on_pointer_exit: false,
             on_press: Callback::new(move |e| {
                 if let Some(on_press) = on_press {
                     on_press.run(e);
@@ -43,6 +45,7 @@ pub fn Button(
             on_press_up: None,
             on_press_start: None,
             on_press_end: None,
+            on_press_change: None,
         },
         use_hover_input: UseHoverInput {
             disabled,
@@ -139,10 +142,13 @@ where
             force_prevent_default: false,
             // Without setting this, Leptos' client-side navigation would not take place.
             allow_propagation: true,
+            allow_text_selection_on_press: false,
+            should_cancel_on_pointer_exit: false,
             on_press: Callback::new(move |_e| {}),
             on_press_up: None,
             on_press_start: None,
             on_press_end: None,
+            on_press_change: None,
         },
         use_hover_input: UseHoverInput {
             disabled,

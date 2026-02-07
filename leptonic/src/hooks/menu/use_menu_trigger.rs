@@ -221,6 +221,8 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             disabled: disabled_for_press,
             force_prevent_default: false,
             allow_propagation: true,
+            allow_text_selection_on_press: false,
+            should_cancel_on_pointer_exit: false,
             on_press: Callback::new(move |e: PressEvent| {
                 // Touch triggers toggle on press
                 if e.pointer_type == PointerType::Touch {
@@ -248,6 +250,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             })),
             on_press_up: None,
             on_press_end: None,
+            on_press_change: None,
         });
         (
             press.props.on_keydown,

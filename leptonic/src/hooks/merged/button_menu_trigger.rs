@@ -9,7 +9,7 @@ use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
+use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::hooks::button::UseButtonProps;
 use crate::hooks::menu::use_menu_trigger::{UseMenuTriggerMenuProps, UseMenuTriggerProps};
@@ -93,6 +93,8 @@ pub struct MergedButtonMenuTriggerProps {
     pub on_click: EventHandler<MouseEvent>,
     /// Pointer down event handler (chained: button, then menu trigger).
     pub on_pointerdown: EventHandler<PointerEvent>,
+    /// Drag start event handler (from button, for Safari workaround).
+    pub on_dragstart: EventHandler<DragEvent>,
 
     // Button's distinct handlers
     /// Pointer enter event handler (from button).
@@ -132,6 +134,7 @@ impl MergedButtonMenuTriggerProps {
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_dragstart.into_on(ev::dragstart),
             // Button's distinct handlers
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
@@ -161,6 +164,7 @@ pub type MergedButtonMenuTriggerAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::dragstart, SharedEventCallback<DragEvent>>,
     // Button's distinct handlers
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
@@ -218,6 +222,7 @@ impl MergeWith<UseMenuTriggerProps> for UseButtonProps {
             on_keydown: button.on_keydown.chain(menu_trigger.on_keydown),
             on_click: button.on_click.chain(menu_trigger.on_click),
             on_pointerdown: button.on_pointerdown.chain(menu_trigger.on_pointerdown),
+            on_dragstart: button.on_dragstart,
 
             // Button's distinct handlers
             on_pointerenter: button.on_pointerenter,

@@ -14,10 +14,6 @@ body {
   flex-direction: column;
 }
 
-[data-disable-user-select="true"] {
-  user-select: none;
-}
-
 /* Focus ring styling for keyboard navigation. Should override any other focus styling. */
 [data-focus-visible="true"] {
   outline: 3px solid var(--brand-color) !important;

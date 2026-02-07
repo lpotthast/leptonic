@@ -3,7 +3,7 @@ use crate::utils::{EventHandler, MergeWith};
 use leptos::attr::custom::CustomAttr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
+use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 /// Combined props from `use_press`, `use_hover`, and `use_focus_ring` hooks.
 ///
@@ -38,6 +38,7 @@ pub struct MergedPressHoverFocusRingProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_dragstart: EventHandler<DragEvent>,
     // From hover
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
@@ -54,6 +55,7 @@ pub type MergedPressHoverFocusRingAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -76,6 +78,7 @@ impl MergedPressHoverFocusRingProps {
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_dragstart.into_on(ev::dragstart),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
             self.on_focus.into_on(ev::focus),
@@ -94,6 +97,7 @@ impl MergeWith<UseFocusRingProps> for MergedPressHoverProps {
             on_keydown: self.on_keydown,
             on_click: self.on_click,
             on_pointerdown: self.on_pointerdown,
+            on_dragstart: self.on_dragstart,
             on_pointerenter: self.on_pointerenter,
             on_pointerleave: self.on_pointerleave,
             // From focus ring (distinct)

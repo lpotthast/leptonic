@@ -15,10 +15,13 @@ pub fn Pressable(
         disabled,
         force_prevent_default: false,
         allow_propagation: false,
+        allow_text_selection_on_press: false,
+        should_cancel_on_pointer_exit: false,
         on_press,
         on_press_up: None,
         on_press_start: None,
         on_press_end: None,
+        on_press_change: None,
     });
 
     view! {

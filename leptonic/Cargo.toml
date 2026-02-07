@@ -52,6 +52,7 @@ docsrs = []
 
 [dependencies]
 cfg-if = "1.0.4"
+js-sys = "0.3"
 educe = "0.6.0"
 icondata = { version = "0.7.0" }
 indoc = "2.0.7"
@@ -87,6 +88,7 @@ web-sys = { version = "0.3.82", features = [
     "HtmlFormElement",
     "HtmlInputElement",
     "Storage",
+    "SvgElement",
 ] }
 
 [build-dependencies]

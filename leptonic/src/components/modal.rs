@@ -69,6 +69,8 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
         disabled: false.into(),
         force_prevent_default: true,
         allow_propagation: false,
+        allow_text_selection_on_press: false,
+        should_cancel_on_pointer_exit: false,
         on_press: Callback::new(move |_| {
             if let Some(modal_on_top) = shown_modals.get_untracked().into_iter().next_back() {
                 if let Some(on_backdrop_interaction) = modal_on_top.on_backdrop_interaction {
@@ -79,6 +81,7 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
         on_press_up: None,
         on_press_start: None,
         on_press_end: None,
+        on_press_change: None,
     });
 
     view! {

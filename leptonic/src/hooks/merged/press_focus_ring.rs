@@ -3,7 +3,7 @@ use crate::utils::{EventHandler, MergeWith};
 use leptos::attr::custom::CustomAttr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
+use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 /// Combined props from `use_press` and `use_focus_ring` hooks (without hover).
 ///
@@ -34,6 +34,7 @@ pub struct MergedPressFocusRingProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_dragstart: EventHandler<DragEvent>,
     // From focus ring.
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
@@ -48,6 +49,7 @@ pub type MergedPressFocusRingAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::dragstart, SharedEventCallback<DragEvent>>,
     // From focus ring.
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -69,6 +71,7 @@ impl MergedPressFocusRingProps {
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_dragstart.into_on(ev::dragstart),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
             self.data_focus_visible,
@@ -86,6 +89,7 @@ impl MergeWith<UseFocusRingProps> for UsePressProps {
             on_keydown: press.on_keydown,
             on_click: press.on_click,
             on_pointerdown: press.on_pointerdown,
+            on_dragstart: press.on_dragstart,
             // From focus ring.
             on_focus: focus_ring.on_focus,
             on_blur: focus_ring.on_blur,

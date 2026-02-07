@@ -4,7 +4,7 @@ use leptos::attr::Attr;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use leptos::{attr, ev};
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
+use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::aria::*;
 use crate::utils::EventHandler;
@@ -55,6 +55,7 @@ pub struct UseButtonProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_dragstart: EventHandler<DragEvent>,
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -76,6 +77,7 @@ impl UseButtonProps {
             self.on_keydown.to_on(ev::keydown),
             self.on_click.to_on(ev::click),
             self.on_pointerdown.to_on(ev::pointerdown),
+            self.on_dragstart.to_on(ev::dragstart),
             self.on_pointerenter.to_on(ev::pointerenter),
             self.on_pointerleave.to_on(ev::pointerleave),
             self.on_focus.to_on(ev::focus),
@@ -97,6 +99,7 @@ impl UseButtonProps {
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_dragstart.into_on(ev::dragstart),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
             self.on_focus.into_on(ev::focus),
@@ -117,6 +120,7 @@ pub type UseButtonAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -155,16 +159,20 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
     UseButtonReturn {
         props: UseButtonProps {
             role: "button",
-            tabindex: Signal::derive(move || if input.disabled.get() {
-                None
-            } else {
-                Some("0")
+            tabindex: Signal::derive(move || {
+                if input.disabled.get() {
+                    None
+                } else {
+                    Some("0")
+                }
             }),
             disabled: Signal::derive(move || input.disabled.get().into_attribute_value()),
-            aria_disabled: Signal::derive(move || if input.disabled.get() {
-                "true"
-            } else {
-                "false"
+            aria_disabled: Signal::derive(move || {
+                if input.disabled.get() {
+                    "true"
+                } else {
+                    "false"
+                }
             }),
             aria_haspopup: Signal::derive(move || input.aria_haspopup.get().into_attribute_value()),
             aria_expanded: Signal::derive(move || input.aria_expanded.get().into_attribute_value()),
@@ -172,6 +180,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
             on_keydown: press_props.on_keydown,
             on_click: press_props.on_click,
             on_pointerdown: press_props.on_pointerdown,
+            on_dragstart: press_props.on_dragstart,
             on_pointerenter: hover_props.on_pointerenter,
             on_pointerleave: hover_props.on_pointerleave,
             on_focus: focus_ring_props.on_focus,

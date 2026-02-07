@@ -5,12 +5,15 @@ use leptos::prelude::*;
 use leptos_use::use_event_listener;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::{
-    current_target_contains_target, pointer_type::PointerType, ElementExt, EventExt, EventHandler,
-    EventModifiers, EventTargetExt, Modifiers,
+    current_target_contains_target,
+    pointer_type::PointerType,
+    virtual_click::{is_virtual_click, is_virtual_pointer_event},
+    ElementExt, EventExt, EventHandler, EventModifiers, EventTargetExt, Modifiers,
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
@@ -42,6 +45,7 @@ pub struct PressEvent {
     pub continue_propagation: Arc<dyn Fn() + Send + Sync + 'static>,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy)]
 pub struct UsePressInput {
     /// Whether the targeted element is currently disabled.
@@ -53,10 +57,24 @@ pub struct UsePressInput {
 
     pub allow_propagation: bool,
 
+    /// When `true`, text selection is not disabled during press interactions.
+    /// By default (`false`), text selection is disabled to prevent accidental selection
+    /// while pressing.
+    pub allow_text_selection_on_press: bool,
+
+    /// When `true`, the press is cancelled entirely when the pointer exits the target.
+    /// By default (`false`), the user can press, drag outside, drag back in, and still
+    /// complete the press.
+    pub should_cancel_on_pointer_exit: bool,
+
     pub on_press: Callback<PressEvent>,
     pub on_press_up: Option<Callback<PressEvent>>,
     pub on_press_start: Option<Callback<PressEvent>>,
     pub on_press_end: Option<Callback<PressEvent>>,
+
+    /// Called when the press state changes. Receives `true` when press starts,
+    /// `false` when press ends.
+    pub on_press_change: Option<Callback<bool>>,
 }
 
 #[derive(Debug, Clone)]
@@ -93,6 +111,7 @@ pub struct UsePressProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_dragstart: EventHandler<web_sys::DragEvent>,
 }
 
 impl UsePressProps {
@@ -103,6 +122,7 @@ impl UsePressProps {
             self.on_keydown.to_on(ev::keydown),
             self.on_click.to_on(ev::click),
             self.on_pointerdown.to_on(ev::pointerdown),
+            self.on_dragstart.to_on(ev::dragstart),
         )
     }
 
@@ -113,6 +133,7 @@ impl UsePressProps {
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_dragstart.into_on(ev::dragstart),
         )
     }
 }
@@ -122,6 +143,7 @@ pub type UsePressAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::dragstart, SharedEventCallback<web_sys::DragEvent>>,
 );
 
 enum EventHandlers {
@@ -140,6 +162,14 @@ struct PressState {
     pointer_type: PointerType,
     target: Option<web_sys::EventTarget>,
     is_over_target: bool,
+
+    /// Tracks whether `trigger_press_start` was actually fired, to prevent
+    /// firing `press_end` without a corresponding `press_start`.
+    did_fire_press_start: bool,
+
+    /// Handle for the 80ms fallback timeout that triggers `target.click()`
+    /// when iOS long press doesn't naturally fire a click event.
+    click_timeout_handle: Option<i32>,
 
     event_handlers: EventHandlers,
 }
@@ -163,6 +193,14 @@ impl PressState {
             }
         }
     }
+
+    fn clear_click_timeout(&mut self) {
+        if let Some(handle) = self.click_timeout_handle.take() {
+            if let Some(window) = web_sys::window() {
+                window.clear_timeout_with_handle(handle);
+            }
+        }
+    }
 }
 
 fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 'static>) {
@@ -177,6 +215,13 @@ fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 
 enum EventRef<'a> {
     Pointer(&'a PointerEvent),
     Keyboard(&'a KeyboardEvent),
+    Mouse(&'a MouseEvent),
+}
+
+fn is_mac() -> bool {
+    web_sys::window()
+        .and_then(|w| w.navigator().platform().ok())
+        .is_some_and(|p| p.contains("Mac"))
 }
 
 /// # Panics
@@ -189,139 +234,241 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     let state: StoredValue<Option<PressState>, LocalStorage> = StoredValue::new_local(None);
 
+    // Tracks meta key events for macOS workaround
+    let meta_key_events: StoredValue<
+        Option<std::collections::HashMap<String, KeyboardEvent>>,
+        LocalStorage,
+    > = StoredValue::new_local(None);
+
     let initialize_press_state = move |e: EventRef<'_>, event_handlers: EventHandlers| {
-        debug_assert!(state.with_value(Option::is_none), "Implicit cleanup ist not supported. Forgot to call cleanup() before initializing a new PressState?");
+        // If a press is already active, ignore this initialization request.
+        // This can happen when a second pointerdown fires before the first press's
+        // click event completes the cycle (the window between pointerup and click).
+        // We follow React Aria's approach of ignoring the second press rather than
+        // cancelling + re-initializing, because cancel+re-init causes click event
+        // cross-pollination: click#1 (from interaction 1) would complete press#2
+        // (from interaction 2), since the click handler cannot distinguish which
+        // press a click belongs to.
+        if state.with_value(Option::is_some) {
+            return;
+        }
 
         state.set_value(Some(PressState {
             pointer_id: match e {
                 EventRef::Pointer(e) => e.pointer_id(),
-                EventRef::Keyboard(_e) => 0,
+                EventRef::Keyboard(_) | EventRef::Mouse(_) => 0,
             },
             pointer_type: match e {
                 EventRef::Pointer(e) => PointerType::from(e.pointer_type()),
                 EventRef::Keyboard(_e) => PointerType::Keyboard,
+                EventRef::Mouse(_e) => PointerType::Virtual,
             },
             target: match e {
                 EventRef::Pointer(e) => e.target(),
                 EventRef::Keyboard(e) => e.target(),
+                EventRef::Mouse(e) => e.target(),
             },
             is_over_target: match e {
                 EventRef::Pointer(e) => e
                     .current_target()
                     .unwrap()
                     .is_over(e, e.target().as_ref().unwrap().as_element().unwrap()),
-                EventRef::Keyboard(_e) => false,
+                EventRef::Keyboard(_) | EventRef::Mouse(_) => false,
             },
+            did_fire_press_start: false,
+            click_timeout_handle: None,
             event_handlers,
         }));
     };
 
     // Has no effect if press is already started. Calling this multiple times only executes the effect once.
-    let trigger_press_start = move |s: &PressState, e: EventRef<'_>| {
-        if !is_pressed.get_untracked() {
-            if let Some(on_press_start) = input.on_press_start {
-                let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-                on_press_start.run(PressEvent {
-                    pointer_type: s.pointer_type.clone(),
-                    target: s.target.clone().map(send_wrapper::SendWrapper::new),
-                    modifiers: match e {
-                        EventRef::Pointer(e) => e.modifiers(),
-                        EventRef::Keyboard(e) => e.modifiers(),
-                    },
-                    continue_propagation,
-                });
-                if !continue_propagation_state.load(Ordering::Acquire) {
-                    match e {
-                        EventRef::Pointer(e) => e.stop_propagation(),
-                        EventRef::Keyboard(e) => e.stop_propagation(),
-                    }
+    let trigger_press_start = move |s: &mut PressState, e: EventRef<'_>| {
+        if s.did_fire_press_start {
+            return;
+        }
+        s.did_fire_press_start = true;
+
+        if let Some(on_press_start) = input.on_press_start {
+            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+            on_press_start.run(PressEvent {
+                pointer_type: s.pointer_type.clone(),
+                target: s.target.clone().map(send_wrapper::SendWrapper::new),
+                modifiers: match e {
+                    EventRef::Pointer(e) => e.modifiers(),
+                    EventRef::Keyboard(e) => e.modifiers(),
+                    EventRef::Mouse(e) => e.modifiers(),
+                },
+                continue_propagation,
+            });
+            if !continue_propagation_state.load(Ordering::Acquire) {
+                match e {
+                    EventRef::Pointer(e) => e.stop_propagation(),
+                    EventRef::Keyboard(e) => e.stop_propagation(),
+                    EventRef::Mouse(e) => e.stop_propagation(),
                 }
             }
-            set_is_pressed.set(true);
+        }
+
+        if let Some(on_press_change) = input.on_press_change {
+            on_press_change.run(true);
+        }
+
+        set_is_pressed.set(true);
+    };
+
+    // Has no effect if press was not started. Calling this multiple times only executes the effect once.
+    // When `was_pressed` is true, also fires the `on_press` callback.
+    let trigger_press_end = move |s: &mut PressState, e: EventRef<'_>, was_pressed: bool| {
+        if !s.did_fire_press_start {
+            return;
+        }
+        s.did_fire_press_start = false;
+
+        if let Some(on_press_end) = input.on_press_end {
+            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+            on_press_end.run(PressEvent {
+                pointer_type: s.pointer_type.clone(),
+                target: s.target.clone().map(send_wrapper::SendWrapper::new),
+                modifiers: match e {
+                    EventRef::Pointer(e) => e.modifiers(),
+                    EventRef::Keyboard(e) => e.modifiers(),
+                    EventRef::Mouse(e) => e.modifiers(),
+                },
+                continue_propagation,
+            });
+            if !continue_propagation_state.load(Ordering::Acquire) {
+                match e {
+                    EventRef::Pointer(e) => e.stop_propagation(),
+                    EventRef::Keyboard(e) => e.stop_propagation(),
+                    EventRef::Mouse(e) => e.stop_propagation(),
+                }
+            }
+        }
+
+        if let Some(on_press_change) = input.on_press_change {
+            on_press_change.run(false);
+        }
+
+        set_is_pressed.set(false);
+
+        if was_pressed {
+            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+            input.on_press.run(PressEvent {
+                pointer_type: s.pointer_type.clone(),
+                target: s.target.clone().map(send_wrapper::SendWrapper::new),
+                modifiers: match e {
+                    EventRef::Pointer(e) => e.modifiers(),
+                    EventRef::Keyboard(e) => e.modifiers(),
+                    EventRef::Mouse(e) => e.modifiers(),
+                },
+                continue_propagation,
+            });
+            if !continue_propagation_state.load(Ordering::Acquire) {
+                match e {
+                    EventRef::Pointer(e) => e.stop_propagation(),
+                    EventRef::Keyboard(e) => e.stop_propagation(),
+                    EventRef::Mouse(e) => e.stop_propagation(),
+                }
+            }
         }
     };
 
-    // Has no effect if press is not yet started. Calling this multiple times only executes the effect once.
-    let trigger_press_end = move |s: &PressState, e: EventRef<'_>| {
-        if is_pressed.get_untracked() {
-            if let Some(on_press_end) = input.on_press_end {
-                let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-                on_press_end.run(PressEvent {
-                    pointer_type: s.pointer_type.clone(),
-                    target: s.target.clone().map(send_wrapper::SendWrapper::new),
-                    modifiers: match e {
-                        EventRef::Pointer(e) => e.modifiers(),
-                        EventRef::Keyboard(e) => e.modifiers(),
-                    },
-                    continue_propagation,
-                });
-                if !continue_propagation_state.load(Ordering::Acquire) {
-                    match e {
-                        EventRef::Pointer(e) => e.stop_propagation(),
-                        EventRef::Keyboard(e) => e.stop_propagation(),
-                    }
+    let trigger_press_up = move |s: &PressState, e: EventRef<'_>| {
+        if let Some(on_press_up) = input.on_press_up {
+            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+            on_press_up.run(PressEvent {
+                pointer_type: s.pointer_type.clone(),
+                target: s.target.clone().map(send_wrapper::SendWrapper::new),
+                modifiers: match e {
+                    EventRef::Pointer(e) => e.modifiers(),
+                    EventRef::Keyboard(e) => e.modifiers(),
+                    EventRef::Mouse(e) => e.modifiers(),
+                },
+                continue_propagation,
+            });
+            if !continue_propagation_state.load(Ordering::Acquire) {
+                match e {
+                    EventRef::Pointer(e) => e.stop_propagation(),
+                    EventRef::Keyboard(e) => e.stop_propagation(),
+                    EventRef::Mouse(e) => e.stop_propagation(),
                 }
             }
-            set_is_pressed.set(false);
         }
     };
 
-    let trigger_press = move |s: &PressState, e: EventRef<'_>| {
-        debug_assert!(
-            !is_pressed.get_untracked(),
-            "Only call trigger_press after triggering a trigger_press_end!"
-        );
-
-        let (continue_propagation_state, continue_propagation) = use_continue_propagation();
-        input.on_press.run(PressEvent {
-            pointer_type: s.pointer_type.clone(),
-            target: s.target.clone().map(send_wrapper::SendWrapper::new),
-            modifiers: match e {
-                EventRef::Pointer(e) => e.modifiers(),
-                EventRef::Keyboard(e) => e.modifiers(),
-            },
-            continue_propagation,
+    let cancel_active_press = move |e: EventRef<'_>| {
+        state.update_value(|s| {
+            if let Some(s) = s {
+                s.clear_click_timeout();
+                trigger_press_end(s, e, false);
+                if !input.allow_text_selection_on_press {
+                    if let Some(target) = s.target.as_ref() {
+                        if let Some(target) = target.as_element() {
+                            target.restore_text_selection();
+                        }
+                    }
+                }
+                s.cleanup_event_handlers();
+            }
         });
-        if !continue_propagation_state.load(Ordering::Acquire) {
-            match e {
-                EventRef::Pointer(e) => e.stop_propagation(),
-                EventRef::Keyboard(e) => e.stop_propagation(),
-            }
-        }
+        state.set_value(None);
     };
 
     let on_key_up = move |e: KeyboardEvent| {
-        let handled = state.with_value(move |s| {
-            if let Some(s) = s {
-                if !input.disabled.get_untracked()
-                    && is_valid_keyboard_event(&e, e.current_target().unwrap())
-                {
-                    let key = e.key();
-                    if e.target()
-                        .and_then(|t| t.as_element())
-                        .is_some_and(|t| should_prevent_default_keyboard(t, key.as_str()))
-                    {
-                        e.prevent_default();
+        // First check if we should handle this event (immutable check).
+        let should_handle = state.with_value(|s| {
+            s.is_some()
+                && !input.disabled.get_untracked()
+                && is_valid_keyboard_event(&e, e.current_target().unwrap())
+        });
+
+        if !should_handle {
+            return;
+        }
+
+        let key = e.key();
+        if e.target()
+            .and_then(|t| t.as_element())
+            .is_some_and(|t| should_prevent_default_keyboard(t, key.as_str()))
+        {
+            e.prevent_default();
+        }
+
+        // Handle Space key on link elements: programmatically click the link
+        // since browsers don't natively trigger navigation on Space for links.
+        if key != "Enter" {
+            if let Some(target) = e.target().and_then(|t| t.as_element()) {
+                if target.is_anchor_link() {
+                    if let Ok(html_el) = target.dyn_into::<web_sys::HtmlElement>() {
+                        html_el.click();
                     }
-
-                    // TODO: Spacial handling of link elements?
-                    // TODO: Special handling of meta keys?
-
-                    trigger_press_end(s, EventRef::Keyboard(&e));
-                    trigger_press(s, EventRef::Keyboard(&e));
-
-                    s.cleanup_event_handlers();
-                    true
-                } else {
-                    false
                 }
-            } else {
-                false
+            }
+        }
+
+        // macOS Meta key workaround: if Meta key is up, dispatch synthetic
+        // keyup events for any keys that were pressed while Meta was held.
+        if key == "Meta" {
+            meta_key_events.update_value(|map| {
+                if let Some(events) = map.take() {
+                    for (_key, stored_e) in events {
+                        if let Some(ct) = stored_e.current_target() {
+                            let _ = ct.dispatch_event(&stored_e);
+                        }
+                    }
+                }
+            });
+        }
+
+        // Now perform mutable operations: fire press_up and press_end.
+        state.update_value(move |s| {
+            if let Some(s) = s.as_mut() {
+                trigger_press_up(s, EventRef::Keyboard(&e));
+                trigger_press_end(s, EventRef::Keyboard(&e), true);
+                s.cleanup_event_handlers();
             }
         });
-        if handled {
-            state.set_value(None);
-        }
+        state.set_value(None);
     };
 
     let on_key_down_handler = move |e: KeyboardEvent| {
@@ -329,6 +476,11 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             .unwrap_or(true)
         {
             tracing::debug!("Aborting on_key_down, as current_target did not contain target.");
+            return;
+        }
+
+        // Ignore key repeats to prevent duplicate press starts when holding a key.
+        if e.repeat() {
             return;
         }
 
@@ -345,6 +497,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             && !input.disabled.get_untracked()
             && is_valid_keyboard_event(&e, e.current_target().unwrap())
         {
+            // macOS Meta key workaround: store events pressed while Meta is held
+            // because macOS doesn't fire keyup for non-Meta keys while Meta is down.
+            if is_mac() && e.meta_key() && key != "Meta" {
+                meta_key_events.update_value(|map| {
+                    let map = map.get_or_insert_with(std::collections::HashMap::new);
+                    map.insert(key.clone(), e.clone());
+                });
+            }
+
             initialize_press_state(
                 EventRef::Keyboard(&e),
                 EventHandlers::KeyboardEvents {
@@ -356,7 +517,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 },
             );
 
-            state.with_value(move |s| {
+            state.update_value(move |s| {
                 if let Some(s) = s {
                     trigger_press_start(s, EventRef::Keyboard(&e));
                 }
@@ -372,45 +533,163 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             return;
         }
 
-        if input.disabled.get_untracked() || input.force_prevent_default {
+        if input.disabled.get_untracked() {
+            e.prevent_default();
+            return;
+        }
+
+        if input.force_prevent_default {
             e.prevent_default();
         }
         if !input.allow_propagation {
             e.stop_propagation();
         }
+
+        // Check if this is the completion of a pointer-initiated press.
+        // After pointerup, we defer press completion to onClick for DOM mutation safety.
+        let was_pointer_press = state.with_value(|s| {
+            s.as_ref().is_some_and(|s| {
+                s.pointer_type != PointerType::Keyboard
+                    && s.pointer_type != PointerType::Virtual
+                    && is_pressed.get_untracked()
+            })
+        });
+
+        if was_pointer_press {
+            state.update_value(|s| {
+                if let Some(s) = s {
+                    s.clear_click_timeout();
+                    trigger_press_up(s, EventRef::Mouse(&e));
+                    trigger_press_end(s, EventRef::Mouse(&e), true);
+
+                    // Restore text selection
+                    if !input.allow_text_selection_on_press {
+                        if let Some(target) = s.target.as_ref() {
+                            if let Some(target) = target.as_element() {
+                                target.restore_text_selection();
+                            }
+                        }
+                    }
+
+                    s.cleanup_event_handlers();
+                }
+            });
+            state.set_value(None);
+            return;
+        }
+
+        // Handle virtual click (screen reader / assistive technology)
+        if !is_pressed.get_untracked() && is_virtual_click(&e) {
+            // Fire full virtual press cycle
+            initialize_press_state(
+                EventRef::Mouse(&e),
+                EventHandlers::KeyboardEvents {
+                    // No global listener needed for virtual clicks — they complete immediately.
+                    global_on_key_up_cleanup: Box::new(|| {}),
+                },
+            );
+
+            state.update_value(|s| {
+                if let Some(s) = s {
+                    trigger_press_start(s, EventRef::Mouse(&e));
+                    trigger_press_up(s, EventRef::Mouse(&e));
+                    trigger_press_end(s, EventRef::Mouse(&e), true);
+                }
+            });
+            state.set_value(None);
+        }
     };
 
-    // Reset press state.
+    // Pointer move handler for drag-in / drag-out behavior.
     let on_pointer_move = move |e: PointerEvent| {
-        // Re-emit a "start" event, when we have a state.
-        // This means: The user already started an interaction but let the pointer leave the target and let it re-enter.
         state.update_value(|s| {
             if let Some(s) = s.as_mut() {
                 if e.pointer_id() != s.pointer_id {
                     return;
                 }
-                let is_over_target = e
-                    .current_target()
-                    .unwrap()
-                    .is_over(&e, s.target.as_ref().and_then(crate::utils::EventTargetExt::as_element).unwrap());
-                match (s.is_over_target, is_over_target) {
-                    (true, false) => trigger_press_end(s, EventRef::Pointer(&e)),
-                    (false, true) => trigger_press_start(s, EventRef::Pointer(&e)),
-                    _ => {}
+                let is_over_target = e.current_target().unwrap().is_over(
+                    &e,
+                    s.target
+                        .as_ref()
+                        .and_then(EventTargetExt::as_element)
+                        .unwrap(),
+                );
+
+                if input.should_cancel_on_pointer_exit && s.is_over_target && !is_over_target {
+                    // Cancel the entire press when configured to do so.
+                    trigger_press_end(s, EventRef::Pointer(&e), false);
+                    s.cleanup_event_handlers();
+                    // Restore text selection
+                    if !input.allow_text_selection_on_press {
+                        if let Some(target) = s.target.as_ref() {
+                            if let Some(target) = target.as_element() {
+                                target.restore_text_selection();
+                            }
+                        }
+                    }
+                } else {
+                    match (s.is_over_target, is_over_target) {
+                        (true, false) => trigger_press_end(s, EventRef::Pointer(&e), false),
+                        (false, true) => trigger_press_start(s, EventRef::Pointer(&e)),
+                        _ => {}
+                    }
                 }
                 s.is_over_target = is_over_target;
             }
         });
+
+        // If should_cancel_on_pointer_exit caused a full cancel, clear state.
+        if input.should_cancel_on_pointer_exit {
+            let should_clear = state.with_value(|s| {
+                s.as_ref()
+                    .is_some_and(|s| !s.did_fire_press_start && !s.is_over_target)
+            });
+            if should_clear {
+                state.set_value(None);
+            }
+        }
     };
 
-    // Finish a press.
+    // Pointer up: defer press completion to onClick for DOM mutation safety.
     let on_pointer_up = move |e: PointerEvent| {
         if !e.current_target_contains_target() {
             return;
         }
-        state.with_value(|s| {
-            if let Some(s) = s.as_ref() {
-                trigger_press_end(s, EventRef::Pointer(&e));
+
+        let should_clear = state.with_value(|s| {
+            let Some(s) = s.as_ref() else {
+                return false;
+            };
+
+            let is_over_target = e.current_target().unwrap().is_over(
+                &e,
+                s.target
+                    .as_ref()
+                    .and_then(EventTargetExt::as_element)
+                    .unwrap(),
+            );
+
+            if !is_over_target {
+                // Pointer is not over the target — cancel the press.
+                return true;
+            }
+
+            false
+        });
+
+        if should_clear {
+            cancel_active_press(EventRef::Pointer(&e));
+            return;
+        }
+
+        // Pointer is over the target. Keep state.is_pressed=true and defer
+        // actual completion to the onClick handler (Phase 3).
+        // Set up an 80ms timeout fallback: on iOS, long press interactions
+        // may not naturally fire a click event, so we programmatically trigger one.
+        state.update_value(|s| {
+            if let Some(s) = s {
+                // Prevent duplicate pointerleave handling
+                s.is_over_target = false;
 
                 if input.force_prevent_default {
                     e.prevent_default();
@@ -419,40 +698,34 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     e.stop_propagation();
                 }
 
-                let is_over_target = e
-                    .current_target()
-                    .unwrap()
-                    .is_over(&e, s.target.as_ref().and_then(crate::utils::EventTargetExt::as_element).unwrap());
+                // Set up 80ms fallback to programmatically click the target.
+                let target = s.target.clone();
+                let callback = Closure::once(Box::new(move || {
+                    if let Some(target) = target {
+                        if let Some(html_el) = target.dyn_ref::<web_sys::HtmlElement>() {
+                            html_el.click();
+                        }
+                    }
+                }) as Box<dyn FnOnce()>);
 
-                if is_over_target {
-                    trigger_press(s, EventRef::Pointer(&e));
-                }
-
-                if let Some(target) = e.target() {
-                    if let Some(target) = target.as_element() {
-                        target.restore_text_selection();
+                if let Some(window) = web_sys::window() {
+                    if let Ok(handle) = window
+                        .set_timeout_with_callback_and_timeout_and_arguments_0(
+                            callback.as_ref().unchecked_ref(),
+                            80,
+                        )
+                    {
+                        s.click_timeout_handle = Some(handle);
                     }
                 }
-                s.cleanup_event_handlers();
+                callback.forget();
             }
         });
-        state.set_value(None);
     };
 
     // Cancel the ongoing press.
     let on_pointer_cancel = move |e: PointerEvent| {
-        state.with_value(|s| {
-            if let Some(s) = s.as_ref() {
-                trigger_press_end(s, EventRef::Pointer(&e));
-                if let Some(target) = e.target() {
-                    if let Some(target) = target.as_element() {
-                        target.restore_text_selection();
-                    }
-                }
-                s.cleanup_event_handlers();
-            }
-        });
-        state.set_value(None);
+        cancel_active_press(EventRef::Pointer(&e));
     };
 
     // Start a press.
@@ -462,24 +735,39 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
 
         if !e.current_target_contains_target() {
-            tracing::trace!("Aborting on_click, as current_target did not contain target.");
+            tracing::trace!("Aborting on_pointer_down, as current_target did not contain target.");
             return;
         }
 
-        // TODO: Special handling of virtual pointer events.
-
-        // TODO: Maybe prevent default and handle element focus manually.
-        //e.prevent_default();
+        // Handle virtual pointer events (e.g., VoiceOver on iOS).
+        // These are deferred to the onClick handler.
+        if is_virtual_pointer_event(&e) {
+            // Store that we saw a virtual event; onClick will handle the full press cycle.
+            return;
+        }
 
         let target = e.target();
 
-        if let Some(target) = target.as_ref() {
-            if let Some(target) = target.as_element() {
-                target.disable_text_selection();
+        if !input.allow_text_selection_on_press {
+            if let Some(target) = target.as_ref() {
+                if let Some(target) = target.as_element() {
+                    target.disable_text_selection();
+                }
             }
         }
 
         if !input.disabled.get_untracked() {
+            // Release pointer capture to enable pointerleave/pointerenter on touch.
+            // By default, the browser captures pointer events to the original target,
+            // which prevents these events from firing correctly.
+            if let Some(target) = e.target() {
+                if let Some(element) = target.dyn_ref::<web_sys::Element>() {
+                    if element.has_pointer_capture(e.pointer_id()) {
+                        let _ = element.release_pointer_capture(e.pointer_id());
+                    }
+                }
+            }
+
             initialize_press_state(
                 EventRef::Pointer(&e),
                 EventHandlers::PointerEvents {
@@ -509,11 +797,19 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     };
 
+    // Safari doesn't fire pointercancel on drag. Handle dragstart to cancel the press.
+    let on_dragstart_handler = move |_e: web_sys::DragEvent| {
+        cancel_active_press(EventRef::Pointer(
+            &PointerEvent::new("pointercancel").unwrap(),
+        ));
+    };
+
     UsePressReturn {
         props: UsePressProps {
             on_keydown: EventHandler::new(on_key_down_handler),
             on_click: EventHandler::new(on_click_handler),
             on_pointerdown: EventHandler::new(on_pointer_down_handler),
+            on_dragstart: EventHandler::new(on_dragstart_handler),
         },
         is_pressed: is_pressed.into(),
     }
@@ -542,7 +838,6 @@ const NON_TEXT_INPUT_TYPES: [&str; 9] = [
 #[allow(clippy::needless_pass_by_value)]
 fn is_valid_input_key(element: web_sys::HtmlInputElement, key: &str) -> bool {
     // Checkboxes and radio-buttons should only toggle with space, not enter.
-    // TODO: Whats with custom implementations for checkboxes and radio buttons??
     match element.get_attribute("type") {
         Some(ty) => match ty.as_str() {
             "checkbox" | "radio" => key == " " || key == "Spacebar",
@@ -556,10 +851,9 @@ fn is_valid_input_key(element: web_sys::HtmlInputElement, key: &str) -> bool {
 #[allow(clippy::needless_pass_by_value)]
 fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: web_sys::EventTarget) -> bool {
     let key = e.key();
-    let resembles_press = match key.as_str() {
-        "Enter" | " " | "Spacebar" | "Space" => true, // "Spacebar" is for IE 11
-        _ => false,
-    };
+    let code = e.code();
+    let resembles_press =
+        matches!(key.as_str(), "Enter" | " " | "Spacebar" | "Space") || code == "Space";
 
     if !resembles_press {
         return false;
@@ -569,7 +863,9 @@ fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: web_sys::EventTarg
         Some(element) => {
             let is_input = element.is_instance_of::<web_sys::HtmlInputElement>();
             let is_text_area = element.is_instance_of::<web_sys::HtmlTextAreaElement>();
-            let is_content_editable = false; // TODO: element.isContentEditable
+            let is_content_editable = element
+                .dyn_ref::<web_sys::HtmlElement>()
+                .is_some_and(web_sys::HtmlElement::is_content_editable);
             let is_link = element.is_link();
 
             // Links should only trigger with Enter key
