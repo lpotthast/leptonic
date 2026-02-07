@@ -274,11 +274,12 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             })),
             on_long_press_end: None,
             threshold: None,
+            accessibility_description: Some("Long press to open menu"),
         });
         (
-            long_press.props.on_keydown,
-            long_press.props.on_click,
-            long_press.props.on_pointerdown,
+            long_press.props.press_props.on_keydown,
+            long_press.props.press_props.on_click,
+            long_press.props.press_props.on_pointerdown,
         )
     };
 

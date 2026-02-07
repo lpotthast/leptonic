@@ -1,18 +1,32 @@
-use educe::Educe;
+use leptos::attr;
+use leptos::attr::Attr;
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
-use leptos_use::use_event_listener;
 use send_wrapper::SendWrapper;
-use std::sync::Arc;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
-use crate::hooks::interactions::use_press::{
-    use_press, PressEvent, UsePressAttrs, UsePressInput, UsePressProps,
-};
+use crate::hooks::interactions::use_press::{use_press, PressEvent, UsePressInput, UsePressProps};
+use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
+use crate::utils::focus::focus_element;
 use crate::utils::pointer_type::PointerType;
-use crate::utils::{use_continue_propagation, Modifiers};
+use crate::utils::Modifiers;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useLongPress.ts
+//
+// ## DEVIATIONS FROM REACT-ARIA
+//
+// - `LongPressEvent` does not include a `continuePropagation` method.
+//   React-aria's `LongPressEvent` also omits it (it is only present on `PressEvent`).
+//
+// - `accessibility_description` is set directly as a static `aria-describedby` attribute
+//   rather than using a visually hidden `<span>` with an auto-generated ID.
+//   Rationale: React-aria creates a hidden DOM element with a unique ID and sets
+//   `aria-describedby` to that ID. In Leptos, directly setting the `aria-describedby`
+//   attribute to the description text is simpler and achieves equivalent accessibility.
+//   If consumers need ID-based `aria-describedby` (e.g. for shared descriptions), they
+//   can manage the ID externally.
 
 /// The default long press threshold in milliseconds.
 const DEFAULT_THRESHOLD: u64 = 500;
@@ -29,8 +43,7 @@ pub enum LongPressEventType {
 }
 
 /// Event fired during long press interactions.
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct LongPressEvent {
     /// The type of long press event.
     pub event_type: LongPressEventType,
@@ -44,10 +57,13 @@ pub struct LongPressEvent {
     /// States which modifier keys were held during the long press event.
     pub modifiers: Modifiers,
 
-    /// By default, long press events stop propagation to parent elements.
-    /// Call this to allow a parent to handle it.
-    #[educe(Debug(ignore))]
-    pub continue_propagation: Arc<dyn Fn() + Send + Sync + 'static>,
+    /// The X coordinate of the pointer at the time of the event.
+    /// `None` for keyboard events.
+    pub x: Option<f64>,
+
+    /// The Y coordinate of the pointer at the time of the event.
+    /// `None` for keyboard events.
+    pub y: Option<f64>,
 }
 
 /// Input parameters for the `use_long_press` hook.
@@ -70,6 +86,10 @@ pub struct UseLongPressInput {
     /// The amount of time in milliseconds to wait before triggering a long press.
     /// Default is 500ms.
     pub threshold: Option<u64>,
+
+    /// A description for assistive technology users indicating that a long press
+    /// action is available, e.g. "Long press to open menu".
+    pub accessibility_description: Option<&'static str>,
 }
 
 /// The return value of the `use_long_press` hook.
@@ -80,11 +100,53 @@ pub struct UseLongPressReturn {
 }
 
 /// Props from `use_long_press` that can be extracted and merged programmatically.
-/// This is a wrapper around [`UsePressProps`].
-pub type UseLongPressProps = UsePressProps;
+///
+/// Contains the underlying press props, an element capture attribute for DOM access,
+/// and an optional `aria-describedby` attribute for accessibility.
+#[derive(Debug, Clone)]
+pub struct UseLongPressProps {
+    /// The underlying press props.
+    pub press_props: UsePressProps,
+    /// Element capture attribute for DOM access (focus management, `pointercancel` dispatch).
+    pub element_capture: ElementCaptureAttr,
+    /// Accessibility description for long press action.
+    pub aria_describedby: Option<&'static str>,
+}
+
+impl UseLongPressProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseLongPressAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseLongPressAttrs {
+        (
+            self.press_props.on_keydown.into_on(leptos::ev::keydown),
+            self.press_props.on_click.into_on(leptos::ev::click),
+            self.press_props
+                .on_pointerdown
+                .into_on(leptos::ev::pointerdown),
+            self.press_props.on_dragstart.into_on(leptos::ev::dragstart),
+            self.press_props.on_dblclick.into_on(leptos::ev::dblclick),
+            self.element_capture,
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+        )
+    }
+}
 
 /// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
-pub type UseLongPressAttrs = UsePressAttrs;
+pub type UseLongPressAttrs = (
+    On<leptos::ev::keydown, SharedEventCallback<KeyboardEvent>>,
+    On<leptos::ev::click, SharedEventCallback<MouseEvent>>,
+    On<leptos::ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<leptos::ev::dragstart, SharedEventCallback<web_sys::DragEvent>>,
+    On<leptos::ev::dblclick, SharedEventCallback<MouseEvent>>,
+    ElementCaptureAttr,
+    Attr<attr::AriaDescribedby, Option<&'static str>>,
+);
 
 /// State for the ongoing long press interaction.
 struct LongPressState {
@@ -98,6 +160,13 @@ struct LongPressState {
 /// Long press is recognized when the user presses and holds the target for a specified
 /// duration (default 500ms). This is commonly used to reveal context menus or secondary actions.
 ///
+/// When the threshold is met, this hook:
+/// 1. Dispatches a synthetic `pointercancel` event to cancel sibling `use_press` handlers.
+/// 2. Focuses the target element without scrolling.
+/// 3. Fires `on_long_press`.
+///
+/// On touch devices, the native context menu is automatically prevented during the interaction.
+///
 /// # Example
 ///
 /// ```ignore
@@ -109,10 +178,11 @@ struct LongPressState {
 ///     on_long_press_start: None,
 ///     on_long_press_end: None,
 ///     threshold: Some(500),
+///     accessibility_description: Some("Long press to open menu"),
 /// });
 ///
 /// view! {
-///     <button {..long_press.attrs}>
+///     <button {..long_press.props.into_attrs()}>
 ///         "Long press me"
 ///     </button>
 /// }
@@ -124,6 +194,7 @@ struct LongPressState {
 #[allow(clippy::too_many_lines)]
 pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
     let threshold = input.threshold.unwrap_or(DEFAULT_THRESHOLD);
+    let element = CapturedElement::new();
 
     let state: StoredValue<Option<LongPressState>, LocalStorage> = StoredValue::new_local(None);
     let context_menu_cleanup: StoredValue<Option<Box<dyn Fn()>>, LocalStorage> =
@@ -168,36 +239,46 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
 
             // Fire on_long_press_start
             if let Some(on_long_press_start) = on_long_press_start {
-                let (continue_propagation_state, continue_propagation) = use_continue_propagation();
                 on_long_press_start.run(LongPressEvent {
                     event_type: LongPressEventType::LongPressStart,
                     pointer_type: e.pointer_type.clone(),
-                    target: None,
+                    target: e.target.clone(),
                     modifiers: e.modifiers,
-                    continue_propagation,
+                    x: e.x,
+                    y: e.y,
                 });
-                let _ = continue_propagation_state; // unused for start event
             }
 
-            // Set up the threshold timeout
+            // Capture values for the timeout closure
             let pointer_type = e.pointer_type.clone();
             let modifiers = e.modifiers;
+            let target = e.target.clone();
+            let x = e.x;
+            let y = e.y;
 
             let callback = Closure::once(Box::new(move || {
-                // Dispatch pointercancel to prevent other usePress handlers
-                // from also handling this event
-                // Note: In practice, this is harder to do in Rust/WASM without a target reference
+                // Dispatch pointercancel to cancel sibling use_press handlers.
+                // This is synchronous — the use_press on_press_end callback (and thus
+                // our on_long_press_end) will execute before the code after dispatch_event.
+                if let Some(el) = element.get_untracked() {
+                    let cancel_event = PointerEvent::new("pointercancel")
+                        .expect("should create pointercancel event");
+                    let _ = el.dispatch_event(&cancel_event);
 
-                // Fire the long press event
+                    // Focus the element without scrolling, matching react-aria's
+                    // focusWithoutScrolling behavior.
+                    focus_element(&el, true);
+                }
+
+                // Fire the long press event (after pointercancel has been processed).
                 if let Some(on_long_press) = on_long_press {
-                    let (_continue_propagation_state, continue_propagation) =
-                        use_continue_propagation();
                     on_long_press.run(LongPressEvent {
                         event_type: LongPressEventType::LongPress,
                         pointer_type: pointer_type.clone(),
-                        target: None,
+                        target: target.clone(),
                         modifiers,
-                        continue_propagation,
+                        x,
+                        y,
                     });
                 }
 
@@ -228,52 +309,27 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
                 }
             });
 
-            // For touch, prevent the context menu
+            // For touch, prevent the context menu on the event target (not the document).
             if e.pointer_type == PointerType::Touch {
-                // Set up context menu prevention on the event target's owner document
-                // This correctly handles elements in iframes or shadow DOM
                 if let Some(target) = e.target.as_ref() {
-                    if let Some(target_node) = target.dyn_ref::<web_sys::Node>() {
-                        if let Some(document) = target_node.owner_document() {
-                            let cleanup = use_event_listener(
-                                document,
-                                leptos::ev::contextmenu,
-                                move |e: web_sys::MouseEvent| {
-                                    e.prevent_default();
-                                },
-                            );
+                    let target_et: &web_sys::EventTarget = target.as_ref();
 
-                            context_menu_cleanup.set_value(Some(Box::new(cleanup)));
-                        }
-                    }
-                }
-
-                // Set up cleanup after pointerup
-                let window = web_sys::window().expect("window should exist");
-                let cleanup_after_pointerup = Closure::once(Box::new(move || {
-                    // Remove context menu handler after a short delay
-                    let window = web_sys::window().expect("window should exist");
-                    let cleanup_callback = Closure::once(Box::new(move || {
-                        cleanup_context_menu();
+                    // Add a one-time contextmenu prevention listener on the target element.
+                    let prevent_context_menu = Closure::once(Box::new(move |e: MouseEvent| {
+                        e.prevent_default();
                     })
-                        as Box<dyn FnOnce()>);
+                        as Box<dyn FnOnce(MouseEvent)>);
 
-                    let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-                        cleanup_callback.as_ref().unchecked_ref(),
-                        30,
-                    );
-                    cleanup_callback.forget();
-                })
-                    as Box<dyn FnOnce()>);
-
-                let options = web_sys::AddEventListenerOptions::new();
-                options.set_once(true);
-                let _ = window.add_event_listener_with_callback_and_add_event_listener_options(
-                    "pointerup",
-                    cleanup_after_pointerup.as_ref().unchecked_ref(),
-                    &options,
-                );
-                cleanup_after_pointerup.forget();
+                    let options = web_sys::AddEventListenerOptions::new();
+                    options.set_once(true);
+                    let _ = target_et
+                        .add_event_listener_with_callback_and_add_event_listener_options(
+                            "contextmenu",
+                            prevent_context_menu.as_ref().unchecked_ref(),
+                            &options,
+                        );
+                    prevent_context_menu.forget();
+                }
             }
         })
     };
@@ -292,14 +348,13 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
 
             // Fire on_long_press_end
             if let Some(on_long_press_end) = on_long_press_end {
-                let (_continue_propagation_state, continue_propagation) =
-                    use_continue_propagation();
                 on_long_press_end.run(LongPressEvent {
                     event_type: LongPressEventType::LongPressEnd,
                     pointer_type: e.pointer_type.clone(),
-                    target: None,
+                    target: e.target.clone(),
                     modifiers: e.modifiers,
-                    continue_propagation,
+                    x: e.x,
+                    y: e.y,
                 });
             }
 
@@ -329,5 +384,18 @@ pub fn use_long_press(input: UseLongPressInput) -> UseLongPressReturn {
         cleanup_context_menu();
     });
 
-    UseLongPressReturn { props: press.props }
+    // Only set aria-describedby when on_long_press is provided and not disabled.
+    let aria_describedby = if input.on_long_press.is_some() {
+        input.accessibility_description
+    } else {
+        None
+    };
+
+    UseLongPressReturn {
+        props: UseLongPressProps {
+            press_props: press.props,
+            element_capture: element.attr(),
+            aria_describedby,
+        },
+    }
 }

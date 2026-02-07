@@ -46,6 +46,14 @@ pub struct PressEvent {
     /// States which modifier keys were held during the press event.
     pub modifiers: Modifiers,
 
+    /// The X coordinate of the pointer at the time of the press event.
+    /// `None` for keyboard events.
+    pub x: Option<f64>,
+
+    /// The Y coordinate of the pointer at the time of the press event.
+    /// `None` for keyboard events.
+    pub y: Option<f64>,
+
     /// By default, press events stop propagation to parent elements.
     /// In cases where a handler decides not to handle a specific event,
     /// it can call `continue_propagation()` to allow a parent to handle it.
@@ -268,6 +276,14 @@ impl EventRef<'_> {
             EventRef::Mouse(e) => e.target(),
         }
     }
+
+    fn coordinates(&self) -> (Option<f64>, Option<f64>) {
+        match self {
+            EventRef::Pointer(e) => (Some(f64::from(e.client_x())), Some(f64::from(e.client_y()))),
+            EventRef::Mouse(e) => (Some(f64::from(e.client_x())), Some(f64::from(e.client_y()))),
+            EventRef::Keyboard(_) => (None, None),
+        }
+    }
 }
 
 fn fire_press_callback(
@@ -277,10 +293,13 @@ fn fire_press_callback(
     allow_propagation: bool,
 ) {
     let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+    let (x, y) = event.coordinates();
     callback.run(PressEvent {
         pointer_type: state.pointer_type.clone(),
         target: state.target.clone().map(send_wrapper::SendWrapper::new),
         modifiers: event.modifiers(),
+        x,
+        y,
         continue_propagation,
     });
     if !allow_propagation && !continue_propagation_state.load(Ordering::Acquire) {
@@ -776,6 +795,8 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             pointer_type: PointerType::Mouse,
             target: e.target().map(send_wrapper::SendWrapper::new),
             modifiers: e.modifiers(),
+            x: Some(f64::from(e.client_x())),
+            y: Some(f64::from(e.client_y())),
             continue_propagation,
         });
         if !input.allow_propagation && !continue_propagation_state.load(Ordering::Acquire) {
