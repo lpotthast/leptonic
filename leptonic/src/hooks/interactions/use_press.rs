@@ -1,14 +1,18 @@
 use educe::Educe;
+use leptos::attr;
+use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use leptos_use::use_event_listener;
+use send_wrapper::SendWrapper;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
-use wasm_bindgen::closure::Closure;
+use std::time::Duration;
 use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
+use crate::utils::focus::focus_element;
 use crate::utils::{
     current_target_contains_target,
     pointer_type::PointerType,
@@ -25,6 +29,48 @@ use crate::utils::{
 // lives in `useSelectableItem` (where double-click triggers an action). We add
 // `on_double_press` here as a convenience so that any pressable element can opt
 // into double-press handling without requiring a full selection model.
+//
+// React-aria has a separate `useLongPress` hook that wraps `usePress`. We merged
+// long press detection directly into `usePress` to avoid double-hook overhead
+// when both press and long press are needed on the same element (e.g. menu triggers).
+
+/// The default long press threshold in milliseconds.
+pub const DEFAULT_LONG_PRESS_THRESHOLD: u64 = 500;
+
+/// The type of long press event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LongPressEventType {
+    /// The long press interaction has started.
+    LongPressStart,
+    /// The long press threshold time was met.
+    LongPress,
+    /// The long press interaction has ended.
+    LongPressEnd,
+}
+
+/// Event fired during long press interactions.
+#[derive(Debug)]
+pub struct LongPressEvent {
+    /// The type of long press event.
+    pub event_type: LongPressEventType,
+
+    /// The pointer type that triggered the long press event.
+    pub pointer_type: PointerType,
+
+    /// The target element of the long press event.
+    pub target: Option<SendWrapper<web_sys::EventTarget>>,
+
+    /// States which modifier keys were held during the long press event.
+    pub modifiers: Modifiers,
+
+    /// The X coordinate of the pointer at the time of the event.
+    /// `None` for keyboard events.
+    pub x: Option<f64>,
+
+    /// The Y coordinate of the pointer at the time of the event.
+    /// `None` for keyboard events.
+    pub y: Option<f64>,
+}
 
 #[derive(Debug)]
 pub enum PressEvents {
@@ -94,6 +140,25 @@ pub struct UsePressInput {
 
     /// Called when the element receives a native `dblclick` event.
     pub on_double_press: Option<Callback<PressEvent>>,
+
+    // Long press fields (all optional — when all are None, behavior is identical to press-only).
+    /// Handler called when a long press interaction starts (mouse/touch only).
+    pub on_long_press_start: Option<Callback<LongPressEvent>>,
+
+    /// Handler called when the long press threshold time is met.
+    pub on_long_press: Option<Callback<LongPressEvent>>,
+
+    /// Handler called when a long press interaction ends.
+    pub on_long_press_end: Option<Callback<LongPressEvent>>,
+
+    /// The amount of time in milliseconds to wait before triggering a long press.
+    /// Default is 500ms. Only used when at least one long press callback is set.
+    pub long_press_threshold: Option<u64>,
+
+    /// A description for assistive technology users indicating that a long press
+    /// action is available, e.g. "Long press to open menu".
+    /// Only applied when `on_long_press` is `Some`.
+    pub long_press_accessibility_description: Option<&'static str>,
 }
 
 #[derive(Debug, Clone)]
@@ -132,6 +197,9 @@ pub struct UsePressProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_dragstart: EventHandler<web_sys::DragEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
+    /// Accessibility description for long press action.
+    /// Set when `on_long_press` is provided; `None` otherwise.
+    pub aria_describedby: Option<&'static str>,
 }
 
 impl UsePressProps {
@@ -144,6 +212,7 @@ impl UsePressProps {
             self.on_pointerdown.to_on(ev::pointerdown),
             self.on_dragstart.to_on(ev::dragstart),
             self.on_dblclick.to_on(ev::dblclick),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
         )
     }
 
@@ -156,6 +225,7 @@ impl UsePressProps {
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_dragstart.into_on(ev::dragstart),
             self.on_dblclick.into_on(ev::dblclick),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
         )
     }
 }
@@ -167,6 +237,7 @@ pub type UsePressAttrs = (
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<web_sys::DragEvent>>,
     On<ev::dblclick, SharedEventCallback<MouseEvent>>,
+    Attr<attr::AriaDescribedby, Option<&'static str>>,
 );
 
 enum EventHandlers {
@@ -192,9 +263,15 @@ struct PressState {
 
     /// Handle for the 80ms fallback timeout that triggers `target.click()`
     /// when iOS long press doesn't naturally fire a click event.
-    click_timeout_handle: Option<i32>,
+    click_timeout_handle: Option<TimeoutHandle>,
 
     event_handlers: EventHandlers,
+
+    // Long press tracking
+    /// Timeout handle for the long press threshold timer.
+    long_press_timeout_handle: Option<TimeoutHandle>,
+    /// Whether the long press threshold was met during this interaction.
+    long_press_triggered: bool,
 }
 
 impl PressState {
@@ -219,9 +296,13 @@ impl PressState {
 
     fn clear_click_timeout(&mut self) {
         if let Some(handle) = self.click_timeout_handle.take() {
-            if let Some(window) = web_sys::window() {
-                window.clear_timeout_with_handle(handle);
-            }
+            handle.clear();
+        }
+    }
+
+    fn clear_long_press_timeout(&mut self) {
+        if let Some(handle) = self.long_press_timeout_handle.take() {
+            handle.clear();
         }
     }
 
@@ -321,6 +402,13 @@ fn is_mac() -> bool {
 pub fn use_press(input: UsePressInput) -> UsePressReturn {
     let (is_pressed, set_is_pressed) = signal(false);
 
+    let supports_long_press = input.on_long_press.is_some()
+        || input.on_long_press_start.is_some()
+        || input.on_long_press_end.is_some();
+    let long_press_threshold = input
+        .long_press_threshold
+        .unwrap_or(DEFAULT_LONG_PRESS_THRESHOLD);
+
     let state: StoredValue<Option<PressState>, LocalStorage> = StoredValue::new_local(None);
 
     // Tracks meta key events for macOS workaround
@@ -363,6 +451,8 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             did_fire_press_start: false,
             click_timeout_handle: None,
             event_handlers,
+            long_press_timeout_handle: None,
+            long_press_triggered: false,
         }));
     };
 
@@ -392,8 +482,28 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
         s.did_fire_press_start = false;
 
+        // Clear long press timeout on press end.
+        s.clear_long_press_timeout();
+
         if let Some(on_press_end) = input.on_press_end {
             fire_press_callback(on_press_end, s, &e, input.allow_propagation);
+        }
+
+        // Fire long press end for mouse/touch when long press is configured.
+        if supports_long_press
+            && (s.pointer_type == PointerType::Mouse || s.pointer_type == PointerType::Touch)
+        {
+            if let Some(on_long_press_end) = input.on_long_press_end {
+                let (x, y) = e.coordinates();
+                on_long_press_end.run(LongPressEvent {
+                    event_type: LongPressEventType::LongPressEnd,
+                    pointer_type: s.pointer_type.clone(),
+                    target: s.target.clone().map(SendWrapper::new),
+                    modifiers: e.modifiers(),
+                    x,
+                    y,
+                });
+            }
         }
 
         if let Some(on_press_change) = input.on_press_change {
@@ -402,7 +512,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
         set_is_pressed.set(false);
 
-        if was_pressed {
+        // Do NOT fire on_press if the long press threshold was met.
+        // The short press was consumed by the long press interaction.
+        if was_pressed && !s.long_press_triggered {
             fire_press_callback(input.on_press, s, &e, input.allow_propagation);
         }
     };
@@ -417,6 +529,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         state.update_value(|s| {
             if let Some(s) = s {
                 s.clear_click_timeout();
+                s.clear_long_press_timeout();
                 trigger_press_end(s, e, false);
                 s.restore_text_selection_if_needed(input.allow_text_selection_on_press);
                 s.cleanup_event_handlers();
@@ -677,25 +790,17 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
                 // Set up 80ms fallback to programmatically click the target.
                 let target = s.target.clone();
-                let callback = Closure::once(Box::new(move || {
-                    if let Some(target) = target {
-                        if let Some(html_el) = target.dyn_ref::<web_sys::HtmlElement>() {
-                            html_el.click();
+                s.click_timeout_handle = set_timeout_with_handle(
+                    move || {
+                        if let Some(target) = target {
+                            if let Some(html_el) = target.dyn_ref::<web_sys::HtmlElement>() {
+                                html_el.click();
+                            }
                         }
-                    }
-                }) as Box<dyn FnOnce()>);
-
-                if let Some(window) = web_sys::window() {
-                    if let Ok(handle) = window
-                        .set_timeout_with_callback_and_timeout_and_arguments_0(
-                            callback.as_ref().unchecked_ref(),
-                            80,
-                        )
-                    {
-                        s.click_timeout_handle = Some(handle);
-                    }
-                }
-                callback.forget();
+                    },
+                    Duration::from_millis(80),
+                )
+                .ok();
             }
         });
     };
@@ -769,6 +874,80 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             state.update_value(move |s| {
                 if let Some(s) = s {
                     trigger_press_start(s, EventRef::Pointer(&e));
+
+                    // Start long press timer for mouse/touch when long press is configured.
+                    if supports_long_press
+                        && (s.pointer_type == PointerType::Mouse
+                            || s.pointer_type == PointerType::Touch)
+                    {
+                        // Fire on_long_press_start
+                        if let Some(on_long_press_start) = input.on_long_press_start {
+                            let (x, y) = EventRef::Pointer(&e).coordinates();
+                            on_long_press_start.run(LongPressEvent {
+                                event_type: LongPressEventType::LongPressStart,
+                                pointer_type: s.pointer_type.clone(),
+                                target: s.target.clone().map(SendWrapper::new),
+                                modifiers: EventRef::Pointer(&e).modifiers(),
+                                x,
+                                y,
+                            });
+                        }
+
+                        // Capture values for the timeout closure
+                        let pointer_type = s.pointer_type.clone();
+                        let modifiers = EventRef::Pointer(&e).modifiers();
+                        let target = s.target.clone();
+                        let (x, y) = EventRef::Pointer(&e).coordinates();
+                        let on_long_press = input.on_long_press;
+
+                        s.long_press_timeout_handle = set_timeout_with_handle(
+                            move || {
+                                // Dispatch pointercancel on the target to cancel the press
+                                // interaction. This is synchronous — the pointercancel handler
+                                // (and thus trigger_press_end / on_long_press_end) will fire
+                                // before the code after dispatch_event.
+                                if let Some(ref target) = target {
+                                    if let Some(el) = target.dyn_ref::<web_sys::Element>() {
+                                        let cancel_event = PointerEvent::new("pointercancel")
+                                            .expect("should create pointercancel event");
+                                        let _ = el.dispatch_event(&cancel_event);
+
+                                        // Focus the element without scrolling.
+                                        focus_element(el, true);
+                                    }
+                                }
+
+                                // Mark long press as triggered so on_press is suppressed.
+                                state.update_value(|s| {
+                                    if let Some(s) = s.as_mut() {
+                                        s.long_press_triggered = true;
+                                        s.long_press_timeout_handle = None;
+                                    }
+                                });
+
+                                // Fire the long press callback.
+                                if let Some(on_long_press) = on_long_press {
+                                    on_long_press.run(LongPressEvent {
+                                        event_type: LongPressEventType::LongPress,
+                                        pointer_type: pointer_type.clone(),
+                                        target: target.map(SendWrapper::new),
+                                        modifiers,
+                                        x,
+                                        y,
+                                    });
+                                }
+                            },
+                            Duration::from_millis(long_press_threshold),
+                        )
+                        .ok();
+
+                        // For touch, prevent the context menu on the event target.
+                        if s.pointer_type == PointerType::Touch {
+                            if let Some(target) = s.target.as_ref() {
+                                target.prevent_default_once("contextmenu");
+                            }
+                        }
+                    }
                 }
             });
         }
@@ -804,6 +983,13 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     };
 
+    // Only set aria-describedby when on_long_press is provided.
+    let aria_describedby = if input.on_long_press.is_some() {
+        input.long_press_accessibility_description
+    } else {
+        None
+    };
+
     UsePressReturn {
         props: UsePressProps {
             on_keydown: EventHandler::new(on_key_down_handler),
@@ -811,6 +997,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             on_pointerdown: EventHandler::new(on_pointer_down_handler),
             on_dragstart: EventHandler::new(on_dragstart_handler),
             on_dblclick: EventHandler::new(on_dblclick_handler),
+            aria_describedby,
         },
         is_pressed: is_pressed.into(),
     }

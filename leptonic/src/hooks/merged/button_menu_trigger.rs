@@ -82,6 +82,9 @@ pub struct MergedButtonMenuTriggerProps {
     /// ID of the controlled popup element (from menu trigger).
     pub aria_controls: Signal<Option<String>>,
 
+    /// Accessibility description for long press action (from button's press hook).
+    pub aria_describedby: Option<&'static str>,
+
     // Button's focus-visible data attribute
     /// Data attribute for focus-visible styling.
     pub data_focus_visible: CustomAttr<&'static str, Signal<Option<&'static str>>>,
@@ -128,6 +131,8 @@ impl MergedButtonMenuTriggerProps {
             Attr(attr::AriaHaspopup, self.aria_haspopup),
             Attr(attr::AriaExpanded, self.aria_expanded),
             Attr(attr::AriaControls, self.aria_controls),
+            // Long press accessibility
+            Attr(attr::AriaDescribedby, self.aria_describedby),
             // Focus visible
             self.data_focus_visible,
             // Chained event handlers
@@ -158,6 +163,8 @@ pub type MergedButtonMenuTriggerAttrs = (
     Attr<attr::AriaHaspopup, &'static str>,
     Attr<attr::AriaExpanded, Signal<&'static str>>,
     Attr<attr::AriaControls, Signal<Option<String>>>,
+    // Long press accessibility
+    Attr<attr::AriaDescribedby, Option<&'static str>>,
     // Focus visible
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
     // Chained event handlers
@@ -214,6 +221,9 @@ impl MergeWith<UseMenuTriggerProps> for UseButtonProps {
             aria_haspopup: menu_trigger.aria_haspopup,
             aria_expanded: menu_trigger.aria_expanded,
             aria_controls: menu_trigger.aria_controls,
+
+            // Long press accessibility (from button's press hook)
+            aria_describedby: button.aria_describedby,
 
             // Button's focus-visible attribute
             data_focus_visible: button.data_focus_visible,

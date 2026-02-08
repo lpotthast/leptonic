@@ -83,6 +83,11 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
         on_press_end: None,
         on_press_change: None,
         on_double_press: None,
+        on_long_press_start: None,
+        on_long_press: None,
+        on_long_press_end: None,
+        long_press_threshold: None,
+        long_press_accessibility_description: None,
     });
 
     view! {

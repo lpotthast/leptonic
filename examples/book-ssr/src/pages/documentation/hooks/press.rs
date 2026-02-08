@@ -61,6 +61,11 @@ pub fn PageUsePress() -> impl IntoView {
                 events.push_overwrite(Oco::Owned(format!("DoublePress: {e:?}")));
             });
         })),
+        on_long_press_start: None,
+        on_long_press: None,
+        on_long_press_end: None,
+        long_press_threshold: None,
+        long_press_accessibility_description: None,
     });
 
     view! {

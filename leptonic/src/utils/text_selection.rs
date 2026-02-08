@@ -1,6 +1,7 @@
 use std::cell::{Cell, RefCell};
+use std::time::Duration;
 
-use wasm_bindgen::closure::Closure;
+use leptos::prelude::set_timeout;
 use wasm_bindgen::JsCast;
 
 use super::run_after_transition::run_after_transition;
@@ -83,7 +84,7 @@ fn disable_text_selection_ios() {
     let current = IOS_STATE.with(Cell::get);
     if current == IosSelectionState::Restoring {
         // Was in the process of restoring, cancel that and keep disabled.
-        IOS_STATE.with(|s| s.set(IosSelectionState::Disabled));
+        IOS_STATE.set(IosSelectionState::Disabled);
         return;
     }
     if current == IosSelectionState::Disabled {
@@ -101,7 +102,7 @@ fn disable_text_selection_ios() {
         let _ = style.set_property("webkit-user-select", "none");
     }
 
-    IOS_STATE.with(|s| s.set(IosSelectionState::Disabled));
+    IOS_STATE.set(IosSelectionState::Disabled);
 }
 
 fn restore_text_selection_ios() {
@@ -109,42 +110,37 @@ fn restore_text_selection_ios() {
         return;
     }
 
-    IOS_STATE.with(|s| s.set(IosSelectionState::Restoring));
+    IOS_STATE.set(IosSelectionState::Restoring);
 
     // Use a 300ms timeout to allow touch events to complete before restoring.
     // This prevents text selection from triggering during the brief period
     // after a touch interaction ends.
-    let callback = Closure::once(Box::new(move || {
-        // Wait for any CSS transitions to complete so we don't recompute style
-        // for the whole page in the middle of the animation and cause jank.
-        run_after_transition(move || {
-            if IOS_STATE.with(Cell::get) == IosSelectionState::Restoring {
-                if let Some(style) = get_document_element_style() {
-                    // Guard: only restore if the current value is still "none".
-                    // Another piece of code may have changed it in the meantime.
-                    if style.get_property_value("webkit-user-select").as_deref() == Ok("none") {
-                        let saved = SAVED_USER_SELECT
-                            .with(|saved| std::mem::take(&mut *saved.borrow_mut()));
-                        if saved.is_empty() {
-                            let _ = style.remove_property("webkit-user-select");
-                        } else {
-                            let _ = style.set_property("webkit-user-select", &saved);
+    set_timeout(
+        move || {
+            // Wait for any CSS transitions to complete so we don't recompute style
+            // for the whole page in the middle of the animation and cause jank.
+            run_after_transition(move || {
+                if IOS_STATE.with(Cell::get) == IosSelectionState::Restoring {
+                    if let Some(style) = get_document_element_style() {
+                        // Guard: only restore if the current value is still "none".
+                        // Another piece of code may have changed it in the meantime.
+                        if style.get_property_value("webkit-user-select").as_deref() == Ok("none") {
+                            let saved = SAVED_USER_SELECT
+                                .with(|saved| std::mem::take(&mut *saved.borrow_mut()));
+                            if saved.is_empty() {
+                                let _ = style.remove_property("webkit-user-select");
+                            } else {
+                                let _ = style.set_property("webkit-user-select", &saved);
+                            }
                         }
                     }
+                    SAVED_USER_SELECT.with(|saved| saved.borrow_mut().clear());
+                    IOS_STATE.set(IosSelectionState::Default);
                 }
-                SAVED_USER_SELECT.with(|saved| saved.borrow_mut().clear());
-                IOS_STATE.with(|s| s.set(IosSelectionState::Default));
-            }
-        });
-    }) as Box<dyn FnOnce()>);
-
-    if let Some(window) = web_sys::window() {
-        let _ = window.set_timeout_with_callback_and_timeout_and_arguments_0(
-            callback.as_ref().unchecked_ref(),
-            300,
-        );
-    }
-    callback.forget();
+            });
+        },
+        Duration::from_millis(300),
+    );
 }
 
 // --- Standard (non-iOS) implementation ---

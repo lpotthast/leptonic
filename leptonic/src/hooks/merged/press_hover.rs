@@ -1,5 +1,7 @@
 use crate::hooks::{UseHoverProps, UsePressProps};
 use crate::utils::{EventHandler, MergeWith};
+use leptos::attr;
+use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use web_sys::{DragEvent, KeyboardEvent, MouseEvent, PointerEvent};
@@ -34,6 +36,7 @@ pub struct MergedPressHoverProps {
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_dragstart: EventHandler<DragEvent>,
+    pub aria_describedby: Option<&'static str>,
     // From hover.
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
@@ -48,6 +51,7 @@ pub type MergedPressHoverAttrs = (
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
+    Attr<attr::AriaDescribedby, Option<&'static str>>,
     // From hover.
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
@@ -69,6 +73,7 @@ impl MergedPressHoverProps {
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_dragstart.into_on(ev::dragstart),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
         )
@@ -86,6 +91,7 @@ impl MergeWith<UseHoverProps> for UsePressProps {
             on_click: press.on_click,
             on_pointerdown: press.on_pointerdown,
             on_dragstart: press.on_dragstart,
+            aria_describedby: press.aria_describedby,
             // From hover (distinct).
             on_pointerenter: hover.on_pointerenter,
             on_pointerleave: hover.on_pointerleave,

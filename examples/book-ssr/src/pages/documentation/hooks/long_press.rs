@@ -25,9 +25,18 @@ pub fn PageUseLongPress() -> impl IntoView {
         })
     });
 
-    let UseLongPressReturn { props } = use_long_press(UseLongPressInput {
+    let UsePressReturn { props, is_pressed: _ } = use_press(UsePressInput {
         disabled: disabled.into(),
-        threshold: Some(threshold.get_untracked()),
+        force_prevent_default: false,
+        allow_propagation: false,
+        allow_text_selection_on_press: false,
+        should_cancel_on_pointer_exit: false,
+        on_press: Callback::new(|_| {}),
+        on_press_up: None,
+        on_press_start: None,
+        on_press_end: None,
+        on_press_change: None,
+        on_double_press: None,
         on_long_press_start: Some(Callback::new(move |e: LongPressEvent| {
             set_events.update(|events| {
                 events.push_overwrite(format!(
@@ -53,26 +62,45 @@ pub fn PageUseLongPress() -> impl IntoView {
                 ));
             });
         })),
-        accessibility_description: Some("Long press to increment counter"),
+        long_press_threshold: Some(threshold.get_untracked()),
+        long_press_accessibility_description: Some("Long press to increment counter"),
     });
 
     view! {
         <Article>
-            <h1 id="use_long_press" class="anchor">
-                "use_long_press"
-                <AnchorLink href="#use_long_press" description="Direct link to article header"/>
+            <h1 id="long-press" class="anchor">
+                "Long press"
+                <AnchorLink href="#long-press" description="Direct link to article header"/>
             </h1>
 
             <p>"Detect long press interactions across mouse and touch devices with customizable threshold."</p>
 
+            <p>
+                "Long press detection is built into " <code>"use_press"</code> " via the optional "
+                <code>"on_long_press"</code> ", " <code>"on_long_press_start"</code> ", and "
+                <code>"on_long_press_end"</code> " fields. When any of these callbacks are set, "
+                <code>"use_press"</code> " will start a timer on mouse/touch press start and "
+                "fire the long press callback when the threshold is met."
+            </p>
+
             <Code>
-                {r#"let UseLongPressReturn { props } = use_long_press(UseLongPressInput {
+                {r#"let UsePressReturn { props, .. } = use_press(UsePressInput {
     disabled: Signal::derive(|| false),
-    threshold: Some(500), // ms
+    force_prevent_default: false,
+    allow_propagation: false,
+    allow_text_selection_on_press: false,
+    should_cancel_on_pointer_exit: false,
+    on_press: Callback::new(|_| {}),
+    on_press_up: None,
+    on_press_start: None,
+    on_press_end: None,
+    on_press_change: None,
+    on_double_press: None,
     on_long_press_start: Some(Callback::new(|e| { /* ... */ })),
     on_long_press: Some(Callback::new(|e| { /* ... */ })),
     on_long_press_end: Some(Callback::new(|e| { /* ... */ })),
-    accessibility_description: Some("Long press to open menu"),
+    long_press_threshold: Some(500), // ms
+    long_press_accessibility_description: Some("Long press to open menu"),
 });
 
 view! {
@@ -151,7 +179,7 @@ view! {
                 <li>"Three event callbacks: start, threshold met, and end"</li>
                 <li>"Accessibility via " <code>"aria-describedby"</code></li>
                 <li>"Automatic focus management when threshold is met"</li>
-                <li>"Cancels sibling press handlers via synthetic " <code>"pointercancel"</code></li>
+                <li>"Cancels the press via synthetic " <code>"pointercancel"</code> " — " <code>"on_press"</code> " will not fire for long presses"</li>
             </ul>
 
             <h2 id="how-it-works" class="anchor">
@@ -167,7 +195,7 @@ view! {
 
             <ol>
                 <li>"A synthetic " <code>"pointercancel"</code> " event is dispatched on the target, "
-                    "which cancels any sibling " <code>"use_press"</code> " handlers."</li>
+                    "which cancels the ongoing press interaction."</li>
                 <li>"The " <code>"on_long_press_end"</code> " callback fires (triggered by the cancellation)."</li>
                 <li>"The target element is focused without scrolling."</li>
                 <li>"The " <code>"on_long_press"</code> " callback fires."</li>
@@ -176,30 +204,17 @@ view! {
             <p>
                 "If the user releases before the threshold, the timer is cancelled and only "
                 <code>"on_long_press_start"</code> " and " <code>"on_long_press_end"</code> " fire. "
-                "On touch devices, the native context menu is automatically prevented during the interaction."
-            </p>
-
-            <h2 id="relationship-to-use-press" class="anchor">
-                "Relationship to use_press"
-                <AnchorLink href="#relationship-to-use-press" description="Direct link to relationship to use_press"/>
-            </h2>
-
-            <p>
-                <code>"use_long_press"</code> " wraps " <code>"use_press"</code> " internally. It listens for "
-                "press start and end events to manage the long press timer. When the threshold is met, "
-                "it dispatches a synthetic " <code>"pointercancel"</code> " event that cancels the underlying "
-                "press interaction. This ensures that sibling " <code>"use_press"</code> " handlers on the "
-                "same element do not fire their " <code>"on_press"</code> " callback for an interaction "
-                "that was actually a long press."
+                "On touch devices, the native context menu is automatically prevented during the interaction. "
+                "Because the long press dispatches " <code>"pointercancel"</code> ", the "
+                <code>"on_press"</code> " callback is suppressed for interactions that became long presses."
             </p>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_long_press", link: "#use_long_press" },
+                Toc::Leaf { title: "Long press", link: "#long-press" },
                 Toc::Leaf { title: "Features", link: "#features" },
                 Toc::Leaf { title: "How it works", link: "#how-it-works" },
-                Toc::Leaf { title: "Relationship to use_press", link: "#relationship-to-use-press" },
             ]
         }/>
     }

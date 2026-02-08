@@ -8,10 +8,7 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
-use crate::hooks::interactions::use_long_press::{
-    use_long_press, LongPressEvent, UseLongPressInput,
-};
-use crate::hooks::interactions::use_press::{use_press, PressEvent, UsePressInput};
+use crate::hooks::interactions::use_press::{use_press, LongPressEvent, PressEvent, UsePressInput};
 use crate::hooks::overlay::use_overlay_trigger::{use_overlay_trigger, UseOverlayTriggerInput};
 use crate::hooks::selection::use_selectable_collection::FocusStrategy;
 use crate::prelude::AriaHasPopup;
@@ -252,6 +249,11 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             on_press_end: None,
             on_press_change: None,
             on_double_press: None,
+            on_long_press_start: None,
+            on_long_press: None,
+            on_long_press_end: None,
+            long_press_threshold: None,
+            long_press_accessibility_description: None,
         });
         (
             press.props.on_keydown,
@@ -259,12 +261,22 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             press.props.on_pointerdown,
         )
     } else {
-        // Long press trigger
+        // Long press trigger — use use_press with long press fields.
         // Note: For long press, we can't focus the trigger before opening because
         // the long press callback is fired from a timeout without access to the target.
         // Focus restoration will still work if the trigger had focus when FocusScope mounted.
-        let long_press = use_long_press(UseLongPressInput {
+        let press = use_press(UsePressInput {
             disabled: input.disabled,
+            force_prevent_default: false,
+            allow_propagation: true,
+            allow_text_selection_on_press: false,
+            should_cancel_on_pointer_exit: false,
+            on_press: Callback::new(|_| {}),
+            on_press_up: None,
+            on_press_start: None,
+            on_press_end: None,
+            on_press_change: None,
+            on_double_press: None,
             on_long_press_start: Some(Callback::new(move |_: LongPressEvent| {
                 // Close any open menu when starting a new long press
                 state.close.run(());
@@ -273,13 +285,13 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
                 state.open.run(Some(FocusStrategy::First));
             })),
             on_long_press_end: None,
-            threshold: None,
-            accessibility_description: Some("Long press to open menu"),
+            long_press_threshold: None,
+            long_press_accessibility_description: Some("Long press to open menu"),
         });
         (
-            long_press.props.press_props.on_keydown,
-            long_press.props.press_props.on_click,
-            long_press.props.press_props.on_pointerdown,
+            press.props.on_keydown,
+            press.props.on_click,
+            press.props.on_pointerdown,
         )
     };
 
