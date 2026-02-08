@@ -125,13 +125,13 @@ view! {
 
             <p>"Customize value display with format options:"</p>
             <Code>
-                {r#"UseMeterInput {
+                {r"UseMeterInput {
     format_options: Some(MeterFormatOptions {
         style: MeterFormatStyle::Percent, // or Decimal
         decimals: 1,
     }),
     ..Default::default()
-}"#}
+}"}
             </Code>
 
             <h2 id="aria-attributes" class="anchor">

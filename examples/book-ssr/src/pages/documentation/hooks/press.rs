@@ -116,7 +116,10 @@ pub fn PageUsePress() -> impl IntoView {
 
     let threshold_signal: Signal<u64> = threshold.into();
 
-    let UsePressReturn { props: lp_props, is_pressed: _ } = use_press(UsePressInput {
+    let UsePressReturn {
+        props: lp_props,
+        is_pressed: _,
+    } = use_press(UsePressInput {
         disabled: lp_disabled.into(),
         force_prevent_default: false,
         allow_propagation: false,

@@ -97,14 +97,14 @@ pub fn PageUseFocusRing() -> impl IntoView {
             </ul>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     // Lower-level hook for focus modality detection
                     let focus_visible = use_focus_visible(UseFocusVisibleInput {
                         auto_focus: false,
                     });
 
                     // focus_visible.is_focus_visible tracks global keyboard modality
-                "#)}
+                ")}
             </Code>
 
             <h2 id="data-attribute" class="anchor">

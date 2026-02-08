@@ -147,7 +147,7 @@ view! {
             <p>"The hook returns a " <code>"FocusHandle"</code> " that allows you to programmatically focus the element:"</p>
 
             <Code>
-                {r#"let UseFocusableReturn { props, focus_handle } = use_focusable(input);
+                {r"let UseFocusableReturn { props, focus_handle } = use_focusable(input);
 
 // Focus the element from anywhere
 focus_handle.focus();
@@ -155,7 +155,7 @@ focus_handle.focus();
 // Check if element has been captured (false during SSR)
 if focus_handle.has_element() {
     focus_handle.focus();
-}"#}
+}"}
             </Code>
 
             <p>"The " <code>"FocusHandle"</code> " is useful for:"</p>
@@ -185,10 +185,10 @@ if focus_handle.has_element() {
             <p>"Set " <code>"auto_focus: true"</code> " to automatically focus the element when it mounts:"</p>
 
             <Code>
-                {r#"let focusable = use_focusable(UseFocusableInput {
+                {r"let focusable = use_focusable(UseFocusableInput {
     auto_focus: true,  // Element will be focused on mount
     ..Default::default()
-});"#}
+});"}
             </Code>
 
             <h2 id="features" class="anchor">

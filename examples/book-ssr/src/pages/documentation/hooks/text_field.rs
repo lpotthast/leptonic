@@ -158,7 +158,7 @@ pub fn PageUseTextField() -> impl IntoView {
             <p>"Numeric input with increment/decrement buttons and min/max/step validation."</p>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     let UseNumberFieldStateReturn { value, set_value, increment, decrement, .. } =
                         use_number_field_state(50.0);
 
@@ -171,7 +171,7 @@ pub fn PageUseTextField() -> impl IntoView {
                             on_change: Some(Callback::new(move |v| set_value.run(v))),
                             ..Default::default()
                         });
-                "#)}
+                ")}
             </Code>
 
             <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">

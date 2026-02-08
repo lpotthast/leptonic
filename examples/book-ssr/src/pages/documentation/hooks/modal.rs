@@ -114,13 +114,13 @@ pub fn PageUseModalHook() -> impl IntoView {
             </h2>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     let UseModalStateReturn { is_open, open, close, toggle } = use_modal_state(false);
 
                     // open.run(()) - opens the modal
                     // close.run(()) - closes the modal
                     // toggle.run(()) - toggles the modal
-                "#)}
+                ")}
             </Code>
 
             <h2 id="use_modal" class="anchor">

@@ -75,7 +75,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                             overflow: hidden;
                         "
                     >
-                        {options.iter().map(|(key, label)| {
+                        {options.iter().map(|(_key, label)| {
                             let label_owned = label.to_string();
                             let label_for_click = label_owned.clone();
                             let label_for_check = label_owned.clone();

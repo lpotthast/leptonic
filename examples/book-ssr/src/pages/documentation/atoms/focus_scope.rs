@@ -86,7 +86,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
             </p>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     use leptonic::atoms::focus_scope::{FocusScope, FocusScopeContext};
 
                     #[component]
@@ -105,7 +105,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                         // Move focus to the last element
                         ctx.focus_manager.focus_last(Default::default());
                     }
-                "#)}
+                ")}
             </Code>
         </Article>
 

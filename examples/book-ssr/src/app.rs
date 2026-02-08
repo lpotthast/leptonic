@@ -347,7 +347,8 @@ pub fn Layout(children: Children) -> impl IntoView {
 
     provide_context(ctx);
 
-    let search_options: Vec<QuicksearchOption> = vec![
+    // TODO: Use
+    let _search_options: Vec<QuicksearchOption> = vec![
         create_search_option(routes::doc::Overview.materialize(), "Overview"),
         create_search_option(routes::doc::Installation.materialize(), "Installation"),
         create_search_option(routes::doc::Themes.materialize(), "Themes"),

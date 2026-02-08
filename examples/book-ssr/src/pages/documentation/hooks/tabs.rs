@@ -56,7 +56,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
     // Set up individual tab hooks
     let id_base_for_tab0 = id_base.clone();
-    let tab0 = use_tab(UseTabInput {
+    let tab_account = use_tab(UseTabInput {
         tab_key: "account".to_string(),
         id_base: id_base_for_tab0,
         is_selected: Signal::derive(move || selected_tab.get() == Some("account".to_string())),
@@ -72,7 +72,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
     });
 
     let id_base_for_tab1 = id_base.clone();
-    let tab1 = use_tab(UseTabInput {
+    let tab_password = use_tab(UseTabInput {
         tab_key: "password".to_string(),
         id_base: id_base_for_tab1,
         is_selected: Signal::derive(move || selected_tab.get() == Some("password".to_string())),
@@ -88,7 +88,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
     });
 
     let id_base_for_tab2 = id_base.clone();
-    let tab2 = use_tab(UseTabInput {
+    let tab_notifications = use_tab(UseTabInput {
         tab_key: "notifications".to_string(),
         id_base: id_base_for_tab2,
         is_selected: Signal::derive(move || {
@@ -150,10 +150,10 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     style="display: flex; border-bottom: 2px solid #ddd;"
                 >
                     <button
-                        {..tab0.tab_props}
+                        {..tab_account.tab_props}
                         style=move || format!(
                             "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
-                            if tab0.is_selected.get() {
+                            if tab_account.is_selected.get() {
                                 "color: var(--brand-color); font-weight: bold; border-bottom: 2px solid var(--brand-color); margin-bottom: -2px;"
                             } else {
                                 "color: #666;"
@@ -163,10 +163,10 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         {tab_labels[0]}
                     </button>
                     <button
-                        {..tab1.tab_props}
+                        {..tab_password.tab_props}
                         style=move || format!(
                             "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
-                            if tab1.is_selected.get() {
+                            if tab_password.is_selected.get() {
                                 "color: var(--brand-color); font-weight: bold; border-bottom: 2px solid var(--brand-color); margin-bottom: -2px;"
                             } else {
                                 "color: #666;"
@@ -176,10 +176,10 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         {tab_labels[1]}
                     </button>
                     <button
-                        {..tab2.tab_props}
+                        {..tab_notifications.tab_props}
                         style=move || format!(
                             "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
-                            if tab2.is_selected.get() {
+                            if tab_notifications.is_selected.get() {
                                 "color: var(--brand-color); font-weight: bold; border-bottom: 2px solid var(--brand-color); margin-bottom: -2px;"
                             } else {
                                 "color: #666;"

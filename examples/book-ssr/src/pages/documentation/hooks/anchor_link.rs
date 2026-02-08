@@ -15,7 +15,9 @@ pub fn PageUseAnchorLink() -> impl IntoView {
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
     let UseAnchorLinkReturn {
-        props, is_pressed, ..
+        props,
+        is_pressed: _,
+        ..
     } = use_anchor_link(UseAnchorLinkInput {
         href: Href::from_str(Oco::Borrowed("#my-anchor-element")).expect("valid href"),
         scroll_behavior: Some(ScrollBehavior::Smooth),

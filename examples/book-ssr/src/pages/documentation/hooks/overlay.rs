@@ -54,8 +54,8 @@ pub fn PageUseOverlay() -> impl IntoView {
 
     let UseButtonReturn {
         props: btn_props,
-        is_hovered,
-        is_pressed,
+        is_hovered: _,
+        is_pressed: _,
         is_focus_visible: _,
     } = use_button(UseButtonInput {
         disabled: false.into(),
@@ -107,9 +107,9 @@ pub fn PageUseOverlay() -> impl IntoView {
             <p>"Create overlays."</p>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     ...
-                "#)}
+                ")}
             </Code>
 
             <Grid gap=leptonic::Size::Em(0.5) attr:style="margin-bottom: 1em;">

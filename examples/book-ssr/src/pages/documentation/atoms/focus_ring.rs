@@ -67,7 +67,7 @@ pub fn PageAtomFocusRing() -> impl IntoView {
             </p>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     .my-button {
                         outline: none;
                     }
@@ -76,7 +76,7 @@ pub fn PageAtomFocusRing() -> impl IntoView {
                         outline: 2px solid var(--brand-color);
                         outline-offset: 2px;
                     }
-                "#)}
+                ")}
             </Code>
 
             <h2 id="demo" class="anchor">
@@ -123,7 +123,7 @@ pub fn PageAtomFocusRing() -> impl IntoView {
             </p>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     use leptonic::atoms::focus_ring::{FocusRing, FocusRingContext};
 
                     #[component]
@@ -136,7 +136,7 @@ pub fn PageAtomFocusRing() -> impl IntoView {
                         // Check if focus is visible (keyboard-focused)
                         let is_focus_visible = ctx.is_focus_visible.get();
                     }
-                "#)}
+                ")}
             </Code>
         </Article>
 

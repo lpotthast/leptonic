@@ -134,7 +134,7 @@ pub fn PageUseCombobox() -> impl IntoView {
             <p>"You can provide a custom filter function via the "<code>"filter"</code>" option:"</p>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     let combobox = use_combobox(UseComboBoxInput {
                         items,
                         filter: Some(Callback::new(|(query, items): (String, Vec<String>)| {
@@ -145,7 +145,7 @@ pub fn PageUseCombobox() -> impl IntoView {
                         })),
                         ..Default::default()
                     });
-                "#)}
+                ")}
             </Code>
 
             <h2 id="accessibility" class="anchor">

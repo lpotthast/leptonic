@@ -121,10 +121,10 @@ pub fn PageUseProgressBar() -> impl IntoView {
             </div>
 
             <style>
-                r#"@keyframes indeterminate {
+                r"@keyframes indeterminate {
                     0% { left: -40%; }
                     100% { left: 100%; }
-                }"#
+                }"
             </style>
 
             <Code>

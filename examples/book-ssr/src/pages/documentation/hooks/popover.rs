@@ -76,7 +76,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             </h3>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     pub struct UsePopoverInput<Trigger, Popover, M> {
                         /// Element ref for the trigger (what the popover positions relative to)
                         pub trigger_ref: Trigger,
@@ -108,7 +108,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         /// Disable scroll prevention
                         pub is_scroll_prevention_disabled: bool,
                     }
-                "#)}
+                ")}
             </Code>
 
             <h3 id="return" class="anchor">
@@ -117,7 +117,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             </h3>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     pub struct UsePopoverReturn {
                         /// Spread onto the popover element (positioning + keydown handler)
                         pub popover_attrs: UsePopoverAttrs,
@@ -125,7 +125,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         /// Spread onto an optional backdrop element (click handler)
                         pub backdrop_attrs: UsePopoverBackdropAttrs,
                     }
-                "#)}
+                ")}
             </Code>
 
             <h2 id="when-to-use" class="anchor">

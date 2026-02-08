@@ -155,7 +155,7 @@ pub fn PageAtomSlider() -> impl IntoView {
             </p>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     <Slider
                         default_values=vec![50.0]
                         on_change=Callback::new(move |values: Vec<f64>| {
@@ -165,7 +165,7 @@ pub fn PageAtomSlider() -> impl IntoView {
                             // Fires once when drag ends
                         })
                     >
-                "#)}
+                ")}
             </Code>
 
             <SliderDemo>

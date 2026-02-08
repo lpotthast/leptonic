@@ -52,7 +52,7 @@ pub fn PageUseSelection() -> impl IntoView {
             <p>"Core hook for managing selection state with support for single, multiple, and no selection modes."</p>
 
             <Code>
-                {indoc!(r#"
+                {indoc!(r"
                     let UseSelectionStateReturn {
                         selected_keys,
                         is_selected,
@@ -67,7 +67,7 @@ pub fn PageUseSelection() -> impl IntoView {
                         disabled: Signal::derive(|| false),
                         ..Default::default()
                     });
-                "#)}
+                ")}
             </Code>
 
             <h3>"Selection Mode"</h3>
