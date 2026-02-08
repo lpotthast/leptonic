@@ -1677,6 +1677,7 @@ dependencies = [
  "leptos_meta",
  "leptos_reactive",
  "leptos_router 0.8.11",
+ "ordered-float",
  "reactive_graph 0.2.12",
  "send_wrapper",
  "serde",

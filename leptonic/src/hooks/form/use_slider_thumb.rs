@@ -411,7 +411,13 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     };
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { Some("true") } else { None });
+    let aria_disabled = Signal::derive(move || {
+        if is_disabled.get() {
+            Some("true")
+        } else {
+            None
+        }
+    });
 
     // Compute aria-required
     let aria_required = if input.is_required {

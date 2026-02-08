@@ -121,9 +121,9 @@ pub fn use_progress_bar(input: UseProgressBarInput) -> UseProgressBarReturn {
             return None;
         }
 
-        value.get().map(|v| {
-            (percentage_in_range(min_value, max_value, v) * 100.0).clamp(0.0, 100.0)
-        })
+        value
+            .get()
+            .map(|v| (percentage_in_range(min_value, max_value, v) * 100.0).clamp(0.0, 100.0))
     });
 
     // Compute value label

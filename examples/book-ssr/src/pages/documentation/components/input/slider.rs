@@ -13,6 +13,10 @@ pub fn PageSlider() -> impl IntoView {
     let (value3, set_value3) = signal(-3.0);
     let (value4, set_value4) = signal(0.5);
     let (value5, set_value5) = signal(0.5);
+    let (popover_value, set_popover_value) = signal(50.0);
+    let (popover_always_value, set_popover_always_value) = signal(30.0);
+    let (popover_range_a, set_popover_range_a) = signal(20.0);
+    let (popover_range_b, set_popover_range_b) = signal(80.0);
     let (range_a, set_range_a) = signal(0.5);
     let (range_b, set_range_b) = signal(0.75);
     let (range_a_step, set_range_a_step) = signal(2.0);
@@ -48,6 +52,10 @@ pub fn PageSlider() -> impl IntoView {
                 "The slider always operates with "<Code inline=true>"f64"</Code>" values and may suffer from typical IEEE-math rounding problems. "
                 "We use the "<Code inline=true>"value_display"</Code>" property to specify how a selected value should be rendered."
             </p>
+
+            <Slider min=0.0 max=100.0 step=1.0
+                value=value4 set_value=set_value4
+                value_display=move |v| format!("{v:.4}") />
 
             <Slider min=0.0 max=1.0 step=0.0001
                 value=value4 set_value=set_value4
@@ -211,7 +219,6 @@ pub fn PageSlider() -> impl IntoView {
                             set_value_b=set_value_b
                             min=0.0
                             max=1.0
-                            popover=SliderPopover::Always
                             value_display=move |v| format!("{v:.4}")
                         />
                     }
@@ -225,7 +232,6 @@ pub fn PageSlider() -> impl IntoView {
                 set_value_b=set_range_b
                 min=0.0
                 max=1.0
-                popover=SliderPopover::Always
                 value_display=move |v| format!("{v:.4}")
             />
 
@@ -240,6 +246,60 @@ pub fn PageSlider() -> impl IntoView {
                 max=5.0
                 step=1.0
                 marks=SliderMarks::Automatic { create_names: true }
+                value_display=move |v| format!("{v:.0}")
+            />
+
+            <h2 id="popover" class="anchor">
+                "Popover"
+                <AnchorLink href="#popover" description="Direct link to section: Popover"/>
+            </h2>
+
+            <p>
+                "A tooltip can be shown above the slider thumb to display the current value. "
+                "Control its visibility with the "<Code inline=true>"popover"</Code>" prop using "<Code inline=true>"SliderPopover"</Code>"."
+            </p>
+
+            <p>
+                "Use "<Code inline=true>"SliderPopover::When { hovered: true, dragged: true }"</Code>" to show the tooltip when the thumb is hovered or dragged."
+            </p>
+
+            <Code>
+                {indoc!(r#"
+                    let (value, set_value) = signal(50.0);
+                    view! {
+                        <Slider min=0.0 max=100.0 step=1.0
+                            value=value set_value=set_value
+                            popover=SliderPopover::When { hovered: true, dragged: true }
+                            value_display=move |v| format!("{v:.0}")/>
+                    }
+                "#)}
+            </Code>
+
+            <Slider min=0.0 max=100.0 step=1.0
+                value=popover_value set_value=set_popover_value
+                popover=SliderPopover::When { hovered: true, dragged: true }
+                value_display=move |v| format!("{v:.0}")/>
+
+            <p>
+                "Use "<Code inline=true>"SliderPopover::Always"</Code>" to keep the tooltip permanently visible."
+            </p>
+
+            <Slider min=0.0 max=100.0 step=1.0
+                value=popover_always_value set_value=set_popover_always_value
+                popover=SliderPopover::Always
+                value_display=move |v| format!("{v:.0}")/>
+
+            <p>"Popovers also work with range sliders, displaying independently for each thumb."</p>
+
+            <RangeSlider
+                value_a=popover_range_a
+                value_b=popover_range_b
+                set_value_a=set_popover_range_a
+                set_value_b=set_popover_range_b
+                min=0.0
+                max=100.0
+                step=1.0
+                popover=SliderPopover::When { hovered: true, dragged: true }
                 value_display=move |v| format!("{v:.0}")
             />
 
@@ -270,23 +330,27 @@ pub fn PageSlider() -> impl IntoView {
             <Code>
                 {indoc!(r"
                     --slider-margin
-                    --slider-bar-height
-                    --slider-bar-background-color
-                    --slider-bar-background-image
-                    --slider-range-height
-                    --slider-range-background-color
-                    --slider-range-background-image
-                    --slider-knob-size
-                    --slider-knob-border-width
-                    --slider-knob-border-color
-                    --slider-knob-border-style
-                    --slider-knob-background-color
-                    --slider-knob-halo-size
-                    --slider-knob-halo-size-while-dragged
-                    --slider-knob-halo-opacity
-                    --slider-knob-halo-background-color
-                    --slider-knob-transition-speed
-                    --slider-knob-box-shadow
+                    --slider-track-height
+                    --slider-track-background-color
+                    --slider-track-background-image
+                    --slider-fill-height
+                    --slider-fill-background-color
+                    --slider-fill-background-image
+                    --slider-thumb-size
+                    --slider-thumb-border-width
+                    --slider-thumb-border-color
+                    --slider-thumb-border-style
+                    --slider-thumb-background-color
+                    --slider-thumb-halo-size
+                    --slider-thumb-halo-size-while-dragged
+                    --slider-thumb-halo-opacity
+                    --slider-thumb-halo-background-color
+                    --slider-thumb-transition-speed
+                    --slider-thumb-box-shadow
+                    --slider-thumb-tooltip-background-color
+                    --slider-thumb-tooltip-color
+                    --slider-thumb-tooltip-border-radius
+                    --slider-thumb-tooltip-font-size
                     --slider-mark-size
                     --slider-mark-color
                     --slider-mark-color-in-range
@@ -303,6 +367,7 @@ pub fn PageSlider() -> impl IntoView {
                 Toc::Leaf { title: "Marks", link: "#marks" },
                 Toc::Leaf { title: "Arbitrary ranges", link: "#arbitrary-ranges" },
                 Toc::Leaf { title: "Range sliders", link: "#range-sliders" },
+                Toc::Leaf { title: "Popover", link: "#popover" },
                 Toc::Leaf { title: "Keyboard input", link: "#keyboard-input" },
                 Toc::Leaf { title: "Styling", link: "#styling" },
             ]

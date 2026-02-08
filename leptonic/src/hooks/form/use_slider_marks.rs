@@ -223,6 +223,7 @@ mod tests {
     use crate::hooks::form::use_slider_state::{
         SliderValues, UseSliderStateInput, UseSliderStateReturn,
     };
+    use crate::hooks::SliderOrientation;
     use assertr::prelude::*;
     use reactive_graph::owner::Owner;
 
@@ -239,7 +240,7 @@ mod tests {
             max_value: max,
             step,
             disabled: false.into(),
-            orientation: Default::default(),
+            orientation: SliderOrientation::default().into(),
             on_change: None,
             on_change_end: None,
         })

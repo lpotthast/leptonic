@@ -62,6 +62,7 @@ leptos-use = { version = "0.18.0", features = ["math"] }
 leptos_meta = { version = "0.8.2", features = [] }
 leptos_reactive = "0.6.6"
 leptos_router = "0.8.2"
+ordered-float = "5.1.0"
 reactive_graph = "0.2"
 send_wrapper = "0.6.0"
 serde = "1.0.228"

@@ -6,10 +6,28 @@ use crate::utils::styles::{
     Styles,
 };
 use crate::utils::CapturedElement;
+use leptos::context::Provider;
 use leptos::prelude::*;
 use std::borrow::Cow;
 use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
+
+/// Controls when the slider thumb tooltip is displayed.
+#[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SliderPopover {
+    /// Never show the tooltip.
+    #[default]
+    Never,
+    /// Show the tooltip conditionally based on hover and drag state.
+    When {
+        /// Show the tooltip when the thumb is hovered.
+        hovered: bool,
+        /// Show the tooltip when the thumb is being dragged.
+        dragged: bool,
+    },
+    /// Always show the tooltip.
+    Always,
+}
 
 #[derive(Debug, Clone)]
 pub(crate) struct SliderCtx {
@@ -37,11 +55,11 @@ pub fn Slider(
     #[prop(into)] values: SliderValues,
     #[prop(into, optional, default = 0.0)] min: f64,
     #[prop(into, optional, default = 100.0)] max: f64,
-    #[prop(into, optional, default = Some(1.0))] step: Option<f64>,
+    #[prop(optional, default = Some(1.0))] step: Option<f64>,
     #[prop(into, optional)] orientation: Signal<SliderOrientation>,
     #[prop(into, optional)] disabled: Signal<bool>,
-    #[prop(into, optional)] on_change: Option<Callback<Vec<f64>>>,
-    #[prop(into, optional)] on_change_end: Option<Callback<Vec<f64>>>,
+    #[prop(optional)] on_change: Option<Callback<Vec<f64>>>,
+    #[prop(optional)] on_change_end: Option<Callback<Vec<f64>>>,
     #[prop(into, optional)] aria_label: Option<&'static str>,
     #[prop(into, optional)] aria_labelledby: Option<String>,
     #[prop(into, optional)] is_rtl: bool,
@@ -73,7 +91,7 @@ pub fn Slider(
         is_rtl,
     });
 
-    provide_context(SliderCtx {
+    let ctx = SliderCtx {
         state,
         _label_props: label_props,
         output_props,
@@ -81,12 +99,14 @@ pub fn Slider(
         track: track_ref,
         is_rtl,
         next_thumb_idx: Arc::new(AtomicUsize::new(0)),
-    });
+    };
 
     view! {
-        <div {..group_props.into_attrs()} class=classes style=styles>
-            {children()}
-        </div>
+        <Provider value=ctx>
+            <div {..group_props.into_attrs()} class=classes style=styles>
+                {children()}
+            </div>
+        </Provider>
     }
 }
 
@@ -107,9 +127,8 @@ pub fn SliderTrack(
     children: Children,
 ) -> impl IntoView {
     let ctx = expect_context::<SliderCtx>();
-    let track_attrs = ctx.track_props.into_attrs();
     view! {
-        <div {..track_attrs} class=classes style=styles>
+        <div {..ctx.track_props.into_attrs()} class=classes style=styles>
             {children()}
         </div>
     }
@@ -161,7 +180,8 @@ pub fn SliderTrackFill(
                 let vals = values.get();
                 let v1 = vals.first().copied().unwrap_or(state.min_value);
                 let v2 = vals.get(1).copied().unwrap_or(state.min_value);
-                ((state.get_value_percent.run(v2) - state.get_value_percent.run(v1)) * 100.0).max(0.0)
+                ((state.get_value_percent.run(v2) - state.get_value_percent.run(v1)) * 100.0)
+                    .max(0.0)
             });
             let styles = styles
                 .add((Position, "absolute"))
@@ -194,6 +214,21 @@ pub fn SliderTrackFill(
     }
 }
 
+/// Context provided by `SliderThumb` to its children, exposing the thumb's
+/// interaction state and value so that child atoms (e.g. `SliderThumbTooltip`)
+/// can render based on thumb state.
+#[derive(Debug, Clone, Copy)]
+pub struct SliderThumbCtx {
+    /// Whether the pointer is currently hovering over the thumb.
+    pub is_hovered: Signal<bool>,
+    /// Whether the thumb is currently being dragged.
+    pub is_dragging: Signal<bool>,
+    /// The current value of this thumb.
+    pub value: Signal<f64>,
+    /// The formatted display value (respects `decimal_places`).
+    pub display_value: Signal<String>,
+}
+
 #[component]
 pub fn SliderThumb(
     #[prop(into, optional)] index: Option<usize>,
@@ -209,6 +244,7 @@ pub fn SliderThumb(
     #[prop(into, optional)] is_rtl: Option<bool>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
+    #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
     let ctx = expect_context::<SliderCtx>();
 
@@ -221,8 +257,8 @@ pub fn SliderThumb(
         is_focused: _,
         is_focus_visible: _,
         percentage,
-        value: _,
-        display_value: _,
+        value,
+        display_value,
         thumb_id: _,
     } = use_slider_thumb(UseSliderThumbInput {
         state: ctx.state,
@@ -268,12 +304,70 @@ pub fn SliderThumb(
             SliderOrientation::Vertical => Some("translate(-50%, 50%)".into()),
         }));
 
+    let (is_hovered, set_is_hovered) = signal(false);
+
+    let thumb_ctx = SliderThumbCtx {
+        is_hovered: is_hovered.into(),
+        is_dragging,
+        value,
+        display_value,
+    };
+
     view! {
-        <FocusRing>
-            <div {..thumb_props} class=classes style=styles attr:data-dragging=data_dragging>
-                <input {..input_props.into_attrs()} />
-            </div>
-        </FocusRing>
+        <Provider value=thumb_ctx>
+            <FocusRing>
+                <div
+                    {..thumb_props}
+                    class=classes
+                    style=styles
+                    attr:data-dragging=data_dragging
+                    on:pointerenter=move |_| set_is_hovered.set(true)
+                    on:pointerleave=move |_| set_is_hovered.set(false)
+                >
+                    <input {..input_props.into_attrs()} />
+
+                    {children.map(|c| c())}
+                </div>
+            </FocusRing>
+        </Provider>
+    }
+}
+
+/// Atom component that renders a tooltip above the slider thumb.
+/// Expects to be used as a child of `SliderThumb` (requires `SliderThumbCtx`).
+///
+/// Renders a single `<div>` whose visibility is controlled by the `popover`
+/// configuration via a `data-visible` attribute. CSS should hide the element
+/// when `data-visible` is absent.
+#[component]
+pub fn SliderThumbTooltip(
+    #[prop(optional)] popover: SliderPopover,
+    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+) -> impl IntoView {
+    let ctx = expect_context::<SliderThumbCtx>();
+
+    let data_visible = Signal::derive(move || {
+        let visible = match popover {
+            SliderPopover::Never => false,
+            SliderPopover::When { hovered, dragged } => {
+                (hovered && ctx.is_hovered.get()) || (dragged && ctx.is_dragging.get())
+            }
+            SliderPopover::Always => true,
+        };
+        visible.then_some("")
+    });
+
+    let text = Signal::derive(move || match value_display {
+        Some(cb) => cb.run(ctx.value.get()),
+        None => ctx.display_value.get(),
+    });
+
+    view! {
+        <div class=classes style=styles attr:data-visible=data_visible>
+            {move || text.get()}
+        </div>
     }
 }
 
@@ -282,7 +376,7 @@ pub fn SliderThumb(
 #[component]
 pub fn SliderMarks<C, V>(
     #[prop(into)] marks: SliderMarks,
-    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
+    #[prop(optional)] value_display: Option<Callback<f64, String>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
     children: C,
@@ -319,7 +413,6 @@ pub fn SliderMark(
 
     let styles = styles
         .add((Position, "absolute"))
-        .add((Top, "0"))
         .add((Left, format!("{}%", mark.percentage * 100.0)));
 
     view! {

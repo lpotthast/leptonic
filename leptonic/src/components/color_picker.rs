@@ -2,7 +2,7 @@ use crate::{
     components::{
         field::{Field, FieldLabel},
         input::NumberInput,
-        prelude::{Slider, SliderMarks, SliderPopover},
+        prelude::{Slider, SliderMarks},
     },
     contexts::global_mouseup_event::GlobalMouseupEvent,
     prelude::*,
@@ -80,10 +80,8 @@ pub fn ColorPalette(
     });
 
     // Project the relative cursor position into the sliders value range.
-    let projected_value_from_cursor_x =
-        Memo::new(move |_| cursor.rel_mouse_pos.get().0);
-    let projected_value_from_cursor_y =
-        Memo::new(move |_| 1.0 - cursor.rel_mouse_pos.get().1);
+    let projected_value_from_cursor_x = Memo::new(move |_| cursor.rel_mouse_pos.get().0);
+    let projected_value_from_cursor_y = Memo::new(move |_| 1.0 - cursor.rel_mouse_pos.get().1);
 
     // While this knob is "listening", propagate the projected values.
     Effect::new(move |_| {
@@ -145,7 +143,7 @@ pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>
     };
     let style = move || {
         format!(
-            "--slider-knob-background-color: {0}; --slider-knob-halo-background-color: {0};",
+            "--slider-thumb-background-color: {0}; --slider-thumb-halo-background-color: {0};",
             rgb_css()
         )
     };
@@ -157,7 +155,6 @@ pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>
                 value=hue
                 set_value=set_hue
                 marks=SliderMarks::None
-                popover=SliderPopover::Never
                 attr:class="hue-slider"
                 attr:style=style
             />
