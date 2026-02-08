@@ -1,3 +1,4 @@
+use crate::utils::math::percentage_in_range;
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::prelude::*;
@@ -133,12 +134,7 @@ pub fn use_meter(input: UseMeterInput) -> UseMeterReturn {
     // Compute percentage
     let percentage = Signal::derive(move || {
         let v = value.get();
-        let range = max_value - min_value;
-        if range == 0.0 {
-            0.0
-        } else {
-            ((v - min_value) / range * 100.0).clamp(0.0, 100.0)
-        }
+        (percentage_in_range(min_value, max_value, v) * 100.0).clamp(0.0, 100.0)
     });
 
     // Compute value label

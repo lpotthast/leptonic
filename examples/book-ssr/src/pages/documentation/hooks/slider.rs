@@ -4,13 +4,16 @@ use indoc::indoc;
 use leptonic::atoms::label::Label as LabelAtom;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::atoms::slider::{
-    Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
+    Slider as SliderAtom, SliderMark, SliderMarks as SliderMarksAtom, SliderOutput, SliderThumb,
+    SliderTrack, SliderTrackFill,
 };
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptonic::utils::styles::Style::*;
 use leptonic::utils::styles::Styles;
 use leptos::prelude::*;
+use ordered_float::OrderedFloat;
+use std::borrow::Cow;
 
 #[component]
 pub fn SliderContainer(children: Children) -> impl IntoView {
@@ -27,10 +30,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
     // Step Slider (step = 5)
     // =========================================================================
     let step_state = use_slider_state(UseSliderStateInput {
-        default_values: vec![25.0],
+        values: SliderValues::Uncontrolled(vec![25.0]),
         min_value: 0.0,
         max_value: 100.0,
-        step: 5.0,
+        step: Some(5.0),
         disabled: false.into(),
         orientation: Default::default(),
         on_change: None,
@@ -132,20 +135,17 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     {indoc!(r#"
                     // Create state for a single-thumb slider
                     let state = use_slider_state(UseSliderStateInput {
-                        default_values: vec![50.0],
+                        values: SliderValues::Uncontrolled(vec![50.0]),
                         min_value: 0.0,
                         max_value: 100.0,
-                        step: 1.0,
+                        step: Some(1.0),     // None = continuous mode
                         ..Default::default()
                     });
 
                     // Create track-level behavior
-                    let track_ref = NodeRef::<html::Div>::new();
-                    let UseSliderReturn { group_props, track_props, label_props, .. } =
+                    let UseSliderReturn { group_props, track_props, track_ref, label_props, .. } =
                         use_slider(UseSliderInput {
                             state,
-                            track_ref,
-                            label: Some("Volume".into()),
                             ..Default::default()
                         });
 
@@ -153,7 +153,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     let UseSliderThumbReturn { thumb_props, percentage, value, .. } =
                         use_slider_thumb(UseSliderThumbInput {
                             state,
-                            track_ref,
+                            track: track_ref,
                             index: 0,
                             ..Default::default()
                         });
@@ -168,7 +168,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <p>"A simple single-thumb slider with full keyboard and drag support:"</p>
 
                 <SliderContainer>
-                    <SliderAtom default_values=vec![50.0] styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
+                    <SliderAtom values=SliderValues::Uncontrolled(vec![50.0]) styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
                         <LabelAtom styles=[(MinWidth, "80px"), (FontWeight, "500")]>
                             "Volume"
                         </LabelAtom>
@@ -198,10 +198,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     {indoc!(r#"
                     // Create state with two thumbs
                     let state = use_slider_state(UseSliderStateInput {
-                        default_values: vec![20.0, 80.0],  // Two thumbs
+                        values: SliderValues::Uncontrolled(vec![20.0, 80.0]),
                         min_value: 0.0,
                         max_value: 100.0,
-                        step: 1.0,
+                        step: Some(1.0),
                         ..Default::default()
                     });
 
@@ -220,7 +220,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 </Code>
 
                 <div style="padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-                    <SliderAtom default_values=vec![20.0, 80.0] styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
+                    <SliderAtom values=SliderValues::Uncontrolled(vec![20.0, 80.0]) styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
                         <LabelAtom styles=[(MinWidth, "80px"), (FontWeight, "500")]>
                             "Price Range"
                         </LabelAtom>
@@ -296,7 +296,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <p>"Set " <code>"orientation: Orientation::Vertical"</code> " for a vertical slider. Note: keyboard Up/Down work regardless of orientation."</p>
 
                 <SliderContainer>
-                    <SliderAtom default_values=vec![60.0] orientation=SliderOrientation::Vertical styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em"), (Height, "150px")]>
+                    <SliderAtom values=SliderValues::Uncontrolled(vec![60.0]) orientation=SliderOrientation::Vertical styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em"), (Height, "150px")]>
                         <LabelAtom styles=[(MinWidth, "80px"), (FontWeight, "500")]>
                             "Vertical"
                         </LabelAtom>
@@ -318,7 +318,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <p>"Vertical range slider"</p>
 
                 <SliderContainer>
-                    <SliderAtom default_values=vec![20.0, 60.0] orientation=SliderOrientation::Vertical styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em"), (Height, "150px")]>
+                    <SliderAtom values=SliderValues::Uncontrolled(vec![20.0, 60.0]) orientation=SliderOrientation::Vertical styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em"), (Height, "150px")]>
                         <LabelAtom styles=[(MinWidth, "80px"), (FontWeight, "500")]>
                             "Vertical"
                         </LabelAtom>
@@ -379,7 +379,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <p>"Set " <code>"is_disabled: true.into()"</code> " on both " <code>"use_slider"</code> " and " <code>"use_slider_thumb"</code> " to disable the slider:"</p>
 
                 <SliderContainer>
-                    <SliderAtom default_values=vec![30.0] disabled=true styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
+                    <SliderAtom values=SliderValues::Uncontrolled(vec![30.0]) disabled=true styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
                         <LabelAtom styles=[(MinWidth, "80px"), (FontWeight, "500")]>
                             "Disabled"
                         </LabelAtom>
@@ -430,6 +430,182 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     <li><strong>"on_change_end"</strong>" - Callback fires only when all thumbs stop dragging"</li>
                 </ul>
 
+                <h2 id="marks" class="anchor">
+                    "Slider Marks"
+                    <AnchorLink href="#marks" description="Direct link to marks"/>
+                </h2>
+
+                <p>"The "<code>"use_slider_marks"</code>" hook computes marks along the slider track with reactive "<code>"in_range"</code>" state. It supports automatic generation from the step value or fully custom marks."</p>
+
+                <h3 id="marks-automatic" class="anchor">
+                    "Automatic Marks"
+                    <AnchorLink href="#marks-automatic" description="Direct link to automatic marks"/>
+                </h3>
+
+                <p>"When using a stepped slider, automatic marks are generated at each step. Mark count is capped at ~20 to avoid clutter."</p>
+
+                <Code>
+                    {indoc!(r#"
+                    let marks = use_slider_marks(UseSliderMarksInput {
+                        state,
+                        marks: SliderMarks::Automatic { create_names: true },
+                        value_display: None,
+                    });
+                    "#)}
+                </Code>
+
+                <SliderContainer>
+                    <SliderAtom values=SliderValues::Uncontrolled(vec![5.0]) min=0.0 max=10.0 step=1.0 styles=[(Display, "flex"), (FlexDirection, "column"), (Gap, "0.5em")]>
+                        <div style="display: flex; align-items: center; gap: 1em;">
+                            <LabelAtom styles=[(MinWidth, "120px"), (FontWeight, "500")]>
+                                "Auto marks"
+                            </LabelAtom>
+                            <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
+                                <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
+                                <SliderThumb styles=thumb_style("var(--brand-color)")/>
+                            </SliderTrack>
+                            <SliderOutput let:props let:values>
+                                <output {..props.into_attrs()} style=Styles::from([(MinWidth, "30px"), (TextAlign, "right")])>
+                                    { move || values.get().first().map(|it| *it as i32).unwrap_or(0).to_string() }
+                                </output>
+                            </SliderOutput>
+                        </div>
+                        <SliderMarksAtom
+                            marks=SliderMarks::Automatic { create_names: true }
+                            styles=[(Position, "relative"), (Height, "1.5em"), (MarginLeft, "120px"), (MarginRight, "40px")]
+                            let:marks
+                        >
+                            <For
+                                each=move || marks.get()
+                                key=|mark| OrderedFloat::from(mark.percentage)
+                                children=|mark| view! {
+                                    <SliderMark mark=mark.clone()>
+                                        { mark.name.unwrap_or_default() }
+                                    </SliderMark>
+                                }
+                            />
+                        </SliderMarksAtom>
+                    </SliderAtom>
+                </SliderContainer>
+
+                <h3 id="marks-custom" class="anchor">
+                    "Custom Marks"
+                    <AnchorLink href="#marks-custom" description="Direct link to custom marks"/>
+                </h3>
+
+                <p>"Custom marks can be placed at absolute values or percentages. Invalid marks (outside the slider range) are filtered out with a warning."</p>
+
+                <Code>
+                    {indoc!(r#"
+                    let marks = use_slider_marks(UseSliderMarksInput {
+                        state,
+                        marks: SliderMarks::Custom {
+                            marks: vec![
+                                SliderMark {
+                                    value: SliderMarkValue::Value(0.0),
+                                    name: Some("Min".into()),
+                                },
+                                SliderMark {
+                                    value: SliderMarkValue::Percentage(0.5),
+                                    name: Some("Mid".into()),
+                                },
+                                SliderMark {
+                                    value: SliderMarkValue::Value(100.0),
+                                    name: Some("Max".into()),
+                                },
+                            ],
+                        },
+                        value_display: None,
+                    });
+                    "#)}
+                </Code>
+
+                <SliderContainer>
+                    <SliderAtom values=SliderValues::Uncontrolled(vec![50.0]) styles=[(Display, "flex"), (FlexDirection, "column"), (Gap, "0.5em")]>
+                        <div style="display: flex; align-items: center; gap: 1em;">
+                            <LabelAtom styles=[(MinWidth, "120px"), (FontWeight, "500")]>
+                                "Custom marks"
+                            </LabelAtom>
+                            <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
+                                <SliderTrackFill styles=[(BackgroundColor, "#4a90d9"), (BorderRadius, "4px")]/>
+                                <SliderThumb styles=thumb_style("#4a90d9")/>
+                            </SliderTrack>
+                            <SliderOutput let:props let:values>
+                                <output {..props.into_attrs()} style=Styles::from([(MinWidth, "30px"), (TextAlign, "right")])>
+                                    { move || values.get().first().map(|it| *it as i32).unwrap_or(0).to_string() }
+                                </output>
+                            </SliderOutput>
+                        </div>
+                        <SliderMarksAtom
+                            marks=SliderMarks::Custom {
+                                marks: vec![
+                                    SliderMark {
+                                        value: SliderMarkValue::Value(0.0),
+                                        name: Some(Cow::Borrowed("Min")),
+                                    },
+                                    SliderMark {
+                                        value: SliderMarkValue::Percentage(0.5),
+                                        name: Some(Cow::Borrowed("Mid")),
+                                    },
+                                    SliderMark {
+                                        value: SliderMarkValue::Value(100.0),
+                                        name: Some(Cow::Borrowed("Max")),
+                                    },
+                                ],
+                            }
+                            styles=[(Position, "relative"), (Height, "1.5em"), (MarginLeft, "120px"), (MarginRight, "40px")]
+                            let:marks
+                        >
+                            <For
+                                each=move || marks.get()
+                                key=|mark| OrderedFloat::from(mark.percentage)
+                                children=|mark| view! {
+                                    <SliderMark mark=mark.clone()>
+                                        { mark.name.unwrap_or_default() }
+                                    </SliderMark>
+                                }
+                            />
+                        </SliderMarksAtom>
+                    </SliderAtom>
+                </SliderContainer>
+
+                <h3 id="marks-range" class="anchor">
+                    "Marks with Range Slider"
+                    <AnchorLink href="#marks-range" description="Direct link to marks with range slider"/>
+                </h3>
+
+                <p>"With two thumbs, "<code>"in_range"</code>" is "<code>"true"</code>" for marks between the two thumb values."</p>
+
+                <SliderContainer>
+                    <SliderAtom values=SliderValues::Uncontrolled(vec![3.0, 7.0]) min=0.0 max=10.0 step=1.0 styles=[(Display, "flex"), (FlexDirection, "column"), (Gap, "0.5em")]>
+                        <div style="display: flex; align-items: center; gap: 1em;">
+                            <LabelAtom styles=[(MinWidth, "120px"), (FontWeight, "500")]>
+                                "Range marks"
+                            </LabelAtom>
+                            <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
+                                <SliderTrackFill styles=[(BackgroundColor, "#27ae60"), (BorderRadius, "4px")]/>
+                                <SliderThumb styles=thumb_style("#27ae60")/>
+                                <SliderThumb styles=thumb_style("#27ae60")/>
+                            </SliderTrack>
+                        </div>
+                        <SliderMarksAtom
+                            marks=SliderMarks::Automatic { create_names: true }
+                            styles=[(Position, "relative"), (Height, "1.5em"), (MarginLeft, "120px"), (MarginRight, "10px")]
+                            let:marks
+                        >
+                            <For
+                                each=move || marks.get()
+                                key=|mark| OrderedFloat::from(mark.percentage)
+                                children=|mark| view! {
+                                    <SliderMark mark=mark.clone()>
+                                        { mark.name.unwrap_or_default() }
+                                    </SliderMark>
+                                }
+                            />
+                        </SliderMarksAtom>
+                    </SliderAtom>
+                </SliderContainer>
+
                 <h2 id="api" class="anchor">
                     "API Reference"
                     <AnchorLink href="#api" description="Direct link to API"/>
@@ -437,10 +613,10 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
                 <h3>"UseSliderStateInput"</h3>
                 <ul>
-                    <li><code>"default_values: Vec<f64>"</code>" - Initial values for each thumb"</li>
+                    <li><code>"values: SliderValues"</code>" - Uncontrolled (with initial values) or Controlled (with external signal)"</li>
                     <li><code>"min_value: f64"</code>" - Minimum slider value"</li>
                     <li><code>"max_value: f64"</code>" - Maximum slider value"</li>
-                    <li><code>"step: f64"</code>" - Step increment"</li>
+                    <li><code>"step: Option<f64>"</code>" - Step increment (None for continuous mode)"</li>
                     <li><code>"on_change: Option<Callback<Vec<f64>>>"</code>" - Called during interaction"</li>
                     <li><code>"on_change_end: Option<Callback<Vec<f64>>>"</code>" - Called when dragging ends"</li>
                 </ul>
@@ -448,16 +624,15 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <h3>"UseSliderInput"</h3>
                 <ul>
                     <li><code>"state: UseSliderStateReturn"</code>" - State from use_slider_state"</li>
-                    <li><code>"label: Option<String>"</code>" - Label text"</li>
-                    <li><code>"orientation: Orientation"</code>" - Horizontal or Vertical"</li>
-                    <li><code>"is_disabled: Signal<bool>"</code>" - Disabled state"</li>
+                    <li><code>"aria_label: Option<&'static str>"</code>" - Accessible label text"</li>
+                    <li><code>"aria_labelledby: Option<String>"</code>" - ID of labelling element"</li>
                     <li><code>"is_rtl: bool"</code>" - Right-to-left layout"</li>
                 </ul>
 
                 <h3>"UseSliderReturn"</h3>
                 <ul>
                     <li><code>"track_props"</code>" - Props to spread on the track element"</li>
-                    <li><code>"track_ref: SliderTrackRef"</code>" - Captured track element (pass to use_slider_thumb)"</li>
+                    <li><code>"track_ref: CapturedElement"</code>" - Captured track element (pass to use_slider_thumb)"</li>
                     <li><code>"group_props"</code>" - Props for the group container"</li>
                     <li><code>"label_props"</code>" - Props for the label element"</li>
                     <li><code>"output_props"</code>" - Props for the output element"</li>
@@ -466,11 +641,37 @@ pub fn PageUseSliderHook() -> impl IntoView {
                 <h3>"UseSliderThumbInput"</h3>
                 <ul>
                     <li><code>"state: UseSliderStateReturn"</code>" - State from use_slider_state"</li>
-                    <li><code>"track_ref: SliderTrackRef"</code>" - Track ref from use_slider return"</li>
+                    <li><code>"track: CapturedElement"</code>" - Track ref from use_slider return"</li>
                     <li><code>"index: usize"</code>" - Thumb index (0-based)"</li>
-                    <li><code>"aria_label: Option<&'static str>"</code>" - Accessible label"</li>
-                    <li><code>"is_disabled: Signal<bool>"</code>" - Disabled state"</li>
+                    <li><code>"aria_label: Option<Cow<'static, str>>"</code>" - Accessible label"</li>
+                    <li><code>"disabled: Signal<bool>"</code>" - Disabled state"</li>
                     <li><code>"is_rtl: bool"</code>" - Right-to-left layout"</li>
+                </ul>
+
+                <h3>"UseSliderMarksInput"</h3>
+                <ul>
+                    <li><code>"state: UseSliderStateReturn"</code>" - State from use_slider_state"</li>
+                    <li><code>"marks: SliderMarks"</code>" - Marks configuration (None, Automatic, or Custom)"</li>
+                    <li><code>"value_display: Option<Callback<f64, String>>"</code>" - Optional formatter for automatic mark labels"</li>
+                </ul>
+
+                <h3>"UseSliderMarksReturn"</h3>
+                <ul>
+                    <li><code>"marks: Signal<Vec<ComputedSliderMark>>"</code>" - Computed marks with reactive in_range state"</li>
+                </ul>
+
+                <h3>"ComputedSliderMark"</h3>
+                <ul>
+                    <li><code>"percentage: f64"</code>" - Position along the track (0.0-1.0)"</li>
+                    <li><code>"in_range: Signal<bool>"</code>" - Whether this mark is within the selected range (reactive)"</li>
+                    <li><code>"name: Option<Cow<'static, str>>"</code>" - Optional display name"</li>
+                </ul>
+
+                <h3>"SliderMarks (enum)"</h3>
+                <ul>
+                    <li><code>"None"</code>" - No marks"</li>
+                    <li><code>"Automatic { create_names: bool }"</code>" - Auto-generate from step (capped at ~20)"</li>
+                    <li><code>"Custom { marks: Vec<SliderMark> }"</code>" - Manually specified marks"</li>
                 </ul>
             </Article>
 
@@ -485,6 +686,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                     Toc::Leaf { title: "Disabled Slider", link: "#disabled-slider" },
                     Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard" },
                     Toc::Leaf { title: "Features", link: "#features" },
+                    Toc::Leaf { title: "Slider Marks", link: "#marks" },
                     Toc::Leaf { title: "API Reference", link: "#api" },
                 ]
             }/>

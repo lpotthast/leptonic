@@ -1,15 +1,19 @@
 use leptos::prelude::*;
-use std::sync::atomic::{AtomicBool, Ordering};
+
+#[cfg(not(feature = "ssr"))]
+use std::sync::atomic::AtomicBool;
+#[cfg(not(feature = "ssr"))]
 use std::sync::OnceLock;
-use wasm_bindgen::JsCast;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/interactions/src/useFocusVisible.ts
 
 /// Global state tracking current interaction modality.
 /// This is shared across all instances to track whether the user
 /// is using keyboard or pointer input.
+#[cfg(not(feature = "ssr"))]
 static MODALITY: OnceLock<ModalityState> = OnceLock::new();
 
+#[cfg(not(feature = "ssr"))]
 struct ModalityState {
     /// Whether current interaction is via keyboard.
     is_keyboard: AtomicBool,
@@ -17,6 +21,7 @@ struct ModalityState {
     handlers_setup: AtomicBool,
 }
 
+#[cfg(not(feature = "ssr"))]
 impl ModalityState {
     fn new() -> Self {
         Self {
@@ -31,6 +36,7 @@ impl ModalityState {
 }
 
 /// Keys that indicate keyboard navigation.
+#[cfg(not(feature = "ssr"))]
 fn is_keyboard_focus_key(key: &str) -> bool {
     matches!(
         key,
@@ -95,6 +101,8 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
 
     #[cfg(not(feature = "ssr"))]
     {
+        use std::sync::atomic::Ordering;
+
         let modality = ModalityState::get();
 
         // Set up global listeners once
@@ -139,7 +147,11 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
 }
 
 /// Sets up global event listeners to track interaction modality.
+#[cfg(not(feature = "ssr"))]
 fn setup_global_listeners() {
+    use std::sync::atomic::Ordering;
+    use wasm_bindgen::JsCast;
+
     let Some(window) = web_sys::window() else {
         return;
     };
@@ -203,6 +215,7 @@ pub fn is_focus_visible() -> bool {
     }
     #[cfg(not(feature = "ssr"))]
     {
+        use std::sync::atomic::Ordering;
         ModalityState::get().is_keyboard.load(Ordering::Acquire)
     }
 }
@@ -216,6 +229,7 @@ pub fn is_focus_visible() -> bool {
 pub fn set_focus_visible(visible: bool) {
     #[cfg(not(feature = "ssr"))]
     {
+        use std::sync::atomic::Ordering;
         ModalityState::get()
             .is_keyboard
             .store(visible, Ordering::Release);

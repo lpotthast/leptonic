@@ -1,15 +1,19 @@
 use leptos::html;
 use leptos::prelude::*;
 use leptos_use::{use_element_bounding, use_element_hover};
-use std::borrow::Cow;
 
 use crate::{
+    atoms::slider::SliderCtx,
     components::popover::{Popover, PopoverContent},
-    contexts::global_mouseup_event::GlobalMouseupEvent,
-    utils::math::project_into_range,
-    Out, RelativeMousePosition, Size, TrackedElementClientBoundingRect,
-    UseElementBoundingReturnReadOnly,
+    hooks::{
+        use_slider_marks, use_slider_state, use_slider_thumb, SliderValues, UseSliderMarksInput,
+        UseSliderStateInput, UseSliderThumbInput, ValidationState,
+    },
+    Out, Size, UseElementBoundingReturnReadOnly,
 };
+
+// Re-export mark types from hooks for backward compatibility.
+pub use crate::hooks::{SliderMark, SliderMarkValue, SliderMarks};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SliderVariant {
@@ -24,176 +28,6 @@ impl SliderVariant {
             Self::Block => "block",
             Self::Round => "round",
         }
-    }
-}
-
-#[derive(Default, Debug, Clone)]
-#[allow(variant_size_differences)]
-pub enum SliderMarks {
-    #[default]
-    None,
-    /// Note that marks can only be automatically generated if a step value is provided!
-    Automatic {
-        create_names: bool,
-    },
-    Custom {
-        marks: Vec<SliderMark>,
-    },
-}
-
-#[derive(Debug, Clone)]
-pub struct SliderMark {
-    pub value: SliderMarkValue,
-    pub name: Option<Cow<'static, str>>,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum SliderMarkValue {
-    Value(f64),
-    /// In 0..1 range.
-    Percentage(f64),
-}
-
-#[derive(Clone)]
-struct Mark {
-    percentage: f64,
-    in_range: Signal<bool>,
-    name: Option<Cow<'static, str>>,
-}
-
-#[allow(clippy::too_many_arguments)]
-fn create_marks(
-    min: f64,
-    max: f64,
-    step: Option<f64>,
-    range: Memo<f64>,
-    in_range: Callback<f64, Signal<bool>>,
-    marks: SliderMarks,
-    value_display: Option<Callback<f64, String>>,
-) -> Signal<Vec<Mark>> {
-    match marks {
-        SliderMarks::None => Signal::derive(Vec::new),
-        SliderMarks::Automatic { create_names } => Signal::derive(move || match step {
-            Some(step) => {
-                let mut marks_at = Vec::new();
-                let cap = 20.0;
-                let estimate = range.get() / step;
-                let step_multiplier = f64::max(1.0, f64::round(estimate / cap));
-                let mut current = min;
-
-                let rounding_error_offset = 0.000_001;
-                loop {
-                    if max > min {
-                        if current > max + rounding_error_offset {
-                            break;
-                        }
-                    } else if current < max - rounding_error_offset {
-                        break;
-                    }
-                    marks_at.push(Mark {
-                        percentage: crate::utils::math::percentage_in_range(min, max, current),
-                        in_range: in_range.run(current),
-                        name: if create_names {
-                            Some(Cow::Owned(match &value_display {
-                                Some(callback) => callback.run(current),
-                                None => format!("{current}"),
-                            }))
-                        } else {
-                            None
-                        },
-                    });
-                    if max > min {
-                        if current <= max + rounding_error_offset {
-                            current += step * step_multiplier;
-                        }
-                    } else if current >= max - rounding_error_offset {
-                        current -= step * step_multiplier;
-                    }
-                }
-                marks_at
-            }
-            None => Vec::new(),
-        }),
-        SliderMarks::Custom { marks } => Signal::derive(move || {
-            marks
-                .iter()
-                .filter(|mark| match mark.value {
-                    SliderMarkValue::Value(value) => {
-                        if value < min || value > max {
-                            tracing::warn!(
-                                ?mark,
-                                min,
-                                max,
-                                "value of custom slider mark is outside slider range"
-                            );
-                            false
-                        } else {
-                            true
-                        }
-                    }
-                    SliderMarkValue::Percentage(percentage) => {
-                        if (0.0..=1.0).contains(&percentage) {
-                            true
-                        } else {
-                            tracing::warn!(
-                                ?mark,
-                                "percentage of custom slider mark is outside 0..1 range"
-                            );
-                            false
-                        }
-                    }
-                })
-                .map(|mark| {
-                    let value = match mark.value {
-                        SliderMarkValue::Value(value) => value,
-                        SliderMarkValue::Percentage(percentage) => {
-                            crate::utils::math::value_in_range(min, max, percentage)
-                        }
-                    };
-                    Mark {
-                        percentage: match mark.value {
-                            SliderMarkValue::Value(value) => {
-                                crate::utils::math::percentage_in_range(min, max, value)
-                            }
-                            SliderMarkValue::Percentage(percentage) => percentage,
-                        },
-                        in_range: in_range.run(value),
-                        name: mark.name.clone(),
-                    }
-                })
-                .collect()
-        }),
-    }
-}
-
-#[component]
-fn Marks(marks: Signal<Vec<Mark>>) -> impl IntoView {
-    view! {
-        <div class="marks">
-            {move || {
-                marks
-                    .get()
-                    .into_iter()
-                    .map(|mark| {
-                        let style = format!("left: {}%", mark.percentage * 100.0);
-                        view! {
-                            <div
-                                class="mark"
-                                class:in-range=move || mark.in_range.get()
-                                style=style
-                            >
-                                {match &mark.name {
-                                    Some(name) => {
-                                        view! { <div class="title">{name.clone()}</div> }.into_any()
-                                    }
-                                    None => ().into_any(),
-                                }}
-                            </div>
-                        }
-                    })
-                    .collect_view()
-            }}
-        </div>
     }
 }
 
@@ -214,17 +48,15 @@ impl Default for SliderPopover {
 }
 
 impl SliderPopover {
-    fn to_signal(self, knob_el: NodeRef<html::Div>, knob: &KnobControl) -> Signal<bool> {
+    fn to_signal(self, is_dragging: Signal<bool>, is_hovered: Signal<bool>) -> Signal<bool> {
         match self {
             Self::Never => Signal::from(false),
             Self::When { hovered, dragged } => match (hovered, dragged) {
                 (true, true) => {
-                    let knob_is_hovered = use_element_hover(knob_el);
-                    let listening = knob.listening;
-                    Signal::derive(move || knob_is_hovered.get() || listening.get())
+                    Signal::derive(move || is_hovered.get() || is_dragging.get())
                 }
-                (true, false) => use_element_hover(knob_el),
-                (false, true) => knob.listening.into(),
+                (true, false) => is_hovered,
+                (false, true) => is_dragging,
                 (false, false) => Signal::from(false),
             },
             Self::Always => Signal::from(true),
@@ -232,6 +64,10 @@ impl SliderPopover {
     }
 }
 
+/// A single-thumb slider component that uses the hooks/atoms infrastructure.
+///
+/// Renders a `<leptonic-slider>` custom element with a bar, range fill, knob, optional popover,
+/// and optional marks. Full keyboard navigation is built in.
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn Slider(
@@ -247,69 +83,62 @@ pub fn Slider(
     #[prop(optional)] marks: SliderMarks,
     #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView {
-    let range = Memo::new(move |_| max - min);
+    // Create controlled values signal from the single value prop.
+    let values = Signal::derive(move || vec![value.get()]);
 
-    let bar_el: NodeRef<html::Div> = NodeRef::new();
-    let bar = TrackedElementClientBoundingRect::new(bar_el);
-    let cursor = RelativeMousePosition::new(bar);
-    let knob_el: NodeRef<html::Div> = NodeRef::new();
-    let bar_bounds = use_element_bounding(bar_el);
-    let knob = KnobControl::new(min, max, step, value);
-    let show_popover = popover.to_signal(knob_el, &knob);
-
-    let range_style = Signal::derive(move || {
-        format!(
-            "left: 0%; width: {}%;",
-            knob.clipped_value_percent.get() * 100.0
-        )
-    });
-
-    // Stop listening whenever any mouseup event got fired.
-    let GlobalMouseupEvent {
-        read_signal: mouse_up,
-        ..
-    } = expect_context();
-    Effect::new(move |_| {
-        if mouse_up.get().is_some() {
-            knob.set_listening.set(false);
+    // Bridge on_change to the single-value set_value.
+    let on_change = Callback::new(move |vals: Vec<f64>| {
+        if let Some(v) = vals.first() {
+            set_value.set(*v);
         }
     });
 
-    // While this slider is "listening", project the relative cursor position into the sliders value range and propagate.
-    Effect::new(move |_| {
-        if knob.listening.get() {
-            set_value.set(project_into_range(
-                cursor.rel_mouse_pos.get().0,
-                range.get(),
-                min,
-                step,
-            ));
-        }
-    });
-
-    let marks = create_marks(
-        min,
-        max,
+    let state = use_slider_state(UseSliderStateInput {
+        values: SliderValues::Controlled(values),
+        min_value: min,
+        max_value: max,
         step,
-        range,
-        Callback::new(move |v| {
-            if max > min {
-                Signal::derive(move || v <= value.get())
-            } else {
-                Signal::derive(move || v >= value.get())
-            }
-        }),
+        disabled: Signal::from(disabled),
+        orientation: Signal::default(),
+        on_change: Some(on_change),
+        on_change_end: None,
+    });
+
+    let crate::hooks::UseSliderReturn {
+        group_props: _,
+        track_props,
+        track_ref,
+        label_props: _,
+        output_props: _,
+    } = crate::hooks::use_slider(crate::hooks::UseSliderInput {
+        state,
+        aria_label: None,
+        aria_labelledby: None,
+        is_rtl: false,
+    });
+
+    // Provide context for the inner thumb component.
+    provide_context(SliderCtx {
+        state,
+        _label_props: crate::hooks::UseSliderLabelProps {
+            id: String::new(),
+        },
+        output_props: crate::hooks::UseSliderOutputProps {
+            id: String::new(),
+            html_for: String::new(),
+            aria_live: "off",
+        },
+        track_props,
+        track: track_ref,
+        is_rtl: false,
+        next_thumb_idx: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+    });
+
+    // Compute marks.
+    let marks_computed = use_slider_marks(UseSliderMarksInput {
+        state,
         marks,
         value_display,
-    );
-
-    let pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
-        format!(
-            "calc({}px + {}px - {}px)",
-            bar_bounds.x.get(),
-            (knob.clipped_value_percent.get() * bar_bounds.width.get()),
-            (pop_bounds.width.get() / 2.0)
-        )
     });
 
     view! {
@@ -317,58 +146,23 @@ pub fn Slider(
             data-variant=variant.to_str()
             class:active=active
             class:disabled=disabled
-            // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
-            // as the user may click, drag and move the cursor outside of this element.
-            on:mousedown=move |_e| {
-                bar.track_client_rect();
-                knob.set_listening.set(true);
-            }
-            on:touchstart=move |_e| {
-                bar.track_client_rect();
-                knob.set_listening.set(true);
-            }
-            on:touchmove=move |e| {
-                if knob.listening.get_untracked() {
-                    e.prevent_default();
-                    e.stop_propagation();
-                }
-            }
-            on:touchend=move |_e| knob.set_listening.set(false)
         >
             <div class="bar-wrapper">
-                <div node_ref=bar_el class="bar">
-                    <div class="range" style=move || range_style.get()></div>
-
-                    <div class="knob-wrapper">
-
-                        <Popover show=show_popover position_x=pos_x margin=Size::Em(1.2)>
-                            <PopoverContent slot>
-                                {move || {
-                                    let value = value.get();
-                                    match &value_display {
-                                        Some(callback) => callback.run(value),
-                                        None => format!("{value}"),
-                                    }
-                                }}
-                            </PopoverContent>
-
-                            <div
-                                class="knob"
-                                class:is-dragged=move || knob.listening.get()
-                                tabindex=0
-                                style=move || knob.style.get()
-                            />
-                        </Popover>
-                    </div>
-                </div>
+                <ComponentSliderTrack
+                    popover=popover
+                    value_display=value_display
+                />
             </div>
 
-            <Marks marks=marks />
-
+            <ComponentMarks marks=marks_computed.marks />
         </leptonic-slider>
     }
 }
 
+/// A two-thumb range slider component.
+///
+/// Renders a `<leptonic-slider>` custom element with two knobs allowing selection
+/// of a value range. Thumbs cannot cross each other.
 #[component]
 #[allow(clippy::similar_names)]
 #[allow(clippy::too_many_lines)]
@@ -387,111 +181,65 @@ pub fn RangeSlider(
     #[prop(optional)] marks: SliderMarks,
     #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
 ) -> impl IntoView {
-    let range = Memo::new(move |_| max - min);
+    // Create controlled values signal from both value props.
+    let values = Signal::derive(move || vec![value_a.get(), value_b.get()]);
 
-    let bar_el: NodeRef<html::Div> = NodeRef::new();
-    let bar = TrackedElementClientBoundingRect::new(bar_el);
-    let bar_bounds = use_element_bounding(bar_el);
-    let cursor = RelativeMousePosition::new(bar);
-    let knob_a_el: NodeRef<html::Div> = NodeRef::new();
-    let knob_b_el: NodeRef<html::Div> = NodeRef::new();
-    let knob_a = KnobControl::new(min, max, step, value_a);
-    let knob_b = KnobControl::new(min, max, step, value_b);
-    let show_a_popover = popover.to_signal(knob_a_el, &knob_a);
-    let show_b_popover = popover.to_signal(knob_b_el, &knob_b);
-
-    let range_style = Signal::derive(move || {
-        format!(
-            "left: {}%; width: {}%;",
-            knob_a.clipped_value_percent.get() * 100.0,
-            knob_b
-                .clipped_value_percent
-                .get()
-                .mul_add(100.0, -knob_a.clipped_value_percent.get() * 100.0)
-        )
-    });
-
-    // Stop listening whenever any mouseup event got fired.
-    let GlobalMouseupEvent {
-        read_signal: mouse_up,
-        ..
-    } = expect_context();
-    Effect::new(move |_| {
-        if mouse_up.get().is_some() {
-            knob_a.set_listening.set(false);
-            knob_b.set_listening.set(false);
+    // Bridge on_change to both setters.
+    let on_change = Callback::new(move |vals: Vec<f64>| {
+        if let Some(v) = vals.first() {
+            set_value_a.set(*v);
+        }
+        if let Some(v) = vals.get(1) {
+            set_value_b.set(*v);
         }
     });
 
-    // Project the relative cursor position into the sliders value range.
-    let projected_value_from_cursor = Memo::new(move |_| {
-        project_into_range(cursor.rel_mouse_pos.get().0, range.get(), min, step)
-    });
-
-    // While this slider is "listening", propagate the projected value.
-    Effect::new(move |_| {
-        if knob_a.listening.get() {
-            let projected_value_from_cursor = projected_value_from_cursor.get();
-            let b = value_b.get_untracked();
-            if projected_value_from_cursor > b {
-                set_value_a.set(b);
-                set_value_b.set(projected_value_from_cursor);
-
-                knob_a.set_listening.set(false);
-                knob_b.set_listening.set(true);
-            } else {
-                set_value_a.set(projected_value_from_cursor);
-            }
-        }
-        if knob_b.listening.get() {
-            let projected_value_from_cursor = projected_value_from_cursor.get();
-            let a = value_a.get_untracked();
-            if projected_value_from_cursor < a {
-                set_value_b.set(a);
-                set_value_a.set(projected_value_from_cursor);
-
-                knob_b.set_listening.set(false);
-                knob_a.set_listening.set(true);
-            } else {
-                set_value_b.set(projected_value_from_cursor);
-            }
-        }
-    });
-
-    let marks = create_marks(
-        min,
-        max,
+    let state = use_slider_state(UseSliderStateInput {
+        values: SliderValues::Controlled(values),
+        min_value: min,
+        max_value: max,
         step,
-        range,
-        Callback::new(move |v| {
-            if max > min {
-                Signal::derive(move || v >= value_a.get() && v <= value_b.get())
-            } else {
-                Signal::derive(move || v <= value_a.get() && v >= value_b.get())
-            }
-        }),
+        disabled: Signal::from(disabled),
+        orientation: Signal::default(),
+        on_change: Some(on_change),
+        on_change_end: None,
+    });
+
+    let crate::hooks::UseSliderReturn {
+        group_props: _,
+        track_props,
+        track_ref,
+        label_props: _,
+        output_props: _,
+    } = crate::hooks::use_slider(crate::hooks::UseSliderInput {
+        state,
+        aria_label: None,
+        aria_labelledby: None,
+        is_rtl: false,
+    });
+
+    // Provide context for inner thumb components.
+    provide_context(SliderCtx {
+        state,
+        _label_props: crate::hooks::UseSliderLabelProps {
+            id: String::new(),
+        },
+        output_props: crate::hooks::UseSliderOutputProps {
+            id: String::new(),
+            html_for: String::new(),
+            aria_live: "off",
+        },
+        track_props,
+        track: track_ref,
+        is_rtl: false,
+        next_thumb_idx: std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0)),
+    });
+
+    // Compute marks.
+    let marks_computed = use_slider_marks(UseSliderMarksInput {
+        state,
         marks,
         value_display,
-    );
-
-    let value_display_a = value_display;
-    let value_display_b = value_display;
-
-    let knob_a_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
-        format!(
-            "calc({}px + {}px - {}px)",
-            bar_bounds.x.get(),
-            (knob_a.clipped_value_percent.get() * bar_bounds.width.get()),
-            (pop_bounds.width.get() / 2.0)
-        )
-    });
-    let knob_b_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
-        format!(
-            "calc({}px + {}px - {}px)",
-            bar_bounds.x.get(),
-            (knob_b.clipped_value_percent.get() * bar_bounds.width.get()),
-            (pop_bounds.width.get() / 2.0)
-        )
     });
 
     view! {
@@ -499,140 +247,290 @@ pub fn RangeSlider(
             data-variant=variant.to_str()
             class:active=active
             class:disabled=disabled
-            // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
-            // as the user may click, drag and move the cursor outside of this element.
-            on:mousedown=move |_e| {
-                bar.track_client_rect();
-                let could_be = projected_value_from_cursor.get();
-                let distance_to_a = (value_a.get() - could_be).abs();
-                let distance_to_b = (value_b.get() - could_be).abs();
-                if distance_to_a < distance_to_b {
-                    knob_a.set_listening.set(true);
-                } else {
-                    knob_b.set_listening.set(true);
-                }
-            }
-            on:touchstart=move |_e| {
-                bar.track_client_rect();
-            }
-            // Note(lukas): We do not use on:touchstart event here to trigger the listening functionality.
-            // Instead, the code handling it lives in on:touchmove.
-            // The reason for this is that the use_mouse function must receive the initial on:touchstart event FIRST,
-            // so that a correct cursor.clipped_value can be computed. We can only then check whether or not the user
-            // touched more towards the left or right knob.
-            // Limitation: The initial touch event no longer results in a direct value change. But the value is set after touchmove or touchend.
-            on:touchmove=move |e| {
-                if knob_a.listening.get_untracked() || knob_b.listening.get_untracked() {
-                    e.prevent_default();
-                    e.stop_propagation();
-                } else {
-                    let could_be = projected_value_from_cursor.get();
-                    let distance_to_a = (value_a.get() - could_be).abs();
-                    let distance_to_b = (value_b.get() - could_be).abs();
-                    if distance_to_a < distance_to_b {
-                        knob_a.set_listening.set(true);
-                    } else {
-                        knob_b.set_listening.set(true);
-                    }
-                }
-            }
-            on:touchend=move |_e| {
-                knob_a.set_listening.set(false);
-                knob_b.set_listening.set(false);
-            }
         >
             <div class="bar-wrapper">
-                <div node_ref=bar_el class="bar">
-                    <div class="knob-wrapper">
-                        <Popover show=show_a_popover position_x=knob_a_pos_x margin=Size::Em(1.2)>
-                            <PopoverContent slot>
-                                {move || {
-                                    let value = value_a.get();
-                                    match &value_display_a {
-                                        Some(callback) => callback.run(value),
-                                        None => format!("{value}"),
-                                    }
-                                }}
-                            </PopoverContent>
-
-                            <div
-                                class="knob"
-                                class:is-dragged=move || knob_a.listening.get()
-                                tabindex=0
-                                style=move || knob_a.style.get()
-                            />
-                        </Popover>
-                    </div>
-                    <div class="range" style=move || range_style.get()></div>
-                    <div class="knob-wrapper">
-                        <Popover show=show_b_popover position_x=knob_b_pos_x margin=Size::Em(1.2)>
-                            <PopoverContent slot>
-                                {move || {
-                                    let value = value_b.get();
-                                    match &value_display_b {
-                                        Some(callback) => callback.run(value),
-                                        None => format!("{value}"),
-                                    }
-                                }}
-                            </PopoverContent>
-
-                            <div
-                                class="knob"
-                                class:is-dragged=move || knob_b.listening.get()
-                                tabindex=0
-                                style=move || knob_b.style.get()
-                            />
-                        </Popover>
-                    </div>
-                </div>
+                <ComponentRangeSliderTrack
+                    popover=popover
+                    value_display=value_display
+                />
             </div>
 
-            <Marks marks=marks />
+            <ComponentMarks marks=marks_computed.marks />
         </leptonic-slider>
     }
 }
 
-struct KnobControl {
-    #[allow(unused)]
-    clipped_value: Signal<f64>,
-    clipped_value_percent: Signal<f64>,
-    style: Signal<String>,
-    listening: ReadSignal<bool>,
-    set_listening: WriteSignal<bool>,
+/// Internal: renders the track with a single thumb + popover.
+#[component]
+fn ComponentSliderTrack(
+    popover: SliderPopover,
+    value_display: Option<Callback<f64, String>>,
+) -> impl IntoView {
+    let ctx = expect_context::<SliderCtx>();
+    let track_attrs = ctx.track_props.into_attrs();
+
+    let thumb = use_slider_thumb(UseSliderThumbInput {
+        state: ctx.state,
+        track: ctx.track,
+        index: 0,
+        name: None,
+        aria_label: None,
+        aria_labelledby: None,
+        disabled: ctx.state.disabled,
+        validation_state: ValidationState::Valid,
+        is_rtl: false,
+        decimal_places: None,
+        is_required: false,
+        aria_describedby: None,
+        aria_details: None,
+        aria_errormessage: None,
+    });
+
+    let percentage = thumb.percentage;
+    let is_dragging = thumb.is_dragging;
+    let thumb_value = thumb.value;
+
+    let range_style = Signal::derive(move || {
+        format!(
+            "left: 0%; width: {}%;",
+            percentage.get()
+        )
+    });
+
+    let knob_style = Signal::derive(move || {
+        format!("left: {}%", percentage.get())
+    });
+
+    // Popover: determine show signal.
+    let knob_el: NodeRef<html::Div> = NodeRef::new();
+    let knob_is_hovered = use_element_hover(knob_el);
+    let show_popover = popover.to_signal(
+        is_dragging,
+        knob_is_hovered,
+    );
+
+    // Popover position.
+    let bar_el: NodeRef<html::Div> = NodeRef::new();
+    let bar_bounds = use_element_bounding(bar_el);
+    let pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+        format!(
+            "calc({}px + {}px - {}px)",
+            bar_bounds.x.get(),
+            (percentage.get() / 100.0 * bar_bounds.width.get()),
+            (pop_bounds.width.get() / 2.0)
+        )
+    });
+
+    view! {
+        <div {..track_attrs} node_ref=bar_el class="bar">
+            <div class="range" style=move || range_style.get()></div>
+
+            <div class="knob-wrapper">
+                <Popover show=show_popover position_x=pos_x margin=Size::Em(1.2)>
+                    <PopoverContent slot>
+                        {move || {
+                            let v = thumb_value.get();
+                            match &value_display {
+                                Some(callback) => callback.run(v),
+                                None => format!("{v}"),
+                            }
+                        }}
+                    </PopoverContent>
+
+                    <div
+                        node_ref=knob_el
+                        class="knob"
+                        class:is-dragged=move || is_dragging.get()
+                        {..thumb.thumb_props}
+                        style=move || knob_style.get()
+                    />
+                </Popover>
+            </div>
+            <input {..thumb.input_props.into_attrs()} />
+        </div>
+    }
 }
 
-impl KnobControl {
-    pub(crate) fn new(min: f64, max: f64, step: Option<f64>, value: Signal<f64>) -> Self {
-        let range = Memo::new(move |_| max - min);
-        let clipped_value = Signal::derive(move || {
-            let value = value.get();
-            if !(min..=max).contains(&value) && !(max..=min).contains(&value) {
-                tracing::warn!(
-                    "Slider was given the value {value} which is outside the range [{min}, {max}]. Value will be clipped on first use of this slider."
-                );
-            }
-            let clipped: f64 = if min < max {
-                f64::min(f64::max(value, min), max)
-            } else {
-                f64::min(f64::max(value, max), min)
-            };
-            // Round to the nearest step if a step-value was provided.
-            match step {
-                Some(step) => (clipped / step).round() * step,
-                None => clipped,
-            }
-        });
-        let clipped_value_percent =
-            Signal::derive(move || ((min.abs() - clipped_value.get()) / range.get()).abs());
-        let style =
-            Signal::derive(move || format!("left: {}%", clipped_value_percent.get() * 100.0));
-        let (listening, set_listening) = signal(false);
-        Self {
-            clipped_value,
-            clipped_value_percent,
-            style,
-            listening,
-            set_listening,
-        }
+/// Internal: renders the track with two thumbs + popovers for a range slider.
+#[component]
+#[allow(clippy::similar_names)]
+fn ComponentRangeSliderTrack(
+    popover: SliderPopover,
+    value_display: Option<Callback<f64, String>>,
+) -> impl IntoView {
+    let ctx = expect_context::<SliderCtx>();
+    let track_attrs = ctx.track_props.into_attrs();
+
+    let thumb_a = use_slider_thumb(UseSliderThumbInput {
+        state: ctx.state,
+        track: ctx.track,
+        index: 0,
+        name: None,
+        aria_label: None,
+        aria_labelledby: None,
+        disabled: ctx.state.disabled,
+        validation_state: ValidationState::Valid,
+        is_rtl: false,
+        decimal_places: None,
+        is_required: false,
+        aria_describedby: None,
+        aria_details: None,
+        aria_errormessage: None,
+    });
+
+    let thumb_b = use_slider_thumb(UseSliderThumbInput {
+        state: ctx.state,
+        track: ctx.track,
+        index: 1,
+        name: None,
+        aria_label: None,
+        aria_labelledby: None,
+        disabled: ctx.state.disabled,
+        validation_state: ValidationState::Valid,
+        is_rtl: false,
+        decimal_places: None,
+        is_required: false,
+        aria_describedby: None,
+        aria_details: None,
+        aria_errormessage: None,
+    });
+
+    let percentage_a = thumb_a.percentage;
+    let percentage_b = thumb_b.percentage;
+    let is_dragging_a = thumb_a.is_dragging;
+    let is_dragging_b = thumb_b.is_dragging;
+    let value_a = thumb_a.value;
+    let value_b = thumb_b.value;
+
+    let range_style = Signal::derive(move || {
+        format!(
+            "left: {}%; width: {}%;",
+            percentage_a.get(),
+            (percentage_b.get() - percentage_a.get()).max(0.0)
+        )
+    });
+
+    let knob_a_style = Signal::derive(move || {
+        format!("left: {}%", percentage_a.get())
+    });
+
+    let knob_b_style = Signal::derive(move || {
+        format!("left: {}%", percentage_b.get())
+    });
+
+    // Popovers for knob A.
+    let knob_a_el: NodeRef<html::Div> = NodeRef::new();
+    let knob_a_hovered = use_element_hover(knob_a_el);
+    let show_a_popover = popover.to_signal(is_dragging_a, knob_a_hovered);
+
+    // Popovers for knob B.
+    let knob_b_el: NodeRef<html::Div> = NodeRef::new();
+    let knob_b_hovered = use_element_hover(knob_b_el);
+    let show_b_popover = popover.to_signal(is_dragging_b, knob_b_hovered);
+
+    // Popover positions.
+    let bar_el: NodeRef<html::Div> = NodeRef::new();
+    let bar_bounds = use_element_bounding(bar_el);
+    let knob_a_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+        format!(
+            "calc({}px + {}px - {}px)",
+            bar_bounds.x.get(),
+            (percentage_a.get() / 100.0 * bar_bounds.width.get()),
+            (pop_bounds.width.get() / 2.0)
+        )
+    });
+    let knob_b_pos_x = Callback::new(move |pop_bounds: UseElementBoundingReturnReadOnly| {
+        format!(
+            "calc({}px + {}px - {}px)",
+            bar_bounds.x.get(),
+            (percentage_b.get() / 100.0 * bar_bounds.width.get()),
+            (pop_bounds.width.get() / 2.0)
+        )
+    });
+
+    let value_display_a = value_display;
+    let value_display_b = value_display;
+
+    view! {
+        <div {..track_attrs} node_ref=bar_el class="bar">
+            <div class="knob-wrapper">
+                <Popover show=show_a_popover position_x=knob_a_pos_x margin=Size::Em(1.2)>
+                    <PopoverContent slot>
+                        {move || {
+                            let v = value_a.get();
+                            match &value_display_a {
+                                Some(callback) => callback.run(v),
+                                None => format!("{v}"),
+                            }
+                        }}
+                    </PopoverContent>
+
+                    <div
+                        node_ref=knob_a_el
+                        class="knob"
+                        class:is-dragged=move || is_dragging_a.get()
+                        {..thumb_a.thumb_props}
+                        style=move || knob_a_style.get()
+                    />
+                </Popover>
+            </div>
+            <div class="range" style=move || range_style.get()></div>
+            <div class="knob-wrapper">
+                <Popover show=show_b_popover position_x=knob_b_pos_x margin=Size::Em(1.2)>
+                    <PopoverContent slot>
+                        {move || {
+                            let v = value_b.get();
+                            match &value_display_b {
+                                Some(callback) => callback.run(v),
+                                None => format!("{v}"),
+                            }
+                        }}
+                    </PopoverContent>
+
+                    <div
+                        node_ref=knob_b_el
+                        class="knob"
+                        class:is-dragged=move || is_dragging_b.get()
+                        {..thumb_b.thumb_props}
+                        style=move || knob_b_style.get()
+                    />
+                </Popover>
+            </div>
+            <input {..thumb_a.input_props.into_attrs()} />
+            <input {..thumb_b.input_props.into_attrs()} />
+        </div>
+    }
+}
+
+/// Internal: renders marks.
+#[component]
+fn ComponentMarks(marks: Signal<Vec<crate::hooks::ComputedSliderMark>>) -> impl IntoView {
+    view! {
+        <div class="marks">
+            {move || {
+                marks
+                    .get()
+                    .into_iter()
+                    .map(|mark| {
+                        let style = format!("left: {}%", mark.percentage * 100.0);
+                        let in_range = mark.in_range;
+                        view! {
+                            <div
+                                class="mark"
+                                class:in-range=move || in_range.get()
+                                style=style
+                            >
+                                {match &mark.name {
+                                    Some(name) => {
+                                        view! { <div class="title">{name.clone()}</div> }.into_any()
+                                    }
+                                    None => ().into_any(),
+                                }}
+                            </div>
+                        }
+                    })
+                    .collect_view()
+            }}
+        </div>
     }
 }

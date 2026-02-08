@@ -5,6 +5,7 @@ use crate::hooks::interactions::use_move::{
 use crate::hooks::{
     use_focus_ring, SliderOrientation, UseFocusRingInput, UseFocusRingReturn, ValidationState,
 };
+use crate::utils::math::percentage_in_range;
 use crate::utils::CapturedElement;
 use leptos::attr;
 use leptos::attr::{Attr, Attribute};
@@ -105,7 +106,7 @@ pub type UseSliderThumbAttrs = (
     Attr<attr::AriaValuetext, Signal<String>>,
     Attr<attr::AriaOrientation, Signal<&'static str>>,
     Attr<attr::AriaInvalid, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Option<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
     Attr<attr::AriaRequired, Option<&'static str>>,
     Attr<attr::AriaDescribedby, Option<&'static str>>,
     Attr<attr::AriaDetails, Option<&'static str>>,
@@ -153,7 +154,7 @@ pub type UseSliderThumbInputAttrs = (
 ///
 /// ```ignore
 /// let state = use_slider_state(UseSliderStateInput {
-///     default_values: vec![50.0],
+///     values: SliderValues::Uncontrolled(vec![50.0]),
 ///     ..Default::default()
 /// });
 ///
@@ -177,7 +178,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
     let state = input.state;
     let orientation = state.orientation;
-    let track_ref = input.track;
+    let track = input.track;
     let index = input.index;
     let is_disabled = input.disabled;
     let is_rtl = input.is_rtl;
@@ -205,12 +206,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             .get(index)
             .copied()
             .unwrap_or(state.min_value);
-        let range = state.max_value - state.min_value;
-        if range == 0.0 {
-            0.0
-        } else {
-            (val - state.min_value) / range * 100.0
-        }
+        percentage_in_range(state.min_value, state.max_value, val) * 100.0
     });
 
     // Minimum value for this thumb, constrained by neighbors.
@@ -262,8 +258,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         }),
         on_move_start: Callback::new(move |_: MoveStartEvent| {
             // Initialize pixel position from current thumb percent
-            if let Some(track) = track_ref.get_untracked().as_deref().cloned() {
-                let rect = track.get_bounding_client_rect();
+            if let Some(rect) = track.get_bounding_client_rect_untracked() {
                 let size = match orientation.get() {
                     SliderOrientation::Horizontal => rect.width(),
                     SliderOrientation::Vertical => rect.height(),
@@ -277,10 +272,8 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             state.set_focused_thumb.run(Some(index));
         }),
         on_move: Callback::new(move |e: MoveEvent| {
-            if let Some(track) = track_ref.get_untracked().as_deref().cloned() {
+            if let Some(rect) = track.get_bounding_client_rect_untracked() {
                 let orientation = orientation.get_untracked();
-
-                let rect = track.get_bounding_client_rect();
                 let size = match orientation {
                     SliderOrientation::Horizontal => rect.width(),
                     SliderOrientation::Vertical => rect.height(),
@@ -324,7 +317,9 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             return;
         }
 
-        let step = state.step;
+        // Default keyboard increment: step if present, else 1% of range.
+        let range = state.max_value - state.min_value;
+        let step_amount = state.step.unwrap_or(range / 100.0);
         let page_size = state.page_size;
         let min_val = state.min_value;
         let max_val = state.max_value;
@@ -352,7 +347,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         match (key.as_str(), shift, is_rtl) {
             // Right arrow / Up arrow (increment by step)
             ("ArrowRight", false, false) | ("ArrowLeft", false, true) | ("ArrowUp", false, _) => {
-                increment(step);
+                increment(step_amount);
             }
             // Right arrow (shifted) / Up arrow (shifted) / Page up (increment by page)
             ("ArrowRight", true, false)
@@ -362,7 +357,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
             // Left arrow / Down arrow (decrement by step)
             ("ArrowLeft", false, false) | ("ArrowRight", false, true) | ("ArrowDown", false, _) => {
-                decrement(step);
+                decrement(step_amount);
             }
             // Left arrow (shifted) / Down arrow (shifted) / Page down (decrement by page)
             ("ArrowLeft", true, false)
@@ -416,11 +411,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     };
 
     // Compute aria-disabled
-    let aria_disabled = if is_disabled.get_untracked() {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_disabled = Signal::derive(move || if is_disabled.get() { Some("true") } else { None });
 
     // Compute aria-required
     let aria_required = if input.is_required {

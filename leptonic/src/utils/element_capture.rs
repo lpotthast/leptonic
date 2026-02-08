@@ -44,7 +44,9 @@ use leptos::prelude::*;
 use leptos::tachys::html::attribute::{Attribute, NamedAttributeKey, NextAttribute};
 use send_wrapper::SendWrapper;
 use std::future::Future;
+use std::ops::Deref;
 use std::sync::Arc;
+use web_sys::DomRect;
 
 /// A reactive element reference populated by an [`ElementCaptureAttr`].
 ///
@@ -69,7 +71,7 @@ impl CapturedElement {
         }
     }
 
-    /// Reactively read the captured element.
+    /// Reactively read (clone) the captured element.
     ///
     /// Tracks the internal `Trigger`, so calling this inside an `Effect` will
     /// cause the Effect to re-run when the element is captured or re-captured.
@@ -78,11 +80,19 @@ impl CapturedElement {
         self.storage.get_value()
     }
 
-    /// Read the captured element without reactive tracking.
+    /// Read (clone) the captured element without reactive tracking.
     ///
     /// Use this inside event handlers where tracking is not needed.
     pub fn get_untracked(&self) -> Option<SendWrapper<web_sys::Element>> {
         self.storage.get_value()
+    }
+
+    /// Access the captured element without reactive tracking.
+    ///
+    /// Use this inside event handlers where tracking is not needed.
+    pub fn with_untracked<U>(&self, accessor: impl Fn(Option<&web_sys::Element>) -> U) -> U {
+        self.storage
+            .with_value(move |e| accessor(e.as_ref().map(|it| it.deref())))
     }
 
     /// Create the [`ElementCaptureAttr`] to spread onto the target element.
@@ -93,6 +103,10 @@ impl CapturedElement {
             storage.set_value(Some(SendWrapper::new(el)));
             trigger.notify();
         })
+    }
+
+    pub fn get_bounding_client_rect_untracked(&self) -> Option<DomRect> {
+        self.with_untracked(|el| el.map(web_sys::Element::get_bounding_client_rect))
     }
 }
 

@@ -339,7 +339,7 @@ pub fn PageUsePress() -> impl IntoView {
             <div style="display: flex; align-items: center; gap: 0.5em; margin-top: 0.5em;">
                 <Label>"Threshold:"</Label>
                 <SliderAtom
-                    default_values=vec![500.0]
+                    values=SliderValues::Uncontrolled(vec![500.0])
                     min=100.0
                     max=2000.0
                     step=100.0

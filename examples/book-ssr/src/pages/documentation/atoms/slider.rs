@@ -6,7 +6,7 @@ use leptonic::atoms::slider::{
     Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
 };
 use leptonic::components::prelude::*;
-use leptonic::hooks::SliderOrientation;
+use leptonic::hooks::{SliderOrientation, SliderValues};
 use leptonic::utils::styles::Style::*;
 use leptonic::utils::styles::Styles;
 use leptos::prelude::*;
@@ -85,7 +85,7 @@ pub fn PageAtomSlider() -> impl IntoView {
                     use leptonic::atoms::slider::*;
 
                     view! {
-                        <Slider default_values=vec![50.0]>
+                        <Slider values=SliderValues::Uncontrolled(vec![50.0])>
                             <SliderTrack>
                                 <SliderTrackFill/>
                                 <SliderThumb/>
@@ -101,7 +101,7 @@ pub fn PageAtomSlider() -> impl IntoView {
             </Code>
 
             <SliderDemo>
-                <SliderAtom default_values=vec![50.0] styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
+                <SliderAtom values=SliderValues::Uncontrolled(vec![50.0]) styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
                     <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
                         <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
                         <SliderThumb styles=thumb_style("var(--brand-color)")/>
@@ -122,10 +122,10 @@ pub fn PageAtomSlider() -> impl IntoView {
                 <AnchorLink href="#range" description="Direct link to range slider"/>
             </h2>
 
-            <p>"Pass two values to "<code>"default_values"</code>" and render two "<code>"SliderThumb"</code>" components. Thumbs are automatically constrained and cannot cross each other."</p>
+            <p>"Pass two values via "<code>"SliderValues::Uncontrolled(vec![...])"</code>" and render two "<code>"SliderThumb"</code>" components. Thumbs are automatically constrained and cannot cross each other."</p>
 
             <SliderDemo>
-                <SliderAtom default_values=vec![20.0, 80.0] styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
+                <SliderAtom values=SliderValues::Uncontrolled(vec![20.0, 80.0]) styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
                     <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
                         <SliderTrackFill styles=[(BackgroundColor, "#4a90d9"), (BorderRadius, "4px")]/>
                         <SliderThumb aria_label="Minimum" styles=thumb_style("#4a90d9")/>
@@ -157,7 +157,7 @@ pub fn PageAtomSlider() -> impl IntoView {
             <Code>
                 {indoc!(r"
                     <Slider
-                        default_values=vec![50.0]
+                        values=SliderValues::Uncontrolled(vec![50.0])
                         on_change=Callback::new(move |values: Vec<f64>| {
                             // Fires continuously during drag
                         })
@@ -170,7 +170,7 @@ pub fn PageAtomSlider() -> impl IntoView {
 
             <SliderDemo>
                 <SliderAtom
-                    default_values=vec![50.0]
+                    values=SliderValues::Uncontrolled(vec![50.0])
                     on_change=Callback::new(move |values: Vec<f64>| {
                         set_change_log.set(format!("on_change: {:?}", values.iter().map(|v| *v as i32).collect::<Vec<_>>()));
                     })
@@ -206,7 +206,7 @@ pub fn PageAtomSlider() -> impl IntoView {
             <p>"Set "<code>"orientation=SliderOrientation::Vertical"</code>" for a vertical layout."</p>
 
             <SliderDemo>
-                <SliderAtom default_values=vec![60.0] orientation=SliderOrientation::Vertical styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em"), (Height, "150px")]>
+                <SliderAtom values=SliderValues::Uncontrolled(vec![60.0]) orientation=SliderOrientation::Vertical styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em"), (Height, "150px")]>
                     <SliderTrack styles=track_style(SliderOrientation::Vertical)>
                         <SliderTrackFill styles=[(BackgroundColor, "#9b59b6"), (BorderRadius, "4px")]/>
                         <SliderThumb styles=thumb_style("#9b59b6")/>
@@ -228,7 +228,7 @@ pub fn PageAtomSlider() -> impl IntoView {
             </h2>
 
             <SliderDemo>
-                <SliderAtom default_values=vec![30.0] disabled=true styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
+                <SliderAtom values=SliderValues::Uncontrolled(vec![30.0]) disabled=true styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
                     <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
                         <SliderTrackFill styles=[(BackgroundColor, "#999"), (BorderRadius, "4px")]/>
                         <SliderThumb styles=thumb_style("#999")/>
@@ -253,7 +253,7 @@ pub fn PageAtomSlider() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    <Slider default_values=vec![50.0]>
+                    <Slider values=SliderValues::Uncontrolled(vec![50.0])>
                         <SliderTrack>
                             <SliderTrackFill/>
                             <SliderThumb name="volume"/>
@@ -269,7 +269,7 @@ pub fn PageAtomSlider() -> impl IntoView {
 
             <h3>"Slider"</h3>
             <ul>
-                <li><code>"default_values: Vec<f64>"</code>" - Initial values (one per thumb)"</li>
+                <li><code>"values: SliderValues"</code>" - Uncontrolled (with initial values) or Controlled (with external signal)"</li>
                 <li><code>"min: f64"</code>" - Minimum value (default: 0.0)"</li>
                 <li><code>"max: f64"</code>" - Maximum value (default: 100.0)"</li>
                 <li><code>"step: f64"</code>" - Step increment (default: 1.0)"</li>

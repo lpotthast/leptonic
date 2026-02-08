@@ -1,18 +1,14 @@
 pub(crate) fn percentage_in_range(min: f64, max: f64, value: f64) -> f64 {
-    (value - min) / (max - min)
+    let range = max - min;
+    if range == 0.0 {
+        0.0
+    } else {
+        (value - min) / range
+    }
 }
 
 pub(crate) fn value_in_range(min: f64, max: f64, percentage: f64) -> f64 {
     (max - min).mul_add(percentage, min)
-}
-
-/// Rounds to the nearest possible step value if a step is provided.
-pub(crate) fn project_into_range(value: f64, range: f64, min: f64, step: Option<f64>) -> f64 {
-    let projected = value.mul_add(range, min);
-    match step {
-        Some(step) => (projected / step).round() * step,
-        None => projected,
-    }
 }
 
 /// Returns the number of decimal places in a floating-point value.
@@ -45,18 +41,31 @@ pub fn round_to_precision(value: f64, precision: u32) -> f64 {
 
 /// Snaps a value to the nearest step within a range.
 ///
+/// Handles reversed ranges where `min > max` (e.g., a slider from 9 to -9).
 /// Pass `precision` from `decimal_precision(step)` to avoid repeated string allocations.
 #[must_use]
 pub fn snap_value_to_step(value: f64, min: f64, max: f64, step: f64, precision: u32) -> f64 {
+    // Normalize to lower/upper bounds so clamping works regardless of direction.
+    let lower = f64::min(min, max);
+    let upper = f64::max(min, max);
+
+    // Snap relative to `min` (the slider origin), using the step magnitude.
     let steps = ((value - min) / step).round();
     let snapped = round_to_precision(min + steps * step, precision);
 
-    if snapped < min {
-        min
-    } else if snapped > max {
-        // Snap to highest valid step within range
-        let max_steps = ((max - min) / step).floor();
-        round_to_precision(min + max_steps * step, precision)
+    if snapped < lower {
+        // Below the numeric lower bound: snap to the closest valid step at the lower end.
+        // When min < max (normal), lower == min, so the lowest valid step is min itself.
+        // When min > max (reversed), lower == max, so the closest valid step from min
+        // toward max that is >= lower.
+        let steps_to_lower = ((lower - min) / step).ceil();
+        let candidate = round_to_precision(min + steps_to_lower * step, precision);
+        candidate.clamp(lower, upper)
+    } else if snapped > upper {
+        // Above the numeric upper bound: snap to the closest valid step at the upper end.
+        let steps_to_upper = ((upper - min) / step).floor();
+        let candidate = round_to_precision(min + steps_to_upper * step, precision);
+        candidate.clamp(lower, upper)
     } else {
         snapped
     }
@@ -98,6 +107,12 @@ mod tests {
     fn test_max() {
         assert_that(percentage_in_range(50.0, 100.0, 100.0)).is_equal_to(1.0);
         assert_that(value_in_range(50.0, 100.0, 1.0)).is_equal_to(100.0);
+    }
+
+    #[test]
+    fn test_zero_range() {
+        assert_that(percentage_in_range(50.0, 50.0, 50.0)).is_equal_to(0.0);
+        assert_that(value_in_range(50.0, 50.0, 0.5)).is_equal_to(50.0);
     }
 
     #[test]
@@ -154,6 +169,30 @@ mod tests {
 
         // Floating-point precision fix: 0.3 should equal exactly 0.3
         assert_that(snap_value_to_step(0.3, 0.0, 1.0, 0.1, precision)).is_equal_to(0.3);
+    }
+
+    #[test]
+    fn test_snap_value_to_step_reversed_range() {
+        // Reversed range: min=100, max=0, step=10
+        // Value 60 should snap to 60 (steps from min: (60-100)/10 = -4 → 100 + (-4)*10 = 60)
+        assert_that(snap_value_to_step(60.0, 100.0, 0.0, 10.0, 0)).is_equal_to(60.0);
+
+        // Value 63 should snap to 60 (nearest step from min=100)
+        assert_that(snap_value_to_step(63.0, 100.0, 0.0, 10.0, 0)).is_equal_to(60.0);
+
+        // Value 67 should snap to 70
+        assert_that(snap_value_to_step(67.0, 100.0, 0.0, 10.0, 0)).is_equal_to(70.0);
+
+        // Out-of-range: value=-50 should clamp to lower bound (0)
+        assert_that(snap_value_to_step(-50.0, 100.0, 0.0, 10.0, 0)).is_equal_to(0.0);
+
+        // Out-of-range: value=150 should clamp to upper bound (100)
+        assert_that(snap_value_to_step(150.0, 100.0, 0.0, 10.0, 0)).is_equal_to(100.0);
+
+        // Reversed range that doesn't align with step: min=9, max=-9, step=4
+        // Steps from 9: 9, 5, 1, -3, -7 (next would be -11, past max=-9)
+        assert_that(snap_value_to_step(6.0, 9.0, -9.0, 4.0, 0)).is_equal_to(5.0);
+        assert_that(snap_value_to_step(-2.0, 9.0, -9.0, 4.0, 0)).is_equal_to(-3.0);
     }
 
     #[test]

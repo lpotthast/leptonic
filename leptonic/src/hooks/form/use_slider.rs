@@ -224,7 +224,7 @@ fn find_closest_thumb(click_value: f64, values: &[f64]) -> usize {
 ///
 /// ```ignore
 /// let state = use_slider_state(UseSliderStateInput {
-///     default_values: vec![50.0],
+///     values: SliderValues::Uncontrolled(vec![50.0]),
 ///     ..Default::default()
 /// });
 ///

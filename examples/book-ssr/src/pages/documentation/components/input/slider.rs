@@ -196,7 +196,7 @@ pub fn PageSlider() -> impl IntoView {
             <p>
                 "A range of values can be selected using the "<Code inline=true>"RangeSlider"</Code>" component. "
                 "The component requires two values and in return provides a slider with two control knobs, allowing you to select a range of values. "
-                "One knob can be dragged over the other, letting them switch places."
+                "Thumbs are constrained and cannot cross each other."
             </p>
 
             <Code>
@@ -249,9 +249,16 @@ pub fn PageSlider() -> impl IntoView {
             </h2>
 
             <p>
-                "Slider knobs are keyboard-interactable and can be cycled through using the "<Code inline=true>"Tab"</Code>" key. "
-                "Manipulation of slider knobs using the error keys will come in a future update."
+                "Slider knobs are keyboard-interactable and can be cycled through using the "<Code inline=true>"Tab"</Code>" key."
             </p>
+
+            <ul>
+                <li><Code inline=true>"Arrow Left"</Code>" / "<Code inline=true>"Arrow Down"</Code>" - Decrease by step"</li>
+                <li><Code inline=true>"Arrow Right"</Code>" / "<Code inline=true>"Arrow Up"</Code>" - Increase by step"</li>
+                <li><Code inline=true>"Shift + Arrow"</Code>" / "<Code inline=true>"Page Up"</Code>" / "<Code inline=true>"Page Down"</Code>" - Increase/decrease by page size (10% of range)"</li>
+                <li><Code inline=true>"Home"</Code>" - Jump to minimum"</li>
+                <li><Code inline=true>"End"</Code>" - Jump to maximum"</li>
+            </ul>
 
             <h2 id="styling" class="anchor">
                 "Styling"

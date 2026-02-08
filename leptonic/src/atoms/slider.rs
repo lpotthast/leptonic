@@ -12,17 +12,17 @@ use std::sync::atomic::AtomicUsize;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
-struct SliderCtx {
-    state: UseSliderStateReturn,
+pub(crate) struct SliderCtx {
+    pub(crate) state: UseSliderStateReturn,
 
-    _label_props: UseSliderLabelProps,
-    output_props: UseSliderOutputProps,
-    track_props: UseSliderTrackProps,
-    track: CapturedElement,
+    pub(crate) _label_props: UseSliderLabelProps,
+    pub(crate) output_props: UseSliderOutputProps,
+    pub(crate) track_props: UseSliderTrackProps,
+    pub(crate) track: CapturedElement,
 
-    is_rtl: bool,
+    pub(crate) is_rtl: bool,
 
-    next_thumb_idx: Arc<AtomicUsize>,
+    pub(crate) next_thumb_idx: Arc<AtomicUsize>,
 }
 
 impl SliderCtx {
@@ -34,10 +34,10 @@ impl SliderCtx {
 
 #[component]
 pub fn Slider(
-    #[prop(into)] default_values: Vec<f64>,
+    #[prop(into)] values: SliderValues,
     #[prop(into, optional, default = 0.0)] min: f64,
     #[prop(into, optional, default = 100.0)] max: f64,
-    #[prop(into, optional, default = 1.0)] step: f64,
+    #[prop(into, optional, default = Some(1.0))] step: Option<f64>,
     #[prop(into, optional)] orientation: Signal<SliderOrientation>,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] on_change: Option<Callback<Vec<f64>>>,
@@ -50,7 +50,7 @@ pub fn Slider(
     children: Children,
 ) -> impl IntoView {
     let state = use_slider_state(UseSliderStateInput {
-        default_values,
+        values,
         min_value: min,
         max_value: max,
         step,
@@ -122,60 +122,66 @@ pub fn SliderTrackFill(
     #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let ctx = expect_context::<SliderCtx>();
-    let values = ctx.state.values;
+    let state = ctx.state;
+    let values = state.values;
 
-    match ctx.state.num_thumbs {
+    match state.num_thumbs {
         1 => {
-            let percentage = Signal::derive(move || values.get().first().copied().unwrap_or(0.0));
+            let percentage = Signal::derive(move || {
+                let val = values.get().first().copied().unwrap_or(state.min_value);
+                state.get_value_percent.run(val) * 100.0
+            });
             let styles = styles
                 .add((Position, "absolute"))
                 .add((Left, "0"))
-                .add((Top, move || match ctx.state.orientation.get() {
+                .add((Top, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some("0".into()),
                     SliderOrientation::Vertical => None,
                 }))
-                .add((Bottom, move || match ctx.state.orientation.get() {
+                .add((Bottom, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => None,
                     SliderOrientation::Vertical => Some("0".into()),
                 }))
-                .add((Height, move || match ctx.state.orientation.get() {
+                .add((Height, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some("100%".into()),
                     SliderOrientation::Vertical => Some(format!("{}%", percentage.get())),
                 }))
-                .add((Width, move || match ctx.state.orientation.get() {
+                .add((Width, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some(format!("{}%", percentage.get())),
                     SliderOrientation::Vertical => Some("100%".into()),
                 }));
             view! { <div class=classes style=styles /> }.into_any()
         }
         2 => {
-            let first_percentage =
-                Signal::derive(move || values.get().first().copied().unwrap_or(0.0));
+            let first_percentage = Signal::derive(move || {
+                let val = values.get().first().copied().unwrap_or(state.min_value);
+                state.get_value_percent.run(val) * 100.0
+            });
             let difference = Signal::derive(move || {
-                let values = values.get();
-                let v1 = values.first().copied().unwrap_or(0.0);
-                let v2 = values.get(1).copied().unwrap_or(0.0);
-                v2 - v1
+                let vals = values.get();
+                let v1 = vals.first().copied().unwrap_or(state.min_value);
+                let v2 = vals.get(1).copied().unwrap_or(state.min_value);
+                ((state.get_value_percent.run(v2) - state.get_value_percent.run(v1)) * 100.0).max(0.0)
             });
             let styles = styles
                 .add((Position, "absolute"))
-                .add((Top, move || match ctx.state.orientation.get() {
+                .add((Top, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some("0".into()),
                     SliderOrientation::Vertical => None,
                 }))
-                .add((Bottom, move || match ctx.state.orientation.get() {
+                .add((Bottom, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => None,
                     SliderOrientation::Vertical => Some(format!("{}%", first_percentage.get())),
                 }))
-                .add((Left, move || match ctx.state.orientation.get() {
+                .add((Left, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some(format!("{}%", first_percentage.get())),
                     SliderOrientation::Vertical => Some("0".into()),
                 }))
-                .add((Height, move || match ctx.state.orientation.get() {
+                .add((Height, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some("100%".into()),
                     SliderOrientation::Vertical => Some(format!("{}%", difference.get())),
                 }))
-                .add((Width, move || match ctx.state.orientation.get() {
+                .add((Width, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some(format!("{}%", difference.get())),
                     SliderOrientation::Vertical => Some("100%".into()),
                 }));
@@ -268,5 +274,60 @@ pub fn SliderThumb(
                 <input {..input_props.into_attrs()} />
             </div>
         </FocusRing>
+    }
+}
+
+/// Atom component that renders slider marks.
+/// Expects to be used within a `Slider` atom (requires `SliderCtx`).
+#[component]
+pub fn SliderMarks<C, V>(
+    #[prop(into)] marks: SliderMarks,
+    #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: C,
+) -> impl IntoView
+where
+    C: Fn(Signal<Vec<ComputedSliderMark>>) -> V,
+    V: IntoView,
+{
+    let ctx = expect_context::<SliderCtx>();
+
+    let computed = use_slider_marks(UseSliderMarksInput {
+        state: ctx.state,
+        marks,
+        value_display,
+    });
+
+    view! {
+        <div class=classes style=styles>
+            { children(computed.marks) }
+        </div>
+    }
+}
+
+/// NOTE: Ignores the `mark`s `name`. It must be rendered manually as children.
+#[component]
+pub fn SliderMark(
+    #[prop(into)] mark: ComputedSliderMark,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    // TODO: We could use a data attribute instead.
+    let classes = classes.add(("in-range", mark.in_range));
+
+    let styles = styles
+        .add((Position, "absolute"))
+        .add((Top, "0"))
+        .add((Left, format!("{}%", mark.percentage * 100.0)));
+
+    view! {
+        <div
+            class=classes
+            style=styles
+        >
+            { children() }
+        </div>
     }
 }

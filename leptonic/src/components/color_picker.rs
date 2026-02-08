@@ -6,10 +6,7 @@ use crate::{
     },
     contexts::global_mouseup_event::GlobalMouseupEvent,
     prelude::*,
-    utils::{
-        color::{HSV, RGB8},
-        math::project_into_range,
-    },
+    utils::color::{HSV, RGB8},
     RelativeMousePosition, TrackedElementClientBoundingRect,
 };
 use indoc::formatdoc;
@@ -84,9 +81,9 @@ pub fn ColorPalette(
 
     // Project the relative cursor position into the sliders value range.
     let projected_value_from_cursor_x =
-        Memo::new(move |_| project_into_range(cursor.rel_mouse_pos.get().0, 1.0, 0.0, None));
+        Memo::new(move |_| cursor.rel_mouse_pos.get().0);
     let projected_value_from_cursor_y =
-        Memo::new(move |_| 1.0 - project_into_range(cursor.rel_mouse_pos.get().1, 1.0, 0.0, None));
+        Memo::new(move |_| 1.0 - cursor.rel_mouse_pos.get().1);
 
     // While this knob is "listening", propagate the projected values.
     Effect::new(move |_| {
