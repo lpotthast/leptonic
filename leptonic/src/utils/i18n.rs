@@ -171,40 +171,41 @@ pub fn use_locale_or_default() -> Locale {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assertr::prelude::*;
 
     #[test]
     fn test_locale_default() {
         let locale = Locale::default();
-        assert_eq!(locale.locale, "en-US");
-        assert_eq!(locale.direction, WritingDirection::Ltr);
+        assert_that(locale.locale).is_equal_to("en-US");
+        assert_that(locale.direction).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_new() {
         let locale = Locale::new("de-DE");
-        assert_eq!(locale.locale, "de-DE");
-        assert_eq!(locale.direction, WritingDirection::Ltr);
+        assert_that(locale.locale).is_equal_to("de-DE");
+        assert_that(locale.direction).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_rtl() {
         let locale = Locale::new("ar-SA");
-        assert_eq!(locale.direction, WritingDirection::Rtl);
-        assert!(locale.is_rtl());
+        assert_that(locale.direction).is_equal_to(WritingDirection::Rtl);
+        assert_that(locale.is_rtl()).is_true();
     }
 
     #[test]
     fn test_locale_language() {
         let locale = Locale::new("en-US");
-        assert_eq!(locale.language(), "en");
-        assert_eq!(locale.region(), Some("US"));
+        assert_that(locale.language()).is_equal_to("en");
+        assert_that(locale.region()).is_some().is_equal_to("US");
     }
 
     #[test]
     fn test_direction_for_locale() {
-        assert_eq!(Locale::direction_for_locale("ar"), WritingDirection::Rtl);
-        assert_eq!(Locale::direction_for_locale("he-IL"), WritingDirection::Rtl);
-        assert_eq!(Locale::direction_for_locale("en"), WritingDirection::Ltr);
-        assert_eq!(Locale::direction_for_locale("ja-JP"), WritingDirection::Ltr);
+        assert_that(Locale::direction_for_locale("ar")).is_equal_to(WritingDirection::Rtl);
+        assert_that(Locale::direction_for_locale("he-IL")).is_equal_to(WritingDirection::Rtl);
+        assert_that(Locale::direction_for_locale("en")).is_equal_to(WritingDirection::Ltr);
+        assert_that(Locale::direction_for_locale("ja-JP")).is_equal_to(WritingDirection::Ltr);
     }
 }
