@@ -162,13 +162,7 @@ where
             None
         }
     });
-    let data_focused = Signal::derive(move || {
-        if is_focused.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
+    let data_focused = Signal::derive(move || if is_focused.get() { Some("true") } else { None });
     let data_disabled = Signal::derive(move || {
         if item.is_disabled.get() {
             Some("true")

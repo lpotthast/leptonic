@@ -68,7 +68,7 @@ pub fn Toggle(
                 data-variant=variant.as_str()
                 on:click=move |_| {
                     if let Some(set) = &set_state {
-                        set.set(!state.get_untracked())
+                        set.set(!state.get_untracked());
                     }
                 }
             >

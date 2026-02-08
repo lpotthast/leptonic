@@ -233,6 +233,7 @@ impl SliderPopover {
 }
 
 #[component]
+#[allow(clippy::too_many_lines)]
 pub fn Slider(
     #[prop(into)] value: Signal<f64>,
     #[prop(into)] set_value: Out<f64>,

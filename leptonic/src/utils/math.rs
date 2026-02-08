@@ -122,8 +122,8 @@ mod tests {
     #[test]
     fn test_round_to_precision() {
         // Fixes floating-point errors
-        assert_that(round_to_precision(0.30000000000000004, 1)).is_equal_to(0.3);
-        assert_that(round_to_precision(0.123456, 2)).is_equal_to(0.12);
+        assert_that(round_to_precision(0.300_000_000_000_000_04, 1)).is_equal_to(0.3);
+        assert_that(round_to_precision(0.123_456, 2)).is_equal_to(0.12);
         assert_that(round_to_precision(0.125, 2)).is_equal_to(0.13);
 
         // Precision 0 returns value unchanged (no rounding)

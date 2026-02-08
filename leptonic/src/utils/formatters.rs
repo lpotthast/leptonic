@@ -727,6 +727,6 @@ mod tests {
                 ..Default::default()
             },
         );
-        assert_eq!(formatter.format(1234567.0), "1,234,567");
+        assert_eq!(formatter.format(1_234_567.0), "1,234,567");
     }
 }

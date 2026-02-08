@@ -51,7 +51,7 @@ pub fn DateSelector(
                                     ></div>
                                     <div
                                         on:click=move |_| {
-                                            set_show.update(|show| *show = Selection::Month)
+                                            set_show.update(|show| *show = Selection::Month);
                                         }
                                         class="current-date"
                                     >
@@ -72,7 +72,7 @@ pub fn DateSelector(
                                     ></div>
                                     <div
                                         on:click=move |_| {
-                                            set_show.update(|show| *show = Selection::Year)
+                                            set_show.update(|show| *show = Selection::Year);
                                         }
                                         class="current-date"
                                     >
@@ -93,7 +93,7 @@ pub fn DateSelector(
                                     ></div>
                                     <div
                                         on:click=move |_| {
-                                            set_show.update(|show| *show = Selection::Year)
+                                            set_show.update(|show| *show = Selection::Year);
                                         }
                                         class="current-date"
                                     >

@@ -224,7 +224,7 @@ mod tests {
             g: 23,
             b: 241,
         };
-        assert_eq!(format!("{:x}", rgb).as_str(), "ba17f1");
+        assert_eq!(format!("{rgb:x}").as_str(), "ba17f1");
     }
 
     #[test]
@@ -234,7 +234,7 @@ mod tests {
             g: 23,
             b: 241,
         };
-        assert_eq!(format!("{:X}", rgb).as_str(), "BA17F1");
+        assert_eq!(format!("{rgb:X}").as_str(), "BA17F1");
     }
 
     #[test]

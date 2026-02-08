@@ -141,7 +141,7 @@ pub fn Radio(
                     match &group_ctx {
                         Some(group_ctx) => {
                             group_ctx
-                                .toggle(opt_uuid.expect("to be present"), !checked.get_untracked())
+                                .toggle(opt_uuid.expect("to be present"), !checked.get_untracked());
                         }
                         None => ctx.toggle(),
                     }

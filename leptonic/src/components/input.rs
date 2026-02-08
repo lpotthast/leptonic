@@ -117,12 +117,12 @@ pub fn TextInput(
                 prop:value=move || get.get()
                 on:change=move |e| {
                     if let Some(set) = &set {
-                        set.set(event_target::<HtmlInputElement>(&e).value())
+                        set.set(event_target::<HtmlInputElement>(&e).value());
                     }
                 }
                 on:keyup=move |e| {
                     if let Some(set) = &set {
-                        set.set(event_target::<HtmlInputElement>(&e).value())
+                        set.set(event_target::<HtmlInputElement>(&e).value());
                     }
                 }
                 on:blur=move |_e| {
@@ -172,12 +172,12 @@ pub fn PasswordInput(
                 prop:value=move || get.get()
                 on:change=move |e| {
                     if let Some(set) = &set {
-                        set.set(event_target::<HtmlInputElement>(&e).value())
+                        set.set(event_target::<HtmlInputElement>(&e).value());
                     }
                 }
                 on:keyup=move |e| {
                     if let Some(set) = &set {
-                        set.set(event_target::<HtmlInputElement>(&e).value())
+                        set.set(event_target::<HtmlInputElement>(&e).value());
                     }
                 }
                 on:blur=move |_e| {
@@ -241,12 +241,12 @@ pub fn NumberInput(
                 prop:value=move || get.get()
                 on:change=move |e| {
                     if let Some(set_value) = &set_value {
-                        set_value(event_target::<HtmlInputElement>(&e).value())
+                        set_value(event_target::<HtmlInputElement>(&e).value());
                     }
                 }
                 on:keyup=move |e| {
                     if let Some(set_value) = &set_value {
-                        set_value(event_target::<HtmlInputElement>(&e).value())
+                        set_value(event_target::<HtmlInputElement>(&e).value());
                     }
                 }
                 on:blur=move |_e| {

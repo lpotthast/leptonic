@@ -180,13 +180,7 @@ where
             None
         }
     });
-    let data_focused = Signal::derive(move || {
-        if is_focused.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
+    let data_focused = Signal::derive(move || if is_focused.get() { Some("true") } else { None });
     let data_disabled = Signal::derive(move || {
         if row.is_disabled.get() {
             Some("true")
@@ -256,13 +250,7 @@ where
             None
         }
     });
-    let data_focused = Signal::derive(move || {
-        if is_focused.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
+    let data_focused = Signal::derive(move || if is_focused.get() { Some("true") } else { None });
     let data_disabled = Signal::derive(move || {
         if cell.is_disabled.get() {
             Some("true")

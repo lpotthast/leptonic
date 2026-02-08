@@ -146,8 +146,7 @@ pub fn SliderTrackFill(
                     SliderOrientation::Horizontal => Some(format!("{}%", percentage.get())),
                     SliderOrientation::Vertical => Some("100%".into()),
                 }));
-            view! { <div class=classes style=styles /> }
-            .into_any()
+            view! { <div class=classes style=styles /> }.into_any()
         }
         2 => {
             let first_percentage =
@@ -180,8 +179,7 @@ pub fn SliderTrackFill(
                     SliderOrientation::Horizontal => Some(format!("{}%", difference.get())),
                     SliderOrientation::Vertical => Some("100%".into()),
                 }));
-            view! { <div class=classes style=styles /> }
-            .into_any()
+            view! { <div class=classes style=styles /> }.into_any()
         }
         n => {
             tracing::warn!("SliderTrackFill: {n}-thumb fill not yet supported");

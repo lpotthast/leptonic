@@ -144,7 +144,7 @@ pub fn TabSelectors(
                         <TabSelector
                             is_active=move || history.get().get_active() == Some(&n1.clone())
                             set_active=move || {
-                                set_history.update(|history| history.push(n2.clone()))
+                                set_history.update(|history| history.push(n2.clone()));
                             }
                             name=tab.name.clone()
                             label=tab.label.clone()

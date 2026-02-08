@@ -97,13 +97,15 @@ pub fn Tab(
             >
                 {children()}
             </leptonic-tab>
-        }.into_any(),
+        }
+        .into_any(),
         Mount::WhenShown => view! {
             <Show when=is_active fallback=|| ()>
                 <leptonic-tab id=id.to_string() data:name=name.get_value() role="tabpanel">
                     {children()}
                 </leptonic-tab>
             </Show>
-        }.into_any(),
+        }
+        .into_any(),
     }
 }

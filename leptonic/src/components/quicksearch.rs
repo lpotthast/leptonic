@@ -34,7 +34,7 @@ pub fn QuicksearchTrigger(
 ) -> impl IntoView {
     view! {
         <leptonic-quicksearch-trigger on:click=move |_| {
-            set_quicksearch.set(true)
+            set_quicksearch.set(true);
         }>{children()}</leptonic-quicksearch-trigger>
     }
 }

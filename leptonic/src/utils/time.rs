@@ -180,13 +180,13 @@ mod tests {
     fn save_replace_year_replaces_when_coming_from_feb_29() {
         let dt = datetime!(2000-02-29 0:00 UTC);
         let result = dt.save_replace_year(1999).unwrap();
-        assert_eq!(result, datetime!(1999-02-28 0:00 UTC))
+        assert_eq!(result, datetime!(1999-02-28 0:00 UTC));
     }
 
     #[test]
     fn save_replace_month_replaces_when_coming_from_day_out_of_targeted_months_range() {
         let dt = datetime!(2023-03-31 0:00 UTC);
         let result = dt.save_replace_month(time::Month::February).unwrap();
-        assert_eq!(result, datetime!(2023-02-28 0:00 UTC))
+        assert_eq!(result, datetime!(2023-02-28 0:00 UTC));
     }
 }
