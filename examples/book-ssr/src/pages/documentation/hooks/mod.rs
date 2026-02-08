@@ -20,7 +20,6 @@ pub mod keyboard;
 pub mod label;
 pub mod link;
 pub mod listbox;
-pub mod long_press;
 pub mod menu;
 pub mod meter;
 pub mod modal;

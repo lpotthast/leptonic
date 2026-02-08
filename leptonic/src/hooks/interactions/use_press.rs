@@ -153,7 +153,7 @@ pub struct UsePressInput {
 
     /// The amount of time in milliseconds to wait before triggering a long press.
     /// Default is 500ms. Only used when at least one long press callback is set.
-    pub long_press_threshold: Option<u64>,
+    pub long_press_threshold: Option<Signal<u64>>,
 
     /// A description for assistive technology users indicating that a long press
     /// action is available, e.g. "Long press to open menu".
@@ -407,7 +407,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         || input.on_long_press_end.is_some();
     let long_press_threshold = input
         .long_press_threshold
-        .unwrap_or(DEFAULT_LONG_PRESS_THRESHOLD);
+        .unwrap_or_else(|| Signal::stored(DEFAULT_LONG_PRESS_THRESHOLD));
 
     let state: StoredValue<Option<PressState>, LocalStorage> = StoredValue::new_local(None);
 
@@ -937,7 +937,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                                     });
                                 }
                             },
-                            Duration::from_millis(long_press_threshold),
+                            Duration::from_millis(long_press_threshold.get()),
                         )
                         .ok();
 

@@ -68,7 +68,6 @@ use crate::pages::documentation::hooks::keyboard::PageUseKeyboard;
 use crate::pages::documentation::hooks::label::PageUseLabel;
 use crate::pages::documentation::hooks::link::PageUseLink;
 use crate::pages::documentation::hooks::listbox::PageUseListbox;
-use crate::pages::documentation::hooks::long_press::PageUseLongPress;
 use crate::pages::documentation::hooks::menu::PageUseMenuHook;
 use crate::pages::documentation::hooks::meter::PageUseMeter;
 use crate::pages::documentation::hooks::modal::PageUseModalHook;
@@ -160,7 +159,6 @@ pub fn App() -> impl IntoView {
                                 <Route path=routes::doc::hooks::UseOverlay.path() view=PageUseOverlay/>
                                 <Route path=routes::doc::hooks::UseAnchorLink.path() view=PageUseAnchorLink/>
                                 <Route path=routes::doc::hooks::UseKeyboard.path() view=PageUseKeyboard/>
-                                <Route path=routes::doc::hooks::UseLongPress.path() view=PageUseLongPress/>
                                 <Route path=routes::doc::hooks::UseInteractOutside.path() view=PageUseInteractOutside/>
                                 <Route path=routes::doc::hooks::UseScrollWheel.path() view=PageUseScrollWheel/>
                                 <Route path=routes::doc::hooks::UsePreventScroll.path() view=PageUsePreventScroll/>

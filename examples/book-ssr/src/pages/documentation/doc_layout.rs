@@ -46,7 +46,6 @@ pub fn DocLayout() -> impl IntoView {
                     <Link href=routes::doc::hooks::UseMoveWithin.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move_within"</Link>
                     <Link href=routes::doc::hooks::UseHover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
                     <Link href=routes::doc::hooks::UseKeyboard.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_keyboard"</Link>
-                    <Link href=routes::doc::hooks::UseLongPress.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_long_press"</Link>
                     <Link href=routes::doc::hooks::UseInteractOutside.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_interact_outside"</Link>
                     <Link href=routes::doc::hooks::UseScrollWheel.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_scroll_wheel"</Link>
                     <Link href=routes::doc::hooks::UsePreventScroll.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_prevent_scroll"</Link>

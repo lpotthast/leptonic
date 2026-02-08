@@ -56,9 +56,6 @@ pub mod routes {
             #[route("/use-keyboard")]
             pub mod use_keyboard {}
 
-            #[route("/use-long-press")]
-            pub mod use_long_press {}
-
             #[route("/use-interact-outside")]
             pub mod use_interact_outside {}
 
