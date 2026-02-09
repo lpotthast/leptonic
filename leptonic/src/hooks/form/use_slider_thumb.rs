@@ -7,6 +7,7 @@ use crate::hooks::{
     use_focus_ring, SliderOrientation, UseFocusRingInput, UseFocusRingReturn, UseMoveProps,
     UseMoveReturn, ValidationState,
 };
+use crate::utils::aria::{AriaDisabled, AriaHidden, AriaInvalid, AriaOrientation, AriaRequired};
 use crate::utils::focus::focus_element;
 use crate::utils::math::percentage_in_range;
 use crate::utils::CapturedElement;
@@ -115,10 +116,10 @@ pub struct UseSliderThumbProps {
     aria_valuemin: Signal<f64>,
     aria_valuemax: Signal<f64>,
     aria_valuetext: Signal<String>,
-    aria_orientation: Signal<&'static str>,
-    aria_invalid: Option<&'static str>,
-    aria_disabled: Signal<Option<&'static str>>,
-    aria_required: Option<&'static str>,
+    aria_orientation: Signal<AriaOrientation>,
+    aria_invalid: Option<AriaInvalid>,
+    aria_disabled: Signal<Option<AriaDisabled>>,
+    aria_required: Option<AriaRequired>,
     aria_describedby: Option<&'static str>,
     aria_details: Option<&'static str>,
     aria_errormessage: Option<&'static str>,
@@ -182,10 +183,10 @@ pub type UseSliderThumbAttrs = (
     Attr<attr::AriaValuemin, Signal<f64>>,
     Attr<attr::AriaValuemax, Signal<f64>>,
     Attr<attr::AriaValuetext, Signal<String>>,
-    Attr<attr::AriaOrientation, Signal<&'static str>>,
-    Attr<attr::AriaInvalid, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
-    Attr<attr::AriaRequired, Option<&'static str>>,
+    Attr<attr::AriaOrientation, Signal<AriaOrientation>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
     Attr<attr::AriaDescribedby, Option<&'static str>>,
     Attr<attr::AriaDetails, Option<&'static str>>,
     Attr<attr::AriaErrormessage, Option<&'static str>>,
@@ -206,7 +207,7 @@ pub struct UseSliderThumbInputProps {
     name: Option<&'static str>,
     value: Signal<f64>,
     disabled: Signal<bool>,
-    aria_hidden: &'static str,
+    aria_hidden: AriaHidden,
 }
 
 impl UseSliderThumbInputProps {
@@ -227,7 +228,7 @@ pub type UseSliderThumbInputAttrs = (
     Attr<attr::Name, Option<&'static str>>,
     Attr<attr::Value, Signal<f64>>,
     Attr<attr::Disabled, Signal<bool>>,
-    Attr<attr::AriaHidden, &'static str>,
+    Attr<attr::AriaHidden, AriaHidden>,
 );
 
 /// Provides the behavior and accessibility implementation for a slider thumb.
@@ -505,33 +506,16 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     });
 
     // Compute aria-invalid
-    let aria_invalid = if input.validation_state == ValidationState::Invalid {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || {
-        if is_disabled.get() {
-            Some("true")
-        } else {
-            None
-        }
-    });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Compute aria-required
-    let aria_required = if input.is_required {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_required = input.is_required.then_some(AriaRequired::True);
 
     // Orientation string
-    let aria_orientation = Signal::derive(move || match orientation.get() {
-        SliderOrientation::Horizontal => "horizontal",
-        SliderOrientation::Vertical => "vertical",
-    });
+    let aria_orientation = Signal::derive(move || AriaOrientation::from(orientation.get()));
 
     UseSliderThumbReturn {
         thumb_props: UseSliderThumbProps {
@@ -566,7 +550,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             name: input.name,
             value,
             disabled: is_disabled,
-            aria_hidden: "true",
+            aria_hidden: AriaHidden::True,
         },
         is_dragging: is_dragging.into(),
         is_hovered,

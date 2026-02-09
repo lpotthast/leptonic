@@ -8,6 +8,8 @@ use std::hash::Hash;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
+use crate::utils::aria::{AriaDisabled, AriaMultiselectable, AriaOrientation};
+
 use crate::hooks::selection::{
     use_selectable_collection::FocusStrategy,
     use_selectable_list::{use_selectable_list, UseSelectableListInput, UseSelectableListReturn},
@@ -85,6 +87,15 @@ pub enum ListBoxOrientation {
     Horizontal,
 }
 
+impl From<ListBoxOrientation> for AriaOrientation {
+    fn from(value: ListBoxOrientation) -> Self {
+        match value {
+            ListBoxOrientation::Vertical => Self::Vertical,
+            ListBoxOrientation::Horizontal => Self::Horizontal,
+        }
+    }
+}
+
 impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseListBoxInput<K> {
     fn default() -> Self {
         Self {
@@ -132,9 +143,9 @@ pub type UseListBoxAttrs = (
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaMultiselectable, Option<&'static str>>,
-    Attr<attr::AriaOrientation, &'static str>,
-    Attr<attr::AriaDisabled, Option<&'static str>>,
+    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
+    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -318,24 +329,17 @@ where
     };
 
     // Compute aria-multiselectable
-    let aria_multiselectable = if input.selection_mode == SelectionMode::Multiple {
-        Some("true")
-    } else {
-        None
+    let aria_multiselectable = match input.selection_mode {
+        SelectionMode::None => None,
+        SelectionMode::Single => Some(AriaMultiselectable::False),
+        SelectionMode::Multiple => Some(AriaMultiselectable::True),
     };
 
-    // Compute aria-disabled
-    let aria_disabled = if is_disabled.get_untracked() {
-        Some("true")
-    } else {
-        None
-    };
+    // Compute aria-disabled (reactive)
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
-    // Orientation string
-    let aria_orientation = match input.orientation {
-        ListBoxOrientation::Vertical => "vertical",
-        ListBoxOrientation::Horizontal => "horizontal",
-    };
+    // Orientation
+    let aria_orientation = AriaOrientation::from(input.orientation);
 
     UseListBoxReturn {
         listbox_props: (

@@ -6,6 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
+use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaMultiselectable, AriaSelected};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tree/src/useTree.ts
 
 /// The selection mode for a tree.
@@ -92,8 +94,8 @@ pub type UseTreeAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaMultiselectable, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -165,12 +167,12 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
     });
 
     let aria_multiselectable = match selection_mode {
-        TreeSelectionMode::Multiple => Some("true"),
-        TreeSelectionMode::Single => Some("false"),
         TreeSelectionMode::None => None,
+        TreeSelectionMode::Single => Some(AriaMultiselectable::False),
+        TreeSelectionMode::Multiple => Some(AriaMultiselectable::True),
     };
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     let handle_keydown = move |e: KeyboardEvent| {
         if is_disabled.get_untracked() {
@@ -303,9 +305,9 @@ pub struct UseTreeItemReturn {
 /// Note: aria-level, aria-setsize, aria-posinset should be set via custom attributes.
 pub type UseTreeItemAttrs = (
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaExpanded, Signal<Option<&'static str>>>,
-    Attr<attr::AriaSelected, Signal<Option<&'static str>>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
+    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -335,11 +337,7 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     // aria-expanded only applies if has children
     let aria_expanded = Signal::derive(move || {
         if has_children {
-            if is_expanded.get() {
-                Some("true")
-            } else {
-                Some("false")
-            }
+            Some(AriaExpanded::from(is_expanded.get()))
         } else {
             None
         }
@@ -347,17 +345,13 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
 
     let aria_selected = Signal::derive(move || {
         if on_select.is_some() {
-            if is_selected.get() {
-                Some("true")
-            } else {
-                Some("false")
-            }
+            Some(AriaSelected::from(is_selected.get()))
         } else {
             None
         }
     });
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 

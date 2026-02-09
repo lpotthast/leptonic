@@ -97,7 +97,7 @@ pub fn Button(
     #[prop(into, optional)] size: Signal<ButtonSize>,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
-    #[prop(into, optional)] aria_expanded: Signal<AriaExpanded>,
+    #[prop(into, optional)] aria_expanded: Signal<Option<AriaExpanded>>,
     #[prop(into, optional)] classes: Classes,
     children: Children,
 ) -> impl IntoView {
@@ -141,7 +141,7 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
     #[prop(into, optional)] active: Option<Signal<bool>>, // TODO: Use
     #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
-    #[prop(into, optional)] aria_expanded: Option<Signal<AriaExpanded>>,
+    #[prop(into, optional)] aria_expanded: Option<Signal<Option<AriaExpanded>>>,
     #[prop(into, optional)] classes: Classes,
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.

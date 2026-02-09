@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
+use crate::utils::aria::{AriaDisabled, AriaReadonly};
 use crate::utils::time::Week;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useCalendarGrid.ts
@@ -68,8 +69,8 @@ pub struct UseCalendarGridReturn {
 pub type UseCalendarGridAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
-    Attr<attr::AriaReadonly, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -123,10 +124,10 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
     }
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Compute aria-readonly
-    let aria_readonly = Signal::derive(move || if is_read_only.get() { "true" } else { "false" });
+    let aria_readonly = Signal::derive(move || is_read_only.get().then_some(AriaReadonly::True));
 
     // Handle keyboard navigation within the grid
     let handle_keydown = move |e: KeyboardEvent| {

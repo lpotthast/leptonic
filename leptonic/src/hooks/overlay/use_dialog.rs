@@ -6,6 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
+use crate::utils::aria::AriaModal;
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dialog/src/useDialog.ts
 
 /// Input parameters for the `use_dialog` hook.
@@ -68,7 +70,7 @@ pub struct UseDialogReturn {
 pub type UseDialogAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaModal, &'static str>,
+    Attr<attr::AriaModal, AriaModal>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::Tabindex, &'static str>,
@@ -164,7 +166,7 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
         dialog_props: (
             Attr(attr::Id, dialog_id.clone()),
             Attr(attr::Role, role),
-            Attr(attr::AriaModal, "true"),
+            Attr(attr::AriaModal, AriaModal::True),
             Attr(attr::AriaLabelledby, aria_labelledby),
             Attr(attr::AriaDescribedby, aria_describedby),
             Attr(attr::Tabindex, "-1"),

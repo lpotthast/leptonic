@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
+use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHidden};
 use super::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/disclosure/src/useDisclosure.ts
@@ -61,9 +62,9 @@ pub struct UseDisclosureReturn {
 /// Attributes for the disclosure trigger button.
 pub type UseDisclosureTriggerAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaControls, String>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -78,7 +79,7 @@ pub type UseDisclosureContentAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabelledby, String>,
-    Attr<attr::AriaHidden, Signal<&'static str>>,
+    Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
 );
 
 /// Provides the behavior and accessibility for a disclosure component.
@@ -123,11 +124,11 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
         }
     });
 
-    let aria_expanded = Signal::derive(move || if is_expanded.get() { "true" } else { "false" });
+    let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_expanded.get())));
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
-    let aria_hidden = Signal::derive(move || if is_expanded.get() { "false" } else { "true" });
+    let aria_hidden = Signal::derive(move || (!is_expanded.get()).then_some(AriaHidden::True));
 
     let handle_click = move |_e: MouseEvent| {
         if is_disabled.get_untracked() {

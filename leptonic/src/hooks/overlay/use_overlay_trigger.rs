@@ -30,8 +30,8 @@ pub struct UseOverlayTriggerReturn {
 /// Props from `use_overlay_trigger` that can be converted to spreadable attributes.
 #[derive(Debug, Clone)]
 pub struct UseOverlayTriggerProps {
-    pub aria_haspopup: &'static str,
-    pub aria_expanded: Signal<&'static str>,
+    pub aria_haspopup: AriaHasPopup,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_controls: Signal<Option<String>>,
 }
 
@@ -59,8 +59,8 @@ impl UseOverlayTriggerProps {
 
 /// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseOverlayTriggerAttrs = (
-    Attr<attr::AriaHaspopup, &'static str>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaHaspopup, AriaHasPopup>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaControls, Signal<Option<String>>>,
 );
 
@@ -85,17 +85,14 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
 
     UseOverlayTriggerReturn {
         props: UseOverlayTriggerProps {
-            aria_haspopup: aria_has_popup.into_attribute_value(),
+            aria_haspopup: aria_has_popup,
             aria_expanded: Signal::derive(move || {
-                AriaExpanded::from(input.show.get()).into_attribute_value()
+                Some(AriaExpanded::from(input.show.get()))
             }),
             aria_controls: Signal::derive(move || {
-                if input.show.get() {
-                    AriaControls::Id(vec![overlay_id.to_string()])
-                } else {
-                    AriaControls::Undefined
-                }
-                .into_attribute_value()
+                input.show.get().then(|| {
+                    AriaControls(vec![overlay_id.to_string()]).into_attribute_value()
+                })
             }),
         },
     }

@@ -6,6 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
+use crate::utils::aria::{AriaDisabled, AriaOrientation};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toolbar/src/useToolbar.ts
 
 /// The orientation of a toolbar.
@@ -16,6 +18,15 @@ pub enum ToolbarOrientation {
     Horizontal,
     /// Vertical toolbar.
     Vertical,
+}
+
+impl From<ToolbarOrientation> for AriaOrientation {
+    fn from(value: ToolbarOrientation) -> Self {
+        match value {
+            ToolbarOrientation::Horizontal => Self::Horizontal,
+            ToolbarOrientation::Vertical => Self::Vertical,
+        }
+    }
 }
 
 /// Input parameters for the `use_toolbar` hook.
@@ -75,8 +86,8 @@ pub type UseToolbarAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaOrientation, &'static str>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -109,12 +120,9 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
     let on_focus_first = input.on_focus_first;
     let on_focus_last = input.on_focus_last;
 
-    let aria_orientation = match orientation {
-        ToolbarOrientation::Horizontal => "horizontal",
-        ToolbarOrientation::Vertical => "vertical",
-    };
+    let aria_orientation = AriaOrientation::from(orientation);
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     let handle_keydown = move |e: KeyboardEvent| {
         if is_disabled.get_untracked() {

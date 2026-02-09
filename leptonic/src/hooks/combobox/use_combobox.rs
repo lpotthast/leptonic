@@ -8,6 +8,8 @@ use std::hash::Hash;
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
+
+use crate::utils::aria::{AriaExpanded, AriaRequired};
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/combobox/src/useComboBox.ts
 
 /// Input parameters for the `use_combobox` hook.
@@ -191,11 +193,11 @@ pub type UseComboBoxInputAttrs = (
     Attr<attr::Readonly, Signal<bool>>,
     Attr<attr::AriaAutocomplete, &'static str>,
     Attr<attr::AriaHaspopup, &'static str>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaControls, String>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaRequired, Option<&'static str>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
     Attr<attr::AriaActivedescendant, Signal<Option<String>>>,
     On<ev::input, SharedEventCallback<Event>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -210,7 +212,7 @@ pub type UseComboBoxButtonAttrs = (
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaLabel, &'static str>,
     Attr<attr::AriaHaspopup, &'static str>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::Disabled, Signal<bool>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
 );
@@ -553,14 +555,10 @@ where
     };
 
     // Compute aria-expanded
-    let aria_expanded = Signal::derive(move || if is_open.get() { "true" } else { "false" });
+    let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_open.get())));
 
     // Compute aria-required
-    let aria_required = if input.is_required {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_required = input.is_required.then_some(AriaRequired::True);
 
     // Compute aria-activedescendant
     let aria_activedescendant = Signal::derive(move || {

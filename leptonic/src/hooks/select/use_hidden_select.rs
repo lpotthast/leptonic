@@ -2,6 +2,8 @@ use leptos::attr;
 use leptos::attr::Attr;
 use leptos::prelude::*;
 
+use crate::utils::aria::AriaHidden;
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/select/src/useHiddenSelect.ts
 
 /// Input parameters for the `use_hidden_select` hook.
@@ -62,7 +64,7 @@ pub struct UseHiddenSelectReturn {
 }
 
 /// Attributes for the hidden container.
-pub type UseHiddenSelectContainerAttrs = (Attr<attr::AriaHidden, &'static str>,);
+pub type UseHiddenSelectContainerAttrs = (Attr<attr::AriaHidden, AriaHidden>,);
 
 /// The style string for hiding the container visually.
 pub const HIDDEN_SELECT_CONTAINER_STYLE: &str = "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;";
@@ -135,7 +137,7 @@ where
     };
 
     UseHiddenSelectReturn {
-        container_props: (Attr(attr::AriaHidden, "true"),),
+        container_props: (Attr(attr::AriaHidden, AriaHidden::True),),
         input_props: (
             Attr(attr::Type, "hidden"),
             Attr(attr::Name, input.name),

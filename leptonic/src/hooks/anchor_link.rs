@@ -68,10 +68,10 @@ pub struct UseAnchorLinkReturn {
 #[derive(Clone, Educe)]
 #[educe(Debug)]
 pub struct UseAnchorLinkProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub hreflang: Oco<'static, str>,
     pub aria_label: Option<Oco<'static, str>>,
-    pub aria_disabled: Signal<&'static str>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
@@ -124,10 +124,10 @@ impl UseAnchorLinkProps {
 }
 
 pub type UseAnchorLinkAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Hreflang, Oco<'static, str>>,
     Attr<attr::AriaLabel, Option<Oco<'static, str>>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
@@ -205,16 +205,10 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
 
     UseAnchorLinkReturn {
         props: UseAnchorLinkProps {
-            role: AriaRole::Link.into_attribute_value(),
+            role: AriaRole::Link,
             hreflang: href.0,
             aria_label: input.description,
-            aria_disabled: Signal::derive(move || {
-                if input.disabled.get() {
-                    "true"
-                } else {
-                    "false"
-                }
-            }),
+            aria_disabled: Signal::derive(move || input.disabled.get().then_some(AriaDisabled::True)),
             on_keydown: press_props.on_keydown,
             on_click: press_props.on_click,
             on_pointerdown: press_props.on_pointerdown,

@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::{KeyboardEvent, MouseEvent};
 
+use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaModal};
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDatePicker.ts
 
 /// Input parameters for the `use_date_picker` hook.
@@ -110,7 +111,7 @@ pub type UseDatePickerGroupAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
 );
 
 /// Props for the label element.
@@ -131,7 +132,7 @@ pub struct UseDatePickerFieldProps {
     /// aria-haspopup attribute.
     pub aria_haspopup: &'static str,
     /// aria-expanded attribute.
-    pub aria_expanded: Signal<&'static str>,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
 }
 
 /// Attributes for the calendar trigger button.
@@ -139,8 +140,8 @@ pub type UseDatePickerButtonAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::AriaLabel, &'static str>,
     Attr<attr::AriaHaspopup, &'static str>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, &'static str>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -155,7 +156,7 @@ pub struct UseDatePickerDialogProps {
     /// The role attribute.
     pub role: &'static str,
     /// aria-modal attribute.
-    pub aria_modal: &'static str,
+    pub aria_modal: AriaModal,
     /// aria-labelledby attribute.
     pub aria_labelledby: String,
 }
@@ -256,10 +257,10 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
     };
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Compute aria-expanded
-    let aria_expanded = Signal::derive(move || if is_open.get() { "true" } else { "false" });
+    let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_open.get())));
 
     // Handle button click
     let handle_click = move |_e: MouseEvent| {
@@ -321,7 +322,7 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
         dialog_props: UseDatePickerDialogProps {
             id: dialog_id,
             role: "dialog",
-            aria_modal: "true",
+            aria_modal: AriaModal::True,
             aria_labelledby: label_id,
         },
         calendar_props: UseDatePickerCalendarProps { id: calendar_id },

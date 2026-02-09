@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use super::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::AriaDisabled;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/link/src/useLink.ts
 
@@ -72,7 +73,7 @@ pub type UseLinkAttrs = (
     Attr<attr::Rel, Option<&'static str>>,
     Attr<attr::Role, Option<&'static str>>,
     Attr<attr::Tabindex, &'static str>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -124,7 +125,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         LinkElementType::Span | LinkElementType::Button => Some("link"),
     };
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     let handle_click = move |e: MouseEvent| {
         if is_disabled.get_untracked() {

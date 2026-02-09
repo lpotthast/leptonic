@@ -12,6 +12,7 @@ use crate::hooks::interactions::use_press::{use_press, LongPressEvent, PressEven
 use crate::hooks::overlay::use_overlay_trigger::{use_overlay_trigger, UseOverlayTriggerInput};
 use crate::hooks::selection::use_selectable_collection::FocusStrategy;
 use crate::prelude::AriaHasPopup;
+use crate::utils::aria::AriaExpanded;
 use crate::utils::focus::focus_event_target;
 use crate::utils::pointer_type::PointerType;
 
@@ -79,9 +80,9 @@ pub struct UseMenuTriggerProps {
     /// Unique identifier for the trigger element.
     pub id: String,
     /// The type of popup this trigger opens (e.g., "menu").
-    pub aria_haspopup: &'static str,
+    pub aria_haspopup: AriaHasPopup,
     /// Whether the popup is currently expanded.
-    pub aria_expanded: Signal<&'static str>,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
     /// ID of the controlled popup element.
     pub aria_controls: Signal<Option<String>>,
     /// Keyboard event handler for menu navigation (Enter/Space/Arrow keys).
@@ -117,8 +118,8 @@ impl UseMenuTriggerProps {
 /// These attributes must be spread onto the menu trigger element.
 pub type UseMenuTriggerAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::AriaHaspopup, &'static str>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaHaspopup, AriaHasPopup>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaControls, Signal<Option<String>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,

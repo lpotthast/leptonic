@@ -7,6 +7,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::use_table::SortDirection;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::AriaDisabled;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableColumnHeader.ts
 
@@ -59,7 +60,7 @@ pub type UseTableColumnHeaderAttrs = (
     Attr<attr::AriaColindex, String>,
     Attr<attr::AriaSort, Signal<Option<&'static str>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -129,7 +130,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     });
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Handle click for sorting
     let handle_click = move |_e: web_sys::MouseEvent| {

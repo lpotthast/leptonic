@@ -7,6 +7,7 @@ use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use super::use_calendar::create_weeks;
+use crate::utils::aria::AriaDisabled;
 use crate::utils::time::{start_of_next_month, start_of_previous_month, Day, Week};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useRangeCalendar.ts
@@ -142,7 +143,7 @@ pub type UseRangeCalendarAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabel, &'static str>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -225,7 +226,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
     let weeks = Signal::derive(move || create_weeks(&staging.get(), min.as_ref(), max.as_ref()));
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Navigation callbacks
     let previous_month = Callback::new(move |_| {

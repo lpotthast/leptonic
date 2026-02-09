@@ -6,6 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
+use crate::utils::aria::AriaModal;
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModal.ts
 
 /// Input parameters for the `use_modal` hook.
@@ -52,7 +54,7 @@ pub struct UseModalReturn {
 pub type UseModalAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaModal, &'static str>,
+    Attr<attr::AriaModal, AriaModal>,
     Attr<attr::Tabindex, &'static str>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
@@ -104,7 +106,7 @@ pub fn use_modal(input: UseModalInput) -> UseModalReturn {
         modal_props: (
             Attr(attr::Id, modal_id.clone()),
             Attr(attr::Role, "dialog"),
-            Attr(attr::AriaModal, "true"),
+            Attr(attr::AriaModal, AriaModal::True),
             Attr(attr::Tabindex, "-1"),
             on(ev::keydown, handle_keydown).into_cloneable(),
         ),

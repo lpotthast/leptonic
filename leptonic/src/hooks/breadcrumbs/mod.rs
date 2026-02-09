@@ -6,6 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::{KeyboardEvent, MouseEvent};
 
+use crate::utils::aria::{AriaCurrent, AriaDisabled};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/breadcrumbs/src/useBreadcrumbs.ts
 
 // TODO: This tries to reimplement behavior already covered by use_press.
@@ -119,8 +121,8 @@ pub type UseBreadcrumbItemAttrs = ();
 /// Attributes for the breadcrumb link element.
 pub type UseBreadcrumbLinkAttrs = (
     Attr<attr::Href, Option<String>>,
-    Attr<attr::AriaCurrent, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaCurrent, Option<AriaCurrent>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, &'static str>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -151,9 +153,9 @@ pub fn use_breadcrumb_item(input: UseBreadcrumbItemInput) -> UseBreadcrumbItemRe
     let on_press = input.on_press;
     let href = input.href.clone();
 
-    let aria_current = if is_current { Some("page") } else { None };
+    let aria_current = is_current.then_some(AriaCurrent::Page);
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Current item doesn't need to be a link
     let tabindex = if is_current { "-1" } else { "0" };

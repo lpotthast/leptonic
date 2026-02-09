@@ -3,6 +3,8 @@ use leptos::attr::Attr;
 use leptos::prelude::*;
 use uuid::Uuid;
 
+use crate::utils::aria::AriaOrientation;
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
 
 /// The orientation of the tab list.
@@ -13,6 +15,15 @@ pub enum TabsOrientation {
     Horizontal,
     /// Vertical tabs.
     Vertical,
+}
+
+impl From<TabsOrientation> for AriaOrientation {
+    fn from(value: TabsOrientation) -> Self {
+        match value {
+            TabsOrientation::Horizontal => Self::Horizontal,
+            TabsOrientation::Vertical => Self::Vertical,
+        }
+    }
 }
 
 /// The keyboard activation mode for tabs.

@@ -9,6 +9,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::{AriaInvalid, AriaLive, AriaRequired};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/numberfield/src/useNumberField.ts
 
@@ -162,8 +163,8 @@ pub type UseNumberFieldInputAttrs = (
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaInvalid, Option<&'static str>>,
-    Attr<attr::AriaRequired, Option<&'static str>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
     Attr<attr::AriaValuenow, Signal<Option<f64>>>,
     Attr<attr::AriaValuemin, Option<f64>>,
     Attr<attr::AriaValuemax, Option<f64>>,
@@ -214,7 +215,7 @@ pub struct UseNumberFieldErrorProps {
     pub role: &'static str,
 
     /// The aria-live attribute.
-    pub aria_live: &'static str,
+    pub aria_live: AriaLive,
 }
 
 /// Provides the behavior and accessibility implementation for a number field.
@@ -452,18 +453,10 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid = if input.validation_state == ValidationState::Invalid {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
-    let aria_required = if input.is_required {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_required = input.is_required.then_some(AriaRequired::True);
 
     // Disabled signals for buttons
     let increment_disabled = Signal::derive(move || !can_increment.get());
@@ -518,7 +511,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         error_props: UseNumberFieldErrorProps {
             id: error_id,
             role: "alert",
-            aria_live: "polite",
+            aria_live: AriaLive::Polite,
         },
         display_value,
         can_increment,

@@ -13,6 +13,7 @@ use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::hooks::button::UseButtonProps;
 use crate::hooks::menu::use_menu_trigger::{UseMenuTriggerMenuProps, UseMenuTriggerProps};
+use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHasPopup};
 use crate::utils::{EventHandler, MergeWith};
 
 /// Return type from merging `UseButtonProps` with `UseMenuTriggerProps`.
@@ -70,15 +71,15 @@ pub struct MergedButtonMenuTriggerProps {
     /// Whether the element is disabled.
     pub disabled: Signal<bool>,
     /// The aria-disabled state.
-    pub aria_disabled: Signal<&'static str>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
 
     // Menu ARIA (takes precedence over button)
     /// Unique identifier for the trigger element (from menu trigger).
     pub id: String,
     /// The type of popup this trigger opens (from menu trigger).
-    pub aria_haspopup: &'static str,
+    pub aria_haspopup: AriaHasPopup,
     /// Whether the popup is currently expanded (from menu trigger).
-    pub aria_expanded: Signal<&'static str>,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
     /// ID of the controlled popup element (from menu trigger).
     pub aria_controls: Signal<Option<String>>,
 
@@ -157,11 +158,11 @@ pub type MergedButtonMenuTriggerAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::Tabindex, Signal<Option<&'static str>>>,
     Attr<attr::Disabled, Signal<bool>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     // Menu ARIA
     Attr<attr::Id, String>,
-    Attr<attr::AriaHaspopup, &'static str>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaHaspopup, AriaHasPopup>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaControls, Signal<Option<String>>>,
     // Long press accessibility
     Attr<attr::AriaDescribedby, Option<&'static str>>,

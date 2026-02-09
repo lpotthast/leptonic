@@ -12,6 +12,7 @@ use crate::hooks::selection::use_selectable_item::{use_selectable_item, UseSelec
 use crate::hooks::selection::use_selection_state::SelectionMode;
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_element;
+use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::EventHandler;
 
 use super::use_grid_list::UseGridListState;
@@ -61,8 +62,8 @@ pub struct UseGridListItemRowProps {
     pub role: &'static str,
     pub tabindex: Signal<&'static str>,
     pub aria_rowindex: String,
-    pub aria_selected: Signal<Option<&'static str>>,
-    pub aria_disabled: Signal<&'static str>,
+    pub aria_selected: Signal<Option<AriaSelected>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_label: Option<String>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -104,8 +105,8 @@ pub type UseGridListItemRowAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaRowindex, String>,
-    Attr<attr::AriaSelected, Signal<Option<&'static str>>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaLabel, Option<String>>,
     ElementCaptureAttr,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -233,10 +234,8 @@ where
     let aria_selected = Signal::derive(move || {
         if selection_mode == SelectionMode::None {
             None
-        } else if is_selected.get() {
-            Some("true")
         } else {
-            Some("false")
+            Some(AriaSelected::from(is_selected.get()))
         }
     });
 
@@ -308,7 +307,9 @@ where
             tabindex,
             aria_rowindex,
             aria_selected,
-            aria_disabled: Signal::derive(move || if is_disabled.get() { "true" } else { "false" }),
+            aria_disabled: Signal::derive(move || {
+                is_disabled.get().then_some(AriaDisabled::True)
+            }),
             aria_label: input.text_value,
             element_capture: row_element.attr(),
             on_keydown,

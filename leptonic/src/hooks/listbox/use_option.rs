@@ -10,6 +10,7 @@ use web_sys::FocusEvent;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::hooks::focus::use_focusable::{use_focusable, UseFocusableInput};
 use crate::hooks::selection::use_selection_state::{Selection, UseSelectionStateReturn};
+use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::ElementCaptureAttr;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useOption.ts
@@ -84,8 +85,8 @@ pub type UseOptionAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
     Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaSelected, Signal<&'static str>>,
-    Attr<attr::AriaDisabled, Option<&'static str>>,
+    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
@@ -234,14 +235,11 @@ where
     });
 
     // Compute aria-selected
-    let aria_selected = Signal::derive(move || if is_selected.get() { "true" } else { "false" });
+    let aria_selected =
+        Signal::derive(move || Some(AriaSelected::from(is_selected.get())));
 
-    // Compute aria-disabled
-    let aria_disabled = if local_disabled.get_untracked() {
-        Some("true")
-    } else {
-        None
-    };
+    // Compute aria-disabled (reactive)
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Use focus ring for keyboard focus visibility with user callback
     let on_focus_input = input.on_focus;

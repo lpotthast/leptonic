@@ -3,6 +3,7 @@ use uuid::Uuid;
 
 use super::use_checkbox_group::Orientation;
 use super::use_field::ValidationState;
+use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadioGroup.ts
 
@@ -89,16 +90,16 @@ pub struct UseRadioGroupAttrs {
     pub aria_describedby: Option<String>,
 
     /// The aria-invalid attribute.
-    pub aria_invalid: Option<&'static str>,
+    pub aria_invalid: Option<AriaInvalid>,
 
     /// The aria-required attribute.
-    pub aria_required: Option<&'static str>,
+    pub aria_required: Option<AriaRequired>,
 
     /// The aria-disabled attribute.
-    pub aria_disabled: Option<&'static str>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
 
     /// The aria-orientation attribute.
-    pub aria_orientation: &'static str,
+    pub aria_orientation: AriaOrientation,
 }
 
 /// Props for the group label.
@@ -212,25 +213,10 @@ where
             role: "radiogroup",
             aria_labelledby,
             aria_describedby,
-            aria_invalid: if input.validation_state == ValidationState::Invalid {
-                Some("true")
-            } else {
-                None
-            },
-            aria_required: if input.is_required {
-                Some("true")
-            } else {
-                None
-            },
-            aria_disabled: if is_disabled.get_untracked() {
-                Some("true")
-            } else {
-                None
-            },
-            aria_orientation: match input.orientation {
-                Orientation::Horizontal => "horizontal",
-                Orientation::Vertical => "vertical",
-            },
+            aria_invalid: (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True),
+            aria_required: input.is_required.then_some(AriaRequired::True),
+            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
+            aria_orientation: AriaOrientation::from(input.orientation),
         },
         label_props: UseRadioGroupLabelProps { id: label_id },
         state: UseRadioGroupState {

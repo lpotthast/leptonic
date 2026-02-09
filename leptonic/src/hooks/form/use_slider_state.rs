@@ -1,4 +1,5 @@
 use crate::hooks::ThumbIdx;
+use crate::utils::aria::AriaOrientation;
 use crate::utils::math::{
     calculate_page_size, decimal_precision, percentage_in_range, snap_value_to_step,
 };
@@ -13,6 +14,15 @@ pub enum SliderOrientation {
 
     /// Vertical layout.
     Vertical,
+}
+
+impl From<SliderOrientation> for AriaOrientation {
+    fn from(value: SliderOrientation) -> Self {
+        match value {
+            SliderOrientation::Horizontal => Self::Horizontal,
+            SliderOrientation::Vertical => Self::Vertical,
+        }
+    }
 }
 
 /// Specifies how slider values are managed.

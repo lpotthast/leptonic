@@ -6,6 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
+use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTable.ts
 
 /// The selection mode for table rows.
@@ -126,8 +128,8 @@ pub type UseTableAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaRowcount, Option<String>>,
-    Attr<attr::AriaMultiselectable, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -230,13 +232,13 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
 
     // Compute aria-multiselectable
     let aria_multiselectable = match selection_mode {
-        TableSelectionMode::Multiple => Some("true"),
-        TableSelectionMode::Single => Some("false"),
         TableSelectionMode::None => None,
+        TableSelectionMode::Single => Some(AriaMultiselectable::False),
+        TableSelectionMode::Multiple => Some(AriaMultiselectable::True),
     };
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {

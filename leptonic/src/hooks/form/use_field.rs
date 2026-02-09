@@ -2,6 +2,8 @@ use leptos::attr;
 use leptos::attr::Attr;
 use uuid::Uuid;
 
+use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, AriaRequired};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useField.ts
 
 /// Validation state for a field.
@@ -91,16 +93,16 @@ pub struct UseFieldProps {
     pub aria_describedby: Option<String>,
 
     /// The aria-invalid attribute.
-    pub aria_invalid: Option<&'static str>,
+    pub aria_invalid: Option<AriaInvalid>,
 
     /// The aria-required attribute.
-    pub aria_required: Option<&'static str>,
+    pub aria_required: Option<AriaRequired>,
 
     /// The aria-disabled attribute.
-    pub aria_disabled: Option<&'static str>,
+    pub aria_disabled: Option<AriaDisabled>,
 
     /// The aria-readonly attribute.
-    pub aria_readonly: Option<&'static str>,
+    pub aria_readonly: Option<AriaReadonly>,
 }
 
 impl UseFieldProps {
@@ -123,10 +125,10 @@ pub type UseFieldAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaInvalid, Option<&'static str>>,
-    Attr<attr::AriaRequired, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Option<&'static str>>,
-    Attr<attr::AriaReadonly, Option<&'static str>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
+    Attr<attr::AriaDisabled, Option<AriaDisabled>>,
+    Attr<attr::AriaReadonly, Option<AriaReadonly>>,
 );
 
 /// Props for the description element.
@@ -156,7 +158,7 @@ pub struct UseFieldErrorMessageProps {
     pub role: &'static str,
 
     /// The aria-live attribute.
-    pub aria_live: &'static str,
+    pub aria_live: AriaLive,
 }
 
 impl UseFieldErrorMessageProps {
@@ -174,7 +176,7 @@ impl UseFieldErrorMessageProps {
 pub type UseFieldErrorMessageAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaLive, &'static str>,
+    Attr<attr::AriaLive, AriaLive>,
 );
 
 /// Provides the accessibility implementation for a form field with label,
@@ -251,32 +253,16 @@ pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
             id: field_id,
             aria_labelledby,
             aria_describedby,
-            aria_invalid: if input.validation_state == ValidationState::Invalid {
-                Some("true")
-            } else {
-                None
-            },
-            aria_required: if input.is_required {
-                Some("true")
-            } else {
-                None
-            },
-            aria_disabled: if input.is_disabled {
-                Some("true")
-            } else {
-                None
-            },
-            aria_readonly: if input.is_read_only {
-                Some("true")
-            } else {
-                None
-            },
+            aria_invalid: (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True),
+            aria_required: input.is_required.then_some(AriaRequired::True),
+            aria_disabled: input.is_disabled.then_some(AriaDisabled::True),
+            aria_readonly: input.is_read_only.then_some(AriaReadonly::True),
         },
         description_props: UseFieldDescriptionProps { id: description_id },
         error_message_props: UseFieldErrorMessageProps {
             id: error_message_id,
             role: "alert",
-            aria_live: "polite",
+            aria_live: AriaLive::Polite,
         },
     }
 }

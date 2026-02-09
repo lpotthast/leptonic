@@ -7,6 +7,7 @@ use web_sys::{Event, FocusEvent};
 
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::{AriaInvalid, AriaRequired};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckbox.ts
 
@@ -88,8 +89,8 @@ pub type UseCheckboxInputAttrs = (
     Attr<attr::Checked, Signal<bool>>,
     Attr<attr::Disabled, Signal<bool>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaInvalid, Option<&'static str>>,
-    Attr<attr::AriaRequired, Option<&'static str>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
     attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::change, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -147,18 +148,10 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid = if input.validation_state == ValidationState::Invalid {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
-    let aria_required = if input.is_required {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_required = input.is_required.then_some(AriaRequired::True);
 
     let UseFocusRingReturn {
         props: focus_ring_props,

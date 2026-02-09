@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::time::Day;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useCalendarCell.ts
@@ -83,8 +84,8 @@ pub struct UseCalendarCellReturn {
 /// Attributes for the calendar cell element (td).
 pub type UseCalendarCellAttrs = (
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaDisabled, &'static str>,
-    Attr<attr::AriaSelected, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Option<AriaDisabled>>,
+    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
 );
 
 /// Attributes for the button inside the calendar cell.
@@ -92,7 +93,7 @@ pub type UseCalendarCellButtonAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaLabel, String>,
-    Attr<attr::AriaDisabled, &'static str>,
+    Attr<attr::AriaDisabled, Option<AriaDisabled>>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -157,12 +158,12 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     );
 
     // Compute aria-selected
-    let aria_selected = Signal::derive(move || if is_selected.get() { "true" } else { "false" });
+    let aria_selected = Signal::derive(move || Some(AriaSelected::from(is_selected.get())));
 
     // Compute tabindex
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 
-    let cell_disabled_str = if day.disabled { "true" } else { "false" };
+    let cell_disabled = day.disabled.then_some(AriaDisabled::True);
 
     // Handle click
     let handle_click = move |_e: web_sys::MouseEvent| {
@@ -254,14 +255,14 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
     UseCalendarCellReturn {
         cell_props: (
             Attr(attr::Role, "gridcell"),
-            Attr(attr::AriaDisabled, cell_disabled_str),
+            Attr(attr::AriaDisabled, cell_disabled),
             Attr(attr::AriaSelected, aria_selected),
         ),
         button_props: (
             Attr(attr::Role, "button"),
             Attr(attr::Tabindex, tabindex),
             Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaDisabled, cell_disabled_str),
+            Attr(attr::AriaDisabled, cell_disabled),
             on(ev::click, handle_click).into_cloneable(),
             on(ev::keydown, handle_keydown).into_cloneable(),
             on_focus,

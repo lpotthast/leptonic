@@ -7,6 +7,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::use_table::TableSelectionMode;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableRow.ts
@@ -67,8 +68,8 @@ pub struct UseTableRowReturn {
 pub type UseTableRowAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaRowindex, String>,
-    Attr<attr::AriaSelected, Signal<Option<&'static str>>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
     On<ev::dblclick, SharedEventCallback<web_sys::MouseEvent>>,
@@ -121,15 +122,13 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     let aria_selected = Signal::derive(move || {
         if selection_mode == TableSelectionMode::None {
             None
-        } else if is_selected.get() {
-            Some("true")
         } else {
-            Some("false")
+            Some(AriaSelected::from(is_selected.get()))
         }
     });
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Compute tabindex
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });

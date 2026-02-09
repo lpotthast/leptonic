@@ -18,7 +18,7 @@ pub fn Button(
     #[prop(into, optional)] on_hover_end: Option<Callback<HoverEndEvent>>,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
-    #[prop(into, optional)] aria_expanded: Signal<AriaExpanded>,
+    #[prop(into, optional)] aria_expanded: Signal<Option<AriaExpanded>>,
     #[prop(into, optional)] classes: Classes,
     children: Children,
 ) -> impl IntoView {
@@ -119,7 +119,7 @@ pub fn LinkButton<H>(
 
     #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
 
-    #[prop(into, optional)] aria_expanded: Option<Signal<AriaExpanded>>,
+    #[prop(into, optional)] aria_expanded: Option<Signal<Option<AriaExpanded>>>,
     #[prop(into, optional)] classes: Classes,
 
     /// If `true`, the link is marked active when the location matches exactly;

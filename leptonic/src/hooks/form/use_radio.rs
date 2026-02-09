@@ -8,6 +8,7 @@ use web_sys::{Event, FocusEvent};
 use super::use_field::ValidationState;
 use super::use_radio_group::UseRadioGroupState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::AriaInvalid;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadio.ts
 
@@ -62,7 +63,7 @@ pub type UseRadioInputAttrs = (
     Attr<attr::Checked, Signal<bool>>,
     Attr<attr::Disabled, Signal<bool>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaInvalid, Option<&'static str>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
     attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::change, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -131,11 +132,7 @@ where
     };
 
     // Compute aria-invalid
-    let aria_invalid = if input.validation_state == ValidationState::Invalid {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Use focus ring for keyboard focus visibility
     let UseFocusRingReturn {

@@ -7,6 +7,7 @@ use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use super::use_date_segment::{DateSegment, DateSegmentType};
+use crate::utils::aria::{AriaDisabled, AriaRequired};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useTimeField.ts
 
@@ -163,8 +164,8 @@ pub type UseTimeFieldAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
-    Attr<attr::AriaRequired, &'static str>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -457,9 +458,9 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
     };
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
-    let aria_required = if input.is_required { "true" } else { "false" };
+    let aria_required = input.is_required.then_some(AriaRequired::True);
 
     // Handle keyboard navigation.
     // Navigation is currently handled by individual segments.

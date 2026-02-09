@@ -5,6 +5,8 @@ use leptos::ev::{on, On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent};
 
+use crate::utils::aria::{AriaDisabled, AriaReadonly};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDateSegment.ts
 
 /// The type of date segment.
@@ -212,8 +214,8 @@ pub type UseDateSegmentAttrs = (
     Attr<attr::AriaValuemin, Option<String>>,
     Attr<attr::AriaValuemax, Option<String>>,
     Attr<attr::AriaValuetext, String>,
-    Attr<attr::AriaReadonly, Signal<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
 );
@@ -270,15 +272,11 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
 
     // Compute aria-readonly
     let aria_readonly = Signal::derive(move || {
-        if is_read_only.get() || !is_editable {
-            "true"
-        } else {
-            "false"
-        }
+        (is_read_only.get() || !is_editable).then_some(AriaReadonly::True)
     });
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // ARIA value attributes
     let aria_valuenow = segment.value.map(|v| v.to_string());

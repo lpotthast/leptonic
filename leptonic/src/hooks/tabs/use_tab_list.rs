@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
 use super::use_tabs::TabsOrientation;
+use crate::utils::aria::{AriaDisabled, AriaOrientation};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
 
@@ -52,8 +53,8 @@ pub type UseTabListAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabel, Option<String>>,
-    Attr<attr::AriaOrientation, &'static str>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaOrientation, AriaOrientation>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -86,12 +87,9 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
     let on_focus_first = input.on_focus_first;
     let on_focus_last = input.on_focus_last;
 
-    let aria_orientation = match orientation {
-        TabsOrientation::Horizontal => "horizontal",
-        TabsOrientation::Vertical => "vertical",
-    };
+    let aria_orientation = AriaOrientation::from(orientation);
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {

@@ -7,6 +7,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::{AriaChecked, AriaDisabled, AriaHidden, AriaInvalid};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/switch/src/useSwitch.ts
 
@@ -75,10 +76,10 @@ pub struct UseSwitchReturn {
 /// Attributes for the switch element.
 pub type UseSwitchAttrs = (
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaChecked, Signal<&'static str>>,
+    Attr<attr::AriaChecked, Signal<AriaChecked>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaInvalid, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Option<&'static str>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, &'static str>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -96,7 +97,7 @@ pub type UseSwitchInputAttrs = (
     Attr<attr::Value, Option<&'static str>>,
     Attr<attr::Checked, Signal<bool>>,
     Attr<attr::Disabled, Signal<bool>>,
-    Attr<attr::AriaHidden, &'static str>,
+    Attr<attr::AriaHidden, AriaHidden>,
 );
 
 /// Provides the behavior and accessibility implementation for a switch.
@@ -170,21 +171,13 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
     };
 
     // Compute aria-checked
-    let aria_checked = Signal::derive(move || if is_selected.get() { "true" } else { "false" });
+    let aria_checked = Signal::derive(move || AriaChecked::from(is_selected.get()));
 
     // Compute aria-invalid
-    let aria_invalid = if input.validation_state == ValidationState::Invalid {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
-    let aria_disabled = if is_disabled.get_untracked() {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     let UseFocusRingReturn {
         props: focus_ring_props,
@@ -223,7 +216,7 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
             Attr(attr::Value, input.value),
             Attr(attr::Checked, is_selected),
             Attr(attr::Disabled, is_disabled),
-            Attr(attr::AriaHidden, "true"),
+            Attr(attr::AriaHidden, AriaHidden::True),
         ),
         is_selected,
         is_pressed: is_pressed.into(),

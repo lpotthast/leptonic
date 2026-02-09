@@ -14,6 +14,7 @@ use crate::hooks::selection::use_selection_state::{
     use_selection_state, Selection, SelectionBehavior, SelectionMode, UseSelectionStateInput,
     UseSelectionStateReturn,
 };
+use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
 use crate::utils::EventHandler;
 
 use super::grid_collection::GridCollection;
@@ -137,8 +138,8 @@ pub struct UseGridProps {
     pub tabindex: Signal<&'static str>,
     pub aria_label: Option<String>,
     pub aria_labelledby: Option<String>,
-    pub aria_multiselectable: Option<&'static str>,
-    pub aria_disabled: Signal<&'static str>,
+    pub aria_multiselectable: Option<AriaMultiselectable>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
@@ -190,8 +191,8 @@ pub type UseGridAttrs = (
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaMultiselectable, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -283,12 +284,12 @@ where
 
     // --- ARIA attributes ---
     let aria_multiselectable = match selection_mode {
-        SelectionMode::Multiple => Some("true"),
-        SelectionMode::Single => Some("false"),
         SelectionMode::None => None,
+        SelectionMode::Single => Some(AriaMultiselectable::False),
+        SelectionMode::Multiple => Some(AriaMultiselectable::True),
     };
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // --- Keyboard handler ---
     let handle_keydown = move |e: KeyboardEvent| {

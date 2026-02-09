@@ -44,6 +44,7 @@ use crate::hooks::{
     form::use_slider_state::UseSliderStateReturn, interactions::use_move::MoveAxis, use_move,
     MoveEndEvent, MoveEvent, MoveStartEvent, SliderOrientation, UseMoveInput,
 };
+use crate::utils::aria::{AriaDisabled, AriaLive};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::{EventHandler, EventTargetExt};
 use leptos::attr;
@@ -99,7 +100,7 @@ pub struct UseSliderGroupProps {
     id: String,
     aria_label: Option<&'static str>,
     aria_labelledby: Option<String>,
-    aria_disabled: Signal<&'static str>,
+    aria_disabled: Signal<Option<AriaDisabled>>,
 }
 
 impl UseSliderGroupProps {
@@ -120,7 +121,7 @@ pub type UseSliderGroupAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
 );
 
 #[derive(Debug, Clone)]
@@ -168,7 +169,7 @@ pub struct UseSliderOutputProps {
 
     /// The aria-live value for the output element. Use "off" to prevent
     /// screen reader announcements during dragging.
-    pub aria_live: &'static str,
+    pub aria_live: AriaLive,
 }
 
 impl UseSliderOutputProps {
@@ -184,7 +185,7 @@ impl UseSliderOutputProps {
 pub type UseSliderOutputAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::For, String>,
-    Attr<attr::AriaLive, &'static str>,
+    Attr<attr::AriaLive, AriaLive>,
 );
 
 pub type ThumbIdx = usize;
@@ -455,13 +456,13 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             id: group_id,
             aria_label: input.aria_label,
             aria_labelledby: input.aria_labelledby,
-            aria_disabled: Signal::derive(move || if disabled.get() { "true" } else { "false" }),
+            aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
         },
         label_props: UseSliderLabelProps { id: label_id },
         output_props: UseSliderOutputProps {
             id: output_id,
             html_for,
-            aria_live: "off",
+            aria_live: AriaLive::Off,
         },
         track_props: UseSliderTrackProps {
             role: "presentation",

@@ -9,6 +9,7 @@ use web_sys::KeyboardEvent;
 
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::AriaInvalid;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/searchfield/src/useSearchField.ts
 
@@ -122,7 +123,7 @@ pub type UseSearchFieldInputAttrs = (
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaInvalid, Option<&'static str>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
     Attr<attr::Maxlength, Option<u32>>,
     Attr<attr::Autofocus, bool>,
     On<ev::input, SharedEventCallback<web_sys::Event>>,
@@ -304,11 +305,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid = if input.validation_state == ValidationState::Invalid {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     UseSearchFieldReturn {
         input_props: (

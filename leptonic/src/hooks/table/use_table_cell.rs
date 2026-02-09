@@ -6,6 +6,7 @@ use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::AriaDisabled;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableCell.ts
 
@@ -65,7 +66,7 @@ pub type UseTableCellAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaColindex, String>,
     Attr<attr::Tabindex, Signal<&'static str>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -107,7 +108,7 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {
@@ -208,7 +209,7 @@ pub type UseTableCheckboxAttrs = (
     Attr<attr::Type, &'static str>,
     Attr<attr::Checked, Signal<bool>>,
     Attr<attr::AriaLabel, &'static str>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::change, SharedEventCallback<web_sys::Event>>,
 );
 
@@ -235,7 +236,7 @@ pub fn use_table_checkbox_cell(input: UseTableCheckboxCellInput) -> UseTableChec
     let is_disabled = input.is_disabled;
     let on_change = input.on_change;
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     let handle_change = move |_e: web_sys::Event| {
         if is_disabled.get_untracked() {

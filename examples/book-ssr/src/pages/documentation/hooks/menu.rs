@@ -94,10 +94,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
     let button = use_button(UseButtonInput {
         disabled: false.into(),
         aria_haspopup: AriaHasPopup::Menu.into(),
-        aria_expanded: Signal::derive(move || match state.is_open.get() {
-            true => AriaExpanded::True,
-            false => AriaExpanded::False,
-        }),
+        aria_expanded: Signal::derive(move || Some(AriaExpanded::from(state.is_open.get()))),
         use_press_input: UsePressInput {
             disabled: false.into(),
             force_prevent_default: false,

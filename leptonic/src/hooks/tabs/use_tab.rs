@@ -8,6 +8,7 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use super::use_tabs::TabsActivationMode;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::hooks::focus::use_focusable::{use_focusable, UseFocusableInput};
+use crate::utils::aria::{AriaDisabled, AriaHidden, AriaSelected};
 use crate::utils::element_capture::ElementCaptureAttr;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTab.ts
@@ -67,9 +68,9 @@ pub struct UseTabReturn {
 pub type UseTabAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaSelected, Signal<&'static str>>,
+    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaControls, String>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
@@ -144,10 +145,10 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
     });
 
     // Compute aria-selected
-    let aria_selected = Signal::derive(move || if is_selected.get() { "true" } else { "false" });
+    let aria_selected = Signal::derive(move || Some(AriaSelected::from(is_selected.get())));
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Compute tabindex
     let tabindex = Signal::derive(move || {
@@ -273,7 +274,7 @@ pub type UseTabPanelAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabelledby, String>,
     Attr<attr::Tabindex, &'static str>,
-    Attr<attr::AriaHidden, Signal<&'static str>>,
+    Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
 );
 
 /// Provides the behavior and accessibility for a tab panel.
@@ -303,7 +304,7 @@ pub fn use_tab_panel(input: UseTabPanelInput) -> UseTabPanelReturn {
     let is_selected = input.is_selected;
 
     // Compute aria-hidden
-    let aria_hidden = Signal::derive(move || if is_selected.get() { "false" } else { "true" });
+    let aria_hidden = Signal::derive(move || (!is_selected.get()).then_some(AriaHidden::True));
 
     UseTabPanelReturn {
         panel_props: (

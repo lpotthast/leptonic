@@ -6,6 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::DragEvent;
 
+use crate::utils::aria::AriaGrabbed;
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrag.ts
 
 /// Data that can be transferred during a drag operation.
@@ -171,7 +173,7 @@ pub type UseDraggableAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Draggable, Signal<&'static str>>,
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaGrabbed, Signal<&'static str>>,
+    Attr<attr::AriaGrabbed, Signal<Option<AriaGrabbed>>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::drag, SharedEventCallback<DragEvent>>,
     On<ev::dragend, SharedEventCallback<DragEvent>>,
@@ -210,7 +212,7 @@ pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
 
     let draggable_attr = Signal::derive(move || if is_disabled.get() { "false" } else { "true" });
 
-    let aria_grabbed = Signal::derive(move || if is_dragging.get() { "true" } else { "false" });
+    let aria_grabbed = Signal::derive(move || is_dragging.get().then_some(AriaGrabbed::True));
 
     let handle_drag_start = move |e: DragEvent| {
         if is_disabled.get_untracked() {

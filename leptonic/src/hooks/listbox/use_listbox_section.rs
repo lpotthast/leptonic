@@ -1,5 +1,7 @@
 use uuid::Uuid;
 
+use crate::utils::aria::AriaHidden;
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useListBoxSection.ts
 
 /// Input parameters for the `use_listbox_section` hook.
@@ -42,7 +44,7 @@ pub struct UseListBoxSectionHeadingProps {
     pub role: &'static str,
 
     /// The aria-hidden attribute.
-    pub aria_hidden: &'static str,
+    pub aria_hidden: AriaHidden,
 }
 
 /// Props for section items container.
@@ -96,7 +98,7 @@ pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionRe
         heading_props: UseListBoxSectionHeadingProps {
             id: heading_id,
             role: "presentation",
-            aria_hidden: "true",
+            aria_hidden: AriaHidden::True,
         },
         items_props: UseListBoxSectionItemsProps { role: "group" },
     }

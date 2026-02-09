@@ -23,7 +23,7 @@ use super::{
 pub struct UseButtonInput {
     pub disabled: Signal<bool>,
     pub aria_haspopup: Signal<AriaHasPopup>,
-    pub aria_expanded: Signal<AriaExpanded>,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
 
     pub use_press_input: UsePressInput,
     pub use_hover_input: UseHoverInput,
@@ -47,9 +47,9 @@ pub struct UseButtonProps {
     pub role: &'static str,
     pub tabindex: Signal<Option<&'static str>>,
     pub disabled: Signal<bool>,
-    pub aria_disabled: Signal<&'static str>,
-    pub aria_haspopup: Signal<&'static str>,
-    pub aria_expanded: Signal<&'static str>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_haspopup: Signal<AriaHasPopup>,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_describedby: Option<&'static str>,
     #[educe(Debug(ignore))]
     pub data_focus_visible: CustomAttr<&'static str, Signal<Option<&'static str>>>,
@@ -69,26 +69,7 @@ impl UseButtonProps {
     /// Convert to spreadable attributes for Leptos views, cloning internally.
     #[must_use]
     pub fn to_attrs(&self) -> UseButtonAttrs {
-        (
-            Attr(attr::Role, self.role),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::Disabled, self.disabled),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            Attr(attr::AriaHaspopup, self.aria_haspopup),
-            Attr(attr::AriaExpanded, self.aria_expanded),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            self.data_focus_visible.clone(),
-            self.on_keydown.to_on(ev::keydown),
-            self.on_click.to_on(ev::click),
-            self.on_pointerdown.to_on(ev::pointerdown),
-            self.on_dragstart.to_on(ev::dragstart),
-            self.on_pointerenter.to_on(ev::pointerenter),
-            self.on_pointerleave.to_on(ev::pointerleave),
-            self.on_focus.to_on(ev::focus),
-            self.on_blur.to_on(ev::blur),
-            self.on_focusin.to_on(ev::focusin),
-            self.on_focusout.to_on(ev::focusout),
-        )
+        self.clone().into_attrs()
     }
 
     /// Convert to spreadable attributes for Leptos views, consuming self.
@@ -122,9 +103,9 @@ pub type UseButtonAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::Tabindex, Signal<Option<&'static str>>>,
     Attr<attr::Disabled, Signal<bool>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
-    Attr<attr::AriaHaspopup, Signal<&'static str>>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaHaspopup, Signal<AriaHasPopup>>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaDescribedby, Option<&'static str>>,
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -180,14 +161,10 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
             }),
             disabled: Signal::derive(move || input.disabled.get().into_attribute_value()),
             aria_disabled: Signal::derive(move || {
-                if input.disabled.get() {
-                    "true"
-                } else {
-                    "false"
-                }
+                input.disabled.get().then_some(AriaDisabled::True)
             }),
-            aria_haspopup: Signal::derive(move || input.aria_haspopup.get().into_attribute_value()),
-            aria_expanded: Signal::derive(move || input.aria_expanded.get().into_attribute_value()),
+            aria_haspopup: input.aria_haspopup,
+            aria_expanded: input.aria_expanded,
             aria_describedby: press_props.aria_describedby,
             data_focus_visible: focus_ring_props.data_focus_visible,
             on_keydown: press_props.on_keydown,

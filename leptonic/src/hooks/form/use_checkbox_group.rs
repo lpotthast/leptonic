@@ -3,6 +3,8 @@ use std::collections::HashSet;
 use std::hash::Hash;
 use uuid::Uuid;
 
+use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired};
+
 use super::use_field::ValidationState;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckboxGroup.ts
@@ -54,6 +56,15 @@ pub enum Orientation {
     Vertical,
 }
 
+impl From<Orientation> for AriaOrientation {
+    fn from(value: Orientation) -> Self {
+        match value {
+            Orientation::Horizontal => Self::Horizontal,
+            Orientation::Vertical => Self::Vertical,
+        }
+    }
+}
+
 /// The return value of the `use_checkbox_group` hook.
 #[derive(Clone)]
 pub struct UseCheckboxGroupReturn<T>
@@ -83,16 +94,16 @@ pub struct UseCheckboxGroupAttrs {
     pub aria_describedby: Option<String>,
 
     /// The aria-invalid attribute.
-    pub aria_invalid: Option<&'static str>,
+    pub aria_invalid: Option<AriaInvalid>,
 
     /// The aria-required attribute.
-    pub aria_required: Option<&'static str>,
+    pub aria_required: Option<AriaRequired>,
 
     /// The aria-disabled attribute.
-    pub aria_disabled: Option<&'static str>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
 
     /// The aria-orientation attribute.
-    pub aria_orientation: &'static str,
+    pub aria_orientation: AriaOrientation,
 }
 
 /// Props for the group label.
@@ -249,25 +260,10 @@ where
             role: "group",
             aria_labelledby,
             aria_describedby,
-            aria_invalid: if input.validation_state == ValidationState::Invalid {
-                Some("true")
-            } else {
-                None
-            },
-            aria_required: if input.is_required {
-                Some("true")
-            } else {
-                None
-            },
-            aria_disabled: if is_disabled.get_untracked() {
-                Some("true")
-            } else {
-                None
-            },
-            aria_orientation: match input.orientation {
-                Orientation::Horizontal => "horizontal",
-                Orientation::Vertical => "vertical",
-            },
+            aria_invalid: (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True),
+            aria_required: input.is_required.then_some(AriaRequired::True),
+            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
+            aria_orientation: AriaOrientation::from(input.orientation),
         },
         label_props: UseCheckboxGroupLabelProps { id: label_id },
         state: UseCheckboxGroupState {

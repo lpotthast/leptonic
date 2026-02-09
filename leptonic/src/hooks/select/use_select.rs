@@ -8,6 +8,8 @@ use std::hash::Hash;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
+use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaRequired};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/select/src/useSelect.ts
 
 /// Input parameters for the `use_select` hook.
@@ -136,12 +138,12 @@ pub type UseSelectTriggerAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaHaspopup, &'static str>,
-    Attr<attr::AriaExpanded, Signal<&'static str>>,
+    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaControls, String>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaRequired, Option<&'static str>>,
-    Attr<attr::AriaDisabled, Option<&'static str>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
@@ -332,21 +334,13 @@ where
     };
 
     // Compute aria-expanded
-    let aria_expanded = Signal::derive(move || if is_open.get() { "true" } else { "false" });
+    let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_open.get())));
 
     // Compute aria-required
-    let aria_required = if input.is_required {
-        Some("true")
-    } else {
-        None
-    };
+    let aria_required = input.is_required.then_some(AriaRequired::True);
 
-    // Compute aria-disabled
-    let aria_disabled = if is_disabled.get_untracked() {
-        Some("true")
-    } else {
-        None
-    };
+    // Compute aria-disabled (reactive)
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     UseSelectReturn {
         trigger_props: (

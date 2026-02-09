@@ -6,6 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
+use crate::utils::aria::{AriaDisabled, AriaSelected};
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tag/src/useTagGroup.ts
 
 /// The selection mode for a tag group.
@@ -84,7 +86,7 @@ pub type UseTagGroupAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
@@ -133,7 +135,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         set_focused_key_signal.set(key);
     });
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     let aria_labelledby = if input.label.is_some() {
         Some(label_id.clone())
@@ -214,8 +216,8 @@ pub struct UseTagReturn {
 /// Attributes for the tag row element.
 pub type UseTagRowAttrs = (
     Attr<attr::Role, &'static str>,
-    Attr<attr::AriaSelected, Signal<Option<&'static str>>>,
-    Attr<attr::AriaDisabled, Signal<&'static str>>,
+    Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -247,17 +249,13 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
 
     let aria_selected = Signal::derive(move || {
         if on_select.is_some() {
-            if is_selected.get() {
-                Some("true")
-            } else {
-                Some("false")
-            }
+            Some(AriaSelected::from(is_selected.get()))
         } else {
             None
         }
     });
 
-    let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 

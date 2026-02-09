@@ -1,6 +1,8 @@
 use leptos::attr;
 use leptos::attr::Attr;
 
+use crate::utils::aria::AriaOrientation;
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/separator/src/useSeparator.ts
 
 /// The orientation of a separator.
@@ -11,6 +13,15 @@ pub enum SeparatorOrientation {
     Horizontal,
     /// Vertical separator.
     Vertical,
+}
+
+impl From<SeparatorOrientation> for AriaOrientation {
+    fn from(value: SeparatorOrientation) -> Self {
+        match value {
+            SeparatorOrientation::Horizontal => Self::Horizontal,
+            SeparatorOrientation::Vertical => Self::Vertical,
+        }
+    }
 }
 
 /// The element type for a separator.
@@ -53,7 +64,7 @@ pub struct UseSeparatorReturn {
 /// Attributes for the separator element.
 pub type UseSeparatorAttrs = (
     Attr<attr::Role, Option<&'static str>>,
-    Attr<attr::AriaOrientation, Option<&'static str>>,
+    Attr<attr::AriaOrientation, Option<AriaOrientation>>,
 );
 
 /// Provides the behavior and accessibility for a separator.
@@ -77,13 +88,10 @@ pub fn use_separator(input: UseSeparatorInput) -> UseSeparatorReturn {
     // Other elements need role="separator"
     let (role, aria_orientation) = match input.element_type {
         SeparatorElementType::Hr => (None, None),
-        SeparatorElementType::Div | SeparatorElementType::Span => {
-            let orientation = match input.orientation {
-                SeparatorOrientation::Horizontal => "horizontal",
-                SeparatorOrientation::Vertical => "vertical",
-            };
-            (Some("separator"), Some(orientation))
-        }
+        SeparatorElementType::Div | SeparatorElementType::Span => (
+            Some("separator"),
+            Some(AriaOrientation::from(input.orientation)),
+        ),
     };
 
     UseSeparatorReturn {
