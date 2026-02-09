@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -35,29 +36,31 @@ pub fn PageUseScrollWheel() -> impl IntoView {
             <p>"Hook for handling scroll wheel events on an element. Useful for custom scroll behaviors, zooming, and value adjustment controls."</p>
 
             <Code>
-                {r#"let (value, set_value) = signal(50.0f64);
+                {indoc!(r#"
+                    let (value, set_value) = signal(50.0f64);
 
-let scroll_wheel = use_scroll_wheel(UseScrollWheelInput {
-    disabled: Signal::derive(|| false),
-    on_scroll: Some(Callback::new(move |e: ScrollEvent| {
-        // e.delta_x, e.delta_y give scroll amounts
-        // Positive delta_y = scroll down, negative = scroll up
+                    let scroll_wheel = use_scroll_wheel(UseScrollWheelInput {
+                        disabled: Signal::derive(|| false),
+                        on_scroll: Some(Callback::new(move |e: ScrollEvent| {
+                            // e.delta_x, e.delta_y give scroll amounts
+                            // Positive delta_y = scroll down, negative = scroll up
 
-        // Only respond to primarily vertical scrolling
-        if e.delta_y.abs() > e.delta_x.abs() {
-            set_value.update(|v| {
-                *v = (*v - e.delta_y * 0.1).clamp(0.0, 100.0);
-            });
-        }
-    })),
-});
+                            // Only respond to primarily vertical scrolling
+                            if e.delta_y.abs() > e.delta_x.abs() {
+                                set_value.update(|v| {
+                                    *v = (*v - e.delta_y * 0.1).clamp(0.0, 100.0);
+                                });
+                            }
+                        })),
+                    });
 
-view! {
-    <div {..scroll_wheel.attrs} tabindex="0">
-        // Round for display only
-        "Value: " { move || value.get().round() as i32 }
-    </div>
-}"#}
+                    view! {
+                        <div {..scroll_wheel.attrs} tabindex="0">
+                            // Round for display only
+                            "Value: " { move || value.get().round() as i32 }
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="demo" class="anchor">

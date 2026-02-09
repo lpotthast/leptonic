@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::{use_interact_outside, UseInteractOutsideInput};
@@ -30,22 +31,23 @@ pub fn PageUseInteractOutside() -> impl IntoView {
             <p>"Hook for detecting interactions (clicks, touches) outside a specified element. Commonly used for closing dropdowns, modals, and popovers."</p>
 
             <Code>
-                {r#"let (is_open, set_is_open) = signal(true);
+                {indoc!(r#"
+                    let (is_open, set_is_open) = signal(true);
 
-let interact_outside = use_interact_outside(UseInteractOutsideInput {
-    disabled: Signal::derive(|| false),
-    on_interact_outside_start: None,
-    on_interact_outside: Some(Callback::new(move |_| {
-        set_is_open.set(false);
-    })),
-});
+                    let interact_outside = use_interact_outside(UseInteractOutsideInput {
+                        disabled: Signal::derive(|| false),
+                        on_interact_outside_start: None,
+                        on_interact_outside: Some(Callback::new(move |_| {
+                            set_is_open.set(false);
+                        })),
+                    });
 
-view! {
-    <div {..interact_outside.props.into_attrs()}>
-        "Interact, e.g. click, anywhere outside this div and `on_interact_outside` will be called."
-    </div>
-}
-"#}
+                    view! {
+                        <div {..interact_outside.props.into_attrs()}>
+                            "Interact, e.g. click, anywhere outside this div and `on_interact_outside` will be called."
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="demo" class="anchor">

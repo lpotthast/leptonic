@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -23,18 +24,20 @@ pub fn PageUsePreventScroll() -> impl IntoView {
             <p>"Prevent the page from scrolling. Commonly used when displaying modals, overlays, or other UI elements that should prevent background scrolling."</p>
 
             <Code>
-                {r#"let (is_modal_open, set_is_modal_open) = signal(false);
+                {indoc!(r#"
+                    let (is_modal_open, set_is_modal_open) = signal(false);
 
-// Scroll is prevented when disabled=false (i.e., when modal is open)
-use_prevent_scroll(UsePreventScrollInput {
-    disabled: Signal::derive(move || !is_modal_open.get()),
-});
+                    // Scroll is prevented when disabled=false (i.e., when modal is open)
+                    use_prevent_scroll(UsePreventScrollInput {
+                        disabled: Signal::derive(move || !is_modal_open.get()),
+                    });
 
-view! {
-    <button on:click=move |_| set_is_modal_open.set(true)>
-        "Open Modal"
-    </button>
-}"#}
+                    view! {
+                        <button on:click=move |_| set_is_modal_open.set(true)>
+                            "Open Modal"
+                        </button>
+                    }
+                "#)}
             </Code>
 
             <p>"Toggle scroll prevention to see the effect. When enabled, you won't be able to scroll the page:"</p>

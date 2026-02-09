@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -114,23 +115,25 @@ pub fn PageUseToolbar() -> impl IntoView {
             </div>
 
             <Code>
-                {r#"let toolbar = use_toolbar(UseToolbarInput {
-    label: Some("Text Formatting".to_string()),
-    orientation: ToolbarOrientation::Horizontal,
-    on_focus_next: Some(Callback::new(|_| focus_next_item())),
-    on_focus_previous: Some(Callback::new(|_| focus_previous_item())),
-    on_focus_first: Some(Callback::new(|_| focus_first_item())),
-    on_focus_last: Some(Callback::new(|_| focus_last_item())),
-    ..Default::default()
-});
+                {indoc!(r#"
+                    let toolbar = use_toolbar(UseToolbarInput {
+                        label: Some("Text Formatting".to_string()),
+                        orientation: ToolbarOrientation::Horizontal,
+                        on_focus_next: Some(Callback::new(|_| focus_next_item())),
+                        on_focus_previous: Some(Callback::new(|_| focus_previous_item())),
+                        on_focus_first: Some(Callback::new(|_| focus_first_item())),
+                        on_focus_last: Some(Callback::new(|_| focus_last_item())),
+                        ..Default::default()
+                    });
 
-view! {
-    <div {..toolbar.toolbar_props}>
-        <button tabindex="0">"Bold"</button>
-        <button tabindex="-1">"Italic"</button>
-        <button tabindex="-1">"Underline"</button>
-    </div>
-}"#}
+                    view! {
+                        <div {..toolbar.toolbar_props}>
+                            <button tabindex="0">"Bold"</button>
+                            <button tabindex="-1">"Italic"</button>
+                            <button tabindex="-1">"Underline"</button>
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="orientation" class="anchor">

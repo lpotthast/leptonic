@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -112,24 +113,26 @@ pub fn PageUseTree() -> impl IntoView {
             </p>
 
             <Code>
-                {r#"let (expanded, set_expanded) = signal(vec!["folder1".to_string()]);
-let (selected, set_selected) = signal(Vec::new());
+                {indoc!(r#"
+                    let (expanded, set_expanded) = signal(vec!["folder1".to_string()]);
+                    let (selected, set_selected) = signal(Vec::new());
 
-let tree = use_tree(UseTreeInput {
-    label: Some("File Browser".to_string()),
-    selection_mode: TreeSelectionMode::Single,
-    expanded_keys: expanded.into(),
-    selected_keys: selected.into(),
-    on_expanded_change: Some(Callback::new(|keys| set_expanded.set(keys))),
-    on_selection_change: Some(Callback::new(|keys| set_selected.set(keys))),
-    ..Default::default()
-});
+                    let tree = use_tree(UseTreeInput {
+                        label: Some("File Browser".to_string()),
+                        selection_mode: TreeSelectionMode::Single,
+                        expanded_keys: expanded.into(),
+                        selected_keys: selected.into(),
+                        on_expanded_change: Some(Callback::new(|keys| set_expanded.set(keys))),
+                        on_selection_change: Some(Callback::new(|keys| set_selected.set(keys))),
+                        ..Default::default()
+                    });
 
-view! {
-    <ul {..tree.tree_props}>
-        // Tree items...
-    </ul>
-}"#}
+                    view! {
+                        <ul {..tree.tree_props}>
+                            // Tree items...
+                        </ul>
+                    }
+                "#)}
             </Code>
 
             <h2 id="selection-modes" class="anchor">

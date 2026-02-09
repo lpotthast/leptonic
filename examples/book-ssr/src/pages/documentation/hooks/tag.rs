@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -104,32 +105,34 @@ pub fn PageUseTag() -> impl IntoView {
             </p>
 
             <Code>
-                {r#"let UseTagGroupReturn { group_props, label_props, .. } = use_tag_group(UseTagGroupInput {
-    label: Some("Categories".to_string()),
-    selection_mode: TagGroupSelectionMode::Multiple,
-    allow_removal: true,
-    on_remove: Some(Callback::new(|key| remove_tag(key))),
-    ..Default::default()
-});
+                {indoc!(r#"
+                    let UseTagGroupReturn { group_props, label_props, .. } = use_tag_group(UseTagGroupInput {
+                        label: Some("Categories".to_string()),
+                        selection_mode: TagGroupSelectionMode::Multiple,
+                        allow_removal: true,
+                        on_remove: Some(Callback::new(|key| remove_tag(key))),
+                        ..Default::default()
+                    });
 
-let tag = use_tag(UseTagInput {
-    tag_key: "rust".to_string(),
-    is_selected: Signal::derive(|| false),
-    is_focused: Signal::derive(|| true),
-    is_disabled: Signal::derive(|| false),
-    allow_removal: true,
-    on_remove: Some(Callback::new(|_| remove_this_tag())),
-    ..Default::default()
-});
+                    let tag = use_tag(UseTagInput {
+                        tag_key: "rust".to_string(),
+                        is_selected: Signal::derive(|| false),
+                        is_focused: Signal::derive(|| true),
+                        is_disabled: Signal::derive(|| false),
+                        allow_removal: true,
+                        on_remove: Some(Callback::new(|_| remove_this_tag())),
+                        ..Default::default()
+                    });
 
-view! {
-    <div {..group_props}>
-        <div {..tag.row_props}>
-            <span {..tag.cell_props}>"Rust"</span>
-            <button {..tag.remove_button_props}>"×"</button>
-        </div>
-    </div>
-}"#}
+                    view! {
+                        <div {..group_props}>
+                            <div {..tag.row_props}>
+                                <span {..tag.cell_props}>"Rust"</span>
+                                <button {..tag.remove_button_props}>"×"</button>
+                            </div>
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="selection-modes" class="anchor">

@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::focus_ring::FocusRing;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
@@ -49,33 +50,35 @@ pub fn PageUseFocusable() -> impl IntoView {
             <p>"Make any element focusable with proper keyboard event handling. Combines " <code>"use_focus"</code> " and " <code>"use_keyboard"</code> " for a complete focusable element solution."</p>
 
             <Code>
-                {r#"let UseFocusableReturn { props, focus_handle } = use_focusable(UseFocusableInput {
-    disabled: Signal::derive(|| false),
-    auto_focus: false,
-    exclude_from_tab_order: Signal::derive(|| false),
-    on_focus: Some(Callback::new(|_| { /* focused */ })),
-    on_blur: None,
-    on_focus_change: None,
-    on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
-        if e.key() == "Enter" {
-            // Handle enter key
-        } else {
-            e.continue_propagation();
-        }
-    })),
-    on_key_up: None,
-});
+                {indoc!(r#"
+                    let UseFocusableReturn { props, focus_handle } = use_focusable(UseFocusableInput {
+                        disabled: Signal::derive(|| false),
+                        auto_focus: false,
+                        exclude_from_tab_order: Signal::derive(|| false),
+                        on_focus: Some(Callback::new(|_| { /* focused */ })),
+                        on_blur: None,
+                        on_focus_change: None,
+                        on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
+                            if e.key() == "Enter" {
+                                // Handle enter key
+                            } else {
+                                e.continue_propagation();
+                            }
+                        })),
+                        on_key_up: None,
+                    });
 
-view! {
-    <div role="button" {..props.into_attrs()}>
-        "Click or Tab to focus"
-    </div>
+                    view! {
+                        <div role="button" {..props.into_attrs()}>
+                            "Click or Tab to focus"
+                        </div>
 
-    // Programmatically focus the element
-    <button on:click=move |_| focus_handle.focus()>
-        "Focus"
-    </button>
-}"#}
+                        // Programmatically focus the element
+                        <button on:click=move |_| focus_handle.focus()>
+                            "Focus"
+                        </button>
+                    }
+                "#)}
             </Code>
 
             <p>"Focus the custom element below using Tab, click, or the button:"</p>
@@ -147,15 +150,17 @@ view! {
             <p>"The hook returns a " <code>"FocusHandle"</code> " that allows you to programmatically focus the element:"</p>
 
             <Code>
-                {r"let UseFocusableReturn { props, focus_handle } = use_focusable(input);
+                {indoc!(r"
+                    let UseFocusableReturn { props, focus_handle } = use_focusable(input);
 
-// Focus the element from anywhere
-focus_handle.focus();
+                    // Focus the element from anywhere
+                    focus_handle.focus();
 
-// Check if element has been captured (false during SSR)
-if focus_handle.has_element() {
-    focus_handle.focus();
-}"}
+                    // Check if element has been captured (false during SSR)
+                    if focus_handle.has_element() {
+                        focus_handle.focus();
+                    }
+                ")}
             </Code>
 
             <p>"The " <code>"FocusHandle"</code> " is useful for:"</p>
@@ -185,10 +190,12 @@ if focus_handle.has_element() {
             <p>"Set " <code>"auto_focus: true"</code> " to automatically focus the element when it mounts:"</p>
 
             <Code>
-                {r"let focusable = use_focusable(UseFocusableInput {
-    auto_focus: true,  // Element will be focused on mount
-    ..Default::default()
-});"}
+                {indoc!(r"
+                    let focusable = use_focusable(UseFocusableInput {
+                        auto_focus: true,  // Element will be focused on mount
+                        ..Default::default()
+                    });
+                ")}
             </Code>
 
             <h2 id="features" class="anchor">

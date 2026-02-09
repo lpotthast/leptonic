@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -86,25 +87,27 @@ pub fn PageUseLink() -> impl IntoView {
             </Stack>
 
             <Code>
-                {r#"// Internal link
-let link = use_link(UseLinkInput {
-    href: Some("/about".to_string()),
-    is_external: false,
-    on_press: Some(Callback::new(|_| navigate("/about"))),
-    ..Default::default()
-});
+                {indoc!(r#"
+                    // Internal link
+                    let link = use_link(UseLinkInput {
+                        href: Some("/about".to_string()),
+                        is_external: false,
+                        on_press: Some(Callback::new(|_| navigate("/about"))),
+                        ..Default::default()
+                    });
 
-// External link - automatically adds target="_blank" and rel="noopener noreferrer"
-let external = use_link(UseLinkInput {
-    href: Some("https://example.com".to_string()),
-    is_external: true,
-    ..Default::default()
-});
+                    // External link - automatically adds target="_blank" and rel="noopener noreferrer"
+                    let external = use_link(UseLinkInput {
+                        href: Some("https://example.com".to_string()),
+                        is_external: true,
+                        ..Default::default()
+                    });
 
-view! {
-    <a {..link.link_props}>"Internal Link"</a>
-    <a {..external.link_props}>"External Link"</a>
-}"#}
+                    view! {
+                        <a {..link.link_props}>"Internal Link"</a>
+                        <a {..external.link_props}>"External Link"</a>
+                    }
+                "#)}
             </Code>
 
             <h2 id="element-types" class="anchor">

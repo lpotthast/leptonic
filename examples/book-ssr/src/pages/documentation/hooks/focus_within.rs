@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -36,21 +37,23 @@ pub fn PageUseFocusWithin() -> impl IntoView {
             <p>"Track when focus is anywhere within an element tree. Unlike " <code>"use_focus"</code> " which only fires when the element itself receives focus, " <code>"use_focus_within"</code> " fires when focus enters or leaves the entire element tree."</p>
 
             <Code>
-                {r#"let UseFocusWithinReturn { attrs, is_focus_within } = use_focus_within(
-    UseFocusWithinInput {
-        disabled: Signal::derive(|| false),
-        on_focus_within: Some(Callback::new(|_| { /* focus entered */ })),
-        on_blur_within: Some(Callback::new(|_| { /* focus left */ })),
-        on_focus_within_change: Some(Callback::new(|is_focused| { /* ... */ })),
-    }
-);
+                {indoc!(r#"
+                    let UseFocusWithinReturn { attrs, is_focus_within } = use_focus_within(
+                        UseFocusWithinInput {
+                            disabled: Signal::derive(|| false),
+                            on_focus_within: Some(Callback::new(|_| { /* focus entered */ })),
+                            on_blur_within: Some(Callback::new(|_| { /* focus left */ })),
+                            on_focus_within_change: Some(Callback::new(|is_focused| { /* ... */ })),
+                        }
+                    );
 
-view! {
-    <div {..attrs}>
-        <input type="text" />
-        <button>"Submit"</button>
-    </div>
-}"#}
+                    view! {
+                        <div {..attrs}>
+                            <input type="text" />
+                            <button>"Submit"</button>
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <p>"Click on any element inside the highlighted box. Focus within will be tracked even as you move between different focusable children:"</p>

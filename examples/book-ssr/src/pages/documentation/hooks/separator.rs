@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -64,22 +65,24 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
             </div>
 
             <Code>
-                {r#"// Using <hr> element (no role needed)
-let hr_sep = use_separator(UseSeparatorInput {
-    orientation: SeparatorOrientation::Horizontal,
-    element_type: SeparatorElementType::Hr,
-});
+                {indoc!(r#"
+                    // Using <hr> element (no role needed)
+                    let hr_sep = use_separator(UseSeparatorInput {
+                        orientation: SeparatorOrientation::Horizontal,
+                        element_type: SeparatorElementType::Hr,
+                    });
 
-// Using <div> element (role="separator" is added)
-let div_sep = use_separator(UseSeparatorInput {
-    orientation: SeparatorOrientation::Vertical,
-    element_type: SeparatorElementType::Div,
-});
+                    // Using <div> element (role="separator" is added)
+                    let div_sep = use_separator(UseSeparatorInput {
+                        orientation: SeparatorOrientation::Vertical,
+                        element_type: SeparatorElementType::Div,
+                    });
 
-view! {
-    <hr {..hr_sep.separator_props} />
-    <div {..div_sep.separator_props}></div>
-}"#}
+                    view! {
+                        <hr {..hr_sep.separator_props} />
+                        <div {..div_sep.separator_props}></div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="element-types" class="anchor">

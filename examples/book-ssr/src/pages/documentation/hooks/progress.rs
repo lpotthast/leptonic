@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -86,16 +87,18 @@ pub fn PageUseProgressBar() -> impl IntoView {
             </Stack>
 
             <Code>
-                {r#"let UseProgressBarReturn { progress_props, label_props, .. } = use_progress_bar(
-    UseProgressBarInput {
-        label: Some("Loading progress".into()),
-        value: Signal::derive(|| Some(65.0)),
-        min_value: 0.0,
-        max_value: 100.0,
-        show_value_label: true,
-        is_indeterminate: false,
-    }
-);"#}
+                {indoc!(r#"
+                    let UseProgressBarReturn { progress_props, label_props, .. } = use_progress_bar(
+                        UseProgressBarInput {
+                            label: Some("Loading progress".into()),
+                            value: Signal::derive(|| Some(65.0)),
+                            min_value: 0.0,
+                            max_value: 100.0,
+                            show_value_label: true,
+                            is_indeterminate: false,
+                        }
+                    );
+                "#)}
             </Code>
 
             <h2 id="indeterminate" class="anchor">
@@ -128,16 +131,18 @@ pub fn PageUseProgressBar() -> impl IntoView {
             </style>
 
             <Code>
-                {r#"let UseProgressBarReturn { progress_props, .. } = use_progress_bar(
-    UseProgressBarInput {
-        label: Some("Loading".into()),
-        value: Signal::derive(|| None), // No specific value
-        min_value: 0.0,
-        max_value: 100.0,
-        show_value_label: false,
-        is_indeterminate: true,
-    }
-);"#}
+                {indoc!(r#"
+                    let UseProgressBarReturn { progress_props, .. } = use_progress_bar(
+                        UseProgressBarInput {
+                            label: Some("Loading".into()),
+                            value: Signal::derive(|| None), // No specific value
+                            min_value: 0.0,
+                            max_value: 100.0,
+                            show_value_label: false,
+                            is_indeterminate: true,
+                        }
+                    );
+                "#)}
             </Code>
 
             <h2 id="aria-attributes" class="anchor">

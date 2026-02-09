@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -69,28 +70,30 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
             </nav>
 
             <Code>
-                {r#"let UseBreadcrumbsReturn { nav_props, .. } = use_breadcrumbs(UseBreadcrumbsInput {
-    label: Some("Navigation".to_string()),
-    ..Default::default()
-});
+                {indoc!(r#"
+                    let UseBreadcrumbsReturn { nav_props, .. } = use_breadcrumbs(UseBreadcrumbsInput {
+                        label: Some("Navigation".to_string()),
+                        ..Default::default()
+                    });
 
-let home_item = use_breadcrumb_item(UseBreadcrumbItemInput {
-    href: Some("/".to_string()),
-    is_current: false,
-    on_press: Some(Callback::new(|_| navigate("/"))),
-    ..Default::default()
-});
+                    let home_item = use_breadcrumb_item(UseBreadcrumbItemInput {
+                        href: Some("/".to_string()),
+                        is_current: false,
+                        on_press: Some(Callback::new(|_| navigate("/"))),
+                        ..Default::default()
+                    });
 
-view! {
-    <nav {..nav_props}>
-        <ol>
-            <li>
-                <a {..home_item.link_props}>"Home"</a>
-            </li>
-            // More items...
-        </ol>
-    </nav>
-}"#}
+                    view! {
+                        <nav {..nav_props}>
+                            <ol>
+                                <li>
+                                    <a {..home_item.link_props}>"Home"</a>
+                                </li>
+                                // More items...
+                            </ol>
+                        </nav>
+                    }
+                "#)}
             </Code>
 
             <h2 id="aria-attributes" class="anchor">

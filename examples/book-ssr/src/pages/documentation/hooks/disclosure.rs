@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -75,21 +76,23 @@ pub fn PageUseDisclosure() -> impl IntoView {
             </div>
 
             <Code>
-                {r#"let UseDisclosureStateReturn { is_expanded, toggle, .. } = use_disclosure_state(false);
+                {indoc!(r#"
+                    let UseDisclosureStateReturn { is_expanded, toggle, .. } = use_disclosure_state(false);
 
-let UseDisclosureReturn { trigger_attrs, content_attrs } = use_disclosure(UseDisclosureInput {
-    is_expanded: is_expanded.into(),
-    on_expanded_change: None,
-});
+                    let UseDisclosureReturn { trigger_attrs, content_attrs } = use_disclosure(UseDisclosureInput {
+                        is_expanded: is_expanded.into(),
+                        on_expanded_change: None,
+                    });
 
-view! {
-    <button {..trigger_attrs} on:click=move |_| toggle.run(())>
-        "Toggle Content"
-    </button>
-    <div {..content_attrs}>
-        "Hidden content here..."
-    </div>
-}"#}
+                    view! {
+                        <button {..trigger_attrs} on:click=move |_| toggle.run(())>
+                            "Toggle Content"
+                        </button>
+                        <div {..content_attrs}>
+                            "Hidden content here..."
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="aria-attributes" class="anchor">

@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::atoms::prelude::FocusScope;
 use leptonic::components::prelude::*;
@@ -37,18 +38,20 @@ pub fn PageUseFocusManager() -> impl IntoView {
             <p>"Programmatically navigate focus within a container. Provides methods to move focus to next, previous, first, or last focusable element."</p>
 
             <Code>
-                {r#"let UseFocusManagerReturn { focus_manager, props } =
-    use_focus_manager(UseFocusManagerInput::default());
+                {indoc!(r#"
+                    let UseFocusManagerReturn { focus_manager, props } =
+                        use_focus_manager(UseFocusManagerInput::default());
 
-view! {
-    <div {..props.into_attrs()}>
-        <button>"First"</button>
-        <button>"Second"</button>
-        <button on:click=move |_| {
-            focus_manager.focus_next(FocusManagerOptions::default());
-        }>"Next"</button>
-    </div>
-}"#}
+                    view! {
+                        <div {..props.into_attrs()}>
+                            <button>"First"</button>
+                            <button>"Second"</button>
+                            <button on:click=move |_| {
+                                focus_manager.focus_next(FocusManagerOptions::default());
+                            }>"Next"</button>
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="demo" class="anchor">
@@ -193,11 +196,13 @@ view! {
             <p>"The " <code>"use_focus_manager"</code> " hook provides " <em>"programmatic"</em> " focus control only. It does not trap focus or intercept Tab key presses. For focus trapping (preventing Tab from leaving the container), use the " <code>"FocusScope"</code> " component which combines focus management with keyboard event handling."</p>
 
             <Code>
-                {r#"<FocusScope contain=true auto_focus=true restore_focus=true>
-    <button>"First"</button>
-    <input type="text" placeholder="Middle" />
-    <button>"Last"</button>
-</FocusScope>"#}
+                {indoc!(r#"
+                    <FocusScope contain=true auto_focus=true restore_focus=true>
+                        <button>"First"</button>
+                        <input type="text" placeholder="Middle" />
+                        <button>"Last"</button>
+                    </FocusScope>
+                "#)}
             </Code>
 
             <p>"Try tabbing through the container below. Focus will wrap from the last element back to the first, and vice versa with Shift+Tab:"</p>

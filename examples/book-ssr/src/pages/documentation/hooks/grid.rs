@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -161,49 +162,51 @@ pub fn PageUseGrid() -> impl IntoView {
             </div>
 
             <Code>
-                {r#"let collection = Signal::stored(GridCollection::new(vec![
-    GridRow { key: "row-0".into(), cells: vec!["0-0".into(), "0-1".into()] },
-    GridRow { key: "row-1".into(), cells: vec!["1-0".into(), "1-1".into()] },
-]));
+                {indoc!(r#"
+                    let collection = Signal::stored(GridCollection::new(vec![
+                        GridRow { key: "row-0".into(), cells: vec!["0-0".into(), "0-1".into()] },
+                        GridRow { key: "row-1".into(), cells: vec!["1-0".into(), "1-1".into()] },
+                    ]));
 
-let grid = use_grid(UseGridInput {
-    label: Some("My Grid".to_string()),
-    collection: collection.into(),
-    selection_mode: SelectionMode::Multiple,
-    focus_mode: GridFocusMode::Cell,
-    on_row_action: Some(Callback::new(|key| { /* ... */ })),
-    ..Default::default()
-});
+                    let grid = use_grid(UseGridInput {
+                        label: Some("My Grid".to_string()),
+                        collection: collection.into(),
+                        selection_mode: SelectionMode::Multiple,
+                        focus_mode: GridFocusMode::Cell,
+                        on_row_action: Some(Callback::new(|key| { /* ... */ })),
+                        ..Default::default()
+                    });
 
-let row_group = use_grid_row_group();
+                    let row_group = use_grid_row_group();
 
-// Per row:
-let row = use_grid_row(UseGridRowInput {
-    state: grid.state,
-    key: "row-0".to_string(),
-    row_index: 0,
-});
+                    // Per row:
+                    let row = use_grid_row(UseGridRowInput {
+                        state: grid.state,
+                        key: "row-0".to_string(),
+                        row_index: 0,
+                    });
 
-// Per cell:
-let cell = use_grid_cell(UseGridCellInput {
-    state: grid.state,
-    key: "0-0".to_string(),
-    row_index: 0,
-    column_index: 0,
-    focus_mode: CellFocusMode::Cell,
-});
+                    // Per cell:
+                    let cell = use_grid_cell(UseGridCellInput {
+                        state: grid.state,
+                        key: "0-0".to_string(),
+                        row_index: 0,
+                        column_index: 0,
+                        focus_mode: CellFocusMode::Cell,
+                    });
 
-view! {
-    <div {..grid.props.into_attrs()}>
-        <div {..row_group.props.into_attrs()}>
-            <div {..row.props.into_attrs()}>
-                <div {..cell.props.into_attrs()}>
-                    "Cell content"
-                </div>
-            </div>
-        </div>
-    </div>
-}"#}
+                    view! {
+                        <div {..grid.props.into_attrs()}>
+                            <div {..row_group.props.into_attrs()}>
+                                <div {..row.props.into_attrs()}>
+                                    <div {..cell.props.into_attrs()}>
+                                        "Cell content"
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="grid-list-demo" class="anchor">
@@ -425,34 +428,36 @@ fn GridListDemo() -> impl IntoView {
         </div>
 
         <Code>
-            {r#"let all_keys = Signal::stored(vec!["file-1".into(), "file-2".into()]);
+            {indoc!(r#"
+                let all_keys = Signal::stored(vec!["file-1".into(), "file-2".into()]);
 
-let grid_list = use_grid_list(UseGridListInput {
-    label: Some("Files".to_string()),
-    all_keys: all_keys.into(),
-    selection_mode: SelectionMode::Multiple,
-    on_action: Some(Callback::new(|key| { /* ... */ })),
-    ..Default::default()
-});
+                let grid_list = use_grid_list(UseGridListInput {
+                    label: Some("Files".to_string()),
+                    all_keys: all_keys.into(),
+                    selection_mode: SelectionMode::Multiple,
+                    on_action: Some(Callback::new(|key| { /* ... */ })),
+                    ..Default::default()
+                });
 
-// Per item:
-let item = use_grid_list_item(UseGridListItemInput {
-    state: grid_list.state,
-    key: "file-1".to_string(),
-    row_index: 0,
-    is_disabled: false.into(),
-    text_value: Some("Document.pdf".to_string()),
-});
+                // Per item:
+                let item = use_grid_list_item(UseGridListItemInput {
+                    state: grid_list.state,
+                    key: "file-1".to_string(),
+                    row_index: 0,
+                    is_disabled: false.into(),
+                    text_value: Some("Document.pdf".to_string()),
+                });
 
-view! {
-    <div {..grid_list.props.into_attrs()}>
-        <div {..item.row_props.into_attrs()}>
-            <div {..item.gridcell_props.into_attrs()}>
-                "File content"
-            </div>
-        </div>
-    </div>
-}"#}
+                view! {
+                    <div {..grid_list.props.into_attrs()}>
+                        <div {..item.row_props.into_attrs()}>
+                            <div {..item.gridcell_props.into_attrs()}>
+                                "File content"
+                            </div>
+                        </div>
+                    </div>
+                }
+            "#)}
         </Code>
     }
 }

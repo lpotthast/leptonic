@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::{
@@ -28,17 +29,19 @@ pub fn PageUseHasTabbableChild() -> impl IntoView {
             <p>"Hook that detects whether an element contains any tabbable child elements. Useful for focus management and accessibility."</p>
 
             <Code>
-                {r#"let UseHasTabbableChildReturn { has_tabbable_child, props } =
-    use_has_tabbable_child(UseHasTabbableChildInput::default());
+                {indoc!(r#"
+                    let UseHasTabbableChildReturn { has_tabbable_child, props } =
+                        use_has_tabbable_child(UseHasTabbableChildInput::default());
 
-view! {
-    <div
-        {..props.into_attrs()}
-        tabindex=move || if has_tabbable_child.get() { -1 } else { 0 }
-    >
-        <button>"Child button"</button>
-    </div>
-}"#}
+                    view! {
+                        <div
+                            {..props.into_attrs()}
+                            tabindex=move || if has_tabbable_child.get() { -1 } else { 0 }
+                        >
+                            <button>"Child button"</button>
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="demo" class="anchor">

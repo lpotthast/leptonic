@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::focus_ring::FocusRing;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
@@ -59,22 +60,24 @@ pub fn PageUseKeyboard() -> impl IntoView {
             <p>"Handle keyboard events with support for disabling and controlling event propagation."</p>
 
             <Code>
-                {r#"let UseKeyboardReturn { attrs } = use_keyboard(UseKeyboardInput {
-    disabled: disabled.into(),
-    on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
-        // Handle key press
-        e.continue_propagation(); // Allow parent handlers
-    })),
-    on_key_up: Some(Callback::new(|e: KeyboardEventWrapper| {
-        // Handle key release
-    })),
-});
+                {indoc!(r#"
+                    let UseKeyboardReturn { attrs } = use_keyboard(UseKeyboardInput {
+                        disabled: disabled.into(),
+                        on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
+                            // Handle key press
+                            e.continue_propagation(); // Allow parent handlers
+                        })),
+                        on_key_up: Some(Callback::new(|e: KeyboardEventWrapper| {
+                            // Handle key release
+                        })),
+                    });
 
-view! {
-    <div tabindex="0" {..attrs}>
-        "Focus me and press keys"
-    </div>
-}"#}
+                    view! {
+                        <div tabindex="0" {..attrs}>
+                            "Focus me and press keys"
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <p>"Focus the box below and press any key to see keyboard events:"</p>

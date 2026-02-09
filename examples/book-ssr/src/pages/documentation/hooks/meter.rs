@@ -1,5 +1,6 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
 use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
@@ -86,25 +87,27 @@ pub fn PageUseMeter() -> impl IntoView {
             </Stack>
 
             <Code>
-                {r#"let UseMeterReturn { meter_props, label_props, percentage, value_label, .. } = use_meter(
-    UseMeterInput {
-        value: Signal::derive(|| 72.5),
-        label: Some("Disk Usage".to_string()),
-        min_value: 0.0,
-        max_value: 100.0,
-        ..Default::default()
-    }
-);
+                {indoc!(r#"
+                    let UseMeterReturn { meter_props, label_props, percentage, value_label, .. } = use_meter(
+                        UseMeterInput {
+                            value: Signal::derive(|| 72.5),
+                            label: Some("Disk Usage".to_string()),
+                            min_value: 0.0,
+                            max_value: 100.0,
+                            ..Default::default()
+                        }
+                    );
 
-view! {
-    <div>
-        <label id={label_props.id}>"Disk Usage"</label>
-        <span>{ move || value_label.get() }</span>
-    </div>
-    <div {..meter_props} style="height: 20px; background: #ddd;">
-        <div style=move || format!("width: {}%;", percentage.get())></div>
-    </div>
-}"#}
+                    view! {
+                        <div>
+                            <label id={label_props.id}>"Disk Usage"</label>
+                            <span>{ move || value_label.get() }</span>
+                        </div>
+                        <div {..meter_props} style="height: 20px; background: #ddd;">
+                            <div style=move || format!("width: {}%;", percentage.get())></div>
+                        </div>
+                    }
+                "#)}
             </Code>
 
             <h2 id="meter-vs-progress" class="anchor">
@@ -125,13 +128,15 @@ view! {
 
             <p>"Customize value display with format options:"</p>
             <Code>
-                {r"UseMeterInput {
-    format_options: Some(MeterFormatOptions {
-        style: MeterFormatStyle::Percent, // or Decimal
-        decimals: 1,
-    }),
-    ..Default::default()
-}"}
+                {indoc!(r"
+                    UseMeterInput {
+                        format_options: Some(MeterFormatOptions {
+                            style: MeterFormatStyle::Percent, // or Decimal
+                            decimals: 1,
+                        }),
+                        ..Default::default()
+                    }
+                ")}
             </Code>
 
             <h2 id="aria-attributes" class="anchor">
