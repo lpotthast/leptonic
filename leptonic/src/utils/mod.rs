@@ -1,7 +1,10 @@
+use leptos::ev::EventDescriptor;
+use leptos::prelude::document;
+use leptos::typed_builder::TypedBuilder;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-
-use leptos::prelude::document;
+use wasm_bindgen::closure::Closure;
+use wasm_bindgen::convert::FromWasmAbi;
 
 pub mod aria;
 pub mod callback;
@@ -44,6 +47,39 @@ impl DomContainer {
                 .owner_document()
                 .and_then(move |d| d.default_view().map(move |w| w == *window))
                 .unwrap_or_default(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, TypedBuilder)]
+pub struct EventListenerOptions {
+    #[allow(unused)] // May only be used in non-SSR context.
+    once: bool,
+
+    #[allow(unused)] // May only be used in non-SSR context.
+    capture: bool,
+}
+
+impl Default for EventListenerOptions {
+    fn default() -> Self {
+        Self {
+            once: false,
+            capture: false,
+        }
+    }
+}
+
+impl EventListenerOptions {
+    pub fn capturing() -> Self {
+        EventListenerOptions {
+            capture: true,
+            ..EventListenerOptions::default()
+        }
+    }
+    pub fn once() -> Self {
+        EventListenerOptions {
+            once: true,
+            ..EventListenerOptions::default()
         }
     }
 }
@@ -92,9 +128,37 @@ pub(crate) trait EventTargetExt {
     /// Adds a one-time event listener for the given event name.
     fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
     where
-        E: wasm_bindgen::convert::FromWasmAbi + 'static;
+        E: FromWasmAbi + 'static;
     /// Adds a one-time event listener that calls `prevent_default()` on the event.
     fn prevent_default_once(&self, event_name: &str);
+}
+
+#[allow(unused)] // May only be used in non-SSR context.
+pub(crate) trait DocumentExt {
+    /// Adds an event listener for the given event name.
+    #[must_use]
+    fn listen<E>(
+        &self,
+        event: impl EventDescriptor,
+        callback: impl FnMut(E) + 'static,
+        options: EventListenerOptions,
+    ) -> Closure<dyn FnMut(E)>
+    where
+        E: FromWasmAbi + 'static;
+}
+
+#[allow(unused)] // May only be used in non-SSR context.
+pub(crate) trait WindowExt {
+    /// Adds an event listener for the given event name.
+    #[must_use]
+    fn listen<E>(
+        &self,
+        event: impl EventDescriptor,
+        callback: impl FnMut(E) + 'static,
+        options: EventListenerOptions,
+    ) -> Closure<dyn FnMut(E)>
+    where
+        E: FromWasmAbi + 'static;
 }
 
 impl EventTargetExt for web_sys::EventTarget {
@@ -138,19 +202,23 @@ impl EventTargetExt for web_sys::EventTarget {
 
     fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
     where
-        E: wasm_bindgen::convert::FromWasmAbi + 'static,
+        E: FromWasmAbi + 'static,
     {
         use wasm_bindgen::closure::Closure;
         use wasm_bindgen::JsCast;
 
-        let closure = Closure::once(Box::new(callback) as Box<dyn FnOnce(E)>);
+        let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
+        let closure = Closure::once(boxed);
+
         let options = web_sys::AddEventListenerOptions::new();
         options.set_once(true);
+
         let _ = self.add_event_listener_with_callback_and_add_event_listener_options(
             event_name,
             closure.as_ref().unchecked_ref(),
             &options,
         );
+
         closure.forget();
     }
 
@@ -158,6 +226,76 @@ impl EventTargetExt for web_sys::EventTarget {
         self.listen_once(event_name, |e: web_sys::Event| {
             e.prevent_default();
         });
+    }
+}
+
+impl DocumentExt for web_sys::Document {
+    fn listen<E>(
+        &self,
+        event: impl EventDescriptor,
+        callback: impl FnMut(E) + 'static,
+        options: EventListenerOptions,
+    ) -> Closure<dyn FnMut(E)>
+    where
+        E: FromWasmAbi + 'static,
+    {
+        use wasm_bindgen::closure::Closure;
+        use wasm_bindgen::JsCast;
+
+        let closure: Closure<dyn FnMut(E)> = if options.once {
+            let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
+            Closure::once(boxed)
+        } else {
+            let boxed: Box<dyn FnMut(E)> = Box::new(callback);
+            Closure::wrap(boxed)
+        };
+
+        let web_sys_options = web_sys::AddEventListenerOptions::new();
+        web_sys_options.set_once(options.once);
+        web_sys_options.set_capture(options.capture);
+
+        let _ = self.add_event_listener_with_callback_and_add_event_listener_options(
+            event.name().as_ref(),
+            closure.as_ref().unchecked_ref(),
+            &web_sys_options,
+        );
+
+        closure
+    }
+}
+
+impl WindowExt for web_sys::Window {
+    fn listen<E>(
+        &self,
+        event: impl EventDescriptor,
+        callback: impl FnMut(E) + 'static,
+        options: EventListenerOptions,
+    ) -> Closure<dyn FnMut(E)>
+    where
+        E: FromWasmAbi + 'static,
+    {
+        use wasm_bindgen::closure::Closure;
+        use wasm_bindgen::JsCast;
+
+        let closure: Closure<dyn FnMut(E)> = if options.once {
+            let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
+            Closure::once(boxed)
+        } else {
+            let boxed: Box<dyn FnMut(E)> = Box::new(callback);
+            Closure::wrap(boxed)
+        };
+
+        let web_sys_options = web_sys::AddEventListenerOptions::new();
+        web_sys_options.set_once(options.once);
+        web_sys_options.set_capture(options.capture);
+
+        let _ = self.add_event_listener_with_callback_and_add_event_listener_options(
+            event.name().as_ref(),
+            closure.as_ref().unchecked_ref(),
+            &web_sys_options,
+        );
+
+        closure
     }
 }
 

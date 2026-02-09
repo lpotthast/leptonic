@@ -45,7 +45,7 @@ pub struct UseTabInput {
 }
 
 /// The return value of the `use_tab` hook.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct UseTabReturn {
     /// Props for the tab button element.
     pub tab_props: UseTabAttrs,
@@ -76,6 +76,8 @@ pub type UseTabAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     ElementCaptureAttr,
 );
 
@@ -210,7 +212,8 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus_handler, on_blur_handler, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     UseTabReturn {
         tab_props: (
@@ -223,8 +226,10 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
             data_focus_visible,
             on(ev::click, handle_click).into_cloneable(),
             on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus_handler,
-            on_blur_handler,
+            on_focus,
+            on_blur,
+            on_focusin,
+            on_focusout,
             focusable.props.element_capture,
         ),
         tab_id,

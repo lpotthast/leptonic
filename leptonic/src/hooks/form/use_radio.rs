@@ -67,6 +67,8 @@ pub type UseRadioInputAttrs = (
     On<ev::change, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
 );
 
 /// Provides the behavior and accessibility implementation for a radio button.
@@ -148,7 +150,8 @@ where
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     UseRadioReturn {
         input_props: (
@@ -162,6 +165,8 @@ where
             on(ev::change, handle_change).into_cloneable(),
             on_focus,
             on_blur,
+            on_focusin,
+            on_focusout,
         ),
         is_selected,
         is_disabled,

@@ -69,18 +69,43 @@ pub fn PageUseFocusRing() -> impl IntoView {
                 <AnchorLink href="#within-mode" description="Direct link to within mode"/>
             </h2>
 
-            <p>"With " <code>"within: true"</code> ", the focus ring is visible whenever the element is focused, regardless of input modality. The " <code>"data-focus-visible"</code> " attribute is set when focused:"</p>
+            <p>"With " <code>"within: true"</code> ", the focus ring tracks focus within the element's subtree using " <code>"focusin"</code> "/" <code>"focusout"</code> " events. The " <code>"data-focus-visible"</code> " attribute is set on the container when any descendant is focused via keyboard:"</p>
 
-            <button
+            <Code>
+                {indoc!(r#"
+                    let focus_ring_within = use_focus_ring(UseFocusRingInput {
+                        within: true,
+                        ..Default::default()
+                    });
+
+                    view! {
+                        <div {..focus_ring_within.props.into_attrs()}>
+                            <input type="text" placeholder="Tab here..." />
+                            <button>"Or here"</button>
+                        </div>
+                    }
+                "#)}
+            </Code>
+
+            <div
                 {..focus_ring_within.props.to_attrs()}
-                tabindex="0"
-                style="padding: 1em 2em; font-size: 1em; border-radius: 8px; cursor: pointer; border: 2px solid #ccc; background: white; transition: all 0.2s;"
+                style="padding: 1em; border-radius: 8px; border: 2px solid #ccc; display: flex; gap: 0.5em; align-items: center; transition: all 0.2s;"
             >
-                "Always shows ring when focused"
-            </button>
+                <input
+                    type="text"
+                    placeholder="Tab here..."
+                    style="padding: 0.5em; border-radius: 4px; border: 1px solid #ccc;"
+                />
+                <button
+                    style="padding: 0.5em 1em; border-radius: 4px; cursor: pointer; border: 1px solid #ccc; background: white;"
+                >
+                    "Or here"
+                </button>
+            </div>
 
             <p style="margin-top: 1em;">
-                "Focus ring (within mode) visible: " <strong>{ move || focus_ring_within.is_focus_visible.get().to_string() }</strong>
+                "Focus within: " <strong>{ move || focus_ring_within.is_focused.get().to_string() }</strong>
+                " | Focus ring (within) visible: " <strong>{ move || focus_ring_within.is_focus_visible.get().to_string() }</strong>
             </p>
 
             <h2 id="use_focus_visible" class="anchor">
@@ -142,7 +167,7 @@ pub fn PageUseFocusRing() -> impl IntoView {
                 <li>"Distinguishes between keyboard and pointer focus"</li>
                 <li>"Tracks both focus state and focus visibility separately"</li>
                 <li>"Automatic " <code>"data-focus-visible"</code> " attribute for CSS styling"</li>
-                <li>"Optional \"within\" mode for always-visible focus rings"</li>
+                <li><code>"within"</code> " mode tracks focus within descendants (for containers with focusable children)"</li>
                 <li>"Supports auto-focus scenarios"</li>
             </ul>
         </Article>

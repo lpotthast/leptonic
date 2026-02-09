@@ -53,7 +53,7 @@ impl Default for UseLinkInput {
 }
 
 /// The return value of the `use_link` hook.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct UseLinkReturn {
     /// Props for the link element.
     pub link_props: UseLinkAttrs,
@@ -78,6 +78,8 @@ pub type UseLinkAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
 );
 
 /// Provides the behavior and accessibility for a link.
@@ -163,7 +165,8 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     UseLinkReturn {
         link_props: (
@@ -178,6 +181,8 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
             on(ev::keydown, handle_keydown).into_cloneable(),
             on_focus,
             on_blur,
+            on_focusin,
+            on_focusout,
         ),
         is_disabled,
         is_focus_visible,

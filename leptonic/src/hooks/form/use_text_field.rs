@@ -144,6 +144,8 @@ pub type UseTextFieldInputAttrs = (
     On<ev::input, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
 );
 
 /// Props for the label element.
@@ -250,7 +252,8 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
     });
-    let (handle_focus, handle_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     // Build aria-describedby
     let mut describedby_parts = Vec::new();
@@ -309,8 +312,10 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
             Attr(attr::Autofocus, input.auto_focus),
             data_focus_visible,
             on(ev::input, handle_input).into_cloneable(),
-            handle_focus,
-            handle_blur,
+            on_focus,
+            on_blur,
+            on_focusin,
+            on_focusout,
         ),
         label_props: UseTextFieldLabelProps {
             id: label_id,

@@ -64,7 +64,9 @@ pub type UseTableColumnHeaderAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
-    leptos::attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 /// Provides the behavior and accessibility for a table column header.
@@ -167,7 +169,8 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     // Column index is 1-based for ARIA
     let aria_colindex = (input.column_index + 1).to_string();
@@ -183,6 +186,8 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
             on(ev::keydown, handle_keydown).into_cloneable(),
             on_focus,
             on_blur,
+            on_focusin,
+            on_focusout,
             data_focus_visible,
         ),
         column_key,

@@ -32,7 +32,8 @@ pub fn FocusRing(
         on_blur,
         on_focus_change,
     });
-    let (on_focus_attr, on_blur_attr, data_focus_visible_attr) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     provide_context(FocusRingContext {
         is_focused,
@@ -41,7 +42,9 @@ pub fn FocusRing(
 
     children()
         .into_view()
-        .add_any_attr(on_focus_attr)
-        .add_any_attr(on_blur_attr)
-        .add_any_attr(data_focus_visible_attr)
+        .add_any_attr(on_focus)
+        .add_any_attr(on_blur)
+        .add_any_attr(on_focusin)
+        .add_any_attr(on_focusout)
+        .add_any_attr(data_focus_visible)
 }

@@ -97,6 +97,8 @@ pub type UseCalendarCellButtonAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
@@ -246,7 +248,8 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus_ring, on_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     UseCalendarCellReturn {
         cell_props: (
@@ -261,8 +264,10 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
             Attr(attr::AriaDisabled, cell_disabled_str),
             on(ev::click, handle_click).into_cloneable(),
             on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus_ring,
+            on_focus,
             on_blur,
+            on_focusin,
+            on_focusout,
             data_focus_visible,
         ),
         is_disabled,

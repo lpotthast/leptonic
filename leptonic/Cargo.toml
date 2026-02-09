@@ -51,6 +51,7 @@ nightly = ["leptos/nightly"]
 docsrs = []
 
 [dependencies]
+atomic_enum = "0.3.0"
 cfg-if = "1.0.4"
 educe = "0.6.0"
 icondata = { version = "0.7.0" }

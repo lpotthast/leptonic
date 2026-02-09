@@ -54,7 +54,7 @@ impl Default for UseSwitchInput {
 }
 
 /// The return value of the `use_switch` hook.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct UseSwitchReturn {
     /// Props for the switch element (use with a button or div).
     pub switch_props: UseSwitchAttrs,
@@ -84,7 +84,9 @@ pub type UseSwitchAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
-    leptos::attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 /// Attributes for the hidden input element (for form submission).
@@ -196,7 +198,8 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     UseSwitchReturn {
         switch_props: (
@@ -210,6 +213,8 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
             on(ev::keydown, handle_keydown).into_cloneable(),
             on_focus,
             on_blur,
+            on_focusin,
+            on_focusout,
             data_focus_visible,
         ),
         input_props: (

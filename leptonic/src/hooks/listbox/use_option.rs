@@ -93,7 +93,9 @@ pub type UseOptionAttrs = (
     On<ev::pointerup, SharedEventCallback<web_sys::PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
-    leptos::attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
     ElementCaptureAttr,
 );
 
@@ -255,7 +257,8 @@ where
         on_blur: None,
         on_focus_change: None,
     });
-    let (handle_focus, handle_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     UseOptionReturn {
         option_props: (
@@ -269,8 +272,10 @@ where
             on(ev::click, handle_click).into_cloneable(),
             on(ev::pointerdown, handle_pointer_down).into_cloneable(),
             on(ev::pointerup, handle_pointer_up).into_cloneable(),
-            handle_focus,
-            handle_blur,
+            on_focus,
+            on_blur,
+            on_focusin,
+            on_focusout,
             data_focus_visible,
             focusable.props.element_capture,
         ),

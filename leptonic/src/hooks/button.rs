@@ -61,6 +61,8 @@ pub struct UseButtonProps {
     pub on_pointerleave: EventHandler<PointerEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
 }
 
 impl UseButtonProps {
@@ -84,6 +86,8 @@ impl UseButtonProps {
             self.on_pointerleave.to_on(ev::pointerleave),
             self.on_focus.to_on(ev::focus),
             self.on_blur.to_on(ev::blur),
+            self.on_focusin.to_on(ev::focusin),
+            self.on_focusout.to_on(ev::focusout),
         )
     }
 
@@ -107,6 +111,8 @@ impl UseButtonProps {
             self.on_pointerleave.into_on(ev::pointerleave),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
         )
     }
 }
@@ -129,6 +135,8 @@ pub type UseButtonAttrs = (
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
 );
 
 pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
@@ -188,8 +196,10 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
             on_dragstart: press_props.on_dragstart,
             on_pointerenter: hover_props.on_pointerenter,
             on_pointerleave: hover_props.on_pointerleave,
-            on_focus: focus_ring_props.on_focus,
-            on_blur: focus_ring_props.on_blur,
+            on_focus: focus_ring_props.handle_focus,
+            on_blur: focus_ring_props.handle_blur,
+            on_focusin: focus_ring_props.handle_focusin,
+            on_focusout: focus_ring_props.handle_focusout,
         },
         is_hovered,
         is_pressed,

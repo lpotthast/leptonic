@@ -62,7 +62,7 @@ impl Default for UseCheckboxInput {
 }
 
 /// The return value of the `use_checkbox` hook.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct UseCheckboxReturn {
     /// Props for the checkbox input element.
     pub input_props: UseCheckboxInputAttrs,
@@ -94,6 +94,8 @@ pub type UseCheckboxInputAttrs = (
     On<ev::change, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
 );
 
 /// Provides the behavior and accessibility implementation for a checkbox.
@@ -170,7 +172,8 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     UseCheckboxReturn {
         input_props: (
@@ -186,6 +189,8 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
             on(ev::change, handle_change).into_cloneable(),
             on_focus,
             on_blur,
+            on_focusin,
+            on_focusout,
         ),
         is_selected,
         is_indeterminate,

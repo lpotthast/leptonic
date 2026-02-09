@@ -129,7 +129,9 @@ pub type UseSearchFieldInputAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<web_sys::FocusEvent>>,
     On<ev::blur, SharedEventCallback<web_sys::FocusEvent>>,
-    leptos::attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    On<ev::focusin, SharedEventCallback<web_sys::FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<web_sys::FocusEvent>>,
+    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 /// Attributes for the clear button element.
@@ -270,7 +272,8 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
     });
-    let (handle_focus, handle_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     // Handle clear button click
     let handle_clear = move |_e: web_sys::MouseEvent| {
@@ -325,8 +328,10 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
             Attr(attr::Autofocus, input.auto_focus),
             on(ev::input, handle_input).into_cloneable(),
             on(ev::keydown, handle_keydown).into_cloneable(),
-            handle_focus,
-            handle_blur,
+            on_focus,
+            on_blur,
+            on_focusin,
+            on_focusout,
             data_focus_visible,
         ),
         clear_button_props: (

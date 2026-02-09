@@ -71,6 +71,8 @@ pub type UseMenuItemAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     On<ev::mouseenter, SharedEventCallback<MouseEvent>>,
     attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
     ElementCaptureAttr,
@@ -219,6 +221,15 @@ where
         on_focus.run(Some(key_for_focus.clone()));
     });
 
+    // Handle mouse enter (for hover focus)
+    let key_for_hover = key.clone();
+    let handle_mouseenter = move |_e: MouseEvent| {
+        if is_disabled_input.get_untracked() {
+            return;
+        }
+        on_focus.run(Some(key_for_hover.clone()));
+    };
+
     // Use focus ring for keyboard focus visibility
     let UseFocusRingReturn {
         props: focus_ring_props,
@@ -232,16 +243,8 @@ where
         on_blur: None,
         on_focus_change: None,
     });
-    let (handle_focus, handle_blur, data_focus_visible) = focus_ring_props.into_attrs();
-
-    // Handle mouse enter (for hover focus)
-    let key_for_hover = key.clone();
-    let handle_mouseenter = move |_e: MouseEvent| {
-        if is_disabled_input.get_untracked() {
-            return;
-        }
-        on_focus.run(Some(key_for_hover.clone()));
-    };
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     UseMenuItemReturn {
         item_props: (
@@ -250,8 +253,10 @@ where
             Attr(attr::AriaDisabled, aria_disabled),
             on(ev::click, handle_click).into_cloneable(),
             on(ev::keydown, handle_keydown).into_cloneable(),
-            handle_focus,
-            handle_blur,
+            on_focus,
+            on_blur,
+            on_focusin,
+            on_focusout,
             on(ev::mouseenter, handle_mouseenter).into_cloneable(),
             data_focus_visible,
             focusable.props.element_capture,

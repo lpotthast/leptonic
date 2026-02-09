@@ -10,7 +10,10 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Duration;
 use wasm_bindgen::JsCast;
-use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
+use web_sys::{
+    EventTarget, HtmlElement, HtmlInputElement, HtmlTextAreaElement, KeyboardEvent, MouseEvent,
+    PointerEvent,
+};
 
 use crate::utils::focus::focus_element;
 use crate::utils::{
@@ -58,7 +61,7 @@ pub struct LongPressEvent {
     pub pointer_type: PointerType,
 
     /// The target element of the long press event.
-    pub target: Option<SendWrapper<web_sys::EventTarget>>,
+    pub target: Option<SendWrapper<EventTarget>>,
 
     /// States which modifier keys were held during the long press event.
     pub modifiers: Modifiers,
@@ -87,7 +90,7 @@ pub struct PressEvent {
     pub pointer_type: PointerType,
 
     /// The target element of the press event.
-    pub target: Option<send_wrapper::SendWrapper<web_sys::EventTarget>>,
+    pub target: Option<SendWrapper<EventTarget>>,
 
     /// States which modifier keys were held during the press event.
     pub modifiers: Modifiers,
@@ -206,14 +209,7 @@ impl UsePressProps {
     /// Convert to spreadable attributes for Leptos views.
     #[must_use]
     pub fn to_attrs(&self) -> UsePressAttrs {
-        (
-            self.on_keydown.to_on(ev::keydown),
-            self.on_click.to_on(ev::click),
-            self.on_pointerdown.to_on(ev::pointerdown),
-            self.on_dragstart.to_on(ev::dragstart),
-            self.on_dblclick.to_on(ev::dblclick),
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-        )
+        self.clone().into_attrs()
     }
 
     /// Convert to spreadable attributes for Leptos views.
@@ -254,7 +250,7 @@ enum EventHandlers {
 struct PressState {
     pointer_id: i32,
     pointer_type: PointerType,
-    target: Option<web_sys::EventTarget>,
+    target: Option<EventTarget>,
     is_over_target: bool,
 
     /// Tracks whether `trigger_press_start` was actually fired, to prevent
@@ -350,7 +346,7 @@ impl EventRef<'_> {
         }
     }
 
-    fn target(&self) -> Option<web_sys::EventTarget> {
+    fn target(&self) -> Option<EventTarget> {
         match self {
             EventRef::Pointer(e) => e.target(),
             EventRef::Keyboard(e) => e.target(),
@@ -377,7 +373,7 @@ fn fire_press_callback(
     let (x, y) = event.coordinates();
     callback.run(PressEvent {
         pointer_type: state.pointer_type.clone(),
-        target: state.target.clone().map(send_wrapper::SendWrapper::new),
+        target: state.target.clone().map(SendWrapper::new),
         modifiers: event.modifiers(),
         x,
         y,
@@ -563,7 +559,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         if key != "Enter" {
             if let Some(target) = e.target().and_then(|t| t.as_element()) {
                 if target.is_anchor_link() {
-                    if let Ok(html_el) = target.dyn_into::<web_sys::HtmlElement>() {
+                    if let Ok(html_el) = target.dyn_into::<HtmlElement>() {
                         html_el.click();
                     }
                 }
@@ -793,7 +789,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 s.click_timeout_handle = set_timeout_with_handle(
                     move || {
                         if let Some(target) = target {
-                            if let Some(html_el) = target.dyn_ref::<web_sys::HtmlElement>() {
+                            if let Some(html_el) = target.dyn_ref::<HtmlElement>() {
                                 html_el.click();
                             }
                         }
@@ -972,7 +968,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         let (continue_propagation_state, continue_propagation) = use_continue_propagation();
         on_double_press.run(PressEvent {
             pointer_type: PointerType::Mouse,
-            target: e.target().map(send_wrapper::SendWrapper::new),
+            target: e.target().map(SendWrapper::new),
             modifiers: e.modifiers(),
             x: Some(f64::from(e.client_x())),
             y: Some(f64::from(e.client_y())),
@@ -1005,8 +1001,8 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
 /// Tests whether a keyboard event's default action should be presented when the given `key` was pressed.
 fn should_prevent_default_keyboard(element: web_sys::Element, key: &str) -> bool {
-    if element.is_instance_of::<web_sys::HtmlInputElement>() {
-        return !is_valid_input_key(element.unchecked_into::<web_sys::HtmlInputElement>(), key);
+    if element.is_instance_of::<HtmlInputElement>() {
+        return !is_valid_input_key(element.unchecked_into::<HtmlInputElement>(), key);
     }
 
     if element.is_instance_of::<web_sys::HtmlButtonElement>() {
@@ -1024,7 +1020,7 @@ const NON_TEXT_INPUT_TYPES: [&str; 9] = [
 ];
 
 #[allow(clippy::needless_pass_by_value)]
-fn is_valid_input_key(element: web_sys::HtmlInputElement, key: &str) -> bool {
+fn is_valid_input_key(element: HtmlInputElement, key: &str) -> bool {
     // Checkboxes and radio-buttons should only toggle with space, not enter.
     match element.get_attribute("type") {
         Some(ty) => match ty.as_str() {
@@ -1037,7 +1033,7 @@ fn is_valid_input_key(element: web_sys::HtmlInputElement, key: &str) -> bool {
 
 /// Accessibility for keyboards. Space and Enter only.
 #[allow(clippy::needless_pass_by_value)]
-fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: web_sys::EventTarget) -> bool {
+fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: EventTarget) -> bool {
     let key = e.key();
     let code = e.code();
     let resembles_press =
@@ -1049,11 +1045,11 @@ fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: web_sys::EventTarg
 
     match current_target.as_element() {
         Some(element) => {
-            let is_input = element.is_instance_of::<web_sys::HtmlInputElement>();
-            let is_text_area = element.is_instance_of::<web_sys::HtmlTextAreaElement>();
+            let is_input = element.is_instance_of::<HtmlInputElement>();
+            let is_text_area = element.is_instance_of::<HtmlTextAreaElement>();
             let is_content_editable = element
-                .dyn_ref::<web_sys::HtmlElement>()
-                .is_some_and(web_sys::HtmlElement::is_content_editable);
+                .dyn_ref::<HtmlElement>()
+                .is_some_and(HtmlElement::is_content_editable);
             let is_link = element.is_link();
 
             // Links should only trigger with Enter key
@@ -1061,7 +1057,7 @@ fn is_valid_keyboard_event(e: &KeyboardEvent, current_target: web_sys::EventTarg
                 || is_content_editable
                 || is_input
                     && !is_valid_input_key(
-                        element.unchecked_into::<web_sys::HtmlInputElement>(),
+                        element.unchecked_into::<HtmlInputElement>(),
                         key.as_str(),
                     )
                 || is_link && key.as_str() != "Enter")

@@ -174,6 +174,8 @@ pub type UseNumberFieldInputAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
 );
 
 /// Attributes for increment/decrement button elements.
@@ -412,7 +414,8 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
     });
-    let (handle_focus, handle_blur, data_focus_visible) = focus_ring_props.into_attrs();
+    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
+        focus_ring_props.into_attrs();
 
     // Handle increment button click
     let increment_click = increment;
@@ -488,8 +491,10 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
             data_focus_visible,
             on(ev::input, handle_input).into_cloneable(),
             on(ev::keydown, handle_keydown).into_cloneable(),
-            handle_focus,
-            handle_blur,
+            on_focus,
+            on_blur,
+            on_focusin,
+            on_focusout,
         ),
         increment_button_props: (
             Attr(attr::Type, "button"),

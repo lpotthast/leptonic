@@ -77,6 +77,8 @@ pub struct UseAnchorLinkProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
     #[educe(Debug(ignore))]
     pub data_focus_visible: CustomAttr<&'static str, Signal<Option<&'static str>>>,
 }
@@ -95,6 +97,8 @@ impl UseAnchorLinkProps {
             self.on_pointerdown.to_on(ev::pointerdown),
             self.on_focus.to_on(ev::focus),
             self.on_blur.to_on(ev::blur),
+            self.on_focusin.to_on(ev::focusin),
+            self.on_focusout.to_on(ev::focusout),
             self.data_focus_visible.clone(),
         )
     }
@@ -112,6 +116,8 @@ impl UseAnchorLinkProps {
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
             self.data_focus_visible,
         )
     }
@@ -127,6 +133,8 @@ pub type UseAnchorLinkAttrs = (
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
@@ -210,8 +218,10 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             on_keydown: press_props.on_keydown,
             on_click: press_props.on_click,
             on_pointerdown: press_props.on_pointerdown,
-            on_focus: focus_ring_props.on_focus,
-            on_blur: focus_ring_props.on_blur,
+            on_focus: focus_ring_props.handle_focus,
+            on_blur: focus_ring_props.handle_blur,
+            on_focusin: focus_ring_props.handle_focusin,
+            on_focusout: focus_ring_props.handle_focusout,
             data_focus_visible: focus_ring_props.data_focus_visible,
         },
         is_pressed,

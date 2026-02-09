@@ -61,6 +61,7 @@ pub type UseFocusAttrs = (
     On<ev::blur, SharedEventCallback<FocusEvent>>,
 );
 
+/// Track focus of an element.
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     let on_focus_handler = move |e: FocusEvent| {
         // Double check that document.activeElement actually matches e.target in case a previously chained

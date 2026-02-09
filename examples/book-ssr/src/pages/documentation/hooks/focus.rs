@@ -57,7 +57,7 @@ pub fn PageUseFocus() -> impl IntoView {
             </Code>
 
             <div
-                tabindex=1
+                tabindex=0
                 {..props.into_attrs()}
                 style="display: inline-flex;
                 border: 0.1em solid green;

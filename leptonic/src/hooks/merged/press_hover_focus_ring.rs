@@ -48,6 +48,8 @@ pub struct MergedPressHoverFocusRingProps {
     // From focus ring
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
     pub data_focus_visible: CustomAttr<&'static str, leptos::prelude::Signal<Option<&'static str>>>,
 }
 
@@ -64,6 +66,8 @@ pub type MergedPressHoverFocusRingAttrs = (
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     CustomAttr<&'static str, leptos::prelude::Signal<Option<&'static str>>>,
 );
 
@@ -88,6 +92,8 @@ impl MergedPressHoverFocusRingProps {
             self.on_pointerleave.into_on(ev::pointerleave),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
             self.data_focus_visible,
         )
     }
@@ -107,8 +113,10 @@ impl MergeWith<UseFocusRingProps> for MergedPressHoverProps {
             on_pointerenter: self.on_pointerenter,
             on_pointerleave: self.on_pointerleave,
             // From focus ring (distinct)
-            on_focus: other.on_focus,
-            on_blur: other.on_blur,
+            on_focus: other.handle_focus,
+            on_blur: other.handle_blur,
+            on_focusin: other.handle_focusin,
+            on_focusout: other.handle_focusout,
             data_focus_visible: other.data_focus_visible,
         }
     }
