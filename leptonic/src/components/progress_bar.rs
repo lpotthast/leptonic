@@ -7,7 +7,7 @@ pub fn ProgressBar(
     #[prop(into, default = Signal::from(100.0))] max: Signal<f64>,
     #[prop(into)] progress: Signal<Option<f64>>,
 ) -> impl IntoView {
-    let el: NodeRef<html::Custom<&str>> = NodeRef::new();
+    let el: NodeRef<html::Div> = NodeRef::new();
 
     let UseElementSizeReturn { width, height: _ } = use_element_size(el);
 
@@ -36,21 +36,21 @@ pub fn ProgressBar(
     });
 
     view! {
-        <leptonic-progress-bar node_ref=el data-indeterminate=move || progress.get().is_none()>
-            <leptonic-progress-bar-background>
-                <leptonic-progress-bar-fill style=move || fill_style.get()>
-                    <leptonic-progress-bar-fill-overlay />
-                </leptonic-progress-bar-fill>
+        <div class="leptonic-progress-bar" node_ref=el data-indeterminate=move || progress.get().is_none()>
+            <div class="leptonic-progress-bar-background">
+                <div class="leptonic-progress-bar-fill" style=move || fill_style.get()>
+                    <div class="leptonic-progress-bar-fill-overlay" />
+                </div>
 
                 <Show when=move || percentage_done.get().is_some() fallback=|| ()>
-                    <leptonic-progress-info>
+                    <div class="leptonic-progress-info">
                         {move || match percentage_done.get() {
                             Some(percentage_done) => format!("{:.2} %", (percentage_done * 100.0)),
                             None => String::new(),
                         }}
-                    </leptonic-progress-info>
+                    </div>
                 </Show>
-            </leptonic-progress-bar-background>
-        </leptonic-progress-bar>
+            </div>
+        </div>
     }
 }

@@ -99,7 +99,8 @@ pub fn Drawer(
     });
 
     view! {
-        <leptonic-drawer
+        <div
+            class="leptonic-drawer"
             class:shown=move || anim_state.get() == DrawerAnimationState::Shown
             class:showing=move || anim_state.get() == DrawerAnimationState::Showing
             class:hiding=move || anim_state.get() == DrawerAnimationState::Hiding
@@ -107,6 +108,6 @@ pub fn Drawer(
             data-side=side.to_str()
         >
             {children()}
-        </leptonic-drawer>
+        </div>
     }
 }

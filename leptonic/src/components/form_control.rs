@@ -18,8 +18,8 @@ pub fn FormControl(children: Children) -> impl IntoView {
     let ctx = FormControlContext { input };
 
     view! {
-        <leptonic-form-control>
+        <div class="leptonic-form-control">
             <Provider value=ctx>{children()}</Provider>
-        </leptonic-form-control>
+        </div>
     }
 }

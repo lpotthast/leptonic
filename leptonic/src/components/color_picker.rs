@@ -20,7 +20,7 @@ pub fn ColorPreview(#[prop(into)] rgb: Signal<RGB8>) -> impl IntoView {
         format!("rgb({r}, {g}, {b})")
     };
 
-    view! { <leptonic-color-preview style:background-color=background_color></leptonic-color-preview> }
+    view! { <div class="leptonic-color-preview" style:background-color=background_color></div> }
 }
 
 #[component]
@@ -116,14 +116,15 @@ pub fn ColorPalette(
             }
             on:touchend=move |_e| set_knob_listening.set(false)
         >
-            <leptonic-color-palette-knob-wrapper style="">
-                <leptonic-color-palette-knob
+            <div class="leptonic-color-palette-knob-wrapper" style="">
+                <div
+                    class="leptonic-color-palette-knob"
                     data-variant="round"
                     style:left=knob_left
                     style:bottom=knob_bottom
                     style=("--color-palette-knob-background-color", knob_background_color)
-                ></leptonic-color-palette-knob>
-            </leptonic-color-palette-knob-wrapper>
+                ></div>
+            </div>
         </div>
     }
 }
@@ -148,7 +149,7 @@ pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>
         )
     };
     view! {
-        <leptonic-hue-slider>
+        <div class="leptonic-hue-slider">
             <Slider
                 min=0.0
                 max=360.0
@@ -158,7 +159,7 @@ pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>
                 attr:class="hue-slider"
                 attr:style=style
             />
-        </leptonic-hue-slider>
+        </div>
     }
 }
 
@@ -182,7 +183,7 @@ pub fn ColorPicker(
     let rgb = Signal::derive(move || RGB8::from(hsv.get()));
 
     view! {
-        <leptonic-color-picker>
+        <div class="leptonic-color-picker">
             <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; height: 20em;">
                 <ColorPreview rgb=rgb attr:style="width: 20%; height: 100%;" />
                 <ColorPalette
@@ -241,6 +242,6 @@ pub fn ColorPicker(
             </div>
 
             <p>"Hex: #"{move || format!("{:X}", rgb.get())}</p>
-        </leptonic-color-picker>
+        </div>
     }
 }

@@ -4,7 +4,7 @@ use crate::hooks::{use_press, PressEvent, UsePressInput, UsePressReturn};
 
 #[component]
 pub fn TableContainer(children: Children) -> impl IntoView {
-    view! { <leptonic-table-container>{children()}</leptonic-table-container> }
+    view! { <div class="leptonic-table-container">{children()}</div> }
 }
 
 #[component]
@@ -14,33 +14,34 @@ pub fn Table(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <leptonic-table
+        <table
+            class="leptonic-table"
             class:leptonic-table-bordered=bordered.unwrap_or(false)
             class:leptonic-table-hoverable=hoverable.unwrap_or(false)
         >
             {children()}
-        </leptonic-table>
+        </table>
     }
 }
 
 #[component]
 pub fn TableHeader(children: Children) -> impl IntoView {
-    view! { <leptonic-table-header>{children()}</leptonic-table-header> }
+    view! { <thead class="leptonic-table-header">{children()}</thead> }
 }
 
 #[component]
 pub fn TableBody(children: Children) -> impl IntoView {
-    view! { <leptonic-table-body>{children()}</leptonic-table-body> }
+    view! { <tbody class="leptonic-table-body">{children()}</tbody> }
 }
 
 #[component]
 pub fn TableFooter(children: Children) -> impl IntoView {
-    view! { <leptonic-table-footer>{children()}</leptonic-table-footer> }
+    view! { <tfoot class="leptonic-table-footer">{children()}</tfoot> }
 }
 
 #[component]
 pub fn TableRow(children: Children) -> impl IntoView {
-    view! { <leptonic-table-row>{children()}</leptonic-table-row> }
+    view! { <tr class="leptonic-table-row">{children()}</tr> }
 }
 
 #[component]
@@ -73,16 +74,17 @@ pub fn TableHeaderCell(
     });
 
     view! {
-        <leptonic-table-header-cell
+        <th
+            class="leptonic-table-header-cell"
             class:min-width=min_width.unwrap_or(false)
             {..props.into_attrs()}
         >
             {children()}
-        </leptonic-table-header-cell>
+        </th>
     }
 }
 
 #[component]
 pub fn TableCell(children: Children) -> impl IntoView {
-    view! { <leptonic-table-cell>{children()}</leptonic-table-cell> }
+    view! { <td class="leptonic-table-cell">{children()}</td> }
 }

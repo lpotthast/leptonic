@@ -45,7 +45,7 @@ pub fn Chip(
 
     // TODO: use use_press instead of on:click.
     view! {
-        <leptonic-chip data-color=move || {
+        <div class="leptonic-chip" data-color=move || {
             color.get().as_str()
         }>
             {children()}
@@ -62,6 +62,6 @@ pub fn Chip(
                 }
                 None => ().into_any(),
             }}
-        </leptonic-chip>
+        </div>
     }
 }

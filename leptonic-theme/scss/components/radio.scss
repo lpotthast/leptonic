@@ -1,4 +1,4 @@
-leptonic-radio {
+.leptonic-radio {
     display: inline-flex;
     justify-content: center;
     align-items: center;
@@ -17,7 +17,7 @@ leptonic-radio {
     border-color: var(--radio-border-color);
     background-color: var(--radio-background-color);
 
-    leptonic-radio-fill {
+    .leptonic-radio-fill {
         display: block;
         width: var(--radio-fill-size);
         min-width: var(--radio-fill-size);
@@ -28,7 +28,7 @@ leptonic-radio {
 
     &[aria-checked="true"] {
         border-color: var(--radio-checked-border-color);
-        leptonic-radio-fill {
+        .leptonic-radio-fill {
             background-color: var(--radio-checked-fill-background-color);
         }
     }

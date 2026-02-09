@@ -14,7 +14,7 @@ pub fn Skeleton(
     let width = width.unwrap_or(Size::Percent(100.0));
     let height = height.unwrap_or(Size::Auto);
 
-    let element: NodeRef<html::Custom<&str>> = NodeRef::new();
+    let element: NodeRef<html::Div> = NodeRef::new();
 
     let UseElementSizeReturn {
         width: el_width,
@@ -22,7 +22,8 @@ pub fn Skeleton(
     } = use_element_size(element);
 
     view! {
-        <leptonic-skeleton
+        <div
+            class="leptonic-skeleton"
             node_ref=element
             data-animated=animated
             style=("--height", format!("{height}"))
@@ -33,6 +34,6 @@ pub fn Skeleton(
                 Some(children) => children().into_any(),
                 None => ().into_any(),
             }}
-        </leptonic-skeleton>
+        </div>
     }
 }

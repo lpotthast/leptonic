@@ -93,19 +93,19 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     view! {
         {children()}
 
-        <leptonic-modal-host data-has-modals=move || {
+        <div class="leptonic-modal-host" data-has-modals=move || {
             if has_modals.get() { "true" } else { "false" }
         }>
-            <leptonic-modal-backdrop {..props.into_attrs()} />
+            <div class="leptonic-modal-backdrop" {..props.into_attrs()} />
 
-            <leptonic-modals>
+            <div class="leptonic-modals">
                 <For
                     each=move || ctx.shown_modals.get()
                     key=|it| it.modal_id
                     children=|it| it.modal_renderer.run()
                 />
-            </leptonic-modals>
-        </leptonic-modal-host>
+            </div>
+        </div>
     }
 }
 
@@ -141,9 +141,9 @@ pub fn Modal(
     let modal_renderer = ViewFn::from(move || {
         let classes = classes.get_value();
         view! {
-            <leptonic-modal id=id.get_value() class=classes>
+            <div class={let c = classes; c.add("leptonic-modal")} id=id.get_value()>
                 {children()}
-            </leptonic-modal>
+            </div>
         }
     });
 
@@ -166,20 +166,20 @@ pub fn Modal(
 
 #[component]
 pub fn ModalHeader(children: Children) -> impl IntoView {
-    view! { <leptonic-modal-header>{children()}</leptonic-modal-header> }
+    view! { <div class="leptonic-modal-header">{children()}</div> }
 }
 
 #[component]
 pub fn ModalTitle(children: Children) -> impl IntoView {
-    view! { <leptonic-modal-title>{children()}</leptonic-modal-title> }
+    view! { <div class="leptonic-modal-title">{children()}</div> }
 }
 
 #[component]
 pub fn ModalBody(children: Children) -> impl IntoView {
-    view! { <leptonic-modal-body>{children()}</leptonic-modal-body> }
+    view! { <div class="leptonic-modal-body">{children()}</div> }
 }
 
 #[component]
 pub fn ModalFooter(children: Children) -> impl IntoView {
-    view! { <leptonic-modal-footer>{children()}</leptonic-modal-footer> }
+    view! { <div class="leptonic-modal-footer">{children()}</div> }
 }

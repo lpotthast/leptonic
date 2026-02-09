@@ -23,11 +23,11 @@ pub fn TiptapEditor(
     let instance_id = uuid::Uuid::now_v7();
 
     view! {
-        <leptonic-tiptap-editor>
+        <div class="leptonic-tiptap-editor">
             {move || match disabled.get() {
                 false => {
                     view! {
-                        <leptonic-tiptap-menu>
+                        <div class="leptonic-tiptap-menu">
                             {move || {
                                 selection_state
                                     .with(|state| {
@@ -224,7 +224,7 @@ pub fn TiptapEditor(
                                         }
                                     })
                             }}
-                        </leptonic-tiptap-menu>
+                        </div>
                     }
                         .into_any()
                 }
@@ -242,7 +242,7 @@ pub fn TiptapEditor(
                 }
                 on_selection_change=move |state| set_selection_state.set(state)
             />
-        </leptonic-tiptap-editor>
+        </div>
     }
 }
 

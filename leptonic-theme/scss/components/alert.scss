@@ -1,4 +1,4 @@
-leptonic-alert {
+.leptonic-alert {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -28,21 +28,21 @@ leptonic-alert {
     background-color: var(--alert-danger-background-color);
   }
 
-  leptonic-alert-prepend {
+  .leptonic-alert-prepend {
     margin-right: 0.75em;
     display: flex;
     align-self: flex-start;
     height: 100%;
 
-    leptonic-icon {
+    .leptonic-icon {
       font-size: 1.5em;
     }
   }
 
-  leptonic-alert-center {
+  .leptonic-alert-center {
     height: 100%;
 
-    leptonic-alert-title {
+    .leptonic-alert-title {
       display: flex;
       flex-direction: row;
       width: 100%;
@@ -52,7 +52,7 @@ leptonic-alert {
       margin-bottom: 0.35em;
     }
 
-    leptonic-alert-content {
+    .leptonic-alert-content {
       display: flex;
       flex-direction: column;
       width: 100%;
@@ -60,13 +60,13 @@ leptonic-alert {
     }
   }
 
-  leptonic-alert-append {
+  .leptonic-alert-append {
     margin-left: 0.75em;
     display: flex;
     align-self: flex-start;
     height: 100%;
 
-    leptonic-icon {
+    .leptonic-icon {
       font-size: 1.5em;
     }
   }

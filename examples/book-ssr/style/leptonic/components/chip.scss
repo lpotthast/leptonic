@@ -1,4 +1,4 @@
-leptonic-chip {
+.leptonic-chip {
     display: inline-flex;
     justify-content: center;
     align-items: center;
@@ -68,7 +68,7 @@ leptonic-chip {
         }
     }
 
-    leptonic-icon.dismiss {
+    .leptonic-icon.dismiss {
         margin-left: 0.4em;
         font-size: 1.1em;
         cursor: pointer;

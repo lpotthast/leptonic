@@ -89,21 +89,22 @@ pub fn Tab(
 
     match mount {
         Mount::Once => view! {
-            <leptonic-tab
+            <div
+                class="leptonic-tab"
                 id=id.to_string()
                 data-name=name.get_value()
                 role="tabpanel"
                 aria-hidden=move || if is_active() { "false" } else { "true" }
             >
                 {children()}
-            </leptonic-tab>
+            </div>
         }
         .into_any(),
         Mount::WhenShown => view! {
             <Show when=is_active fallback=|| ()>
-                <leptonic-tab id=id.to_string() data:name=name.get_value() role="tabpanel">
+                <div class="leptonic-tab" id=id.to_string() data-name=name.get_value() role="tabpanel">
                     {children()}
-                </leptonic-tab>
+                </div>
             </Show>
         }
         .into_any(),

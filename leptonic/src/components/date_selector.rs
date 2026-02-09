@@ -38,9 +38,9 @@ pub fn DateSelector(
     let (short_weekday_names, _) = signal(create_week_day_names());
 
     view! {
-        <leptonic-datetime>
-            <leptonic-date-selector>
-                <leptonic-calender-month>
+        <div class="leptonic-datetime">
+            <div class="leptonic-date-selector">
+                <div class="leptonic-calender-month">
                     <div class="actions">
                         {move || match show.get() {
                             Selection::Year => {
@@ -214,9 +214,9 @@ pub fn DateSelector(
                         </div>
                     </Show>
 
-                </leptonic-calender-month>
-            </leptonic-date-selector>
-        </leptonic-datetime>
+                </div>
+            </div>
+        </div>
     }
 }
 

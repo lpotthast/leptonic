@@ -1,8 +1,8 @@
-leptonic-tiptap-editor {
+.leptonic-tiptap-editor {
     display: flex;
     flex-direction: column;
 
-    leptonic-tiptap-menu {
+    .leptonic-tiptap-menu {
         display: flex;
         flex-direction: row;
         justify-content: flex-start;

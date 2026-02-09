@@ -404,13 +404,13 @@
     }
   }
 
-  leptonic-icon {
+  .leptonic-icon {
     font-size: 0.9em;
     margin-right: 0.3em;
   }
 }
 
-leptonic-btn-wrapper {
+.leptonic-btn-wrapper {
   // Remove the gaps between the inline-block level buttons by using flexbox.
   display: inline-flex;
   flex-wrap: wrap;
@@ -430,7 +430,7 @@ leptonic-btn-wrapper {
   }
 }
 
-leptonic-btn-group {
+.leptonic-btn-group {
   // Remove the gaps between the inline-block level buttons by using flexbox.
   display: inline-flex;
   flex-wrap: nowrap;

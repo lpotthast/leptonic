@@ -41,13 +41,13 @@ pub(crate) fn PopoverRoot(children: Children) -> impl IntoView {
     view! {
         {children}
 
-        <leptonic-popover-host>
+        <div class="leptonic-popover-host">
             <For
                 each=move || ctx.popovers.get()
                 key=|it| it.key
                 children=|it| view! { {(it.children)()} }
             />
-        </leptonic-popover-host>
+        </div>
     }
 }
 

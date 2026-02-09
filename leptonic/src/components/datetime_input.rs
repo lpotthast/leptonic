@@ -87,7 +87,7 @@ pub fn DateTimeInput(
     };
 
     view! {
-        <leptonic-input-field style=style>
+        <div class="leptonic-input-field" style=style>
             {prepend.run()}
             <input
                 id=id
@@ -125,7 +125,7 @@ pub fn DateTimeInput(
                     </div>
                 </Show>
             </div>
-        </leptonic-input-field>
+        </div>
     }
 }
 

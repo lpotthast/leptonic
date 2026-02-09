@@ -1,4 +1,4 @@
-leptonic-checkbox {
+.leptonic-checkbox {
     display: flex;
     justify-content: center;
     align-items: center;
@@ -27,7 +27,7 @@ leptonic-checkbox {
         color: var(--checkbox-checked-color);
         border-color: var(--checkbox-checked-border-color);
         background-color: var(--checkbox-checked-background-color);
-        
+
         &:hover {
             color: var(--checkbox-checked-hover-color);
             border-color: var(--checkbox-checked-hover-border-color);
@@ -41,7 +41,7 @@ leptonic-checkbox {
         pointer-events: none;
     }
 
-    leptonic-icon {
+    .leptonic-icon {
         width: 100%;
         height: 100%;
     }

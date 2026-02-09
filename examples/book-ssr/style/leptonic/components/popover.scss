@@ -1,14 +1,14 @@
-leptonic-popover-host {
+.leptonic-popover-host {
     position: fixed;
 }
 
-leptonic-has-popover {
+.leptonic-has-popover {
     display: inline-flex;
     justify-content: center;
     align-items: center;
 }
 
-leptonic-popover {
+.leptonic-popover {
     display: none;
     justify-content: center;
     align-items: flex-start;
@@ -19,7 +19,7 @@ leptonic-popover {
     width: fit-content;
     top: 0;
     left: 0;
-  
+
     padding: 0.3em 0.5em;
     border-radius: 0.25em;
 

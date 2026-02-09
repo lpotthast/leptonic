@@ -73,7 +73,7 @@ pub fn Collapsibles(default_on_open: OnOpen, children: Children) -> impl IntoVie
         default_on_open,
         collapsibles: Arc::new(RwLock::new(vec![])),
     });
-    view! { <leptonic-collapsibles>{children()}</leptonic-collapsibles> }
+    view! { <div class="leptonic-collapsibles">{children()}</div> }
 }
 
 pub fn use_collapsible(open: bool, on_open: Option<OnOpen>) -> CollapsibleContext {
@@ -115,10 +115,10 @@ pub fn Collapsible(
     let collapsible = use_collapsible(open, on_open);
     let id_str = collapsible.id.to_string();
     view! {
-        <leptonic-collapsible id=id_str>
+        <div class="leptonic-collapsible" id=id_str>
             <CollapsibleHeaderInternal collapsible_header />
             <CollapsibleBodyInternal collapsible_body />
-        </leptonic-collapsible>
+        </div>
     }
 }
 
@@ -147,10 +147,10 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
     let ctx = use_collapsible_header();
     let ctx2 = use_collapsible_header();
     view! {
-        <leptonic-collapsible-header-wrapper on:click=move |_| ctx.collapsible_ctx.toggle()>
-            <leptonic-collapsible-header>
+        <div class="leptonic-collapsible-header-wrapper" on:click=move |_| ctx.collapsible_ctx.toggle()>
+            <div class="leptonic-collapsible-header">
                 {(collapsible_header.children)()}
-            </leptonic-collapsible-header>
+            </div>
 
             {move || {
                 if ctx2.collapsible_ctx.show.get() {
@@ -159,7 +159,7 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
                     view! { <Icon icon=icondata::BsCaretDownFill /> }.into_any()
                 }
             }}
-        </leptonic-collapsible-header-wrapper>
+        </div>
     }
 }
 
@@ -177,12 +177,18 @@ fn CollapsibleBodyInternal(collapsible_body: CollapsibleBody) -> impl IntoView {
     let collapsible_ctx = use_context::<CollapsibleContext>()
         .expect("A CollapsibleHeader must be placed inside a Collapsible component.");
 
+    let class = if collapsible_body.class.is_empty() {
+        "leptonic-collapsible-body".to_owned()
+    } else {
+        format!("leptonic-collapsible-body {}", collapsible_body.class)
+    };
+
     view! {
-        <leptonic-collapsible-body
-            class=collapsible_body.class
+        <div
+            class=class
             class:show=move || collapsible_ctx.show.get()
         >
             {(collapsible_body.children)()}
-        </leptonic-collapsible-body>
+        </div>
     }
 }

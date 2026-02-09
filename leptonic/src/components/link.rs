@@ -20,13 +20,13 @@ pub fn Link<H>(
     children: Children,
 
     #[prop(into, optional)] on_press: Option<
-        Callback<(PressEvent, NodeRef<html::Custom<&'static str>>)>,
+        Callback<(PressEvent, NodeRef<html::Div>)>,
     >,
 ) -> impl IntoView
 where
     H: ToHref + Send + Sync + 'static,
 {
-    let el: NodeRef<html::Custom<&str>> = NodeRef::new();
+    let el: NodeRef<html::Div> = NodeRef::new();
 
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
@@ -61,11 +61,11 @@ where
     // TODO: propagate missing A props
     // TODO: do not wrap A, make this an atom
     view! {
-        <leptonic-link {..props.into_attrs()} node_ref=el>
+        <div class="leptonic-link" {..props.into_attrs()} node_ref=el>
             <A href=href exact=exact>
                 {children()}
             </A>
-        </leptonic-link>
+        </div>
     }
 }
 
@@ -107,7 +107,7 @@ where
 {
     // NOTE(lukas): rel="noopener" is added for security reasons. See: https://developer.chrome.com/docs/lighthouse/best-practices/external-anchors-use-rel-noopener/
     view! {
-        <leptonic-link>
+        <div class="leptonic-link">
             <a
                 href=move || href.to_href()()
                 target=format!("{target}")
@@ -119,6 +119,6 @@ where
             >
                 {children()}
             </a>
-        </leptonic-link>
+        </div>
     }
 }

@@ -2,10 +2,10 @@ use leptos::prelude::*;
 
 #[component]
 pub fn Field(children: Children) -> impl IntoView {
-    view! { <leptonic-field>{children()}</leptonic-field> }
+    view! { <div class="leptonic-field">{children()}</div> }
 }
 
 #[component]
 pub fn FieldLabel(children: Children) -> impl IntoView {
-    view! { <leptonic-field-label>{children()}</leptonic-field-label> }
+    view! { <div class="leptonic-field-label">{children()}</div> }
 }

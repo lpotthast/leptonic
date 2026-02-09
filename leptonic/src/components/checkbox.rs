@@ -43,7 +43,8 @@ pub fn Checkbox(
     }
 
     view! {
-        <leptonic-checkbox
+        <div
+            class="leptonic-checkbox"
             role="checkbox"
             aria-checked=move || if checked.get() { "true" } else { "false" }
             aria-disabled=move || if disabled.get() { "true" } else { "false" }
@@ -58,6 +59,6 @@ pub fn Checkbox(
                 icon=checked_icon
                 attr:style=move || if checked.get() { "display: inherit" } else { "display: none" }
             />
-        </leptonic-checkbox>
+        </div>
     }
 }

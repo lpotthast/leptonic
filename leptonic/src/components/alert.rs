@@ -69,13 +69,13 @@ pub fn Alert(
     #[prop(optional)] default_icon_slot: AlertIconSlot,
 ) -> impl IntoView {
     view! {
-        <leptonic-alert data-variant=variant
+        <div class="leptonic-alert" data-variant=variant
             .to_str()>
             {match alert_prepend {
                 Some(slot) => {
                     view! {
-                        <leptonic-alert-prepend style=slot
-                            .style>{(slot.children)()}</leptonic-alert-prepend>
+                        <div class="leptonic-alert-prepend" style=slot
+                            .style>{(slot.children)()}</div>
                     }
                         .into_any()
                 }
@@ -83,24 +83,24 @@ pub fn Alert(
                     match default_icon_slot {
                         AlertIconSlot::Prepend => {
                             view! {
-                                <leptonic-alert-prepend>
+                                <div class="leptonic-alert-prepend">
                                     <AlertIcon variant />
-                                </leptonic-alert-prepend>
+                                </div>
                             }
                                 .into_any()
                         }
                         AlertIconSlot::Append | AlertIconSlot::None => {
-                            view! { <leptonic-alert-prepend /> }.into_any()
+                            view! { <div class="leptonic-alert-prepend" /> }.into_any()
                         }
                     }
                 }
             }}
-            <leptonic-alert-center>
+            <div class="leptonic-alert-center">
                 {match alert_title {
                     Some(slot) => {
                         view! {
-                            <leptonic-alert-title style=slot
-                                .style>{(slot.children)()}</leptonic-alert-title>
+                            <div class="leptonic-alert-title" style=slot
+                                .style>{(slot.children)()}</div>
                         }
                             .into_any()
                     }
@@ -109,38 +109,38 @@ pub fn Alert(
                 {match alert_content {
                     Some(slot) => {
                         view! {
-                            <leptonic-alert-content>{(slot.children)()}</leptonic-alert-content>
+                            <div class="leptonic-alert-content">{(slot.children)()}</div>
                         }
                             .into_any()
                     }
                     None => ().into_any(),
                 }}
-            </leptonic-alert-center>
+            </div>
             {match alert_append {
                 Some(slot) => {
                     view! {
-                        <leptonic-alert-append style=slot
-                            .style>{(slot.children)()}</leptonic-alert-append>
+                        <div class="leptonic-alert-append" style=slot
+                            .style>{(slot.children)()}</div>
                     }
                         .into_any()
                 }
                 None => {
                     match default_icon_slot {
                         AlertIconSlot::Prepend | AlertIconSlot::None => {
-                            view! { <leptonic-alert-append /> }.into_any()
+                            view! { <div class="leptonic-alert-append" /> }.into_any()
                         }
                         AlertIconSlot::Append => {
                             view! {
-                                <leptonic-alert-append>
+                                <div class="leptonic-alert-append">
                                     <AlertIcon variant />
-                                </leptonic-alert-append>
+                                </div>
                             }
                                 .into_any()
                         }
                     }
                 }
             }}
-        </leptonic-alert>
+        </div>
     }
 }
 

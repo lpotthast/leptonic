@@ -67,11 +67,11 @@ pub fn Code(
     });
 
     view! {
-        <leptonic-code inline=inline.map(|it| it.to_string())>
-            <leptonic-code-text inline=inline
-                .map(|it| it.to_string())>{code_text.get_value()}</leptonic-code-text>
+        <code class="leptonic-code" data-inline=inline.map(|it| it.to_string())>
+            <span class="leptonic-code-text" data-inline=inline
+                .map(|it| it.to_string())>{code_text.get_value()}</span>
             {copy_btn}
-        </leptonic-code>
+        </code>
     }
 }
 

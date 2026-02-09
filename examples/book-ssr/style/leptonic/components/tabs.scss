@@ -1,11 +1,11 @@
-leptonic-tabs {
+.leptonic-tabs {
     display: block;
 
-    leptonic-tab-selectors {
+    .leptonic-tab-selectors {
         display: flex;
         padding: 0 1em;
 
-        leptonic-tab-selector {
+        .leptonic-tab-selector {
             padding: 1em 1.2em;
             margin-right: 0.5em;
             background-color: var(--tab-selector-background-color);
@@ -29,7 +29,7 @@ leptonic-tabs {
         }
     }
 
-    leptonic-tab {
+    .leptonic-tab {
         display: block;
         padding: 1.75em;
         background-color: var(--tab-background-color);

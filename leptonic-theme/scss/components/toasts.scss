@@ -1,4 +1,4 @@
-leptonic-toasts {
+.leptonic-toasts {
     position: fixed;
     bottom: 2.5em;
     width: 100vw;
@@ -10,7 +10,7 @@ leptonic-toasts {
     z-index: 9999;
 }
 
-leptonic-toast {
+.leptonic-toast {
     position: relative;
     display: flex;
     flex-direction: column;
@@ -22,7 +22,7 @@ leptonic-toast {
     color: white;
     pointer-events: all;
 
-    leptonic-toast-header {
+    .leptonic-toast-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -34,7 +34,7 @@ leptonic-toast {
 
         font-weight: 900;
 
-        leptonic-icon.dismiss {
+        .leptonic-icon.dismiss {
             font-size: 1.15em;
             margin: -0.5em;
             margin-left: 0.5em;
@@ -43,7 +43,7 @@ leptonic-toast {
         }
     }
 
-    leptonic-toast-message {
+    .leptonic-toast-message {
         display: block;
         padding: var(--toast-message-padding);
 
@@ -52,48 +52,48 @@ leptonic-toast {
     }
 
     &[data-variant="info"] {
-        leptonic-toast-header {
+        .leptonic-toast-header {
             background-color: var(--toast-info-header-background-color);
             color: var(--toast-info-header-color);
         }
 
-        leptonic-toast-message {
+        .leptonic-toast-message {
             background-color: var(--toast-info-message-background-color);
             color: var(--toast-info-message-color);
         }
     }
 
     &[data-variant="success"] {
-        leptonic-toast-header {
+        .leptonic-toast-header {
             background-color: var(--toast-success-header-background-color);
             color: var(--toast-success-header-color);
         }
 
-        leptonic-toast-message {
+        .leptonic-toast-message {
             background-color: var(--toast-success-message-background-color);
             color: var(--toast-success-message-color);
         }
     }
 
     &[data-variant="warn"] {
-        leptonic-toast-header {
+        .leptonic-toast-header {
             background-color: var(--toast-warn-header-background-color);
             color: var(--toast-warn-header-color);
         }
 
-        leptonic-toast-message {
+        .leptonic-toast-message {
             background-color: var(--toast-warn-message-background-color);
             color: var(--toast-warn-message-color);
         }
     }
 
     &[data-variant="error"] {
-        leptonic-toast-header {
+        .leptonic-toast-header {
             background-color: var(--toast-error-header-background-color);
             color: var(--toast-error-header-color);
         }
 
-        leptonic-toast-message {
+        .leptonic-toast-message {
             background-color: var(--toast-error-message-background-color);
             color: var(--toast-error-message-color);
         }

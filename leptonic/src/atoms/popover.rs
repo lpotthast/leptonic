@@ -22,8 +22,8 @@ pub struct PopoverContext {
 
     id: Oco<'static, str>,
     overlay_attrs: UseOverlayAttrs,
-    trigger_el: ReadSignal<Option<NodeRef<html::Custom<&'static str>>>>, // TODO: generic el type
-    set_trigger_el: WriteSignal<Option<NodeRef<html::Custom<&'static str>>>>, // TODO: generic el type
+    trigger_el: ReadSignal<Option<NodeRef<html::Div>>>,
+    set_trigger_el: WriteSignal<Option<NodeRef<html::Div>>>,
 }
 
 #[component]
@@ -54,7 +54,7 @@ pub fn Popover(#[prop(into)] disabled: Signal<bool>, children: Children) -> impl
 pub fn PopoverTrigger(children: Children) -> impl IntoView {
     let ctx = expect_context::<PopoverContext>();
 
-    let trigger_el: NodeRef<html::Custom<&str>> = NodeRef::new();
+    let trigger_el: NodeRef<html::Div> = NodeRef::new();
     ctx.set_trigger_el.set(Some(trigger_el));
 
     let UseOverlayTriggerReturn {
@@ -66,9 +66,9 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
     });
 
     view! {
-        <leptonic-popover-trigger {..trigger_props.into_attrs()} node_ref=trigger_el>
+        <div class="leptonic-popover-trigger" {..trigger_props.into_attrs()} node_ref=trigger_el>
             {children()}
-        </leptonic-popover-trigger>
+        </div>
     }
 }
 
@@ -81,7 +81,7 @@ pub fn PopoverContent(
 ) -> impl IntoView {
     let ctx = expect_context::<PopoverContext>();
 
-    let overlay_el: NodeRef<html::Custom<&str>> = NodeRef::new();
+    let overlay_el: NodeRef<html::Div> = NodeRef::new();
 
     let UseOverlayPositionReturn {
         props: overlay_pos_props,
@@ -103,13 +103,14 @@ pub fn PopoverContent(
                 let overlay_el = overlay_el;
                 view! {
                     <Show when=move || ctx.state.get()>
-                        <leptonic-popover-content
+                        <div
+                            class="leptonic-popover-content"
                             {..overlay_attrs.clone()}
                             {..overlay_pos_attrs.clone()}
                             node_ref=overlay_el
                         >
                             {children()}
-                        </leptonic-popover-content>
+                        </div>
                     </Show>
                 }
             }

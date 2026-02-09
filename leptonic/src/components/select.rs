@@ -232,15 +232,15 @@ where
             on:blur=move |_| set_focused.set(false)
             on:focus=move |_| set_focused.set(true)
         >
-            <leptonic-select
+            <div class="leptonic-select"
                 id=id_string
                 data-variant="select"
                 aria-haspopup="listbox"
                 class:active=move || show_options.get()
             >
-                <leptonic-select-selected on:click=move |_| toggle_show()>
+                <div class="leptonic-select-selected" on:click=move |_| toggle_show()>
                     {move || render_option.render(selected.get())}
-                    <leptonic-select-show-trigger>
+                    <div class="leptonic-select-show-trigger">
                         {move || {
                             if show_options.get() {
                                 view! { <Icon icon=icondata::BsCaretUpFill /> }
@@ -248,10 +248,10 @@ where
                                 view! { <Icon icon=icondata::BsCaretDownFill /> }
                             }
                         }}
-                    </leptonic-select-show-trigger>
-                </leptonic-select-selected>
+                    </div>
+                </div>
 
-                <leptonic-select-options class:shown=move || show_options.get()>
+                <div class="leptonic-select-options" class:shown=move || show_options.get()>
                     <TextInput
                         get=search
                         set=set_search
@@ -276,7 +276,7 @@ where
                                 let clone4 = option.clone();
                                 let clone5 = option.clone();
                                 view! {
-                                    <leptonic-select-option
+                                    <div class="leptonic-select-option"
                                         class:preselected=move || {
                                             memoized_preselected
                                                 .with(|preselected| preselected.as_ref() == Some(&option))
@@ -293,7 +293,7 @@ where
                                         }
                                     >
                                         {render_option.render(clone1)}
-                                    </leptonic-select-option>
+                                    </div>
                                 }
                             })
                             .collect_view()}
@@ -304,16 +304,16 @@ where
                             } else {
                                 Some(
                                     view! {
-                                        <leptonic-select-no-search-results>
+                                        <div class="leptonic-select-no-search-results">
                                             "No options..."
-                                        </leptonic-select-no-search-results>
+                                        </div>
                                     },
                                 )
                             }
                         }}
                     </Show>
-                </leptonic-select-options>
-            </leptonic-select>
+                </div>
+            </div>
         </div>
     }
 }
@@ -470,35 +470,35 @@ where
             on:blur=move |_| set_focused.set(false)
             on:focus=move |_| set_focused.set(true)
         >
-            <leptonic-select id=id_string data-variant="optional-select" aria-haspopup="listbox">
-                <leptonic-select-selected on:click=move |_| toggle_show()>
+            <div class="leptonic-select" id=id_string data-variant="optional-select" aria-haspopup="listbox">
+                <div class="leptonic-select-selected" on:click=move |_| toggle_show()>
                     {move || {
                         selected
                             .get()
                             .map(|selected| {
                                 view! {
-                                    <leptonic-select-option>
+                                    <div class="leptonic-select-option">
                                         {render_option.render(selected)}
-                                    </leptonic-select-option>
+                                    </div>
                                 }
                             })
                     }}
                     {if allow_deselect.get() {
                         Some(
                             view! {
-                                <leptonic-select-deselect-trigger on:click=move |e| {
+                                <div class="leptonic-select-deselect-trigger" on:click=move |e| {
                                     e.prevent_default();
                                     e.stop_propagation();
                                     deselect();
                                 }>
                                     <Icon icon=icondata::BsXCircleFill />
-                                </leptonic-select-deselect-trigger>
+                                </div>
                             },
                         )
                     } else {
                         None
                     }}
-                    <leptonic-select-show-trigger>
+                    <div class="leptonic-select-show-trigger">
                         {move || {
                             if show_options.get() {
                                 view! { <Icon icon=icondata::BsCaretUpFill /> }
@@ -506,10 +506,10 @@ where
                                 view! { <Icon icon=icondata::BsCaretDownFill /> }
                             }
                         }}
-                    </leptonic-select-show-trigger>
-                </leptonic-select-selected>
+                    </div>
+                </div>
 
-                <leptonic-select-options class:shown=move || show_options.get()>
+                <div class="leptonic-select-options" class:shown=move || show_options.get()>
                     <TextInput
                         get=search
                         set=set_search
@@ -534,7 +534,7 @@ where
                                 let clone4 = option.clone();
                                 let clone5 = option.clone();
                                 view! {
-                                    <leptonic-select-option
+                                    <div class="leptonic-select-option"
                                         class:preselected=move || {
                                             memoized_preselected
                                                 .with(|preselected| preselected.as_ref() == Some(&option))
@@ -551,7 +551,7 @@ where
                                         }
                                     >
                                         {render_option.render(clone1)}
-                                    </leptonic-select-option>
+                                    </div>
                                 }
                             })
                             .collect_view()}
@@ -564,8 +564,8 @@ where
                             }
                         }}
                     </Show>
-                </leptonic-select-options>
-            </leptonic-select>
+                </div>
+            </div>
         </div>
     }
 }
@@ -738,8 +738,8 @@ where
             on:blur=move |_| set_focused.set(false)
             on:focus=move |_| set_focused.set(true)
         >
-            <leptonic-select id=id_string data-variant="multiselect" aria-haspopup="listbox">
-                <leptonic-select-selected on:click=move |_| toggle_show()>
+            <div class="leptonic-select" id=id_string data-variant="multiselect" aria-haspopup="listbox">
+                <div class="leptonic-select-selected" on:click=move |_| toggle_show()>
                     // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
                     {move || {
                         selected
@@ -748,7 +748,7 @@ where
                             .map(|selected| {
                                 let clone = selected.clone();
                                 view! {
-                                    <leptonic-select-option>
+                                    <div class="leptonic-select-option">
                                         <Chip
                                             color=ChipColor::Secondary
                                             on:click=move |e| {
@@ -761,12 +761,12 @@ where
                                         >
                                             {render_option.render(selected)}
                                         </Chip>
-                                    </leptonic-select-option>
+                                    </div>
                                 }
                             })
                             .collect_view()
                     }}
-                    <leptonic-select-show-trigger>
+                    <div class="leptonic-select-show-trigger">
                         {move || {
                             if show_options.get() {
                                 view! { <Icon icon=icondata::BsCaretUpFill /> }
@@ -774,10 +774,10 @@ where
                                 view! { <Icon icon=icondata::BsCaretDownFill /> }
                             }
                         }}
-                    </leptonic-select-show-trigger>
-                </leptonic-select-selected>
+                    </div>
+                </div>
 
-                <leptonic-select-options class:shown=move || show_options.get()>
+                <div class="leptonic-select-options" class:shown=move || show_options.get()>
                     <TextInput
                         get=search
                         set=set_search
@@ -802,7 +802,7 @@ where
                                 let clone4 = option.clone();
                                 let clone5 = option.clone();
                                 view! {
-                                    <leptonic-select-option
+                                    <div class="leptonic-select-option"
                                         class:preselected=move || {
                                             memoized_preselected
                                                 .with(|preselected| preselected.as_ref() == Some(&option))
@@ -819,7 +819,7 @@ where
                                         }
                                     >
                                         {render_option.render(clone1)}
-                                    </leptonic-select-option>
+                                    </div>
                                 }
                             })
                             .collect_view()}
@@ -832,8 +832,8 @@ where
                             }
                         }}
                     </Show>
-                </leptonic-select-options>
-            </leptonic-select>
+                </div>
+            </div>
         </div>
     }
 }

@@ -1,14 +1,14 @@
-leptonic-modal.quicksearch-modal {
+.leptonic-modal.quicksearch-modal {
     margin: auto;
     width: auto;
     min-width: unset;
     max-width: 45em;
     max-height: 80em;
 
-    leptonic-modal-header {
+    .leptonic-modal-header {
         padding: 0;
 
-        leptonic-input {
+        .leptonic-input {
             width: 100%;
 
             input.search-input {
@@ -21,11 +21,11 @@ leptonic-modal.quicksearch-modal {
         }
     }
 
-    leptonic-modal-body {
+    .leptonic-modal-body {
         padding: 1em 0;
     }
 
-    leptonic-quicksearch-results {
+    .leptonic-quicksearch-results {
         width: 100%;
         display: flex;
         flex-direction: column;
@@ -33,7 +33,7 @@ leptonic-modal.quicksearch-modal {
         overflow-y: scroll;
         max-height: 60vh;
 
-        leptonic-quicksearch-result {
+        .leptonic-quicksearch-result {
             width: 100%;
             border: 0.1em solid lightgrey;
             border-radius: 0.4em;
@@ -44,12 +44,12 @@ leptonic-modal.quicksearch-modal {
     }
 }
 
-leptonic-quicksearch {
+.leptonic-quicksearch {
     display: flex;
     justify-content: center;
     align-items: center;
 
-    leptonic-quicksearch-trigger {
+    .leptonic-quicksearch-trigger {
         display: flex;
         padding: var(--input-padding);
         color: #7c7c7c;

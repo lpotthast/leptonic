@@ -96,7 +96,7 @@ pub fn Tabs(#[prop(optional)] mount: Option<Mount>, children: Children) -> impl 
     let (tabs, set_tabs) = signal(Vec::new());
 
     view! {
-        <leptonic-tabs>
+        <div class="leptonic-tabs">
             <Provider value=TabsContext {
                 history,
                 set_history,
@@ -106,7 +106,7 @@ pub fn Tabs(#[prop(optional)] mount: Option<Mount>, children: Children) -> impl 
             }>
                 <TabsContent children />
             </Provider>
-        </leptonic-tabs>
+        </div>
     }
 }
 
@@ -133,7 +133,7 @@ pub fn TabSelectors(
     set_history: WriteSignal<TabHistory>,
 ) -> impl IntoView {
     view! {
-        <leptonic-tab-selectors role="tablist">
+        <div class="leptonic-tab-selectors" role="tablist">
             <For
                 each=move || tabs.get()
                 key=|tab| tab.id
@@ -152,7 +152,7 @@ pub fn TabSelectors(
                     }
                 }
             />
-        </leptonic-tab-selectors>
+        </div>
     }
 }
 
@@ -168,13 +168,14 @@ where
     S: Fn() + 'static,
 {
     view! {
-        <leptonic-tab-selector
+        <div
+            class="leptonic-tab-selector"
             data:for-name=name
             class:active=is_active
             on:click=move |_event| set_active()
             role="tab"
         >
             {label.run()}
-        </leptonic-tab-selector>
+        </div>
     }
 }

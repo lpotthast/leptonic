@@ -143,7 +143,7 @@ pub fn ToastRoot(children: Children) -> impl IntoView {
     view! {
         {children()}
 
-        <leptonic-toasts>
+        <div class="leptonic-toasts">
             <For
                 each=move || toasts.get()
                 key=|toast| toast.id
@@ -151,7 +151,7 @@ pub fn ToastRoot(children: Children) -> impl IntoView {
                     view! { <Toast toast /> }
                 }
             />
-        </leptonic-toasts>
+        </div>
     }
 }
 
@@ -181,8 +181,8 @@ pub fn Toast(toast: Toast) -> impl IntoView {
     };
 
     view! {
-        <leptonic-toast id=toast.id.to_string() data-variant=toast.variant.as_str()>
-            <leptonic-toast-header>
+        <div class="leptonic-toast" id=toast.id.to_string() data-variant=toast.variant.as_str()>
+            <div class="leptonic-toast-header">
                 {toast.header.run()}
                 {if manually_closable {
                     view! {
@@ -200,8 +200,8 @@ pub fn Toast(toast: Toast) -> impl IntoView {
                 } else {
                     ().into_any()
                 }}
-            </leptonic-toast-header>
-            <leptonic-toast-message>{toast.body.run()}</leptonic-toast-message>
-        </leptonic-toast>
+            </div>
+            <div class="leptonic-toast-message">{toast.body.run()}</div>
+        </div>
     }
 }

@@ -16,14 +16,14 @@ pub fn Quicksearch(
 ) -> impl IntoView {
     let (show_modal, set_show_modal) = signal(false);
     view! {
-        <leptonic-quicksearch>
+        <div class="leptonic-quicksearch">
             {trigger.render(set_show_modal)}
             <QuicksearchModal
                 show_when=show_modal
                 query=query
                 on_cancel=move || set_show_modal.set(false)
             />
-        </leptonic-quicksearch>
+        </div>
     }
 }
 
@@ -33,9 +33,9 @@ pub fn QuicksearchTrigger(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <leptonic-quicksearch-trigger on:click=move |_| {
+        <div class="leptonic-quicksearch-trigger" on:click=move |_| {
             set_quicksearch.set(true);
-        }>{children()}</leptonic-quicksearch-trigger>
+        }>{children()}</div>
     }
 }
 
@@ -79,21 +79,21 @@ fn QuicksearchModal(
                 />
             </ModalHeader>
             <ModalBody attr:style="overflow: auto;">
-                <leptonic-quicksearch-results>
+                <div class="leptonic-quicksearch-results">
                     {move || {
                         options()
                             .into_iter()
                             .map(|option| {
                                 view! {
-                                    <leptonic-quicksearch-result on:click=move |_| {
+                                    <div class="leptonic-quicksearch-result" on:click=move |_| {
                                         option.on_select.run(());
                                         on_cancel.run(());
-                                    }>{option.view.produce()}</leptonic-quicksearch-result>
+                                    }>{option.view.produce()}</div>
                                 }
                             })
                             .collect_view()
                     }}
-                </leptonic-quicksearch-results>
+                </div>
             </ModalBody>
             <ModalFooter>
                 <ButtonWrapper>

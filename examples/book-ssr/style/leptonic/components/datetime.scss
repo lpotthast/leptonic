@@ -1,4 +1,4 @@
-leptonic-datetime {
+.leptonic-datetime {
     display: flex;
     flex-direction: column;
     font-size: 1em;
@@ -22,10 +22,10 @@ leptonic-datetime {
         z-index: 9000;
     }
 
-    leptonic-date-selector {
+    .leptonic-date-selector {
         display: block;
 
-        leptonic-calendar-month {
+        .leptonic-calender-month {
             display: flex;
             flex-direction: column;
         }

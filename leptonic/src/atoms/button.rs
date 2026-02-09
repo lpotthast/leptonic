@@ -199,5 +199,5 @@ where
 
 #[component]
 pub fn ButtonWrapper(children: Children) -> impl IntoView {
-    view! { <leptonic-btn-wrapper>{children()}</leptonic-btn-wrapper> }
+    view! { <div class="leptonic-btn-wrapper">{children()}</div> }
 }

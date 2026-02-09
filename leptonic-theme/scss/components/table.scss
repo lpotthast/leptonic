@@ -1,4 +1,4 @@
-leptonic-table-container {
+.leptonic-table-container {
   display: block;
   width: 100%;
   overflow-x: auto;
@@ -7,7 +7,7 @@ leptonic-table-container {
   box-shadow: -2px 3px 15px -6px var(--table-wrapper-box-shadow-color);
 }
 
-leptonic-table {
+.leptonic-table {
   display: table;
   margin: 0;
   width: 100%;
@@ -16,19 +16,19 @@ leptonic-table {
   color: var(--table-color);
   background-color: var(--table-background-color);
 
-  leptonic-table-header {
+  .leptonic-table-header {
     display: table-header-group;
     background-color: var(--table-header-background-color);
 
 
-    leptonic-table-header-cell {
+    .leptonic-table-header-cell {
       &.min-width {
         width: 1%;
       }
     }
   }
 
-  leptonic-table-row {
+  .leptonic-table-row {
     display: table-row;
     transition: background-color 0.25s;
 
@@ -38,8 +38,8 @@ leptonic-table {
     }
   }
 
-  leptonic-table-header-cell,
-  leptonic-table-cell {
+  .leptonic-table-header-cell,
+  .leptonic-table-cell {
     display: table-cell;
 
     &.leptonic-column-ordered {
@@ -47,7 +47,7 @@ leptonic-table {
     }
   }
 
-  leptonic-table-header-cell {
+  .leptonic-table-header-cell {
     padding: var(--table-header-cell-padding);
 
     &.leptonic-column-header {
@@ -69,7 +69,7 @@ leptonic-table {
     }
   }
 
-  leptonic-table-cell {
+  .leptonic-table-cell {
     padding: var(--table-body-cell-padding);
     text-align: start;
     vertical-align: top;
@@ -92,21 +92,21 @@ leptonic-table {
     }
   }
 
-  leptonic-table-body {
+  .leptonic-table-body {
     display: table-row-group;
 
-    leptonic-table-row {
+    .leptonic-table-row {
       border-bottom: 1px solid var(--table-row-border-bottom-color); // 1px instead of 0.005em so that all lines are equally thick.
 
       &.interactable {
         cursor: pointer;
       }
     }
-    leptonic-table-row:last-of-type {
+    .leptonic-table-row:last-of-type {
       border-bottom: none;
     }
 
-    leptonic-table-cell.no-data {
+    .leptonic-table-cell.no-data {
       text-align: center;
     }
   }
@@ -114,25 +114,25 @@ leptonic-table {
   &.leptonic-table-bordered {
     border-collapse: collapse;
 
-    leptonic-table-cell,
-    leptonic-table-header-cell {
+    .leptonic-table-cell,
+    .leptonic-table-header-cell {
       //border: 0.05em solid;
       border-color: var(--table-border-color);
     }
 
-    leptonic-table-header-cell {
+    .leptonic-table-header-cell {
       border-bottom: 0.15em solid;
     }
   }
 
   &.leptonic-table-striped {
-    leptonic-table-row:nth-child(2n) {
+    .leptonic-table-row:nth-child(2n) {
       background-color: var(--table-background-color-of-striped-rows);
     }
   }
 
   &.leptonic-table-hoverable {
-    leptonic-table-body leptonic-table-row:hover {
+    .leptonic-table-body .leptonic-table-row:hover {
       background-color: var(--table-background-color-on-hover);
     }
   }

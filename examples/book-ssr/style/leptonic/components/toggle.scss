@@ -1,6 +1,6 @@
 // TODO: Allow different out-of-the-box color styles.
 
-leptonic-toggle-wrapper {
+.leptonic-toggle-wrapper {
     --height: 1.75em;
     --width: calc(var(--height) * 2.0);
     --transition: 0.3s;
@@ -12,13 +12,13 @@ leptonic-toggle-wrapper {
     flex-direction: row;
     user-select: none;
 
-    leptonic-icon {
+    .leptonic-icon {
         margin: 0;
         font-size: 1.2em;
         color: var(--toggle-icon-color);
     }
 
-    leptonic-toggle {
+    .leptonic-toggle {
         display: inline-flex;
         height: var(--height);
 

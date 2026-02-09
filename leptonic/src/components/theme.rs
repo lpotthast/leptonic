@@ -55,9 +55,9 @@ where
     provide_context(ThemeContext { theme, set_theme });
 
     view! {
-        <leptonic-theme-provider data-theme=move || theme.get().name() style="display: contents;">
+        <div class="leptonic-theme-provider" data-theme=move || theme.get().name() style="display: contents;">
             {children()}
-        </leptonic-theme-provider>
+        </div>
     }
 }
 
@@ -90,5 +90,5 @@ where
         }),
     });
 
-    view! { <leptonic-theme-toggle>{toggle}</leptonic-theme-toggle> }
+    view! { <div class="leptonic-theme-toggle">{toggle}</div> }
 }

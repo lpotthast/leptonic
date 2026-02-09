@@ -60,8 +60,9 @@ pub fn Toggle(
     #[prop(into, optional)] icons: Option<ToggleIcons>,
 ) -> impl IntoView {
     view! {
-        <leptonic-toggle-wrapper>
-            <leptonic-toggle
+        <div class="leptonic-toggle-wrapper">
+            <div
+                class="leptonic-toggle"
                 class:active=move || active.get().unwrap_or(true)
                 class:disabled=move || disabled.get().unwrap_or(false)
                 data-size=size.as_str()
@@ -106,7 +107,7 @@ pub fn Toggle(
                             })
                     }}
                 </span>
-            </leptonic-toggle>
-        </leptonic-toggle-wrapper>
+            </div>
+        </div>
     }
 }

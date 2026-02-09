@@ -40,5 +40,5 @@ pub fn Label(children: Children, #[prop(into, optional)] disabled: Signal<bool>)
         long_press_accessibility_description: None,
     });
 
-    view! { <leptonic-label {..props.into_attrs()}>{children()}</leptonic-label> }
+    view! { <label class="leptonic-label" {..props.into_attrs()}>{children()}</label> }
 }

@@ -119,12 +119,12 @@ pub fn Button(
 
 #[component]
 pub fn ButtonGroup(children: Children) -> impl IntoView {
-    view! { <leptonic-btn-group>{children()}</leptonic-btn-group> }
+    view! { <div class="leptonic-btn-group">{children()}</div> }
 }
 
 #[component]
 pub fn ButtonWrapper(children: Children) -> impl IntoView {
-    view! { <leptonic-btn-wrapper>{children()}</leptonic-btn-wrapper> }
+    view! { <div class="leptonic-btn-wrapper">{children()}</div> }
 }
 
 #[component]

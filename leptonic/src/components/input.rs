@@ -108,7 +108,7 @@ pub fn TextInput(
     }
 
     view! {
-        <leptonic-input>
+        <div class="leptonic-input">
             <input
                 node_ref=node_ref
                 placeholder=placeholder
@@ -133,7 +133,7 @@ pub fn TextInput(
                 }
             />
             {append.run()}
-        </leptonic-input>
+        </div>
     }
 }
 
@@ -163,7 +163,7 @@ pub fn PasswordInput(
     }
 
     view! {
-        <leptonic-input>
+        <div class="leptonic-input">
             <input
                 node_ref=node_ref
                 placeholder=placeholder
@@ -188,7 +188,7 @@ pub fn PasswordInput(
                 }
             />
             {append.run()}
-        </leptonic-input>
+        </div>
     }
 }
 
@@ -229,7 +229,7 @@ pub fn NumberInput(
     });
 
     view! {
-        <leptonic-input>
+        <div class="leptonic-input">
             <input
                 node_ref=node_ref
                 placeholder=placeholder
@@ -257,6 +257,6 @@ pub fn NumberInput(
                 }
             />
             {append.run()}
-        </leptonic-input>
+        </div>
     }
 }

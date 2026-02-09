@@ -7,17 +7,17 @@ use crate::Language;
 
 #[component]
 pub fn KbdKey(key: Key) -> impl IntoView {
-    view! { <leptonic-kbd-key>{key.display(Language::En)}</leptonic-kbd-key> }
+    view! { <kbd class="leptonic-kbd-key">{key.display(Language::En)}</kbd> }
 }
 
 #[component]
 pub fn KbdConcatenate(#[prop(into, optional)] with: Option<Cow<'static, str>>) -> impl IntoView {
-    view! { <leptonic-kbd-concatenate>{with.unwrap_or(Cow::Borrowed("+"))}</leptonic-kbd-concatenate> }
+    view! { <span class="leptonic-kbd-concatenate">{with.unwrap_or(Cow::Borrowed("+"))}</span> }
 }
 
 #[component]
 pub fn KbdShortcutRoot(children: Children) -> impl IntoView {
-    view! { <leptonic-kbd-shortcut>{children()}</leptonic-kbd-shortcut> }
+    view! { <kbd class="leptonic-kbd-shortcut">{children()}</kbd> }
 }
 
 #[component]

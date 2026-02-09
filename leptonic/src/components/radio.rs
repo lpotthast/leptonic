@@ -73,9 +73,9 @@ pub fn RadioGroup(children: Children) -> impl IntoView {
         states: StoredValue::new(Vec::new()),
     };
     view! {
-        <leptonic-radio-group role="radiogroup">
+        <div class="leptonic-radio-group" role="radiogroup">
             <Provider value=ctx>{children()}</Provider>
-        </leptonic-radio-group>
+        </div>
     }
 }
 
@@ -130,7 +130,8 @@ pub fn Radio(
     let disabled = move || disabled.get().unwrap_or(false);
 
     view! {
-        <leptonic-radio
+        <div
+            class="leptonic-radio"
             role="radio"
             aria-disabled=move || if disabled() { "true" } else { "false" }
             aria-checked=move || if checked.get() { "true" } else { "false" }
@@ -148,7 +149,7 @@ pub fn Radio(
                 }
             }
         >
-            <leptonic-radio-fill />
-        </leptonic-radio>
+            <div class="leptonic-radio-fill" />
+        </div>
     }
 }

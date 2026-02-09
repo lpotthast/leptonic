@@ -47,7 +47,7 @@ p {
   line-height: var(--typography-p-line-height);
 }
 
-leptonic-code {
+.leptonic-code {
   display: block;
   position: relative;
   font-family: monospace;
@@ -63,7 +63,7 @@ leptonic-code {
   text-size-adjust: none;
   -webkit-text-size-adjust: none;
 
-  &[inline="true"] {
+  &[data-inline="true"] {
     display: inline;
     margin: var(--typography-inline-code-margin);
     padding: var(--typography-inline-code-padding);
@@ -71,23 +71,23 @@ leptonic-code {
   }
 }
 
-leptonic-code-text {
+.leptonic-code-text {
   display: block;
   font-family: monospace;
   white-space: pre;
   overflow: auto;
 
-  &[inline="true"] {
+  &[data-inline="true"] {
     display: inline;
   }
 }
 
-Button.leptonic-code-copy-button {
+.leptonic-code-copy-button {
   position: absolute;
   top: calc(0.5 * var(--typography-code-padding));
   right: calc(0.5 * var(--typography-code-padding));
 
-  &[inline="true"] {
+  &[data-inline="true"] {
     top: var(--typography-inline-code-padding);
     right: var(--typography-inline-code-padding);
   }

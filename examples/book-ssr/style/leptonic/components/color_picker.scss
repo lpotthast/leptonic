@@ -1,4 +1,4 @@
-leptonic-color-preview {
+.leptonic-color-preview {
   display: flex;
   // These are default values for width and height, intended to only take effect when not otherwise specified. Values should be specified based on usage / context.
   width: 10em;
@@ -34,7 +34,7 @@ leptonic-color-preview {
   touch-action: none;
   user-select: none;
 
-  leptonic-color-palette-knob-wrapper {
+  .leptonic-color-palette-knob-wrapper {
     display: flex;
     align-items: center;
     position: absolute;
@@ -44,7 +44,7 @@ leptonic-color-preview {
     bottom: calc(var(--color-palette-knob-size) * -0.5);
   }
 
-  leptonic-color-palette-knob {
+  .leptonic-color-palette-knob {
     &:before {
       --color-palette-knob-halo-displacement: calc((var(--color-palette-knob-halo-size) / 2.0 - (var(--color-palette-knob-size) - 2.0 * var(--color-palette-knob-border-width)) / 2.0) * -1.0);
       content: "";
@@ -99,7 +99,7 @@ leptonic-color-preview {
   }
 }
 
-leptonic-hue-slider leptonic-slider {
+.leptonic-hue-slider .leptonic-slider {
   --slider-fill-height: 0.75em;
   --slider-fill-background-color: transparent;
 
