@@ -6,7 +6,7 @@
 }
 
 *:focus-visible {
-  // Leptonic sets the `data-focus-visible` whenever focus should be made visible to the user.
+  // Leptonic sets the `data-focus-visible` attribute whenever focus should be made visible to the user.
   // Add styling for this data-attribute instead.
   outline: none;
 }
@@ -76,13 +76,6 @@ summary,
 textarea {
   -ms-touch-action: manipulation;
   touch-action: manipulation;
-}
-
-input:focus,
-select:focus,
-textarea:focus,
-button:focus {
-  outline: none;
 }
 
 table {

@@ -44,10 +44,6 @@
     border-radius: 0.2em;
   }
 
-  &:focus {
-    outline: none;
-  }
-
   &[data-variant="flat"] {
     border: none;
     background-color: transparent;
