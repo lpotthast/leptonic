@@ -2,7 +2,7 @@ use leptos::prelude::*;
 
 #[cfg(not(feature = "ssr"))]
 use crate::{
-    utils::{DocumentExt, EventListenerOptions, WindowExt},
+    utils::{EventListenerOptions, ListenExt},
     Out,
 };
 

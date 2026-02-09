@@ -134,21 +134,7 @@ pub(crate) trait EventTargetExt {
 }
 
 #[allow(unused)] // May only be used in non-SSR context.
-pub(crate) trait DocumentExt {
-    /// Adds an event listener for the given event name.
-    #[must_use]
-    fn listen<E>(
-        &self,
-        event: impl EventDescriptor,
-        callback: impl FnMut(E) + 'static,
-        options: EventListenerOptions,
-    ) -> Closure<dyn FnMut(E)>
-    where
-        E: FromWasmAbi + 'static;
-}
-
-#[allow(unused)] // May only be used in non-SSR context.
-pub(crate) trait WindowExt {
+pub(crate) trait ListenExt {
     /// Adds an event listener for the given event name.
     #[must_use]
     fn listen<E>(
@@ -229,7 +215,7 @@ impl EventTargetExt for web_sys::EventTarget {
     }
 }
 
-impl DocumentExt for web_sys::Document {
+impl<T: AsRef<web_sys::EventTarget>> ListenExt for T {
     fn listen<E>(
         &self,
         event: impl EventDescriptor,
@@ -241,6 +227,8 @@ impl DocumentExt for web_sys::Document {
     {
         use wasm_bindgen::closure::Closure;
         use wasm_bindgen::JsCast;
+
+        let target: &web_sys::EventTarget = self.as_ref();
 
         let closure: Closure<dyn FnMut(E)> = if options.once {
             let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
@@ -254,42 +242,7 @@ impl DocumentExt for web_sys::Document {
         web_sys_options.set_once(options.once);
         web_sys_options.set_capture(options.capture);
 
-        let _ = self.add_event_listener_with_callback_and_add_event_listener_options(
-            event.name().as_ref(),
-            closure.as_ref().unchecked_ref(),
-            &web_sys_options,
-        );
-
-        closure
-    }
-}
-
-impl WindowExt for web_sys::Window {
-    fn listen<E>(
-        &self,
-        event: impl EventDescriptor,
-        callback: impl FnMut(E) + 'static,
-        options: EventListenerOptions,
-    ) -> Closure<dyn FnMut(E)>
-    where
-        E: FromWasmAbi + 'static,
-    {
-        use wasm_bindgen::closure::Closure;
-        use wasm_bindgen::JsCast;
-
-        let closure: Closure<dyn FnMut(E)> = if options.once {
-            let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
-            Closure::once(boxed)
-        } else {
-            let boxed: Box<dyn FnMut(E)> = Box::new(callback);
-            Closure::wrap(boxed)
-        };
-
-        let web_sys_options = web_sys::AddEventListenerOptions::new();
-        web_sys_options.set_once(options.once);
-        web_sys_options.set_capture(options.capture);
-
-        let _ = self.add_event_listener_with_callback_and_add_event_listener_options(
+        let _ = target.add_event_listener_with_callback_and_add_event_listener_options(
             event.name().as_ref(),
             closure.as_ref().unchecked_ref(),
             &web_sys_options,
