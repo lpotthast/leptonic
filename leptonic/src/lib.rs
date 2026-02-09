@@ -75,6 +75,7 @@ pub enum Out<O: 'static, S = SyncStorage> {
     Callback(Callback<O, ()>),
     WriteSignal(WriteSignal<O, S>),
     RwSignal(RwSignal<O, S>),
+    StoredValue(StoredValue<O, S>),
 }
 
 impl<O: 'static, S> Copy for Out<O, S> {}
@@ -112,6 +113,7 @@ impl<O: 'static> Out<O, LocalStorage> {
             Self::Callback(callback) => Callable::run(callback, new_value),
             Self::WriteSignal(write_signal) => write_signal.set(new_value),
             Self::RwSignal(rw_signal) => rw_signal.set(new_value),
+            Self::StoredValue(stored_value) => stored_value.set_value(new_value),
         }
     }
 }
@@ -123,6 +125,7 @@ impl<O: Send + Sync + 'static> Out<O, SyncStorage> {
             Self::Callback(callback) => Callable::run(callback, new_value),
             Self::WriteSignal(write_signal) => write_signal.set(new_value),
             Self::RwSignal(rw_signal) => rw_signal.set(new_value),
+            Self::StoredValue(stored_value) => stored_value.set_value(new_value),
         }
     }
 }
@@ -152,6 +155,12 @@ impl<O: 'static, S> From<WriteSignal<O, S>> for Out<O, S> {
 impl<O: 'static, S> From<RwSignal<O, S>> for Out<O, S> {
     fn from(rw_signal: RwSignal<O, S>) -> Self {
         Self::RwSignal(rw_signal)
+    }
+}
+
+impl<O: 'static, S> From<StoredValue<O, S>> for Out<O, S> {
+    fn from(stored_value: StoredValue<O, S>) -> Self {
+        Self::StoredValue(stored_value)
     }
 }
 
