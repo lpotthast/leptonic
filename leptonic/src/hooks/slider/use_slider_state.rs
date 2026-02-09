@@ -1,4 +1,4 @@
-use crate::hooks::ThumbIdx;
+use crate::hooks::slider::ThumbIdx;
 use crate::utils::aria::AriaOrientation;
 use crate::utils::math::{
     calculate_page_size, decimal_precision, percentage_in_range, snap_value_to_step,

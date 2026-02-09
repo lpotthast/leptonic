@@ -40,9 +40,10 @@
 //! We use basic string formatting with configurable decimal places.
 //! This avoids `wasm_bindgen` complexity for internationalization.
 
+use crate::hooks::slider::{SliderOrientation, UseSliderStateReturn};
 use crate::hooks::{
-    form::use_slider_state::UseSliderStateReturn, interactions::use_move::MoveAxis, use_move,
-    MoveEndEvent, MoveEvent, MoveStartEvent, SliderOrientation, UseMoveInput,
+    interactions::use_move::MoveAxis, use_move, MoveEndEvent, MoveEvent, MoveStartEvent,
+    UseMoveInput,
 };
 use crate::utils::aria::{AriaDisabled, AriaLive};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};

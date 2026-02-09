@@ -1,11 +1,12 @@
-use crate::hooks::form::use_slider_state::UseSliderStateReturn;
 use crate::hooks::interactions::use_hover::{use_hover, UseHoverInput, UseHoverReturn};
 use crate::hooks::interactions::use_move::{
     use_move, MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
 };
+use crate::hooks::slider::use_slider_state::UseSliderStateReturn;
+use crate::hooks::slider::SliderOrientation;
 use crate::hooks::{
-    use_focus_ring, SliderOrientation, UseFocusRingInput, UseFocusRingReturn, UseMoveProps,
-    UseMoveReturn, ValidationState,
+    use_focus_ring, UseFocusRingInput, UseFocusRingReturn, UseMoveProps, UseMoveReturn,
+    ValidationState,
 };
 use crate::utils::aria::{AriaDisabled, AriaHidden, AriaInvalid, AriaOrientation, AriaRequired};
 use crate::utils::focus::focus_element;
@@ -506,7 +507,8 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     });
 
     // Compute aria-invalid
-    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid =
+        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));

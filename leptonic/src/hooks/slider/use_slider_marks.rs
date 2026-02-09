@@ -1,4 +1,4 @@
-use crate::hooks::form::use_slider_state::UseSliderStateReturn;
+use crate::hooks::slider::use_slider_state::UseSliderStateReturn;
 use crate::utils::math::percentage_in_range;
 use leptos::prelude::*;
 use std::borrow::Cow;
@@ -220,8 +220,8 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> UseSliderMarksReturn {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::hooks::form::use_slider_state::{
-        SliderValues, UseSliderStateInput, UseSliderStateReturn,
+    use crate::hooks::slider::use_slider_state::{
+        use_slider_state, SliderValues, UseSliderStateInput, UseSliderStateReturn,
     };
     use crate::hooks::SliderOrientation;
     use assertr::prelude::*;
@@ -234,7 +234,7 @@ mod tests {
         max: f64,
         step: Option<f64>,
     ) -> UseSliderStateReturn {
-        crate::hooks::form::use_slider_state::use_slider_state(UseSliderStateInput {
+        use_slider_state(UseSliderStateInput {
             values: SliderValues::Uncontrolled(default_values),
             min_value: min,
             max_value: max,
