@@ -14,12 +14,6 @@ body {
   flex-direction: column;
 }
 
-/* Focus ring styling for keyboard navigation. Should override any other focus styling. */
-[data-focus-visible="true"] {
-  outline: 3px solid var(--brand-color) !important;
-  outline-offset: 2px !important;
-}
-
 [data-theme="light"] {
   color-scheme: light;
 
