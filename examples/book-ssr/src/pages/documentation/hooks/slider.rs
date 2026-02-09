@@ -267,7 +267,7 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             )></div>
 
                             <div
-                                {..step_thumb_props}
+                                {..step_thumb_props.into_attrs()}
                                 style=move || format!(
                                     "position: absolute; top: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; background: orange; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: grab; left: {}%;",
                                     step_percent.get()

@@ -40,19 +40,19 @@
 //! We use basic string formatting with configurable decimal places.
 //! This avoids `wasm_bindgen` complexity for internationalization.
 
-use crate::hooks::form::use_slider_state::UseSliderStateReturn;
-use crate::hooks::interactions::use_move::{
-    use_move, MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
+use crate::hooks::{
+    form::use_slider_state::UseSliderStateReturn, interactions::use_move::MoveAxis, use_move,
+    MoveEndEvent, MoveEvent, MoveStartEvent, SliderOrientation, UseMoveInput,
 };
-use crate::hooks::SliderOrientation;
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::utils::EventHandler;
+use crate::utils::{EventHandler, EventTargetExt};
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use leptos::tachys::html::style::{style, Style};
+use leptos_use::use_event_listener;
 use uuid::Uuid;
 use web_sys::PointerEvent;
 
@@ -187,29 +187,29 @@ pub type UseSliderOutputAttrs = (
     Attr<attr::AriaLive, &'static str>,
 );
 
+pub type ThumbIdx = usize;
+
 /// Find the closest thumb to a click position.
-fn find_closest_thumb(click_value: f64, values: &[f64]) -> usize {
+fn find_closest_thumb(click_value: f64, values: &[f64]) -> Option<ThumbIdx> {
     if values.is_empty() {
-        return 0;
+        return None;
     }
     if values.len() == 1 {
-        return 0;
+        return Some(0);
     }
 
     // Find position where click_value would be inserted
-    let insert_pos = values.iter().position(|&v| click_value < v);
-
-    match insert_pos {
-        Some(0) => 0,             // Click is before first thumb
-        None => values.len() - 1, // Click is after last thumb
+    match values.iter().position(|&v| click_value < v) {
+        Some(0) => Some(0),             // Click is before first thumb.
+        None => Some(values.len() - 1), // Click is after last thumb.
         Some(i) => {
-            // Click is between thumb i-1 and thumb i, find closer one
+            // Click is between thumb i-1 and thumb i, find closer one.
             let prev_dist = (values[i - 1] - click_value).abs();
             let next_dist = (values[i] - click_value).abs();
             if prev_dist <= next_dist {
-                i - 1
+                Some(i - 1)
             } else {
-                i
+                Some(i)
             }
         }
     }
@@ -243,6 +243,10 @@ fn find_closest_thumb(click_value: f64, values: &[f64]) -> usize {
 ///     ..Default::default()
 /// });
 /// ```
+///
+/// # Panics
+///
+/// Panics if the current target of the pointer event is not available.
 #[allow(clippy::too_many_lines)]
 pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
     let base_id = Uuid::new_v4();
@@ -269,66 +273,126 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
     // precision loss when the percent snaps to steps. See module docs for details.
     let current_position_px: StoredValue<Option<f64>> = StoredValue::new(None);
 
-    // Use use_move hook for track-level dragging. This handles all pointer event
-    // management (pointerdown, pointermove, pointerup, pointercancel) automatically.
+    // Cleanup functions for the global pointerup/pointercancel listeners registered
+    // in on_track_pointerdown. Stored so we can remove them in the handler or on_cleanup.
+    let track_cleanup: StoredValue<Option<Box<dyn Fn() + Send + Sync>>, LocalStorage> =
+        StoredValue::new_local(None);
+
+    // Handle track clicks immediately on pointerdown (before use_move processes the event).
+    // This is the react-aria "onDownTrack" pattern: click-to-position happens here,
+    // while use_move only handles subsequent drag deltas.
+    let on_track_pointerdown = move |e: PointerEvent| {
+        if disabled.get_untracked() {
+            return;
+        }
+
+        if let Some(track) = track_element.get_untracked().as_deref().cloned() {
+            let rect = track.get_bounding_client_rect();
+
+            // Convert page coordinates to client coordinates relative to track.
+            // page_x/page_y include scroll offset, but getBoundingClientRect uses viewport coords.
+            let scroll_x = web_sys::window()
+                .and_then(|w| w.scroll_x().ok())
+                .unwrap_or(0.0);
+            let scroll_y = web_sys::window()
+                .and_then(|w| w.scroll_y().ok())
+                .unwrap_or(0.0);
+            let client_x = f64::from(e.page_x()) - scroll_x;
+            let client_y = f64::from(e.page_y()) - scroll_y;
+
+            let (position, size): (f64, f64) = match orientation.get_untracked() {
+                SliderOrientation::Horizontal => {
+                    let pos = client_x - rect.left();
+                    let adjusted_pos = if is_rtl { rect.width() - pos } else { pos };
+                    (adjusted_pos, rect.width())
+                }
+                SliderOrientation::Vertical => {
+                    // For vertical, bottom = 0%, top = 100%
+                    (rect.bottom() - client_y, rect.height())
+                }
+            };
+
+            let percent = (position / size).clamp(0.0, 1.0);
+            let click_value = state.min_value + percent * (state.max_value - state.min_value);
+
+            // Find closest thumb
+            let values = state.values.get_untracked();
+            let Some(closest_thumb) = find_closest_thumb(click_value, &values) else {
+                return;
+            };
+
+            // Move the closest thumb to the click position
+            state.set_thumb_percent.run((closest_thumb, percent));
+
+            // Focus the thumb that was clicked
+            state.set_focused_thumb.run(Some(closest_thumb));
+
+            // Start tracking for continuous drag
+            dragging_thumb_index.set_value(Some(closest_thumb));
+            state.set_thumb_dragging.run((closest_thumb, true));
+
+            // Initialize pixel position for accumulation pattern.
+            // Use the click position (already adjusted for RTL/vertical).
+            current_position_px.set_value(Some(position));
+
+            // Register global pointerup/pointercancel listeners for cleanup.
+            // These always fire (even without pointer movement), ensuring dragging state
+            // is cleared for click-without-drag interactions.
+            let pointer_id = e.pointer_id();
+            let doc = e.current_target().unwrap().get_owner_document();
+
+            let cleanup_up =
+                use_event_listener(doc.clone(), ev::pointerup, move |e: PointerEvent| {
+                    if e.pointer_id() != pointer_id {
+                        return;
+                    }
+                    if let Some(idx) = dragging_thumb_index.get_value() {
+                        state.set_thumb_dragging.run((idx, false));
+                    }
+                    dragging_thumb_index.set_value(None);
+                    current_position_px.set_value(None);
+                    // Remove our global listeners
+                    track_cleanup.update_value(|c| {
+                        if let Some(cleanup_fn) = c.take() {
+                            cleanup_fn();
+                        }
+                    });
+                });
+
+            let cleanup_cancel =
+                use_event_listener(doc, ev::pointercancel, move |e: PointerEvent| {
+                    if e.pointer_id() != pointer_id {
+                        return;
+                    }
+                    if let Some(idx) = dragging_thumb_index.get_value() {
+                        state.set_thumb_dragging.run((idx, false));
+                    }
+                    dragging_thumb_index.set_value(None);
+                    current_position_px.set_value(None);
+                    // Remove our global listeners
+                    track_cleanup.update_value(|c| {
+                        if let Some(cleanup_fn) = c.take() {
+                            cleanup_fn();
+                        }
+                    });
+                });
+
+            track_cleanup.set_value(Some(Box::new(move || {
+                cleanup_up();
+                cleanup_cancel();
+            })));
+        }
+    };
+
+    // Use use_move hook for track-level dragging. use_move handles pointer event
+    // management (pointerdown, pointermove, pointerup, pointercancel) for drag deltas.
+    // on_move_start is a no-op because we handle the initial click in on_track_pointerdown.
     let track_move_props = use_move(UseMoveInput {
         axis: Signal::derive(move || match orientation.get() {
             SliderOrientation::Horizontal => Some(MoveAxis::Horizontal),
             SliderOrientation::Vertical => Some(MoveAxis::Vertical),
         }),
-        on_move_start: Callback::new(move |e: MoveStartEvent| {
-            if disabled.get_untracked() {
-                return;
-            }
-
-            if let Some(track) = track_element.get_untracked().as_deref().cloned() {
-                let rect = track.get_bounding_client_rect();
-
-                // Convert page coordinates to client coordinates relative to track
-                // Note: page_x/page_y include scroll offset, but getBoundingClientRect uses viewport coords
-                let scroll_x = web_sys::window()
-                    .and_then(|w| w.scroll_x().ok())
-                    .unwrap_or(0.0);
-                let scroll_y = web_sys::window()
-                    .and_then(|w| w.scroll_y().ok())
-                    .unwrap_or(0.0);
-                let client_x = e.page_x - scroll_x;
-                let client_y = e.page_y - scroll_y;
-
-                let (position, size): (f64, f64) = match orientation.get_untracked() {
-                    SliderOrientation::Horizontal => {
-                        let pos = client_x - rect.left();
-                        let adjusted_pos = if is_rtl { rect.width() - pos } else { pos };
-                        (adjusted_pos, rect.width())
-                    }
-                    SliderOrientation::Vertical => {
-                        // For vertical, bottom = 0%, top = 100%
-                        (rect.bottom() - client_y, rect.height())
-                    }
-                };
-
-                let percent = (position / size).clamp(0.0, 1.0);
-                let click_value = state.min_value + percent * (state.max_value - state.min_value);
-
-                // Find closest thumb
-                let values = state.values.get_untracked();
-                let closest_thumb = find_closest_thumb(click_value, &values);
-
-                // Move the closest thumb to the click position
-                state.set_thumb_percent.run((closest_thumb, percent));
-
-                // Focus the thumb that was clicked
-                state.set_focused_thumb.run(Some(closest_thumb));
-
-                // Start tracking for continuous drag
-                dragging_thumb_index.set_value(Some(closest_thumb));
-                state.set_thumb_dragging.run((closest_thumb, true));
-
-                // Initialize pixel position for accumulation pattern.
-                // Use the click position (already adjusted for RTL/vertical).
-                current_position_px.set_value(Some(position));
-            }
-        }),
+        on_move_start: Callback::new(move |_: MoveStartEvent| {}),
         on_move: Callback::new(move |e: MoveEvent| {
             if let Some(idx) = dragging_thumb_index.get_value() {
                 if let Some(track) = track_element.get_untracked().as_deref().cloned() {
@@ -340,7 +404,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
                         SliderOrientation::Vertical => rect.height(),
                     };
 
-                    // Get current position in pixels (should be initialized in on_move_start)
+                    // Get current position in pixels (initialized in on_track_pointerdown)
                     let pos = current_position_px
                         .get_value()
                         .unwrap_or_else(|| state.get_thumb_percent.run(idx) * size);
@@ -367,12 +431,22 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             }
         }),
         on_move_end: Callback::new(move |_: MoveEndEvent| {
+            // Idempotent: on_track_pointerdown's global pointerup handler may have
+            // already cleared this state. Both handlers guard with `if let Some`.
             if let Some(idx) = dragging_thumb_index.get_value() {
                 state.set_thumb_dragging.run((idx, false));
             }
             dragging_thumb_index.set_value(None);
             current_position_px.set_value(None);
         }),
+    });
+
+    on_cleanup(move || {
+        track_cleanup.update_value(|c| {
+            if let Some(cleanup_fn) = c.take() {
+                cleanup_fn();
+            }
+        });
     });
 
     UseSliderReturn {
@@ -392,7 +466,8 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
         track_props: UseSliderTrackProps {
             role: "presentation",
             style_touch_action: "none",
-            on_pointerdown: track_move_props.props.on_pointerdown,
+            on_pointerdown: EventHandler::new(on_track_pointerdown)
+                .chain(track_move_props.props.on_pointerdown),
             element_capture: track_element.attr(),
         },
         track_ref: track_element,

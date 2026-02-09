@@ -1,3 +1,4 @@
+use crate::hooks::ThumbIdx;
 use crate::utils::math::{
     calculate_page_size, decimal_precision, percentage_in_range, snap_value_to_step,
 };
@@ -64,40 +65,40 @@ pub struct UseSliderStateReturn {
     pub values: Signal<Vec<f64>>,
 
     /// Get the value of a specific thumb.
-    pub get_thumb_value: Callback<usize, f64>,
+    pub get_thumb_value: Callback<ThumbIdx, f64>,
 
     /// Set the value of a specific thumb.
-    pub set_thumb_value: Callback<(usize, f64)>,
+    pub set_thumb_value: Callback<(ThumbIdx, f64)>,
 
     /// Set a thumb's value as a percentage (0.0-1.0).
-    pub set_thumb_percent: Callback<(usize, f64)>,
+    pub set_thumb_percent: Callback<(ThumbIdx, f64)>,
 
     /// Get a thumb's value as a percentage (0.0-1.0).
-    pub get_thumb_percent: Callback<usize, f64>,
+    pub get_thumb_percent: Callback<ThumbIdx, f64>,
 
     /// Get the minimum allowed value for a thumb (constrained by previous thumb).
-    pub get_thumb_min_value: Callback<usize, f64>,
+    pub get_thumb_min_value: Callback<ThumbIdx, f64>,
 
     /// Get the maximum allowed value for a thumb (constrained by next thumb).
-    pub get_thumb_max_value: Callback<usize, f64>,
+    pub get_thumb_max_value: Callback<ThumbIdx, f64>,
 
     /// Increment a thumb's value. Optional `step_size` for Shift+Arrow.
-    pub increment_thumb: Callback<(usize, Option<f64>)>,
+    pub increment_thumb: Callback<(ThumbIdx, Option<f64>)>,
 
     /// Decrement a thumb's value. Optional `step_size` for Shift+Arrow.
-    pub decrement_thumb: Callback<(usize, Option<f64>)>,
+    pub decrement_thumb: Callback<(ThumbIdx, Option<f64>)>,
 
     /// Check if a specific thumb is being dragged.
-    pub is_thumb_dragging: Callback<usize, bool>,
+    pub is_thumb_dragging: Callback<ThumbIdx, bool>,
 
     /// Set the dragging state for a specific thumb.
-    pub set_thumb_dragging: Callback<(usize, bool)>,
+    pub set_thumb_dragging: Callback<(ThumbIdx, bool)>,
 
     /// The currently focused thumb index (if any).
-    pub focused_thumb: Signal<Option<usize>>,
+    pub focused_thumb: Signal<Option<ThumbIdx>>,
 
     /// Set which thumb is focused.
-    pub set_focused_thumb: Callback<Option<usize>>,
+    pub set_focused_thumb: Callback<Option<ThumbIdx>>,
 
     /// The step value (`None` for continuous mode).
     pub step: Option<f64>,
@@ -121,10 +122,10 @@ pub struct UseSliderStateReturn {
     pub get_percent_value: Callback<f64, f64>,
 
     /// Check if a specific thumb is editable.
-    pub is_thumb_editable: Callback<usize, bool>,
+    pub is_thumb_editable: Callback<ThumbIdx, bool>,
 
     /// Set whether a specific thumb is editable.
-    pub set_thumb_editable: Callback<(usize, bool)>,
+    pub set_thumb_editable: Callback<(ThumbIdx, bool)>,
 }
 
 /// Clamp a value within a range without step snapping (continuous mode).

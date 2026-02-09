@@ -1,19 +1,25 @@
 use crate::hooks::form::use_slider_state::UseSliderStateReturn;
+use crate::hooks::interactions::use_hover::{use_hover, UseHoverInput, UseHoverReturn};
 use crate::hooks::interactions::use_move::{
     use_move, MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
 };
 use crate::hooks::{
-    use_focus_ring, SliderOrientation, UseFocusRingInput, UseFocusRingReturn, ValidationState,
+    use_focus_ring, SliderOrientation, UseFocusRingInput, UseFocusRingReturn, UseMoveProps,
+    UseMoveReturn, ValidationState,
 };
+use crate::utils::focus::focus_element;
 use crate::utils::math::percentage_in_range;
 use crate::utils::CapturedElement;
+use crate::utils::EventHandler;
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::CustomAttr;
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::borrow::Cow;
 use uuid::Uuid;
+use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
 
 /// Input parameters for the `use_slider_thumb` hook.
@@ -66,13 +72,16 @@ pub struct UseSliderThumbInput {
 #[derive(Clone)]
 pub struct UseSliderThumbReturn {
     /// Props for the thumb element.
-    pub thumb_props: UseSliderThumbAttrs,
+    pub thumb_props: UseSliderThumbProps,
 
     /// Props for a hidden input for form submission.
     pub input_props: UseSliderThumbInputProps,
 
     /// Whether this thumb is being dragged.
     pub is_dragging: Signal<bool>,
+
+    /// Whether this thumb is hovered.
+    pub is_hovered: Signal<bool>,
 
     /// Whether this thumb is focused.
     pub is_focused: Signal<bool>,
@@ -91,6 +100,71 @@ pub struct UseSliderThumbReturn {
 
     /// The thumb ID (for ARIA associations).
     pub thumb_id: String,
+}
+
+/// Intermediate props struct for the slider thumb element.
+/// Call `into_attrs()` or `to_attrs()` to convert to spreadable attributes.
+#[derive(Debug, Clone)]
+pub struct UseSliderThumbProps {
+    id: String,
+    role: &'static str,
+    tabindex: &'static str,
+    aria_label: Option<Cow<'static, str>>,
+    aria_labelledby: Option<&'static str>,
+    aria_valuenow: Signal<f64>,
+    aria_valuemin: Signal<f64>,
+    aria_valuemax: Signal<f64>,
+    aria_valuetext: Signal<String>,
+    aria_orientation: Signal<&'static str>,
+    aria_invalid: Option<&'static str>,
+    aria_disabled: Signal<Option<&'static str>>,
+    aria_required: Option<&'static str>,
+    aria_describedby: Option<&'static str>,
+    aria_details: Option<&'static str>,
+    aria_errormessage: Option<&'static str>,
+    on_keydown: EventHandler<KeyboardEvent>,
+    on_pointerdown: EventHandler<PointerEvent>,
+    on_focus: EventHandler<FocusEvent>,
+    on_blur: EventHandler<FocusEvent>,
+    on_pointerenter: EventHandler<PointerEvent>,
+    on_pointerleave: EventHandler<PointerEvent>,
+    data_focus_visible: CustomAttr<&'static str, Signal<Option<&'static str>>>,
+}
+
+impl UseSliderThumbProps {
+    /// Converts these props into spreadable attributes, consuming self.
+    pub fn into_attrs(self) -> UseSliderThumbAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaValuenow, self.aria_valuenow),
+            Attr(attr::AriaValuemin, self.aria_valuemin),
+            Attr(attr::AriaValuemax, self.aria_valuemax),
+            Attr(attr::AriaValuetext, self.aria_valuetext),
+            Attr(attr::AriaOrientation, self.aria_orientation),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaRequired, self.aria_required),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaDetails, self.aria_details),
+            Attr(attr::AriaErrormessage, self.aria_errormessage),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_pointerenter.into_on(ev::pointerenter),
+            self.on_pointerleave.into_on(ev::pointerleave),
+            self.data_focus_visible,
+        )
+    }
+
+    /// Converts these props into spreadable attributes by cloning.
+    pub fn to_attrs(&self) -> UseSliderThumbAttrs {
+        self.clone().into_attrs()
+    }
 }
 
 /// Attributes for the slider thumb element.
@@ -115,7 +189,9 @@ pub type UseSliderThumbAttrs = (
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
+    On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 #[derive(Debug, Clone)]
@@ -251,7 +327,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
     // Use use_move hook for thumb dragging. This handles all the pointer event
     // management (pointerdown, pointermove, pointerup, pointercancel) automatically.
-    let move_props = use_move(UseMoveInput {
+    let UseMoveReturn { props: move_props } = use_move(UseMoveInput {
         axis: Signal::derive(move || match orientation.get() {
             SliderOrientation::Horizontal => Some(MoveAxis::Horizontal),
             SliderOrientation::Vertical => Some(MoveAxis::Vertical),
@@ -310,6 +386,20 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             current_position_px.set_value(None);
         }),
     });
+
+    // Destructure move_props to catch future type-changes / extensions early.
+    let UseMoveProps { on_pointerdown } = move_props;
+
+    // Focus the thumb element explicitly. use_move calls prevent_default()
+    // on pointerdown which suppresses the browser's default focus behavior.
+    let on_pointerdown = EventHandler::new(move |e: PointerEvent| {
+        if let Some(target) = e.current_target() {
+            if let Some(el) = target.dyn_ref::<web_sys::Element>() {
+                focus_element(el, true);
+            }
+        }
+    })
+    .chain(on_pointerdown);
 
     // Handle keydown on thumb
     let handle_keydown = move |e: KeyboardEvent| {
@@ -373,22 +463,20 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         }
     };
 
-    // Handle focus
-    let handle_focus = move |_: FocusEvent| {
-        set_is_focused.set(true);
-        state.set_focused_thumb.run(Some(index));
-    };
+    // Use hover hook for robust hover tracking (handles iOS, touch/pen, disabled state)
+    let UseHoverReturn {
+        props: hover_props,
+        is_hovered,
+    } = use_hover(UseHoverInput {
+        disabled: is_disabled,
+        on_hover_start: None,
+        on_hover_end: None,
+        on_hover_change: None,
+    });
 
-    // Handle blur
-    let handle_blur = move |_: FocusEvent| {
-        set_is_focused.set(false);
-        // Only clear focused thumb if this thumb was the focused one
-        if state.focused_thumb.get_untracked() == Some(index) {
-            state.set_focused_thumb.run(None);
-        }
-    };
-
-    // Use focus ring for keyboard focus visibility
+    // Use focus ring for keyboard focus visibility.
+    // Pass the thumb's focus/blur logic as callbacks so use_focus_ring chains them
+    // with its internal focus tracking, making is_focus_visible work correctly.
     let UseFocusRingReturn {
         props: focus_ring_props,
         is_focus_visible,
@@ -397,11 +485,18 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         disabled: is_disabled,
         within: false,
         auto_focus: false,
-        on_focus: None,
-        on_blur: None,
+        on_focus: Some(Callback::new(move |_: FocusEvent| {
+            set_is_focused.set(true);
+            state.set_focused_thumb.run(Some(index));
+        })),
+        on_blur: Some(Callback::new(move |_: FocusEvent| {
+            set_is_focused.set(false);
+            if state.focused_thumb.get_untracked() == Some(index) {
+                state.set_focused_thumb.run(None);
+            }
+        })),
         on_focus_change: None,
     });
-    let (_, _, data_focus_visible) = focus_ring_props.into_attrs();
 
     // Compute aria-invalid
     let aria_invalid = if input.validation_state == ValidationState::Invalid {
@@ -433,29 +528,31 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     });
 
     UseSliderThumbReturn {
-        thumb_props: (
-            Attr(attr::Id, thumb_id.clone()),
-            Attr(attr::Role, "slider"),
-            Attr(attr::Tabindex, "0"),
-            Attr(attr::AriaLabel, input.aria_label),
-            Attr(attr::AriaLabelledby, input.aria_labelledby),
-            Attr(attr::AriaValuenow, value),
-            Attr(attr::AriaValuemin, thumb_min),
-            Attr(attr::AriaValuemax, thumb_max),
-            Attr(attr::AriaValuetext, display_value),
-            Attr(attr::AriaOrientation, aria_orientation),
-            Attr(attr::AriaInvalid, aria_invalid),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::AriaRequired, aria_required),
-            Attr(attr::AriaDescribedby, input.aria_describedby),
-            Attr(attr::AriaDetails, input.aria_details),
-            Attr(attr::AriaErrormessage, input.aria_errormessage),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            move_props.props.on_pointerdown.into_on(ev::pointerdown),
-            on(ev::focus, handle_focus).into_cloneable(),
-            on(ev::blur, handle_blur).into_cloneable(),
-            data_focus_visible,
-        ),
+        thumb_props: UseSliderThumbProps {
+            id: thumb_id.clone(),
+            role: "slider",
+            tabindex: "0",
+            aria_label: input.aria_label,
+            aria_labelledby: input.aria_labelledby,
+            aria_valuenow: value,
+            aria_valuemin: thumb_min,
+            aria_valuemax: thumb_max,
+            aria_valuetext: display_value,
+            aria_orientation,
+            aria_invalid,
+            aria_disabled,
+            aria_required,
+            aria_describedby: input.aria_describedby,
+            aria_details: input.aria_details,
+            aria_errormessage: input.aria_errormessage,
+            on_keydown: EventHandler::new(handle_keydown),
+            on_pointerdown,
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_pointerenter: hover_props.on_pointerenter,
+            on_pointerleave: hover_props.on_pointerleave,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+        },
         input_props: UseSliderThumbInputProps {
             ty: "hidden",
             name: input.name,
@@ -464,6 +561,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             aria_hidden: "true",
         },
         is_dragging: is_dragging.into(),
+        is_hovered,
         is_focused: is_focused.into(),
         is_focus_visible,
         value,

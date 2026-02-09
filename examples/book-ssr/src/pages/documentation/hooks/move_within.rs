@@ -89,7 +89,7 @@ fn BasicExample() -> impl IntoView {
         is_moving,
         ..
     } = use_move_within(UseMoveWithinInput {
-        axis: MoveAxis::Both,
+        axis: MoveAxis::Both.into(),
         disabled: false.into(),
         on_move_start: Some(Callback::new(move |e: MoveWithinStartEvent| {
             set_events.update(move |events| {
@@ -198,7 +198,7 @@ fn AxisExample() -> impl IntoView {
         pixel_position: h_pixel_position,
         ..
     } = use_move_within(UseMoveWithinInput {
-        axis: MoveAxis::Horizontal,
+        axis: MoveAxis::Horizontal.into(),
         disabled: false.into(),
         ..Default::default()
     });
@@ -211,7 +211,7 @@ fn AxisExample() -> impl IntoView {
         pixel_position: v_pixel_position,
         ..
     } = use_move_within(UseMoveWithinInput {
-        axis: MoveAxis::Vertical,
+        axis: MoveAxis::Vertical.into(),
         disabled: false.into(),
         ..Default::default()
     });
@@ -297,7 +297,7 @@ fn ContainerClickExample() -> impl IntoView {
         pixel_position,
         ..
     } = use_move_within(UseMoveWithinInput {
-        axis: MoveAxis::Both,
+        axis: MoveAxis::Both.into(),
         disabled: false.into(),
         allow_container_click: true,
         ..Default::default()
@@ -351,7 +351,7 @@ fn ConstrainCenterExample() -> impl IntoView {
         pixel_position: bounds_pixel_position,
         ..
     } = use_move_within(UseMoveWithinInput {
-        axis: MoveAxis::Both,
+        axis: MoveAxis::Both.into(),
         disabled: false.into(),
         constrain_center: false,
         ..Default::default()
@@ -365,7 +365,7 @@ fn ConstrainCenterExample() -> impl IntoView {
         pixel_position: center_pixel_position,
         ..
     } = use_move_within(UseMoveWithinInput {
-        axis: MoveAxis::Both,
+        axis: MoveAxis::Both.into(),
         disabled: false.into(),
         constrain_center: true,
         ..Default::default()
@@ -457,7 +457,7 @@ fn ProgrammaticExample() -> impl IntoView {
         set_position,
         ..
     } = use_move_within(UseMoveWithinInput {
-        axis: MoveAxis::Both,
+        axis: MoveAxis::Both.into(),
         disabled: false.into(),
         ..Default::default()
     });

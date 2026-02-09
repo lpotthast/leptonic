@@ -1,4 +1,3 @@
-use crate::atoms::focus_ring::FocusRing;
 use crate::hooks::*;
 use crate::utils::classes::Classes;
 use crate::utils::styles::{
@@ -254,6 +253,7 @@ pub fn SliderThumb(
         thumb_props,
         input_props,
         is_dragging,
+        is_hovered,
         is_focused: _,
         is_focus_visible: _,
         percentage,
@@ -304,10 +304,8 @@ pub fn SliderThumb(
             SliderOrientation::Vertical => Some("translate(-50%, 50%)".into()),
         }));
 
-    let (is_hovered, set_is_hovered) = signal(false);
-
     let thumb_ctx = SliderThumbCtx {
-        is_hovered: is_hovered.into(),
+        is_hovered,
         is_dragging,
         value,
         display_value,
@@ -315,20 +313,16 @@ pub fn SliderThumb(
 
     view! {
         <Provider value=thumb_ctx>
-            <FocusRing>
-                <div
-                    {..thumb_props}
-                    class=classes
-                    style=styles
-                    attr:data-dragging=data_dragging
-                    on:pointerenter=move |_| set_is_hovered.set(true)
-                    on:pointerleave=move |_| set_is_hovered.set(false)
-                >
-                    <input {..input_props.into_attrs()} />
+            <div
+                {..thumb_props.into_attrs()}
+                class=classes
+                style=styles
+                attr:data-dragging=data_dragging
+            >
+                <input {..input_props.into_attrs()} />
 
-                    {children.map(|c| c())}
-                </div>
-            </FocusRing>
+                {children.map(|c| c())}
+            </div>
         </Provider>
     }
 }
