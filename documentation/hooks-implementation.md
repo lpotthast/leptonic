@@ -81,6 +81,37 @@ We do not support a react-aria like generic `mergeProps` function.
 
 Most hooks support a `disabled` input. This should always be a `Signal<bool>` for reactive enabling/disabling.
 
+## Input Destructuring
+
+Hooks must destructure their `*Input` parameter at the very top of the function body.
+This makes all available inputs visible at a glance and avoids `input.field` access scattered throughout the body.
+It gives us compile-time safety while preserving our "single parameter input" concept.
+
+```rust
+pub fn use_foo(input: UseFooInput) -> UseFooReturn {
+    let UseFooInput { disabled, on_change, value } = input;
+    // ... rest of hook body uses `disabled`, `on_change`, `value` directly
+}
+```
+
+## Event Handler Naming Conventions
+
+Hooks use different naming conventions depending on where an event handler lives:
+
+| Location                                       | Convention  | Example                                      |
+|------------------------------------------------|-------------|----------------------------------------------|
+| `*Input` struct fields (user callbacks)        | `on_*`      | `on_press`, `on_change`                      |
+| Internal event handler closures (hook body)    | `handle_*`  | `handle_click`, `handle_keydown`             |
+| `*Props` struct fields (`EventHandler<E>`)     | `on_*`      | `on_keydown`, `on_click`                     |
+| Internal helper functions (not event handlers) | descriptive | `trigger_press_start`, `toggle`, `increment` |
+
+**Rationale:** User callbacks in `*Input` and `EventHandler` fields in `*Props` both use `on_*` because they represent
+the public API surface. Internal closures in the hook body use `handle_*` to avoid naming conflicts — a `handle_click`
+closure often captures an `on_click` user callback, and distinct prefixes prevent shadowing and improve readability.
+
+Internal helpers that invoke user callbacks but aren't direct DOM event handlers can use descriptive names like
+`trigger_press_start` or `toggle`.
+
 ## Shared State
 
 Many concepts, e.g. "sliders" with their respective `use_slider_*` hooks, need to share state between hooks.
@@ -299,16 +330,18 @@ pub struct UseFooReturn {
 }
 
 pub fn use_foo(input: UseFooInput) -> UseFooReturn {
+    let UseFooInput { disabled, .. } = input;
+
     // hook logic...
 
-    let on_keydown = move |e: KeyboardEvent| {
+    let handle_keydown = move |e: KeyboardEvent| {
         // ...
     };
 
     UseFooReturn {
         props: UseFooProps {
-            is_disabled: input.disabled,
-            on_keydown: EventHandler::new(on_keydown),
+            is_disabled: disabled,
+            on_keydown: EventHandler::new(handle_keydown),
             // ...
         },
         is_pressed: unimplemented!(),
@@ -395,28 +428,26 @@ the DOM — the code compiles, no runtime warning is logged, and the accessibili
 ```rust
 // WRONG: aria-disabled will silently not render
 pub aria_disabled: Signal<bool>,
-
 // CORRECT: renders as aria-disabled="true" or aria-disabled="false"
-pub aria_disabled: Signal<&'static str>,
+pub aria_disabled: Signal< & 'static str>,
 
 // Derive from a bool signal:
-let aria_disabled = Signal::derive(move || if is_disabled.get() { "true" } else { "false" });
+let aria_disabled = Signal::derive( move | | if is_disabled.get() { "true" } else { "false" });
 ```
 
 **Pattern for optional ARIA attributes** (attribute absent when not applicable):
 
 ```rust
 // Use Option to suppress the attribute entirely when None
-pub aria_selected: Signal<Option<&'static str>>,
-
-let aria_selected = Signal::derive(move || {
-    if selection_mode == SelectionMode::None {
-        None                // attribute absent from DOM
-    } else if is_selected.get() {
-        Some("true")        // aria-selected="true"
-    } else {
-        Some("false")       // aria-selected="false"
-    }
+pub aria_selected: Signal<Option< & 'static str> >,
+let aria_selected = Signal::derive(move | | {
+if selection_mode == SelectionMode::None {
+None                // attribute absent from DOM
+} else if is_selected.get() {
+Some("true")        // aria-selected="true"
+} else {
+Some("false")       // aria-selected="false"
+}
 });
 ```
 
