@@ -9,7 +9,7 @@ use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 use crate::utils::aria::*;
 use crate::utils::EventHandler;
 
-use super::{
+use crate::hooks::{
     focus::use_focus_ring::{use_focus_ring, UseFocusRingInput},
     interactions::{
         use_hover::{use_hover, UseHoverInput},
