@@ -86,10 +86,15 @@ pub type UseModalAttrs = (
 /// }
 /// ```
 pub fn use_modal(input: UseModalInput) -> UseModalReturn {
+    let UseModalInput {
+        is_open,
+        on_close,
+        is_dismissable,
+        should_close_on_interact_outside,
+        is_keyboard_dismiss_disabled,
+    } = input;
+
     let modal_id = format!("modal-{}", Uuid::new_v4());
-    let on_close = input.on_close;
-    let is_dismissable = input.is_dismissable;
-    let is_keyboard_dismiss_disabled = input.is_keyboard_dismiss_disabled;
 
     // Handle keydown for escape
     let handle_keydown = move |e: KeyboardEvent| {

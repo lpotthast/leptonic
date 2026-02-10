@@ -101,12 +101,18 @@ struct MoveState {
 /// Panics if the current target of the pointer event is not available.
 #[allow(clippy::too_many_lines)]
 pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
+    let UseMoveInput {
+        axis,
+        on_move_start,
+        on_move,
+        on_move_end,
+    } = input;
+
     // Note: There may be multiple pointers. Every pointer event contains a unique identifier of the pointer used for the interaction.
     // We start movement tracking by listening for on_pointer_down events.
     // Only movements from the pointer which initiated the tracking is propagated.
 
     let state: StoredValue<Option<MoveState>, LocalStorage> = StoredValue::new_local(None);
-    let axis = input.axis;
 
     // Handle pointer move during drag
     let on_pointer_move = move |e: PointerEvent| {
@@ -138,12 +144,12 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
 
                 if first_move {
                     let (initial_x, initial_y) = s.initial_pos;
-                    input.on_move_start.run(MoveStartEvent {
+                    on_move_start.run(MoveStartEvent {
                         page_x: initial_x,
                         page_y: initial_y,
                     });
                 }
-                input.on_move.run(MoveEvent { delta_x, delta_y });
+                on_move.run(MoveEvent { delta_x, delta_y });
             }
         });
     };
@@ -156,7 +162,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             if let Some(s) = s.as_ref() {
                 if s.pointer_id == pointer_id {
                     if s.moved {
-                        input.on_move_end.run(MoveEndEvent {});
+                        on_move_end.run(MoveEndEvent {});
                     }
                     s.event_handlers.cleanup();
                     return true;
@@ -178,7 +184,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             if let Some(s) = s.as_ref() {
                 if s.pointer_id == pointer_id {
                     if s.moved {
-                        input.on_move_end.run(MoveEndEvent {});
+                        on_move_end.run(MoveEndEvent {});
                     }
                     s.event_handlers.cleanup();
                     return true;

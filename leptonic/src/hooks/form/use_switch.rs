@@ -129,10 +129,16 @@ pub type UseSwitchInputAttrs = (
 /// }
 /// ```
 pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
-    let is_selected = input.is_selected;
-    let on_change = input.on_change;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
+    let UseSwitchInput {
+        is_selected,
+        on_change,
+        is_disabled,
+        is_read_only,
+        validation_state,
+        aria_label,
+        name,
+        value,
+    } = input;
 
     let (is_pressed, _set_is_pressed) = signal(false);
 
@@ -175,7 +181,7 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
 
     // Compute aria-invalid
     let aria_invalid =
-        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
@@ -199,7 +205,7 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
         switch_props: (
             Attr(attr::Role, "switch"),
             Attr(attr::AriaChecked, aria_checked),
-            Attr(attr::AriaLabel, input.aria_label),
+            Attr(attr::AriaLabel, aria_label),
             Attr(attr::AriaInvalid, aria_invalid),
             Attr(attr::AriaDisabled, aria_disabled),
             Attr(attr::Tabindex, "0"),
@@ -213,8 +219,8 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
         ),
         input_props: (
             Attr(attr::Type, "checkbox"),
-            Attr(attr::Name, input.name),
-            Attr(attr::Value, input.value),
+            Attr(attr::Name, name),
+            Attr(attr::Value, value),
             Attr(attr::Checked, is_selected),
             Attr(attr::Disabled, is_disabled),
             Attr(attr::AriaHidden, AriaHidden::True),

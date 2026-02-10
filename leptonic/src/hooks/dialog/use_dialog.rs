@@ -123,30 +123,35 @@ pub struct UseDialogDescriptionProps {
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
+    let UseDialogInput {
+        title,
+        description,
+        role: dialog_role,
+        is_dismissable,
+        on_close,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let dialog_id = format!("dialog-{base_id}");
     let title_id = format!("dialog-title-{base_id}");
     let description_id = format!("dialog-description-{base_id}");
 
-    let on_close = input.on_close;
-    let is_dismissable = input.is_dismissable;
-
     // Build aria-labelledby
-    let aria_labelledby = if input.title.is_some() {
+    let aria_labelledby = if title.is_some() {
         Some(title_id.clone())
     } else {
         None
     };
 
     // Build aria-describedby
-    let aria_describedby = if input.description.is_some() {
+    let aria_describedby = if description.is_some() {
         Some(description_id.clone())
     } else {
         None
     };
 
     // Determine role string
-    let role = match input.role {
+    let role = match dialog_role {
         DialogRole::Dialog => "dialog",
         DialogRole::AlertDialog => "alertdialog",
     };

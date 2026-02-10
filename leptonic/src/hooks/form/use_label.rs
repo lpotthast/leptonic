@@ -86,12 +86,15 @@ pub type UseLabelFieldAttrs = (
 /// }
 /// ```
 pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
-    let label_id = input
-        .id
-        .unwrap_or_else(|| format!("label-{}", Uuid::new_v4()));
+    let UseLabelInput {
+        id,
+        label_element_type,
+    } = input;
+
+    let label_id = id.unwrap_or_else(|| format!("label-{}", Uuid::new_v4()));
     let field_id = format!("field-{}", Uuid::new_v4());
 
-    let element_type = input.label_element_type.unwrap_or_default();
+    let element_type = label_element_type.unwrap_or_default();
 
     // For <label> elements, use the "for" attribute
     // For other elements, use aria-labelledby on the field
@@ -175,19 +178,22 @@ pub struct UseLabelWithDescriptionReturn {
 pub fn use_label_with_description(
     input: UseLabelWithDescriptionInput,
 ) -> UseLabelWithDescriptionReturn {
+    let UseLabelWithDescriptionInput {
+        label_id,
+        description_id,
+        error_message_id,
+        has_error,
+    } = input;
+
     let base_id = Uuid::new_v4();
 
-    let label_id = input.label_id.unwrap_or_else(|| format!("label-{base_id}"));
+    let label_id = label_id.unwrap_or_else(|| format!("label-{base_id}"));
     let field_id = format!("field-{base_id}");
-    let description_id = input
-        .description_id
-        .unwrap_or_else(|| format!("description-{base_id}"));
-    let error_message_id = input
-        .error_message_id
-        .unwrap_or_else(|| format!("error-{base_id}"));
+    let description_id = description_id.unwrap_or_else(|| format!("description-{base_id}"));
+    let error_message_id = error_message_id.unwrap_or_else(|| format!("error-{base_id}"));
 
     // Compute aria-describedby - include error message if there's an error
-    let aria_describedby = if input.has_error {
+    let aria_describedby = if has_error {
         Some(format!("{description_id} {error_message_id}"))
     } else {
         Some(description_id.clone())

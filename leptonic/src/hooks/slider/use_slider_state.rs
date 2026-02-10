@@ -159,18 +159,21 @@ enum InternalState {
 /// Creates sharable state for a multi-thumb slider component.
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_slider_state(input: UseSliderStateInput) -> UseSliderStateReturn {
-    let min_value = input.min_value;
-    let max_value = input.max_value;
-    let step = input.step;
-    let disabled = input.disabled;
-    let orientation = input.orientation;
-    let on_change = input.on_change;
-    let on_change_end = input.on_change_end;
+    let UseSliderStateInput {
+        values,
+        min_value,
+        max_value,
+        step,
+        disabled,
+        orientation,
+        on_change,
+        on_change_end,
+    } = input;
 
     // Precompute precision once to avoid repeated string allocations
     let precision = step.map(decimal_precision);
 
-    let (num_thumbs, state, values) = match input.values {
+    let (num_thumbs, state, values) = match values {
         SliderValues::Uncontrolled(defaults) => {
             let mut processed: Vec<f64> = defaults
                 .iter()

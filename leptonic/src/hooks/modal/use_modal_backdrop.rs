@@ -89,13 +89,18 @@ pub type UseModalBackdropContentAttrs = (On<ev::click, SharedEventCallback<web_s
 /// }
 /// ```
 pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropReturn {
+    let UseModalBackdropInput {
+        is_open,
+        on_close,
+        should_close_on_interact_outside,
+        prevent_scroll,
+    } = input;
+
     let backdrop_id = format!("modal-backdrop-{}", Uuid::new_v4());
-    let on_close = input.on_close;
-    let should_close_on_interact_outside = input.should_close_on_interact_outside;
 
     // Prevent body scrolling when modal is open
     let _prevent_scroll = use_prevent_scroll(UsePreventScrollInput {
-        disabled: Signal::derive(move || !input.is_open.get() || !input.prevent_scroll),
+        disabled: Signal::derive(move || !is_open.get() || !prevent_scroll),
     });
 
     // Handle click on backdrop

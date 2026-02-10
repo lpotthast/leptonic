@@ -122,11 +122,19 @@ pub struct UseTagGroupLabelProps {
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
+    let UseTagGroupInput {
+        label,
+        selection_mode,
+        is_disabled: disabled,
+        selected_keys,
+        on_selection_change,
+        on_remove,
+        allow_removal,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let group_id = format!("tag-group-{base_id}");
     let label_id = format!("tag-group-label-{base_id}");
-
-    let is_disabled = input.is_disabled;
 
     // Track focused tag
     let (focused_key, set_focused_key_signal) = signal::<Option<String>>(None);
@@ -135,9 +143,9 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         set_focused_key_signal.set(key);
     });
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
@@ -237,15 +245,17 @@ pub type UseTagRemoveButtonAttrs = (
 /// Provides the behavior and accessibility for a single tag.
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_tag(input: UseTagInput) -> UseTagReturn {
-    let tag_key = input.tag_key.clone();
-    let is_selected = input.is_selected;
-    let is_focused = input.is_focused;
-    let is_disabled = input.is_disabled;
-    let allow_removal = input.allow_removal;
-    let on_select = input.on_select;
-    let on_remove = input.on_remove;
-    let on_focus_next = input.on_focus_next;
-    let on_focus_previous = input.on_focus_previous;
+    let UseTagInput {
+        tag_key,
+        is_selected,
+        is_focused,
+        is_disabled: disabled,
+        allow_removal,
+        on_select,
+        on_remove,
+        on_focus_next,
+        on_focus_previous,
+    } = input;
 
     let aria_selected = Signal::derive(move || {
         if on_select.is_some() {
@@ -255,12 +265,12 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
         }
     });
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 
     let handle_click = move |_e: web_sys::MouseEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
         if let Some(on_select) = on_select {
@@ -269,7 +279,7 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
     };
 
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -311,7 +321,7 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
 
     let handle_remove_click = move |e: web_sys::MouseEvent| {
         e.stop_propagation();
-        if is_disabled.get_untracked() || !allow_removal {
+        if disabled.get_untracked() || !allow_removal {
             return;
         }
         if let Some(on_remove) = on_remove {

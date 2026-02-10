@@ -69,10 +69,12 @@ pub type UseDismissAttrs = (
 /// }
 /// ```
 pub fn use_dismiss(input: UseDismissInput) -> UseDismissReturn {
-    let is_disabled = input.is_disabled;
-    let on_dismiss = input.on_dismiss;
-    let dismiss_on_escape = input.dismiss_on_escape;
-    let dismiss_on_blur = input.dismiss_on_blur;
+    let UseDismissInput {
+        is_disabled,
+        on_dismiss,
+        dismiss_on_escape,
+        dismiss_on_blur,
+    } = input;
 
     // Handle keydown for escape
     let handle_keydown = move |e: KeyboardEvent| {
@@ -153,7 +155,7 @@ pub struct UseDismissButtonInput {
 /// }
 /// ```
 pub fn use_dismiss_button(input: UseDismissButtonInput) -> UseDismissButtonReturn {
-    let on_dismiss = input.on_dismiss;
+    let UseDismissButtonInput { on_dismiss } = input;
 
     let handle_click = move |_e: web_sys::MouseEvent| {
         if let Some(on_dismiss) = on_dismiss {

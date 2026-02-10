@@ -95,8 +95,7 @@ pub type UseScrollWheelAttrs = (On<ev::wheel, SharedEventCallback<WheelEvent>>,)
 /// }
 /// ```
 pub fn use_scroll_wheel(input: UseScrollWheelInput) -> UseScrollWheelReturn {
-    let on_scroll = input.on_scroll;
-    let disabled = input.disabled;
+    let UseScrollWheelInput { disabled, on_scroll } = input;
 
     let on_wheel_handler = move |e: WheelEvent| {
         if disabled.get_untracked() {

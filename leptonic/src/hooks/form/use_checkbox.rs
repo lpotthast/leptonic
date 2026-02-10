@@ -126,11 +126,18 @@ pub type UseCheckboxInputAttrs = (
 /// }
 /// ```
 pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
-    let is_selected = input.is_selected;
-    let is_indeterminate = input.is_indeterminate;
-    let on_change = input.on_change;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
+    let UseCheckboxInput {
+        is_selected,
+        is_indeterminate,
+        on_change,
+        is_disabled,
+        is_read_only,
+        is_required,
+        validation_state,
+        aria_label,
+        name,
+        value,
+    } = input;
 
     let (is_pressed, _set_is_pressed) = signal(false);
 
@@ -149,10 +156,10 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
 
     // Compute aria-invalid
     let aria_invalid =
-        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
-    let aria_required = input.is_required.then_some(AriaRequired::True);
+    let aria_required = is_required.then_some(AriaRequired::True);
 
     let UseFocusRingReturn {
         props: focus_ring_props,
@@ -172,11 +179,11 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
     UseCheckboxReturn {
         input_props: (
             Attr(attr::Type, "checkbox"),
-            Attr(attr::Name, input.name),
-            Attr(attr::Value, input.value),
+            Attr(attr::Name, name),
+            Attr(attr::Value, value),
             Attr(attr::Checked, is_selected),
             Attr(attr::Disabled, is_disabled),
-            Attr(attr::AriaLabel, input.aria_label),
+            Attr(attr::AriaLabel, aria_label),
             Attr(attr::AriaInvalid, aria_invalid),
             Attr(attr::AriaRequired, aria_required),
             data_focus_visible,

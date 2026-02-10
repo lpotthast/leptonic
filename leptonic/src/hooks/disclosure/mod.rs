@@ -107,16 +107,18 @@ pub type UseDisclosureContentAttrs = (
 /// }
 /// ```
 pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
+    let UseDisclosureInput {
+        is_expanded,
+        is_disabled: disabled,
+        on_expanded_change,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let trigger_id = format!("disclosure-trigger-{base_id}");
     let content_id = format!("disclosure-content-{base_id}");
 
-    let is_expanded = input.is_expanded;
-    let is_disabled = input.is_disabled;
-    let on_expanded_change = input.on_expanded_change;
-
     let toggle = Callback::new(move |_| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
         if let Some(on_change) = on_expanded_change {
@@ -126,12 +128,12 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
 
     let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_expanded.get())));
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     let aria_hidden = Signal::derive(move || (!is_expanded.get()).then_some(AriaHidden::True));
 
     let handle_click = move |_e: MouseEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
         if let Some(on_change) = on_expanded_change {
@@ -140,7 +142,7 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
     };
 
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -158,7 +160,7 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
+        disabled,
         within: false,
         auto_focus: false,
         on_focus: None,

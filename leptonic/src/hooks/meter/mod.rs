@@ -122,14 +122,18 @@ pub struct UseMeterLabelProps {
 /// }
 /// ```
 pub fn use_meter(input: UseMeterInput) -> UseMeterReturn {
+    let UseMeterInput {
+        value,
+        min_value,
+        max_value,
+        label,
+        show_value_label,
+        format_options,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let meter_id = format!("meter-{base_id}");
     let label_id = format!("meter-label-{base_id}");
-
-    let value = input.value;
-    let min_value = input.min_value;
-    let max_value = input.max_value;
-    let format_options = input.format_options;
 
     // Compute percentage
     let percentage = Signal::derive(move || {
@@ -161,7 +165,7 @@ pub fn use_meter(input: UseMeterInput) -> UseMeterReturn {
     let aria_valuenow = Signal::derive(move || value.get().to_string());
     let aria_valuetext = value_label;
 
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None

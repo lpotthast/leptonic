@@ -190,7 +190,14 @@ pub fn use_grid_list_item<K>(input: UseGridListItemInput<K>) -> UseGridListItemR
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    let state = input.state;
+    let UseGridListItemInput {
+        state,
+        key,
+        row_index,
+        is_disabled,
+        text_value,
+    } = input;
+
     let selection_mode = state.selection_mode;
 
     // --- Row element capture for DOM focus synchronization ---
@@ -205,12 +212,12 @@ where
 
     // --- Delegate selection to use_selectable_item ---
     let selectable = use_selectable_item(UseSelectableItemInput {
-        key: input.key.clone(),
+        key: key.clone(),
         selection_mode: state.selection_mode,
         selection_behavior: state.selection_behavior,
         selected_keys: state.selection.selected_keys,
         focused_key: state.focused_key,
-        is_disabled: input.is_disabled,
+        is_disabled,
         on_toggle: state.selection.toggle,
         on_select: state.selection.select,
         on_focus: state.set_focused_key,
@@ -242,7 +249,7 @@ where
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 
     // Row index is 1-based for ARIA.
-    let aria_rowindex = (input.row_index + 1).to_string();
+    let aria_rowindex = (row_index + 1).to_string();
 
     // --- Row-level keyboard handler (within-row child navigation) ---
     let focus_manager_for_keydown = focus_manager.clone();
@@ -282,7 +289,7 @@ where
     });
 
     // --- Focus handler ---
-    let key_for_focus = input.key.clone();
+    let key_for_focus = key.clone();
     let set_focused_key = state.set_focused_key;
     let row_focus = EventHandler::new(move |e: FocusEvent| {
         // If a child element received focus (target != currentTarget), update the grid list's
@@ -308,7 +315,7 @@ where
             aria_rowindex,
             aria_selected,
             aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-            aria_label: input.text_value,
+            aria_label: text_value,
             element_capture: row_element.attr(),
             on_keydown,
             on_click,

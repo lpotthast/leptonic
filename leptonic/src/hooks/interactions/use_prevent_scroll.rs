@@ -37,6 +37,8 @@ pub type UsePreventScrollAttrs = ();
 ///
 /// Panics if setting the style attribute on the document root element fails.
 pub fn use_prevent_scroll(input: UsePreventScrollInput) -> UsePreventScrollReturn {
+    let UsePreventScrollInput { disabled } = input;
+
     let style = move |window: &web_sys::Window, root: &web_sys::Element| {
         format!(
             "overflow: hidden; padding-right: {}px;",
@@ -81,7 +83,7 @@ pub fn use_prevent_scroll(input: UsePreventScrollInput) -> UsePreventScrollRetur
             cleanup();
         }
 
-        if input.disabled.get() {
+        if disabled.get() {
             None
         } else {
             register();

@@ -66,8 +66,8 @@ pub type UseOverlayTriggerAttrs = (
 
 pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerReturn {
     #[cfg(debug_assertions)]
-    fn get_overlay_type(input: &UseOverlayTriggerInput) -> AriaHasPopup {
-        match input.overlay_type {
+    fn validate_overlay_type(overlay_type: AriaHasPopup) -> AriaHasPopup {
+        match overlay_type {
             unexpected @ (AriaHasPopup::False | AriaHasPopup::True) => {
                 tracing::warn!(?unexpected, "use_overlay_trigger received unexpected AriaHasPopup variant. Do not use `False` or `True`.");
                 unexpected
@@ -76,20 +76,24 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
         }
     }
     #[cfg(not(debug_assertions))]
-    fn get_overlay_type(input: &UseOverlayTriggerInput) -> AriaHasPopup {
-        input.overlay_type
+    fn validate_overlay_type(overlay_type: AriaHasPopup) -> AriaHasPopup {
+        overlay_type
     }
-    let aria_has_popup = get_overlay_type(&input);
 
-    let overlay_id = input.overlay_id;
+    let UseOverlayTriggerInput {
+        show,
+        overlay_id,
+        overlay_type,
+    } = input;
+
+    let aria_has_popup = validate_overlay_type(overlay_type);
 
     UseOverlayTriggerReturn {
         props: UseOverlayTriggerProps {
             aria_haspopup: aria_has_popup,
-            aria_expanded: Signal::derive(move || Some(AriaExpanded::from(input.show.get()))),
+            aria_expanded: Signal::derive(move || Some(AriaExpanded::from(show.get()))),
             aria_controls: Signal::derive(move || {
-                input
-                    .show
+                show
                     .get()
                     .then(|| AriaControls(vec![overlay_id.to_string()]).into_attribute_value())
             }),

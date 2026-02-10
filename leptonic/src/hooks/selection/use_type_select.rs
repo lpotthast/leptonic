@@ -108,12 +108,14 @@ where
         now()
     }
 
-    let disabled = input.disabled;
-    let all_keys = input.all_keys;
-    let get_key_label = input.get_key_label;
-    let focused_key = input.focused_key;
-    let on_focus = input.on_focus;
-    let timeout_ms = input.timeout_ms;
+    let UseTypeSelectInput {
+        disabled,
+        all_keys,
+        get_key_label,
+        focused_key,
+        on_focus,
+        timeout_ms,
+    } = input;
 
     // Search string state
     let (search_string, set_search_string) = signal(String::new());

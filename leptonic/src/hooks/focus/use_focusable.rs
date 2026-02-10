@@ -293,9 +293,16 @@ pub type UseFocusableAttrs = (
 /// }
 /// ```
 pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
-    let disabled = input.disabled;
-    let auto_focus = input.auto_focus;
-    let exclude_from_tab_order = input.exclude_from_tab_order;
+    let UseFocusableInput {
+        disabled,
+        auto_focus,
+        exclude_from_tab_order,
+        on_focus,
+        on_blur,
+        on_focus_change,
+        on_key_down,
+        on_key_up,
+    } = input;
 
     let element = CapturedElement::new();
 
@@ -308,16 +315,16 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
     // Use the focus hook
     let focus = use_focus(UseFocusInput {
         disabled,
-        on_focus: input.on_focus,
-        on_blur: input.on_blur,
-        on_focus_change: input.on_focus_change,
+        on_focus,
+        on_blur,
+        on_focus_change,
     });
 
     // Use the keyboard hook
     let keyboard = use_keyboard(UseKeyboardInput {
         disabled,
-        on_key_down: input.on_key_down,
-        on_key_up: input.on_key_up,
+        on_key_down,
+        on_key_up,
     });
 
     // When not disabled, chain context handlers with own handlers (own first, context second).

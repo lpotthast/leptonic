@@ -197,19 +197,29 @@ pub struct UseSearchFieldDescriptionProps {
 /// ```
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
+    let UseSearchFieldInput {
+        value,
+        on_change,
+        on_clear,
+        on_submit,
+        on_focus,
+        on_blur,
+        is_disabled,
+        is_read_only,
+        validation_state,
+        placeholder,
+        aria_label,
+        name,
+        label,
+        description,
+        max_length,
+        auto_focus,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let input_id = format!("searchfield-{base_id}");
     let label_id = format!("searchfield-label-{base_id}");
     let description_id = format!("searchfield-description-{base_id}");
-
-    let value = input.value;
-    let on_change = input.on_change;
-    let on_clear = input.on_clear;
-    let on_submit = input.on_submit;
-    let on_focus = input.on_focus;
-    let on_blur = input.on_blur;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
 
     // Whether to show the clear button
     let show_clear_button = Signal::derive(move || !value.get().is_empty());
@@ -268,7 +278,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     } = use_focus_ring(UseFocusRingInput {
         disabled: is_disabled,
         within: false,
-        auto_focus: input.auto_focus,
+        auto_focus,
         on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
@@ -291,14 +301,14 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     };
 
     // Build aria-labelledby
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
     };
 
     // Build aria-describedby
-    let aria_describedby = if input.description.is_some() {
+    let aria_describedby = if description.is_some() {
         Some(description_id.clone())
     } else {
         None
@@ -306,24 +316,24 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
 
     // Compute aria-invalid
     let aria_invalid =
-        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     UseSearchFieldReturn {
         input_props: (
             Attr(attr::Id, input_id.clone()),
             Attr(attr::Type, "search"),
             Attr(attr::Role, "searchbox"),
-            Attr(attr::Name, input.name),
+            Attr(attr::Name, name),
             Attr(attr::Value, value),
-            Attr(attr::Placeholder, input.placeholder),
+            Attr(attr::Placeholder, placeholder),
             Attr(attr::Disabled, is_disabled),
             Attr(attr::Readonly, is_read_only),
-            Attr(attr::AriaLabel, input.aria_label),
+            Attr(attr::AriaLabel, aria_label),
             Attr(attr::AriaLabelledby, aria_labelledby),
             Attr(attr::AriaDescribedby, aria_describedby),
             Attr(attr::AriaInvalid, aria_invalid),
-            Attr(attr::Maxlength, input.max_length),
-            Attr(attr::Autofocus, input.auto_focus),
+            Attr(attr::Maxlength, max_length),
+            Attr(attr::Autofocus, auto_focus),
             on(ev::input, handle_input).into_cloneable(),
             on(ev::keydown, handle_keydown).into_cloneable(),
             on_focus,

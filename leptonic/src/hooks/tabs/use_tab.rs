@@ -108,19 +108,23 @@ pub type UseTabAttrs = (
 /// ```
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_tab(input: UseTabInput) -> UseTabReturn {
-    let tab_id = format!("{}-tab-{}", input.id_base, input.tab_key);
-    let panel_id = format!("{}-panel-{}", input.id_base, input.tab_key);
+    let UseTabInput {
+        tab_key,
+        id_base,
+        is_selected,
+        is_disabled: disabled,
+        is_focused,
+        activation_mode,
+        on_select,
+        on_focus,
+    } = input;
 
-    let is_selected = input.is_selected;
-    let is_disabled = input.is_disabled;
-    let is_focused = input.is_focused;
-    let activation_mode = input.activation_mode;
-    let on_select = input.on_select;
-    let on_focus = input.on_focus;
+    let tab_id = format!("{id_base}-tab-{tab_key}");
+    let panel_id = format!("{id_base}-panel-{tab_key}");
 
     // Use focusable to get element capture and focus handle
     let focusable = use_focusable(UseFocusableInput {
-        disabled: is_disabled,
+        disabled,
         auto_focus: false,
         exclude_from_tab_order: Signal::derive(|| true), // Tabs use roving tabindex
         on_focus: None, // We handle focus through focus_ring's on_focus
@@ -148,7 +152,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
     let aria_selected = Signal::derive(move || Some(AriaSelected::from(is_selected.get())));
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Compute tabindex
     let tabindex = Signal::derive(move || {
@@ -161,7 +165,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
 
     // Handle click
     let handle_click = move |_e: web_sys::MouseEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
         if let Some(on_select) = on_select {
@@ -171,7 +175,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
 
     // Handle keyboard
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -191,11 +195,11 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
+        disabled,
         within: false,
         auto_focus: false,
         on_focus: Some(Callback::new(move |_e| {
-            if is_disabled.get_untracked() {
+            if disabled.get_untracked() {
                 return;
             }
 
@@ -298,10 +302,14 @@ pub type UseTabPanelAttrs = (
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_tab_panel(input: UseTabPanelInput) -> UseTabPanelReturn {
-    let panel_id = format!("{}-panel-{}", input.id_base, input.panel_key);
-    let tab_id = format!("{}-tab-{}", input.id_base, input.panel_key);
+    let UseTabPanelInput {
+        panel_key,
+        id_base,
+        is_selected,
+    } = input;
 
-    let is_selected = input.is_selected;
+    let panel_id = format!("{id_base}-panel-{panel_key}");
+    let tab_id = format!("{id_base}-tab-{panel_key}");
 
     // Compute aria-hidden
     let aria_hidden = Signal::derive(move || (!is_selected.get()).then_some(AriaHidden::True));

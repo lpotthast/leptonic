@@ -146,8 +146,17 @@ where
     Overlay: IntoElementMaybeSignal<web_sys::Element, M>,
     Target: IntoElementMaybeSignal<web_sys::Element, M>,
 {
-    let overlay_bounding = use_element_bounding(input.overlay);
-    let target_bounding = use_element_bounding(input.target);
+    let UseOverlayPositionInput {
+        overlay,
+        target,
+        placement_x,
+        placement_y,
+        writing_direction,
+        phantom_data: _,
+    } = input;
+
+    let overlay_bounding = use_element_bounding(overlay);
+    let target_bounding = use_element_bounding(target);
 
     let container_width = move || match use_document().as_ref() {
         Some(document) => match document.body() {
@@ -166,10 +175,9 @@ where
     };
 
     let placement_x = Memo::new(move |_| {
-        match input
-            .placement_x
+        match placement_x
             .get()
-            .direction_aware(input.writing_direction.get())
+            .direction_aware(writing_direction.get())
         {
             original @ PhysicalPlacementX::OuterLeft => {
                 let space_left = target_bounding.left.get();
@@ -191,7 +199,7 @@ where
         }
     });
 
-    let placement_y = Memo::new(move |_| match input.placement_y.get() {
+    let placement_y = Memo::new(move |_| match placement_y.get() {
         original @ PlacementY::Above => {
             let space_top = target_bounding.top.get();
             if overlay_bounding.height.get() > space_top {

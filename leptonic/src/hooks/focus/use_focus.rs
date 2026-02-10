@@ -63,18 +63,25 @@ pub type UseFocusAttrs = (
 
 /// Track focus of an element.
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
+    let UseFocusInput {
+        disabled,
+        on_focus,
+        on_blur,
+        on_focus_change,
+    } = input;
+
     let on_focus_handler = move |e: FocusEvent| {
         // Double check that document.activeElement actually matches e.target in case a previously chained
         // focus handler already moved focus somewhere else.
         if e.target() == e.current_target()
             && use_document().active_element() == e.target().and_then(|t| t.as_element())
-            && !input.disabled.get_untracked()
+            && !disabled.get_untracked()
         {
-            if let Some(on_focus) = input.on_focus {
+            if let Some(on_focus) = on_focus {
                 on_focus.run(e);
             }
 
-            if let Some(on_focus_change) = input.on_focus_change {
+            if let Some(on_focus_change) = on_focus_change {
                 on_focus_change.run(true);
             }
         }
@@ -84,14 +91,14 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         // In certain situations, we saw this blur handler being called after the disabled signal
         // was disposed. Mostly when interaction with this use_focus enabled element
         // lead to removal from said element from the DOM.
-        let is_disabled = input.disabled.try_get_untracked().unwrap_or(true);
+        let is_disabled = disabled.try_get_untracked().unwrap_or(true);
 
         if e.target() == e.current_target() && !is_disabled {
-            if let Some(on_blur) = input.on_blur {
+            if let Some(on_blur) = on_blur {
                 on_blur.run(e);
             }
 
-            if let Some(on_focus_change) = input.on_focus_change {
+            if let Some(on_focus_change) = on_focus_change {
                 on_focus_change.run(false);
             }
         }

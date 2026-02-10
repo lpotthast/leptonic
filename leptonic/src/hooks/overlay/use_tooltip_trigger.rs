@@ -131,17 +131,23 @@ pub struct UseTooltipTriggerTooltipProps {
 /// }
 /// ```
 pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerReturn {
+    let UseTooltipTriggerInput {
+        is_disabled,
+        is_open: controlled_is_open,
+        default_open,
+        on_open_change,
+        delay,
+        close_delay,
+        trigger: trigger_type,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let trigger_id = format!("tooltip-trigger-{base_id}");
     let tooltip_id = format!("tooltip-{base_id}");
 
-    let is_disabled = input.is_disabled;
-    let on_open_change = input.on_open_change;
-    let trigger_type = input.trigger;
-
     // Internal open state
-    let (internal_open, set_internal_open) = signal(input.default_open);
-    let is_open = input.is_open.unwrap_or_else(|| internal_open.into());
+    let (internal_open, set_internal_open) = signal(default_open);
+    let is_open = controlled_is_open.unwrap_or_else(|| internal_open.into());
 
     // Helper to update open state
     let update_open = move |new_open: bool| {

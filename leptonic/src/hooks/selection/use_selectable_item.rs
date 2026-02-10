@@ -164,16 +164,21 @@ pub fn use_selectable_item<K>(input: UseSelectableItemInput<K>) -> UseSelectable
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    let key = input.key.clone();
-    let selection_mode = input.selection_mode;
-    let selection_behavior = input.selection_behavior;
-    let selected_keys = input.selected_keys;
-    let focused_key = input.focused_key;
-    let is_disabled_input = input.is_disabled;
-    let on_toggle = input.on_toggle;
-    let on_select = input.on_select;
-    let on_focus = input.on_focus;
-    let should_select_on_press_up = input.should_select_on_press_up;
+    let UseSelectableItemInput {
+        key,
+        selection_mode,
+        selection_behavior,
+        selected_keys,
+        focused_key,
+        is_disabled,
+        on_toggle,
+        on_select,
+        on_double_click,
+        on_focus,
+        should_select_on_press_up,
+        allow_drag,
+        focus,
+    } = input;
 
     // Compute whether this item is selected
     let key_for_selected = key.clone();
@@ -190,7 +195,7 @@ where
     let is_focused = Signal::derive(move || focused_key.get().as_ref() == Some(&key_for_focused));
 
     // --- DOM focus synchronization (mirrors react-aria useSelectableItem) ---
-    if let Some(focus_fn) = input.focus {
+    if let Some(focus_fn) = focus {
         Effect::new(move |prev_focused: Option<bool>| {
             let currently_focused = is_focused.get();
             let was_focused = prev_focused.unwrap_or(false);
@@ -204,7 +209,7 @@ where
     // Handle click
     let key_for_click = key.clone();
     let handle_click = move |_e: MouseEvent| {
-        if is_disabled_input.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
 
@@ -229,7 +234,7 @@ where
     // Handle focus
     let key_for_focus = key.clone();
     let handle_focus = move |_e: FocusEvent| {
-        if is_disabled_input.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
 
@@ -237,10 +242,9 @@ where
     };
 
     // Handle double-click (action)
-    let on_double_click = input.on_double_click;
     let key_for_dblclick = key.clone();
     let handle_dblclick = move |_e: MouseEvent| {
-        if is_disabled_input.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
         if let Some(on_action) = on_double_click {
@@ -249,13 +253,12 @@ where
     };
 
     // Handle mouse enter (for hover focus)
-    let key_for_hover = key.clone();
     let handle_mouseenter = move |_e: MouseEvent| {
-        if is_disabled_input.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
 
-        on_focus.run(Some(key_for_hover.clone()));
+        on_focus.run(Some(key.clone()));
     };
 
     UseSelectableItemReturn {
@@ -267,6 +270,6 @@ where
         },
         is_selected,
         is_focused,
-        is_disabled: is_disabled_input,
+        is_disabled,
     }
 }

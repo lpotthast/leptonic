@@ -84,13 +84,18 @@ pub type UseSeparatorAttrs = (
 /// }
 /// ```
 pub fn use_separator(input: UseSeparatorInput) -> UseSeparatorReturn {
+    let UseSeparatorInput {
+        orientation,
+        element_type,
+    } = input;
+
     // <hr> elements don't need role or aria-orientation
     // Other elements need role="separator"
-    let (role, aria_orientation) = match input.element_type {
+    let (role, aria_orientation) = match element_type {
         SeparatorElementType::Hr => (None, None),
         SeparatorElementType::Div | SeparatorElementType::Span => (
             Some("separator"),
-            Some(AriaOrientation::from(input.orientation)),
+            Some(AriaOrientation::from(orientation)),
         ),
     };
 

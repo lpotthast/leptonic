@@ -174,9 +174,11 @@ pub type UseKeyboardAttrs = (
 /// }
 /// ```
 pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
-    let on_key_down = input.on_key_down;
-    let on_key_up = input.on_key_up;
-    let disabled = input.disabled;
+    let UseKeyboardInput {
+        disabled,
+        on_key_down,
+        on_key_up,
+    } = input;
 
     let handle_key_down = move |e: KeyboardEvent| {
         if disabled.get_untracked() {

@@ -261,7 +261,19 @@ struct MoveWithinState {
 /// Panics if the current target of the pointer event is not available.
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
-    let initial_pos = input.initial_position.unwrap_or((0.0, 0.0));
+    let UseMoveWithinInput {
+        axis,
+        disabled,
+        initial_position,
+        is_rtl,
+        constrain_center,
+        allow_container_click,
+        on_move_start,
+        on_move,
+        on_move_end,
+    } = input;
+
+    let initial_pos = initial_position.unwrap_or((0.0, 0.0));
 
     // Reactive state
     let (normalized_position, set_normalized_position) = signal(initial_pos);
@@ -273,15 +285,6 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
 
     // Drag state
     let state: StoredValue<Option<MoveWithinState>, LocalStorage> = StoredValue::new_local(None);
-
-    // Extract input values for closures
-    let axis = input.axis;
-    let is_rtl = input.is_rtl;
-    let constrain_center = input.constrain_center;
-    let disabled = input.disabled;
-    let on_move_start = input.on_move_start;
-    let on_move = input.on_move;
-    let on_move_end = input.on_move_end;
 
     // Helper to calculate position from pointer event
     let calculate_position =
@@ -557,7 +560,6 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
     };
 
     // Handler for container pointer down (when allow_container_click is true)
-    let allow_container_click = input.allow_container_click;
     let on_container_pointer_down = move |e: PointerEvent| {
         if !allow_container_click {
             return;

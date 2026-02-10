@@ -81,9 +81,14 @@ pub struct UseMenuSectionGroupProps {
 /// }
 /// ```
 pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
+    let UseMenuSectionInput {
+        heading,
+        aria_label,
+    } = input;
+
     let heading_id = format!("menu-section-heading-{}", Uuid::new_v4());
 
-    let has_heading = input.heading.is_some();
+    let has_heading = heading.is_some();
 
     UseMenuSectionReturn {
         item_props: UseMenuSectionItemProps {
@@ -105,7 +110,7 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
         },
         group_props: UseMenuSectionGroupProps {
             role: "group",
-            aria_label: input.aria_label,
+            aria_label,
             aria_labelledby: if has_heading { Some(heading_id) } else { None },
         },
     }

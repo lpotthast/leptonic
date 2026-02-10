@@ -95,10 +95,13 @@ pub type UseToggleAttrs = (
 /// }
 /// ```
 pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
-    let is_selected = input.is_selected;
-    let on_change = input.on_change;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
+    let UseToggleInput {
+        is_selected,
+        on_change,
+        is_disabled,
+        is_read_only,
+        value,
+    } = input;
 
     let (is_pressed, _set_is_pressed) = signal(false);
 

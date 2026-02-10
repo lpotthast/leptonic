@@ -119,14 +119,18 @@ pub type UseTreeAttrs = (
 /// }
 /// ```
 pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
+    let UseTreeInput {
+        label,
+        selection_mode,
+        is_disabled: disabled,
+        selected_keys,
+        expanded_keys,
+        on_selection_change,
+        on_expanded_change,
+        on_action,
+    } = input;
+
     let tree_id = format!("tree-{}", Uuid::new_v4());
-    let selection_mode = input.selection_mode;
-    let is_disabled = input.is_disabled;
-    let selected_keys = input.selected_keys;
-    let expanded_keys = input.expanded_keys;
-    let on_selection_change = input.on_selection_change;
-    let on_expanded_change = input.on_expanded_change;
-    let on_action = input.on_action;
 
     // Track focused item
     let (focused_key, set_focused_key_signal) = signal::<Option<String>>(None);
@@ -172,10 +176,10 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
         TreeSelectionMode::Multiple => Some(AriaMultiselectable::True),
     };
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -216,7 +220,7 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
         tree_props: (
             Attr(attr::Id, tree_id.clone()),
             Attr(attr::Role, "tree"),
-            Attr(attr::AriaLabel, input.label),
+            Attr(attr::AriaLabel, label),
             Attr(attr::AriaMultiselectable, aria_multiselectable),
             Attr(attr::AriaDisabled, aria_disabled),
             on(ev::keydown, handle_keydown).into_cloneable(),
@@ -320,19 +324,24 @@ pub type UseTreeItemContentAttrs = (Attr<attr::Role, &'static str>,);
 /// Provides the behavior and accessibility for a tree item.
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
-    let item_key = input.item_key.clone();
-    let has_children = input.has_children;
-    let is_expanded = input.is_expanded;
-    let is_selected = input.is_selected;
-    let is_focused = input.is_focused;
-    let is_disabled = input.is_disabled;
-    let on_expand = input.on_expand;
-    let on_select = input.on_select;
-    let on_action = input.on_action;
-    let on_focus_next = input.on_focus_next;
-    let on_focus_previous = input.on_focus_previous;
-    let on_focus_parent = input.on_focus_parent;
-    let on_focus_first_child = input.on_focus_first_child;
+    let UseTreeItemInput {
+        item_key,
+        level,
+        position_in_set,
+        set_size,
+        has_children,
+        is_expanded,
+        is_selected,
+        is_focused,
+        is_disabled: disabled,
+        on_expand,
+        on_select,
+        on_action,
+        on_focus_next,
+        on_focus_previous,
+        on_focus_parent,
+        on_focus_first_child,
+    } = input;
 
     // aria-expanded only applies if has children
     let aria_expanded = Signal::derive(move || {
@@ -351,12 +360,12 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
         }
     });
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 
     let handle_click = move |_e: web_sys::MouseEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
         if let Some(on_select) = on_select {
@@ -365,7 +374,7 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     };
 
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 

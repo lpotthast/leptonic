@@ -85,9 +85,11 @@ pub struct UseFocusVisibleReturn {
 /// }
 /// ```
 pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
+    let UseFocusVisibleInput { auto_focus } = input;
+
     #[cfg(feature = "ssr")]
     {
-        let (is_focus_visible, _) = signal(input.auto_focus);
+        let (is_focus_visible, _) = signal(auto_focus);
         return UseFocusVisibleReturn {
             focus_should_be_visible: is_focus_visible.into(),
         };
@@ -102,7 +104,7 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
         }
 
         let (is_focus_visible, set_is_focus_visible) =
-            signal(input.auto_focus || state.modality() == Modality::Keyboard);
+            signal(auto_focus || state.modality() == Modality::Keyboard);
 
         let id = state.register(move |modality| {
             set_is_focus_visible.set(modality == Modality::Keyboard);

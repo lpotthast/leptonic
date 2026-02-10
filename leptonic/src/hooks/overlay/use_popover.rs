@@ -149,29 +149,39 @@ where
     Trigger: IntoElementMaybeSignal<web_sys::Element, M> + Clone + 'static,
     Popover: IntoElementMaybeSignal<web_sys::Element, M> + Clone + 'static,
 {
+    let UsePopoverInput {
+        trigger_ref,
+        popover_ref,
+        is_open,
+        on_close,
+        placement_x,
+        placement_y,
+        writing_direction,
+        is_non_modal,
+        is_keyboard_dismiss_disabled,
+        is_scroll_prevention_disabled,
+        phantom_data: _,
+    } = input;
+
     // Use overlay positioning
     let position = use_overlay_position(UseOverlayPositionInput {
-        overlay: input.popover_ref.clone(),
-        target: input.trigger_ref.clone(),
-        placement_x: input.placement_x,
-        placement_y: input.placement_y,
-        writing_direction: input.writing_direction,
+        overlay: popover_ref.clone(),
+        target: trigger_ref.clone(),
+        placement_x,
+        placement_y,
+        writing_direction,
         phantom_data: PhantomData,
     });
 
     // Prevent scroll when open and not non-modal
     let _prevent_scroll = use_prevent_scroll(UsePreventScrollInput {
         disabled: Signal::derive(move || {
-            input.is_scroll_prevention_disabled || input.is_non_modal || !input.is_open.get()
+            is_scroll_prevention_disabled || is_non_modal || !is_open.get()
         }),
     });
 
     // Handle click outside to close
-    let on_close_for_click = input.on_close;
-    let is_non_modal = input.is_non_modal;
-    let is_open = input.is_open;
-    let popover_ref = input.popover_ref.clone();
-    let trigger_ref = input.trigger_ref;
+    let on_close_for_click = on_close;
 
     // Convert popover_ref to ElementMaybeSignal for accessing the element
     let popover_signal = StoredValue::new(popover_ref.clone().into_element_maybe_signal());
@@ -217,8 +227,7 @@ where
     });
 
     // Handle Escape key
-    let on_close_for_escape = input.on_close;
-    let is_keyboard_dismiss_disabled = input.is_keyboard_dismiss_disabled;
+    let on_close_for_escape = on_close;
     let on_key_down = move |e: KeyboardEvent| {
         if is_keyboard_dismiss_disabled {
             return;
@@ -232,7 +241,7 @@ where
     };
 
     // Handle backdrop click
-    let on_close_for_backdrop = input.on_close;
+    let on_close_for_backdrop = on_close;
     let on_backdrop_click = move |e: web_sys::MouseEvent| {
         // Only close if clicking directly on the backdrop, not a child
         if e.target() == e.current_target() {

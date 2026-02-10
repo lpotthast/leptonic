@@ -79,21 +79,26 @@ pub type UseTabListAttrs = (
 /// }
 /// ```
 pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
-    let tab_list_id = format!("{}-tablist", input.id_base);
-    let orientation = input.orientation;
-    let is_disabled = input.is_disabled;
-    let on_focus_next = input.on_focus_next;
-    let on_focus_previous = input.on_focus_previous;
-    let on_focus_first = input.on_focus_first;
-    let on_focus_last = input.on_focus_last;
+    let UseTabListInput {
+        id_base,
+        orientation,
+        is_disabled: disabled,
+        label,
+        on_focus_next,
+        on_focus_previous,
+        on_focus_first,
+        on_focus_last,
+    } = input;
+
+    let tab_list_id = format!("{id_base}-tablist");
 
     let aria_orientation = AriaOrientation::from(orientation);
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -145,7 +150,7 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
         tab_list_props: (
             Attr(attr::Id, tab_list_id.clone()),
             Attr(attr::Role, "tablist"),
-            Attr(attr::AriaLabel, input.label),
+            Attr(attr::AriaLabel, label),
             Attr(attr::AriaOrientation, aria_orientation),
             Attr(attr::AriaDisabled, aria_disabled),
             on(ev::keydown, handle_keydown).into_cloneable(),

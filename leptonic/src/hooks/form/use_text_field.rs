@@ -210,18 +210,34 @@ pub struct UseTextFieldErrorProps {
 /// ```
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
+    let UseTextFieldInput {
+        value,
+        on_change,
+        on_focus,
+        on_blur,
+        is_disabled,
+        is_read_only,
+        is_required,
+        validation_state,
+        input_type,
+        placeholder,
+        aria_label,
+        name,
+        label,
+        description,
+        error_message,
+        min_length,
+        max_length,
+        pattern,
+        auto_complete,
+        auto_focus,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let input_id = format!("textfield-{base_id}");
     let label_id = format!("textfield-label-{base_id}");
     let description_id = format!("textfield-description-{base_id}");
     let error_id = format!("textfield-error-{base_id}");
-
-    let value = input.value;
-    let on_change = input.on_change;
-    let on_focus = input.on_focus;
-    let on_blur = input.on_blur;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
 
     // Handle input event
     let handle_input = move |e: Event| {
@@ -248,7 +264,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     } = use_focus_ring(UseFocusRingInput {
         disabled: is_disabled,
         within: false,
-        auto_focus: input.auto_focus,
+        auto_focus,
         on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
@@ -258,10 +274,10 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
 
     // Build aria-describedby
     let mut describedby_parts = Vec::new();
-    if input.description.is_some() {
+    if description.is_some() {
         describedby_parts.push(description_id.clone());
     }
-    if input.validation_state == ValidationState::Invalid && input.error_message.is_some() {
+    if validation_state == ValidationState::Invalid && error_message.is_some() {
         describedby_parts.push(error_id.clone());
     }
 
@@ -272,7 +288,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     };
 
     // Build aria-labelledby
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
@@ -280,30 +296,30 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
 
     // Compute aria-invalid
     let aria_invalid =
-        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
-    let aria_required = input.is_required.then_some(AriaRequired::True);
+    let aria_required = is_required.then_some(AriaRequired::True);
 
     UseTextFieldReturn {
         input_props: (
             Attr(attr::Id, input_id.clone()),
-            Attr(attr::Type, input.input_type),
-            Attr(attr::Name, input.name),
+            Attr(attr::Type, input_type),
+            Attr(attr::Name, name),
             Attr(attr::Value, value),
-            Attr(attr::Placeholder, input.placeholder),
+            Attr(attr::Placeholder, placeholder),
             Attr(attr::Disabled, is_disabled),
             Attr(attr::Readonly, is_read_only),
-            Attr(attr::AriaLabel, input.aria_label),
+            Attr(attr::AriaLabel, aria_label),
             Attr(attr::AriaLabelledby, aria_labelledby),
             Attr(attr::AriaDescribedby, aria_describedby),
             Attr(attr::AriaInvalid, aria_invalid),
             Attr(attr::AriaRequired, aria_required),
-            Attr(attr::Minlength, input.min_length),
-            Attr(attr::Maxlength, input.max_length),
-            Attr(attr::Pattern, input.pattern),
-            Attr(attr::Autocomplete, input.auto_complete),
-            Attr(attr::Autofocus, input.auto_focus),
+            Attr(attr::Minlength, min_length),
+            Attr(attr::Maxlength, max_length),
+            Attr(attr::Pattern, pattern),
+            Attr(attr::Autocomplete, auto_complete),
+            Attr(attr::Autofocus, auto_focus),
             data_focus_visible,
             on(ev::input, handle_input).into_cloneable(),
             on_focus,

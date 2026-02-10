@@ -106,14 +106,18 @@ pub struct UseProgressBarLabelProps {
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_progress_bar(input: UseProgressBarInput) -> UseProgressBarReturn {
+    let UseProgressBarInput {
+        value,
+        min_value,
+        max_value,
+        label,
+        show_value_label,
+        is_indeterminate,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let progress_id = format!("progress-{base_id}");
     let label_id = format!("progress-label-{base_id}");
-
-    let value = input.value;
-    let min_value = input.min_value;
-    let max_value = input.max_value;
-    let is_indeterminate = input.is_indeterminate;
 
     // Compute percentage
     let percentage = Signal::derive(move || {
@@ -160,7 +164,7 @@ pub fn use_progress_bar(input: UseProgressBarInput) -> UseProgressBarReturn {
         }
     });
 
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None

@@ -250,22 +250,34 @@ pub struct UseNumberFieldErrorProps {
 /// ```
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
+    let UseNumberFieldInput {
+        value,
+        on_change,
+        on_focus,
+        on_blur,
+        is_disabled,
+        is_read_only,
+        is_required,
+        validation_state,
+        placeholder,
+        aria_label,
+        name,
+        label,
+        description,
+        error_message,
+        min_value,
+        max_value,
+        step,
+        decimal_places,
+        format_options,
+        auto_focus,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let input_id = format!("numberfield-{base_id}");
     let label_id = format!("numberfield-label-{base_id}");
     let description_id = format!("numberfield-description-{base_id}");
     let error_id = format!("numberfield-error-{base_id}");
-
-    let value = input.value;
-    let on_change = input.on_change;
-    let on_focus = input.on_focus;
-    let on_blur = input.on_blur;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
-    let min_value = input.min_value;
-    let max_value = input.max_value;
-    let step = input.step;
-    let decimal_places = input.decimal_places;
 
     // Clamp value to min/max
     let clamp_value = move |v: f64| -> f64 {
@@ -410,7 +422,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     } = use_focus_ring(UseFocusRingInput {
         disabled: is_disabled,
         within: false,
-        auto_focus: input.auto_focus,
+        auto_focus,
         on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
@@ -432,10 +444,10 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
 
     // Build aria-describedby
     let mut describedby_parts = Vec::new();
-    if input.description.is_some() {
+    if description.is_some() {
         describedby_parts.push(description_id.clone());
     }
-    if input.validation_state == ValidationState::Invalid && input.error_message.is_some() {
+    if validation_state == ValidationState::Invalid && error_message.is_some() {
         describedby_parts.push(error_id.clone());
     }
 
@@ -446,7 +458,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     };
 
     // Build aria-labelledby
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
@@ -454,10 +466,10 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
 
     // Compute aria-invalid
     let aria_invalid =
-        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
-    let aria_required = input.is_required.then_some(AriaRequired::True);
+    let aria_required = is_required.then_some(AriaRequired::True);
 
     // Disabled signals for buttons
     let increment_disabled = Signal::derive(move || !can_increment.get());
@@ -468,11 +480,11 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
             Attr(attr::Id, input_id.clone()),
             Attr(attr::Type, "text"),
             Attr(attr::Role, "spinbutton"),
-            Attr(attr::Name, input.name),
-            Attr(attr::Placeholder, input.placeholder),
+            Attr(attr::Name, name),
+            Attr(attr::Placeholder, placeholder),
             Attr(attr::Disabled, is_disabled),
             Attr(attr::Readonly, is_read_only),
-            Attr(attr::AriaLabel, input.aria_label),
+            Attr(attr::AriaLabel, aria_label),
             Attr(attr::AriaLabelledby, aria_labelledby),
             Attr(attr::AriaDescribedby, aria_describedby),
             Attr(attr::AriaInvalid, aria_invalid),
@@ -480,7 +492,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
             Attr(attr::AriaValuenow, value),
             Attr(attr::AriaValuemin, min_value),
             Attr(attr::AriaValuemax, max_value),
-            Attr(attr::Autofocus, input.auto_focus),
+            Attr(attr::Autofocus, auto_focus),
             Attr(attr::Inputmode, "decimal"),
             data_focus_visible,
             on(ev::input, handle_input).into_cloneable(),

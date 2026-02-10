@@ -245,15 +245,26 @@ pub fn use_grid<K>(input: UseGridInput<K>) -> UseGridReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
+    let UseGridInput {
+        label,
+        labelled_by,
+        collection,
+        disabled_keys,
+        focus_mode,
+        selection_mode,
+        selection_behavior,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
+        disallow_empty_selection,
+        is_disabled,
+        escape_key_behavior,
+        should_focus_wrap,
+        on_row_action,
+        on_cell_action,
+    } = input;
+
     let grid_id = format!("grid-{}", Uuid::new_v4());
-    let is_disabled = input.is_disabled;
-    let selection_mode = input.selection_mode;
-    let collection = input.collection;
-    let disabled_keys = input.disabled_keys;
-    let focus_mode = input.focus_mode;
-    let escape_key_behavior = input.escape_key_behavior;
-    let on_row_action = input.on_row_action;
-    let on_cell_action = input.on_cell_action;
 
     // --- Keyboard delegate ---
     let delegate = GridKeyboardDelegate::new(collection, disabled_keys, focus_mode);
@@ -261,13 +272,13 @@ where
     // --- Selection state (delegated) ---
     let selection = use_selection_state(UseSelectionStateInput {
         selection_mode,
-        selection_behavior: input.selection_behavior,
+        selection_behavior,
         disabled: is_disabled,
-        selected_keys: input.selected_keys,
-        default_selected_keys: input.default_selected_keys,
-        on_selection_change: input.on_selection_change,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
         disabled_keys,
-        disallow_empty_selection: input.disallow_empty_selection,
+        disallow_empty_selection,
     });
 
     // --- Focus tracking ---
@@ -464,7 +475,7 @@ where
         set_focused_key,
         is_disabled,
         selection_mode,
-        selection_behavior: input.selection_behavior,
+        selection_behavior,
         on_cell_action,
         on_row_action,
     };
@@ -474,8 +485,8 @@ where
             id: grid_id,
             role: "grid",
             tabindex,
-            aria_label: input.label,
-            aria_labelledby: input.labelled_by,
+            aria_label: label,
+            aria_labelledby: labelled_by,
             aria_multiselectable,
             aria_disabled,
             on_keydown: EventHandler::new(handle_keydown),

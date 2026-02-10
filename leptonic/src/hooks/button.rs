@@ -119,21 +119,30 @@ pub type UseButtonAttrs = (
 );
 
 pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
+    let UseButtonInput {
+        disabled,
+        aria_haspopup,
+        aria_expanded,
+        use_press_input,
+        use_hover_input,
+        use_focus_ring_input,
+    } = input;
+
     let UseHoverReturn {
         props: hover_props,
         is_hovered,
-    } = use_hover(input.use_hover_input);
+    } = use_hover(use_hover_input);
 
     let UsePressReturn {
         props: press_props,
         is_pressed,
-    } = use_press(input.use_press_input);
+    } = use_press(use_press_input);
 
     let UseFocusRingReturn {
         props: focus_ring_props,
         is_focus_visible,
         is_focused: _,
-    } = use_focus_ring(input.use_focus_ring_input);
+    } = use_focus_ring(use_focus_ring_input);
 
     // From https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded
     // A button that opens a widget should have aria-controls set to the id of the expandable widget and aria-expanded set to the current state of the widget.
@@ -151,18 +160,18 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
         props: UseButtonProps {
             role: "button",
             tabindex: Signal::derive(move || {
-                if input.disabled.get() {
+                if disabled.get() {
                     None
                 } else {
                     Some("0")
                 }
             }),
-            disabled: Signal::derive(move || input.disabled.get().into_attribute_value()),
+            disabled: Signal::derive(move || disabled.get().into_attribute_value()),
             aria_disabled: Signal::derive(move || {
-                input.disabled.get().then_some(AriaDisabled::True)
+                disabled.get().then_some(AriaDisabled::True)
             }),
-            aria_haspopup: input.aria_haspopup,
-            aria_expanded: input.aria_expanded,
+            aria_haspopup,
+            aria_expanded,
             aria_describedby: press_props.aria_describedby,
             data_focus_visible: focus_ring_props.data_focus_visible,
             on_keydown: press_props.on_keydown,

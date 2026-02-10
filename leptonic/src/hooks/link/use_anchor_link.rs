@@ -161,14 +161,25 @@ fn scroll_to_anchor(href: &Href, scroll_behavior: ScrollBehavior) {
 /// robust interaction handling, focus management, and accessibility for
 /// anchor links that scroll to a target element on the same page.
 pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
-    let href = input.href.clone();
-    let user_on_press = input.on_press;
+    let UseAnchorLinkInput {
+        href,
+        scroll_behavior,
+        disabled,
+        element_type,
+        description,
+        on_press,
+        on_press_start,
+        on_press_end,
+    } = input;
+
+    let href_for_scroll = href.clone();
+    let user_on_press = on_press;
     let on_press = Callback::new(move |e: PressEvent| {
-        if !input.disabled.get() {
-            if let Some(behavior) = input.scroll_behavior {
-                scroll_to_anchor(&href, behavior);
+        if !disabled.get() {
+            if let Some(behavior) = scroll_behavior {
+                scroll_to_anchor(&href_for_scroll, behavior);
             }
-            update_url(&href);
+            update_url(&href_for_scroll);
         }
         if let Some(cb) = user_on_press {
             cb.run(e);
@@ -176,7 +187,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
     });
 
     // Non-anchor elements need role="link".
-    let role = match input.element_type {
+    let role = match element_type {
         LinkElementType::Anchor => None,
         LinkElementType::Span | LinkElementType::Button => Some("link"),
     };
@@ -186,7 +197,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         props: focusable_props,
         focus_handle,
     } = use_focusable(UseFocusableInput {
-        disabled: input.disabled,
+        disabled,
         ..UseFocusableInput::default()
     });
 
@@ -194,7 +205,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         props: press_props,
         is_pressed,
     } = use_press(UsePressInput {
-        disabled: input.disabled,
+        disabled,
         // Anchor links always need prevent_default for custom scroll behavior.
         force_prevent_default: true,
         allow_propagation: false,
@@ -202,8 +213,8 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         should_cancel_on_pointer_exit: false,
         on_press,
         on_press_up: None,
-        on_press_start: input.on_press_start,
-        on_press_end: input.on_press_end,
+        on_press_start,
+        on_press_end,
         on_press_change: None,
         on_double_press: None,
         on_long_press_start: None,
@@ -218,7 +229,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: input.disabled,
+        disabled,
         ..UseFocusRingInput::default()
     });
 
@@ -230,21 +241,19 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
     let merged = MergedFocusablePressFocusRingProps {
         element_capture: merged.element_capture.clone().chain(
             ElementCaptureAttr::new(move |el| {
-                super::debug_validate_element_type(input.element_type, &el);
+                super::debug_validate_element_type(element_type, &el);
             }),
         ),
         ..merged
     };
 
-    let href = input.href;
-
     UseAnchorLinkReturn {
         props: UseAnchorLinkProps {
             href: href.0,
             role,
-            aria_label: input.description,
+            aria_label: description,
             aria_disabled: Signal::derive(move || {
-                input.disabled.get().then_some(AriaDisabled::True)
+                disabled.get().then_some(AriaDisabled::True)
             }),
             merged,
         },

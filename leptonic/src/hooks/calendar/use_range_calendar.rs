@@ -179,22 +179,25 @@ pub type UseRangeCalendarAttrs = (
 /// Panics if the `on` event handler cannot be converted to a cloneable callback.
 #[allow(clippy::too_many_lines)]
 pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarReturn {
+    let UseRangeCalendarInput {
+        value,
+        min,
+        max,
+        is_disabled: disabled,
+        is_read_only,
+        on_change,
+    } = input;
+
     let calendar_id = format!("range-calendar-{}", Uuid::new_v4());
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
-    let on_change = input.on_change;
-    let min = input.min;
-    let max = input.max;
 
     // Initialize staging date
-    let initial_staging = input
-        .value
+    let initial_staging = value
         .and_then(|r| r.start)
         .unwrap_or_else(time::OffsetDateTime::now_utc);
     let (staging, set_staging) = signal(initial_staging);
 
     // The selected range
-    let (value, set_value) = signal(input.value.unwrap_or_default());
+    let (value, set_value) = signal(value.unwrap_or_default());
 
     // The anchor date (first click in range selection)
     let (anchor_date, set_anchor_date) = signal::<Option<time::OffsetDateTime>>(None);
@@ -226,7 +229,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
     let weeks = Signal::derive(move || create_weeks(&staging.get(), min.as_ref(), max.as_ref()));
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Navigation callbacks
     let previous_month = Callback::new(move |_| {
@@ -239,7 +242,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
 
     // Select a date for range
     let select_date = Callback::new(move |day: Day| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() || day.disabled {
+        if disabled.get_untracked() || is_read_only.get_untracked() || day.disabled {
             return;
         }
 
@@ -274,7 +277,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 

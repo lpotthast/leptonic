@@ -218,26 +218,36 @@ pub fn use_select<K>(input: UseSelectInput<K>) -> UseSelectReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
+    let UseSelectInput {
+        is_disabled,
+        is_required,
+        selected_key,
+        default_selected_key,
+        on_selection_change,
+        disabled_keys,
+        items,
+        is_open,
+        default_open,
+        on_open_change,
+        aria_label,
+        aria_labelledby,
+        get_text_value,
+        name,
+        placeholder,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let trigger_id = format!("select-trigger-{base_id}");
     let value_id = format!("select-value-{base_id}");
     let listbox_id = format!("select-listbox-{base_id}");
 
-    let is_disabled = input.is_disabled;
-    let _items = input.items;
-    let get_text_value = input.get_text_value;
-
     // Internal open state
-    let (internal_open, set_internal_open) = signal(input.default_open);
-    let is_open = input.is_open.unwrap_or_else(|| internal_open.into());
-    let on_open_change = input.on_open_change;
+    let (internal_open, set_internal_open) = signal(default_open);
+    let is_open = is_open.unwrap_or_else(|| internal_open.into());
 
     // Internal selected state
-    let (internal_selected, set_internal_selected) = signal(input.default_selected_key);
-    let selected_key = input
-        .selected_key
-        .unwrap_or_else(|| internal_selected.into());
-    let on_selection_change = input.on_selection_change;
+    let (internal_selected, set_internal_selected) = signal(default_selected_key);
+    let selected_key = selected_key.unwrap_or_else(|| internal_selected.into());
 
     // Compute display value
     let display_value = Signal::derive(move || {
@@ -337,7 +347,7 @@ where
     let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_open.get())));
 
     // Compute aria-required
-    let aria_required = input.is_required.then_some(AriaRequired::True);
+    let aria_required = is_required.then_some(AriaRequired::True);
 
     // Compute aria-disabled (reactive)
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
@@ -350,8 +360,8 @@ where
             Attr(attr::AriaHaspopup, "listbox"),
             Attr(attr::AriaExpanded, aria_expanded),
             Attr(attr::AriaControls, listbox_id.clone()),
-            Attr(attr::AriaLabel, input.aria_label),
-            Attr(attr::AriaLabelledby, input.aria_labelledby),
+            Attr(attr::AriaLabel, aria_label),
+            Attr(attr::AriaLabelledby, aria_labelledby),
             Attr(attr::AriaRequired, aria_required),
             Attr(attr::AriaDisabled, aria_disabled),
             on(ev::click, handle_click).into_cloneable(),
@@ -365,8 +375,8 @@ where
             tabindex: "-1",
         },
         hidden_select_props: UseSelectHiddenProps {
-            name: input.name,
-            required: input.is_required,
+            name,
+            required: is_required,
             disabled: is_disabled,
         },
         trigger_id,

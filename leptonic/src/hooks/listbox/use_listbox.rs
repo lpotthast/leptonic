@@ -189,17 +189,31 @@ pub fn use_listbox<K>(input: UseListBoxInput<K>) -> UseListBoxReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
+    let UseListBoxInput {
+        selection_mode,
+        selection_behavior,
+        is_disabled,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
+        disabled_keys,
+        disallow_empty_selection,
+        items,
+        should_focus_wrap,
+        auto_focus,
+        select_on_focus,
+        aria_label,
+        aria_labelledby,
+        get_text_value,
+        is_virtualized,
+        orientation,
+    } = input;
+
     let listbox_id = format!("listbox-{}", Uuid::new_v4());
-    let is_disabled = input.is_disabled;
-    let selection_mode = input.selection_mode;
-    let selection_behavior = input.selection_behavior;
-    let select_on_focus = input.select_on_focus;
-    let items = input.items;
-    let get_text_value = input.get_text_value;
 
     // Convert auto_focus bool to Signal<Option<FocusStrategy>>
     // For listbox, auto_focus means focus first item on mount
-    let auto_focus_signal = if input.auto_focus {
+    let auto_focus_signal = if auto_focus {
         Signal::derive(|| Some(FocusStrategy::First))
     } else {
         Signal::derive(|| None)
@@ -207,18 +221,18 @@ where
 
     // Use selectable list for selection and navigation
     let state = use_selectable_list(UseSelectableListInput {
-        selection_mode: input.selection_mode,
-        selection_behavior: input.selection_behavior,
-        disabled: input.is_disabled,
-        selected_keys: input.selected_keys,
-        default_selected_keys: input.default_selected_keys,
-        on_selection_change: input.on_selection_change,
-        disabled_keys: input.disabled_keys,
-        disallow_empty_selection: input.disallow_empty_selection,
-        all_keys: input.items,
-        should_focus_wrap: input.should_focus_wrap,
+        selection_mode,
+        selection_behavior,
+        disabled: is_disabled,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
+        disabled_keys,
+        disallow_empty_selection,
+        all_keys: items,
+        should_focus_wrap,
         auto_focus: auto_focus_signal,
-        select_on_focus: input.select_on_focus,
+        select_on_focus,
     });
 
     // Extract navigation callbacks for keyboard handler
@@ -329,7 +343,7 @@ where
     };
 
     // Compute aria-multiselectable
-    let aria_multiselectable = match input.selection_mode {
+    let aria_multiselectable = match selection_mode {
         SelectionMode::None => None,
         SelectionMode::Single => Some(AriaMultiselectable::False),
         SelectionMode::Multiple => Some(AriaMultiselectable::True),
@@ -339,15 +353,15 @@ where
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Orientation
-    let aria_orientation = AriaOrientation::from(input.orientation);
+    let aria_orientation = AriaOrientation::from(orientation);
 
     UseListBoxReturn {
         listbox_props: (
             Attr(attr::Id, listbox_id.clone()),
             Attr(attr::Role, "listbox"),
             Attr(attr::Tabindex, "0"),
-            Attr(attr::AriaLabel, input.aria_label),
-            Attr(attr::AriaLabelledby, input.aria_labelledby),
+            Attr(attr::AriaLabel, aria_label),
+            Attr(attr::AriaLabelledby, aria_labelledby),
             Attr(attr::AriaMultiselectable, aria_multiselectable),
             Attr(attr::AriaOrientation, aria_orientation),
             Attr(attr::AriaDisabled, aria_disabled),

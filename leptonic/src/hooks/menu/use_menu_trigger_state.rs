@@ -50,7 +50,9 @@ pub struct UseMenuTriggerStateReturn {
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_menu_trigger_state(input: UseMenuTriggerStateInput) -> UseMenuTriggerStateReturn {
-    let (is_open, set_is_open) = signal(input.default_open);
+    let UseMenuTriggerStateInput { default_open } = input;
+
+    let (is_open, set_is_open) = signal(default_open);
     let (focus_strategy, set_focus_strategy) = signal::<Option<FocusStrategy>>(None);
 
     let open = Callback::new(move |strategy: Option<FocusStrategy>| {

@@ -160,12 +160,19 @@ pub type UseTableAttrs = (
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn use_table(input: UseTableInput) -> UseTableReturn {
+    let UseTableInput {
+        label,
+        selection_mode,
+        is_disabled: disabled,
+        selected_keys,
+        sorted_column,
+        sort_direction,
+        on_selection_change,
+        on_sort_change,
+        on_row_action,
+    } = input;
+
     let table_id = format!("table-{}", Uuid::new_v4());
-    let is_disabled = input.is_disabled;
-    let selection_mode = input.selection_mode;
-    let selected_keys = input.selected_keys;
-    let on_selection_change = input.on_selection_change;
-    let on_row_action = input.on_row_action;
 
     // Track focused row
     let (focused_key, set_focused_key_signal) = signal::<Option<String>>(None);
@@ -238,11 +245,11 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
     };
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -293,7 +300,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         table_props: (
             Attr(attr::Id, table_id.clone()),
             Attr(attr::Role, "grid"),
-            Attr(attr::AriaLabel, input.label),
+            Attr(attr::AriaLabel, label),
             Attr(attr::AriaRowcount, None), // Set by component based on data
             Attr(attr::AriaMultiselectable, aria_multiselectable),
             Attr(attr::AriaDisabled, aria_disabled),
@@ -301,7 +308,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         ),
         table_id,
         selection_mode,
-        is_disabled,
+        is_disabled: disabled,
         focused_key: focused_key.into(),
         set_focused_key,
         select_row,

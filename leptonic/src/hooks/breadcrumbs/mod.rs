@@ -64,12 +64,17 @@ pub type UseBreadcrumbsAttrs = (
 /// }
 /// ```
 pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
+    let UseBreadcrumbsInput {
+        label,
+        is_disabled: disabled,
+    } = input;
+
     let nav_id = format!("breadcrumbs-{}", Uuid::new_v4());
 
     UseBreadcrumbsReturn {
         nav_props: (
             Attr(attr::Id, nav_id.clone()),
-            Attr(attr::AriaLabel, input.label),
+            Attr(attr::AriaLabel, label),
         ),
         nav_id,
     }
@@ -148,20 +153,22 @@ pub type UseBreadcrumbLinkAttrs = (
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_breadcrumb_item(input: UseBreadcrumbItemInput) -> UseBreadcrumbItemReturn {
-    let is_current = input.is_current;
-    let is_disabled = input.is_disabled;
-    let on_press = input.on_press;
-    let href = input.href.clone();
+    let UseBreadcrumbItemInput {
+        href,
+        is_current,
+        is_disabled: disabled,
+        on_press,
+    } = input;
 
     let aria_current = is_current.then_some(AriaCurrent::Page);
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Current item doesn't need to be a link
     let tabindex = if is_current { "-1" } else { "0" };
 
     let handle_click = move |e: MouseEvent| {
-        if is_disabled.get_untracked() || is_current {
+        if disabled.get_untracked() || is_current {
             e.prevent_default();
             return;
         }
@@ -171,7 +178,7 @@ pub fn use_breadcrumb_item(input: UseBreadcrumbItemInput) -> UseBreadcrumbItemRe
     };
 
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() || is_current {
+        if disabled.get_untracked() || is_current {
             return;
         }
 

@@ -181,18 +181,26 @@ pub struct UseDateFieldErrorProps {
 /// Panics if the `on` event handler cannot be converted to a cloneable callback.
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
+    let UseDateFieldInput {
+        value,
+        min,
+        max,
+        is_disabled: disabled,
+        is_read_only,
+        is_required,
+        label,
+        description,
+        error_message,
+        on_change,
+        show_time,
+        hour_cycle_24,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let field_id = format!("date-field-{base_id}");
     let label_id = format!("date-field-label-{base_id}");
     let description_id = format!("date-field-desc-{base_id}");
     let error_id = format!("date-field-error-{base_id}");
-
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
-    let value = input.value;
-    let on_change = input.on_change;
-    let show_time = input.show_time;
-    let hour_cycle_24 = input.hour_cycle_24;
 
     // Track focused segment
     let (focused_segment, set_focused_segment) = signal::<Option<usize>>(None);
@@ -436,19 +444,19 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
     });
 
     // Build aria-labelledby
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
     };
 
     // Build aria-describedby
-    let aria_describedby = if input.description.is_some() || input.error_message.is_some() {
+    let aria_describedby = if description.is_some() || error_message.is_some() {
         let mut ids = Vec::new();
-        if input.description.is_some() {
+        if description.is_some() {
             ids.push(description_id.clone());
         }
-        if input.error_message.is_some() {
+        if error_message.is_some() {
             ids.push(error_id.clone());
         }
         Some(ids.join(" "))
@@ -457,13 +465,13 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
     };
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
-    let aria_required = input.is_required.then_some(AriaRequired::True);
+    let aria_required = is_required.then_some(AriaRequired::True);
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
             return;
         }
 

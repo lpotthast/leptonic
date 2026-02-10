@@ -108,15 +108,18 @@ pub type UseTableRowAttrs = (
 /// ```
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
-    let row_key = input.row_key.clone();
-    let is_selected = input.is_selected;
-    let is_focused = input.is_focused;
-    let is_disabled = input.is_disabled;
-    let selection_mode = input.selection_mode;
-    let on_selection_change = input.on_selection_change;
-    let on_action = input.on_action;
-    let on_focus_next = input.on_focus_next;
-    let on_focus_previous = input.on_focus_previous;
+    let UseTableRowInput {
+        row_key,
+        row_index,
+        is_selected,
+        is_focused,
+        is_disabled: disabled,
+        selection_mode,
+        on_selection_change,
+        on_action,
+        on_focus_next,
+        on_focus_previous,
+    } = input;
 
     // Compute aria-selected
     let aria_selected = Signal::derive(move || {
@@ -128,14 +131,14 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
     });
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Compute tabindex
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 
     // Handle click for selection
     let handle_click = move |e: web_sys::MouseEvent| {
-        if is_disabled.get_untracked() || selection_mode == TableSelectionMode::None {
+        if disabled.get_untracked() || selection_mode == TableSelectionMode::None {
             return;
         }
 
@@ -153,7 +156,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
 
     // Handle double-click for action
     let handle_dblclick = EventHandler::new(move |_e: web_sys::MouseEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
         if let Some(on_action) = on_action {
@@ -163,7 +166,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
 
     // Handle keyboard
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -206,7 +209,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
+        disabled,
         within: false,
         auto_focus: false,
         on_focus: None,
@@ -217,7 +220,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         focus_ring_props.into_attrs();
 
     // Row index is 1-based for ARIA (add 1 for header row)
-    let aria_rowindex = (input.row_index + 2).to_string();
+    let aria_rowindex = (row_index + 2).to_string();
 
     UseTableRowReturn {
         row_props: (
@@ -262,7 +265,9 @@ pub type UseTableHeaderRowAttrs = (
 );
 
 /// Provides the behavior and accessibility for a table header row.
-pub fn use_table_header_row(_input: UseTableHeaderRowInput) -> UseTableHeaderRowReturn {
+pub fn use_table_header_row(input: UseTableHeaderRowInput) -> UseTableHeaderRowReturn {
+    let UseTableHeaderRowInput { row_index } = input;
+
     UseTableHeaderRowReturn {
         row_props: (Attr(attr::Role, "row"), Attr(attr::AriaRowindex, "1")),
     }

@@ -112,26 +112,32 @@ pub struct UseCalendarGridHeaderProps {
 /// }
 /// ```
 pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
+    let UseCalendarGridInput {
+        weeks,
+        is_disabled: disabled,
+        is_read_only,
+        start_of_week,
+        weekday_labels,
+    } = input;
+
     let grid_id = format!("calendar-grid-{}", Uuid::new_v4());
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
 
     // Reorder weekday labels based on start_of_week
-    let mut weekday_labels = input.weekday_labels;
-    if input.start_of_week > 0 {
-        let start = input.start_of_week as usize % 7;
+    let mut weekday_labels = weekday_labels;
+    if start_of_week > 0 {
+        let start = start_of_week as usize % 7;
         weekday_labels.rotate_left(start);
     }
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Compute aria-readonly
     let aria_readonly = Signal::derive(move || is_read_only.get().then_some(AriaReadonly::True));
 
     // Handle keyboard navigation within the grid
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 

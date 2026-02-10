@@ -250,15 +250,18 @@ pub type UseDateSegmentAttrs = (
 /// since the input is validated to be an ASCII digit).
 #[allow(clippy::too_many_lines)]
 pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
-    let segment = input.segment.clone();
-    let is_focused = input.is_focused;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
-    let on_change = input.on_change;
-    let on_increment = input.on_increment;
-    let on_decrement = input.on_decrement;
-    let on_focus_next = input.on_focus_next;
-    let on_focus_previous = input.on_focus_previous;
+    let UseDateSegmentInput {
+        segment,
+        is_focused,
+        is_disabled: disabled,
+        is_read_only,
+        on_change,
+        on_increment,
+        on_decrement,
+        on_focus_next,
+        on_focus_previous,
+    } = input;
+    let segment = segment.clone();
     let is_editable = segment.is_editable;
 
     // Compute tabindex
@@ -275,7 +278,7 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
         Signal::derive(move || (is_read_only.get() || !is_editable).then_some(AriaReadonly::True));
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // ARIA value attributes
     let aria_valuenow = segment.value.map(|v| v.to_string());
@@ -287,7 +290,7 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
     let segment_type = segment.segment_type;
 
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() || !is_editable {
+        if disabled.get_untracked() || is_read_only.get_untracked() || !is_editable {
             return;
         }
 
@@ -368,6 +371,6 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
             on(ev::keydown, handle_keydown).into_cloneable(),
             on(ev::focus, handle_focus).into_cloneable(),
         ),
-        segment: input.segment,
+        segment,
     }
 }

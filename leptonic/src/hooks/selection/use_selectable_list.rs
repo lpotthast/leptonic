@@ -124,24 +124,34 @@ pub fn use_selectable_list<K>(input: UseSelectableListInput<K>) -> UseSelectable
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    let disabled = input.disabled;
-    let select_on_focus = input.select_on_focus;
-    let selection_mode = input.selection_mode;
-    let selection_behavior = input.selection_behavior;
+    let UseSelectableListInput {
+        selection_mode,
+        selection_behavior,
+        disabled,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
+        disabled_keys,
+        disallow_empty_selection,
+        all_keys,
+        should_focus_wrap,
+        auto_focus,
+        select_on_focus,
+    } = input;
 
     // Create collection state
     let collection = use_selectable_collection(UseSelectableCollectionInput {
-        selection_mode: input.selection_mode,
-        selection_behavior: input.selection_behavior,
-        disabled: input.disabled,
-        selected_keys: input.selected_keys,
-        default_selected_keys: input.default_selected_keys,
-        on_selection_change: input.on_selection_change,
-        disabled_keys: input.disabled_keys,
-        disallow_empty_selection: input.disallow_empty_selection,
-        all_keys: input.all_keys,
-        should_focus_wrap: input.should_focus_wrap,
-        auto_focus: input.auto_focus,
+        selection_mode,
+        selection_behavior,
+        disabled,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
+        disabled_keys,
+        disallow_empty_selection,
+        all_keys,
+        should_focus_wrap,
+        auto_focus,
     });
 
     // Extract individual callbacks for the keyboard handler

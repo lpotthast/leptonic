@@ -82,9 +82,11 @@ pub struct UseListBoxSectionItemsProps {
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionReturn {
+    let UseListBoxSectionInput { heading } = input;
+
     let heading_id = format!("listbox-section-heading-{}", Uuid::new_v4());
 
-    let aria_labelledby = if input.heading.is_some() {
+    let aria_labelledby = if heading.is_some() {
         Some(heading_id.clone())
     } else {
         None

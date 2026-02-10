@@ -97,22 +97,25 @@ pub type UseTableCellAttrs = (
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
-    let is_focused = input.is_focused;
-    let is_disabled = input.is_disabled;
-    let is_interactive = input.is_interactive;
-    let on_focus = input.on_focus;
-    let on_focus_next = input.on_focus_next;
-    let on_focus_previous = input.on_focus_previous;
+    let UseTableCellInput {
+        column_index,
+        is_focused,
+        is_disabled: disabled,
+        is_interactive,
+        on_focus,
+        on_focus_next,
+        on_focus_previous,
+    } = input;
 
     // Compute tabindex
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -145,7 +148,7 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
+        disabled,
         within: false,
         auto_focus: false,
         on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
@@ -156,7 +159,7 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         focus_ring_props.into_attrs();
 
     // Column index is 1-based for ARIA
-    let aria_colindex = (input.column_index + 1).to_string();
+    let aria_colindex = (column_index + 1).to_string();
 
     UseTableCellReturn {
         cell_props: (
@@ -232,14 +235,17 @@ pub type UseTableCheckboxAttrs = (
 /// }
 /// ```
 pub fn use_table_checkbox_cell(input: UseTableCheckboxCellInput) -> UseTableCheckboxCellReturn {
-    let is_selected = input.is_selected;
-    let is_disabled = input.is_disabled;
-    let on_change = input.on_change;
+    let UseTableCheckboxCellInput {
+        is_selected,
+        is_indeterminate,
+        is_disabled: disabled,
+        on_change,
+    } = input;
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     let handle_change = move |_e: web_sys::Event| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
         if let Some(on_change) = on_change {

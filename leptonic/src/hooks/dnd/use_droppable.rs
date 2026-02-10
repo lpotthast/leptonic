@@ -147,20 +147,23 @@ pub type UseDroppableAttrs = (
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
+    let UseDroppableInput {
+        is_disabled: disabled,
+        accepted_types,
+        get_drop_operation,
+        on_drop_enter,
+        on_drop_move,
+        on_drop_exit,
+        on_drop,
+    } = input;
+
     let droppable_id = format!("droppable-{}", Uuid::new_v4());
-    let is_disabled = input.is_disabled;
-    let accepted_types = input.accepted_types;
-    let get_drop_operation = input.get_drop_operation;
-    let on_drop_enter = input.on_drop_enter;
-    let on_drop_move = input.on_drop_move;
-    let on_drop_exit = input.on_drop_exit;
-    let on_drop = input.on_drop;
 
     let (is_drop_target, set_is_drop_target) = signal(false);
     let (drag_counter, set_drag_counter) = signal(0i32);
 
     let aria_dropeffect = Signal::derive(move || {
-        if is_disabled.get() {
+        if disabled.get() {
             "none"
         } else if is_drop_target.get() {
             "copy"
@@ -218,7 +221,7 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
 
     let accepted_types_for_enter = accepted_types.clone();
     let handle_drag_enter = move |e: DragEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -255,7 +258,7 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
 
     let accepted_types_for_over = accepted_types.clone();
     let handle_drag_over = move |e: DragEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -310,7 +313,7 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
     };
 
     let handle_drag_leave = move |e: DragEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -328,7 +331,7 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
     };
 
     let handle_drop = move |e: DragEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 

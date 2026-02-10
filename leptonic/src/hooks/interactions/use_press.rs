@@ -396,13 +396,31 @@ fn is_mac() -> bool {
 /// or if the current target of the pointer event is not available.
 #[allow(clippy::too_many_lines)]
 pub fn use_press(input: UsePressInput) -> UsePressReturn {
+    let UsePressInput {
+        disabled,
+        force_prevent_default,
+        allow_propagation,
+        allow_text_selection_on_press,
+        should_cancel_on_pointer_exit,
+        on_press,
+        on_press_up,
+        on_press_start,
+        on_press_end,
+        on_press_change,
+        on_double_press,
+        on_long_press_start,
+        on_long_press,
+        on_long_press_end,
+        long_press_threshold,
+        long_press_accessibility_description,
+    } = input;
+
     let (is_pressed, set_is_pressed) = signal(false);
 
-    let supports_long_press = input.on_long_press.is_some()
-        || input.on_long_press_start.is_some()
-        || input.on_long_press_end.is_some();
-    let long_press_threshold = input
-        .long_press_threshold
+    let supports_long_press = on_long_press.is_some()
+        || on_long_press_start.is_some()
+        || on_long_press_end.is_some();
+    let long_press_threshold = long_press_threshold
         .unwrap_or_else(|| Signal::stored(DEFAULT_LONG_PRESS_THRESHOLD));
 
     let state: StoredValue<Option<PressState>, LocalStorage> = StoredValue::new_local(None);
@@ -459,11 +477,11 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
         s.did_fire_press_start = true;
 
-        if let Some(on_press_start) = input.on_press_start {
-            fire_press_callback(on_press_start, s, &e, input.allow_propagation);
+        if let Some(on_press_start) = on_press_start {
+            fire_press_callback(on_press_start, s, &e, allow_propagation);
         }
 
-        if let Some(on_press_change) = input.on_press_change {
+        if let Some(on_press_change) = on_press_change {
             on_press_change.run(true);
         }
 
@@ -481,15 +499,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         // Clear long press timeout on press end.
         s.clear_long_press_timeout();
 
-        if let Some(on_press_end) = input.on_press_end {
-            fire_press_callback(on_press_end, s, &e, input.allow_propagation);
+        if let Some(on_press_end) = on_press_end {
+            fire_press_callback(on_press_end, s, &e, allow_propagation);
         }
 
         // Fire long press end for mouse/touch when long press is configured.
         if supports_long_press
             && (s.pointer_type == PointerType::Mouse || s.pointer_type == PointerType::Touch)
         {
-            if let Some(on_long_press_end) = input.on_long_press_end {
+            if let Some(on_long_press_end) = on_long_press_end {
                 let (x, y) = e.coordinates();
                 on_long_press_end.run(LongPressEvent {
                     event_type: LongPressEventType::LongPressEnd,
@@ -502,7 +520,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             }
         }
 
-        if let Some(on_press_change) = input.on_press_change {
+        if let Some(on_press_change) = on_press_change {
             on_press_change.run(false);
         }
 
@@ -511,13 +529,13 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         // Do NOT fire on_press if the long press threshold was met.
         // The short press was consumed by the long press interaction.
         if was_pressed && !s.long_press_triggered {
-            fire_press_callback(input.on_press, s, &e, input.allow_propagation);
+            fire_press_callback(on_press, s, &e, allow_propagation);
         }
     };
 
     let trigger_press_up = move |s: &PressState, e: EventRef<'_>| {
-        if let Some(on_press_up) = input.on_press_up {
-            fire_press_callback(on_press_up, s, &e, input.allow_propagation);
+        if let Some(on_press_up) = on_press_up {
+            fire_press_callback(on_press_up, s, &e, allow_propagation);
         }
     };
 
@@ -527,7 +545,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 s.clear_click_timeout();
                 s.clear_long_press_timeout();
                 trigger_press_end(s, e, false);
-                s.restore_text_selection_if_needed(input.allow_text_selection_on_press);
+                s.restore_text_selection_if_needed(allow_text_selection_on_press);
                 s.cleanup_event_handlers();
             }
         });
@@ -538,7 +556,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         // First check if we should handle this event (immutable check).
         let should_handle = state.with_value(|s| {
             s.is_some()
-                && !input.disabled.get_untracked()
+                && !disabled.get_untracked()
                 && is_valid_keyboard_event(&e, e.current_target().unwrap())
         });
 
@@ -614,7 +632,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
 
         if state.with_value(Option::is_none)
-            && !input.disabled.get_untracked()
+            && !disabled.get_untracked()
             && is_valid_keyboard_event(&e, e.current_target().unwrap())
         {
             // macOS Meta key workaround: store events pressed while Meta is held
@@ -653,15 +671,15 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             return;
         }
 
-        if input.disabled.get_untracked() {
+        if disabled.get_untracked() {
             e.prevent_default();
             return;
         }
 
-        if input.force_prevent_default {
+        if force_prevent_default {
             e.prevent_default();
         }
-        if !input.allow_propagation {
+        if !allow_propagation {
             e.stop_propagation();
         }
 
@@ -681,7 +699,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     s.clear_click_timeout();
                     trigger_press_up(s, EventRef::Mouse(&e));
                     trigger_press_end(s, EventRef::Mouse(&e), true);
-                    s.restore_text_selection_if_needed(input.allow_text_selection_on_press);
+                    s.restore_text_selection_if_needed(allow_text_selection_on_press);
                     s.cleanup_event_handlers();
                 }
             });
@@ -720,11 +738,11 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 }
                 let is_over_target = s.is_pointer_over_target(&e);
 
-                if input.should_cancel_on_pointer_exit && s.is_over_target && !is_over_target {
+                if should_cancel_on_pointer_exit && s.is_over_target && !is_over_target {
                     // Cancel the entire press when configured to do so.
                     trigger_press_end(s, EventRef::Pointer(&e), false);
                     s.cleanup_event_handlers();
-                    s.restore_text_selection_if_needed(input.allow_text_selection_on_press);
+                    s.restore_text_selection_if_needed(allow_text_selection_on_press);
                 } else {
                     match (s.is_over_target, is_over_target) {
                         (true, false) => trigger_press_end(s, EventRef::Pointer(&e), false),
@@ -737,7 +755,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         });
 
         // If should_cancel_on_pointer_exit caused a full cancel, clear state.
-        if input.should_cancel_on_pointer_exit {
+        if should_cancel_on_pointer_exit {
             let should_clear = state.with_value(|s| {
                 s.as_ref()
                     .is_some_and(|s| !s.did_fire_press_start && !s.is_over_target)
@@ -777,10 +795,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 // Prevent duplicate pointerleave handling
                 s.is_over_target = false;
 
-                if input.force_prevent_default {
+                if force_prevent_default {
                     e.prevent_default();
                 }
-                if !input.allow_propagation {
+                if !allow_propagation {
                     e.stop_propagation();
                 }
 
@@ -826,7 +844,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
         let target = e.target();
 
-        if !input.allow_text_selection_on_press {
+        if !allow_text_selection_on_press {
             if let Some(target) = target.as_ref() {
                 if let Some(target) = target.as_element() {
                     target.disable_text_selection();
@@ -834,7 +852,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             }
         }
 
-        if !input.disabled.get_untracked() {
+        if !disabled.get_untracked() {
             // Release pointer capture to enable pointerleave/pointerenter on touch.
             // By default, the browser captures pointer events to the original target,
             // which prevents these events from firing correctly.
@@ -877,7 +895,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                             || s.pointer_type == PointerType::Touch)
                     {
                         // Fire on_long_press_start
-                        if let Some(on_long_press_start) = input.on_long_press_start {
+                        if let Some(on_long_press_start) = on_long_press_start {
                             let (x, y) = EventRef::Pointer(&e).coordinates();
                             on_long_press_start.run(LongPressEvent {
                                 event_type: LongPressEventType::LongPressStart,
@@ -894,7 +912,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                         let modifiers = EventRef::Pointer(&e).modifiers();
                         let target = s.target.clone();
                         let (x, y) = EventRef::Pointer(&e).coordinates();
-                        let on_long_press = input.on_long_press;
+                        let on_long_press = on_long_press;
 
                         s.long_press_timeout_handle = set_timeout_with_handle(
                             move || {
@@ -958,10 +976,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     // Handle native dblclick for on_double_press.
     let on_dblclick_handler = move |e: MouseEvent| {
-        let Some(on_double_press) = input.on_double_press else {
+        let Some(on_double_press) = on_double_press else {
             return;
         };
-        if input.disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -974,14 +992,14 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             y: Some(f64::from(e.client_y())),
             continue_propagation,
         });
-        if !input.allow_propagation && !continue_propagation_state.load(Ordering::Acquire) {
+        if !allow_propagation && !continue_propagation_state.load(Ordering::Acquire) {
             e.stop_propagation();
         }
     };
 
     // Only set aria-describedby when on_long_press is provided.
-    let aria_describedby = if input.on_long_press.is_some() {
-        input.long_press_accessibility_description
+    let aria_describedby = if on_long_press.is_some() {
+        long_press_accessibility_description
     } else {
         None
     };

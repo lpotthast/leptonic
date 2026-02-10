@@ -115,8 +115,15 @@ pub fn use_hidden_select<K>(input: UseHiddenSelectInput<K>) -> UseHiddenSelectRe
 where
     K: Clone + Send + Sync + 'static,
 {
-    let selected_key = input.selected_key;
-    let key_to_value = input.key_to_value;
+    let UseHiddenSelectInput {
+        name,
+        is_disabled,
+        is_required,
+        selected_key,
+        key_to_value,
+        trigger_id,
+        label,
+    } = input;
 
     // Compute the value for the hidden input
     let value = Signal::derive(move || {
@@ -130,8 +137,8 @@ where
     });
 
     // Build aria-labelledby
-    let aria_labelledby = if input.label.is_some() {
-        Some(input.trigger_id.clone())
+    let aria_labelledby = if label.is_some() {
+        Some(trigger_id)
     } else {
         None
     };
@@ -140,16 +147,16 @@ where
         container_props: (Attr(attr::AriaHidden, AriaHidden::True),),
         input_props: (
             Attr(attr::Type, "hidden"),
-            Attr(attr::Name, input.name),
+            Attr(attr::Name, name),
             Attr(attr::Value, value),
-            Attr(attr::Disabled, input.is_disabled),
-            Attr(attr::Required, input.is_required),
+            Attr(attr::Disabled, is_disabled),
+            Attr(attr::Required, is_required),
             Attr(attr::Tabindex, "-1"),
         ),
         select_props: (
-            Attr(attr::Name, input.name),
-            Attr(attr::Disabled, input.is_disabled),
-            Attr(attr::Required, input.is_required),
+            Attr(attr::Name, name),
+            Attr(attr::Disabled, is_disabled),
+            Attr(attr::Required, is_required),
             Attr(attr::Tabindex, "-1"),
             Attr(attr::AriaLabelledby, aria_labelledby),
         ),

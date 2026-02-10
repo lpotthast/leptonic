@@ -251,15 +251,20 @@ fn find_closest_thumb(click_value: f64, values: &[f64]) -> Option<ThumbIdx> {
 /// Panics if the current target of the pointer event is not available.
 #[allow(clippy::too_many_lines)]
 pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
+    let UseSliderInput {
+        state,
+        aria_label,
+        aria_labelledby,
+        is_rtl,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let group_id = format!("slider-group-{base_id}");
     let label_id = format!("slider-label-{base_id}");
     let output_id = format!("slider-output-{base_id}");
 
-    let state = input.state;
     let orientation = state.orientation;
     let disabled = state.disabled;
-    let is_rtl = input.is_rtl;
 
     let track_element = CapturedElement::new();
 
@@ -455,8 +460,8 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
         group_props: UseSliderGroupProps {
             role: "group",
             id: group_id,
-            aria_label: input.aria_label,
-            aria_labelledby: input.aria_labelledby,
+            aria_label,
+            aria_labelledby,
             aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
         },
         label_props: UseSliderLabelProps { id: label_id },

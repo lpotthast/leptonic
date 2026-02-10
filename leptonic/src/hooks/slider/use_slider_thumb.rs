@@ -257,16 +257,28 @@ pub type UseSliderThumbInputAttrs = (
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
+    let UseSliderThumbInput {
+        state,
+        track,
+        index,
+        name,
+        aria_label,
+        aria_labelledby,
+        disabled,
+        validation_state,
+        is_rtl,
+        decimal_places,
+        is_required,
+        aria_describedby,
+        aria_details,
+        aria_errormessage,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let thumb_id = format!("slider-thumb-{base_id}");
 
-    let state = input.state;
     let orientation = state.orientation;
-    let track = input.track;
-    let index = input.index;
-    let is_disabled = input.disabled;
-    let is_rtl = input.is_rtl;
-    let decimal_places = input.decimal_places;
+    let is_disabled = disabled;
 
     // Dragging state for this thumb
     let (is_dragging, set_is_dragging) = signal(false);
@@ -508,13 +520,13 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
     // Compute aria-invalid
     let aria_invalid =
-        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Compute aria-required
-    let aria_required = input.is_required.then_some(AriaRequired::True);
+    let aria_required = is_required.then_some(AriaRequired::True);
 
     // Orientation string
     let aria_orientation = Signal::derive(move || AriaOrientation::from(orientation.get()));
@@ -524,8 +536,8 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             id: thumb_id.clone(),
             role: "slider",
             tabindex: "0",
-            aria_label: input.aria_label,
-            aria_labelledby: input.aria_labelledby,
+            aria_label,
+            aria_labelledby,
             aria_valuenow: value,
             aria_valuemin: thumb_min,
             aria_valuemax: thumb_max,
@@ -534,9 +546,9 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             aria_invalid,
             aria_disabled,
             aria_required,
-            aria_describedby: input.aria_describedby,
-            aria_details: input.aria_details,
-            aria_errormessage: input.aria_errormessage,
+            aria_describedby,
+            aria_details,
+            aria_errormessage,
             on_keydown: EventHandler::new(handle_keydown),
             on_pointerdown,
             on_focus: focus_ring_props.handle_focus,
@@ -549,7 +561,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         },
         input_props: UseSliderThumbInputProps {
             ty: "hidden",
-            name: input.name,
+            name,
             value,
             disabled: is_disabled,
             aria_hidden: AriaHidden::True,

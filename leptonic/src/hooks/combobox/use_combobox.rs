@@ -272,35 +272,46 @@ pub fn use_combobox<K>(input: UseComboBoxInput<K>) -> UseComboBoxReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
+    let UseComboBoxInput {
+        input_value,
+        default_input_value,
+        on_input_change,
+        is_disabled,
+        is_read_only,
+        is_required,
+        selected_key,
+        default_selected_key,
+        on_selection_change,
+        disabled_keys,
+        items,
+        is_open,
+        default_open,
+        on_open_change,
+        aria_label,
+        aria_labelledby,
+        get_text_value,
+        filter,
+        name,
+        placeholder,
+        allows_custom_value,
+        menu_trigger,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let input_id = format!("combobox-input-{base_id}");
     let button_id = format!("combobox-button-{base_id}");
     let listbox_id = format!("combobox-listbox-{base_id}");
 
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
-    let items = input.items;
-    let get_text_value = input.get_text_value;
-    let filter = input.filter;
-    let menu_trigger = input.menu_trigger;
-
     // Internal state
     let (internal_input_value, set_internal_input_value) =
-        signal(input.default_input_value.unwrap_or_default());
-    let input_value = input
-        .input_value
-        .unwrap_or_else(|| internal_input_value.into());
-    let on_input_change = input.on_input_change;
+        signal(default_input_value.unwrap_or_default());
+    let input_value = input_value.unwrap_or_else(|| internal_input_value.into());
 
-    let (internal_open, set_internal_open) = signal(input.default_open);
-    let is_open = input.is_open.unwrap_or_else(|| internal_open.into());
-    let on_open_change = input.on_open_change;
+    let (internal_open, set_internal_open) = signal(default_open);
+    let is_open = is_open.unwrap_or_else(|| internal_open.into());
 
-    let (internal_selected, set_internal_selected) = signal(input.default_selected_key);
-    let selected_key = input
-        .selected_key
-        .unwrap_or_else(|| internal_selected.into());
-    let on_selection_change = input.on_selection_change;
+    let (internal_selected, set_internal_selected) = signal(default_selected_key);
+    let selected_key = selected_key.unwrap_or_else(|| internal_selected.into());
 
     let (focused_key, set_focused_key) = signal::<Option<K>>(None);
 
@@ -558,7 +569,7 @@ where
     let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_open.get())));
 
     // Compute aria-required
-    let aria_required = input.is_required.then_some(AriaRequired::True);
+    let aria_required = is_required.then_some(AriaRequired::True);
 
     // Compute aria-activedescendant
     let aria_activedescendant = Signal::derive(move || {
@@ -573,15 +584,15 @@ where
             Attr(attr::Type, "text"),
             Attr(attr::Role, "combobox"),
             Attr(attr::Value, input_value),
-            Attr(attr::Placeholder, input.placeholder),
+            Attr(attr::Placeholder, placeholder),
             Attr(attr::Disabled, is_disabled),
             Attr(attr::Readonly, is_read_only),
             Attr(attr::AriaAutocomplete, "list"),
             Attr(attr::AriaHaspopup, "listbox"),
             Attr(attr::AriaExpanded, aria_expanded),
             Attr(attr::AriaControls, listbox_id.clone()),
-            Attr(attr::AriaLabel, input.aria_label),
-            Attr(attr::AriaLabelledby, input.aria_labelledby),
+            Attr(attr::AriaLabel, aria_label),
+            Attr(attr::AriaLabelledby, aria_labelledby),
             Attr(attr::AriaRequired, aria_required),
             Attr(attr::AriaActivedescendant, aria_activedescendant),
             on(ev::input, handle_input).into_cloneable(),

@@ -107,6 +107,13 @@ pub type UseFocusWithinAttrs = (
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
+    let UseFocusWithinInput {
+        disabled,
+        on_focus_within,
+        on_blur_within,
+        on_focus_within_change,
+    } = input;
+
     let (is_focus_within, set_is_focus_within) = signal(false);
 
     // Store cleanup function for global focus listener
@@ -120,11 +127,6 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             }
         });
     };
-
-    let on_focus_within = input.on_focus_within;
-    let on_blur_within = input.on_blur_within;
-    let on_focus_within_change = input.on_focus_within_change;
-    let disabled = input.disabled;
 
     let trigger_blur_within = move |e: FocusEvent| {
         if !is_focus_within.get_untracked() {

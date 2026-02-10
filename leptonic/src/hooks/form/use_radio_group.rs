@@ -164,23 +164,31 @@ pub fn use_radio_group<T>(input: UseRadioGroupInput<T>) -> UseRadioGroupReturn<T
 where
     T: Clone + Send + Sync + 'static,
 {
+    let UseRadioGroupInput {
+        value,
+        on_change,
+        is_disabled,
+        is_read_only,
+        is_required,
+        validation_state,
+        label,
+        description,
+        error_message,
+        orientation,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let label_id = format!("radio-group-label-{base_id}");
     let description_id = format!("radio-group-description-{base_id}");
     let error_id = format!("radio-group-error-{base_id}");
     let name: &'static str = Box::leak(format!("radio-group-{base_id}").into_boxed_str());
 
-    let value = input.value;
-    let on_change = input.on_change;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
-
     // Build aria-describedby
     let mut describedby_parts = Vec::new();
-    if input.description.is_some() {
+    if description.is_some() {
         describedby_parts.push(description_id.clone());
     }
-    if input.validation_state == ValidationState::Invalid && input.error_message.is_some() {
+    if validation_state == ValidationState::Invalid && error_message.is_some() {
         describedby_parts.push(error_id.clone());
     }
 
@@ -191,7 +199,7 @@ where
     };
 
     // Build aria-labelledby
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
@@ -213,11 +221,11 @@ where
             role: "radiogroup",
             aria_labelledby,
             aria_describedby,
-            aria_invalid: (input.validation_state == ValidationState::Invalid)
+            aria_invalid: (validation_state == ValidationState::Invalid)
                 .then_some(AriaInvalid::True),
-            aria_required: input.is_required.then_some(AriaRequired::True),
+            aria_required: is_required.then_some(AriaRequired::True),
             aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-            aria_orientation: AriaOrientation::from(input.orientation),
+            aria_orientation: AriaOrientation::from(orientation),
         },
         label_props: UseRadioGroupLabelProps { id: label_id },
         state: UseRadioGroupState {

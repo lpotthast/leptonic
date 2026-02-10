@@ -128,16 +128,23 @@ pub fn use_menu<K>(input: UseMenuInput<K>) -> UseMenuReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    let on_close = input.on_close;
-    let on_action = input.on_action;
-    let disabled = input.disabled;
-    let aria_label = input.aria_label.clone();
+    let UseMenuInput {
+        should_focus_wrap,
+        aria_label,
+        all_keys,
+        disabled_keys,
+        get_key_label,
+        on_close,
+        on_action,
+        disabled,
+        auto_focus,
+    } = input;
 
     // Create the selectable list
     let list = use_selectable_list(UseSelectableListInput {
         selection_mode: SelectionMode::Single,
         selection_behavior: SelectionBehavior::Replace,
-        disabled: input.disabled,
+        disabled,
         selected_keys: None,
         default_selected_keys: None,
         on_selection_change: Some(Callback::new(move |selection: Selection<K>| {
@@ -150,19 +157,19 @@ where
                 }
             }
         })),
-        disabled_keys: input.disabled_keys,
+        disabled_keys,
         disallow_empty_selection: false,
-        all_keys: input.all_keys,
-        should_focus_wrap: input.should_focus_wrap,
-        auto_focus: input.auto_focus,
+        all_keys,
+        should_focus_wrap,
+        auto_focus,
         select_on_focus: false,
     });
 
     // Create type-ahead selection
     let type_select = use_type_select(UseTypeSelectInput {
-        disabled: input.disabled,
-        all_keys: input.all_keys,
-        get_key_label: input.get_key_label,
+        disabled,
+        all_keys,
+        get_key_label,
         focused_key: list.collection.focused_key,
         on_focus: list.collection.set_focused_key,
         timeout_ms: 500,

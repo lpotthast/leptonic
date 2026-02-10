@@ -215,19 +215,30 @@ pub type UseFieldErrorMessageAttrs = (
 /// }
 /// ```
 pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
+    let UseFieldInput {
+        id,
+        label,
+        description,
+        error_message,
+        validation_state,
+        is_required,
+        is_disabled,
+        is_read_only,
+    } = input;
+
     let base_id = Uuid::new_v4();
 
-    let field_id = input.id.unwrap_or_else(|| format!("field-{base_id}"));
+    let field_id = id.unwrap_or_else(|| format!("field-{base_id}"));
     let label_id = format!("label-{base_id}");
     let description_id = format!("description-{base_id}");
     let error_message_id = format!("error-{base_id}");
 
     // Build aria-describedby
     let mut describedby_parts = Vec::new();
-    if input.description.is_some() {
+    if description.is_some() {
         describedby_parts.push(description_id.clone());
     }
-    if input.validation_state == ValidationState::Invalid && input.error_message.is_some() {
+    if validation_state == ValidationState::Invalid && error_message.is_some() {
         describedby_parts.push(error_message_id.clone());
     }
 
@@ -238,7 +249,7 @@ pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
     };
 
     // Build aria-labelledby (only if label exists)
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
@@ -253,11 +264,11 @@ pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
             id: field_id,
             aria_labelledby,
             aria_describedby,
-            aria_invalid: (input.validation_state == ValidationState::Invalid)
+            aria_invalid: (validation_state == ValidationState::Invalid)
                 .then_some(AriaInvalid::True),
-            aria_required: input.is_required.then_some(AriaRequired::True),
-            aria_disabled: input.is_disabled.then_some(AriaDisabled::True),
-            aria_readonly: input.is_read_only.then_some(AriaReadonly::True),
+            aria_required: is_required.then_some(AriaRequired::True),
+            aria_disabled: is_disabled.then_some(AriaDisabled::True),
+            aria_readonly: is_read_only.then_some(AriaReadonly::True),
         },
         description_props: UseFieldDescriptionProps { id: description_id },
         error_message_props: UseFieldErrorMessageProps {

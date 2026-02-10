@@ -96,13 +96,15 @@ pub type UseInteractOutsideAttrs = (ElementCaptureAttr,);
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsideReturn {
+    let UseInteractOutsideInput {
+        disabled,
+        on_interact_outside_start,
+        on_interact_outside,
+    } = input;
+
     let element = CapturedElement::new();
 
     let is_pointer_down: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
-
-    let on_interact_outside = input.on_interact_outside;
-    let on_interact_outside_start = input.on_interact_outside_start;
-    let disabled = input.disabled;
 
     // Set up pointer down listener to track interaction start.
     // Uses `element.get()` (reactive) so the Effect re-runs when the element

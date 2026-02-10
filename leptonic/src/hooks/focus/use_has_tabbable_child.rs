@@ -91,9 +91,9 @@ const TABBABLE_SELECTOR: &str = "input:not([disabled]):not([type=hidden]), selec
 /// }
 /// ```
 pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbableChildReturn {
-    let (has_tabbable_child, set_has_tabbable_child) = signal(false);
+    let UseHasTabbableChildInput { disabled } = input;
 
-    let disabled = input.disabled;
+    let (has_tabbable_child, set_has_tabbable_child) = signal(false);
 
     let element = CapturedElement::new();
 

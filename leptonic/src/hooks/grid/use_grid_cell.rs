@@ -172,8 +172,15 @@ pub fn use_grid_cell<K>(input: UseGridCellInput<K>) -> UseGridCellReturn
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    let state = input.state;
-    let cell_focus_mode = input.focus_mode;
+    let UseGridCellInput {
+        state,
+        key,
+        row_index,
+        column_index,
+        focus_mode,
+    } = input;
+
+    let cell_focus_mode = focus_mode;
     let selection_mode = state.selection_mode;
 
     // --- Element capture + FocusManager for within-cell navigation ---
@@ -201,7 +208,7 @@ where
 
     // --- Delegate selection to use_selectable_item ---
     let selectable = use_selectable_item(UseSelectableItemInput {
-        key: input.key.clone(),
+        key: key.clone(),
         selection_mode: state.selection_mode,
         selection_behavior: state.selection_behavior,
         selected_keys: state.selection.selected_keys,
@@ -235,8 +242,8 @@ where
     let tabindex = Signal::derive(move || if is_focused.get() { "0" } else { "-1" });
 
     // Indices are 1-based for ARIA.
-    let aria_rowindex = (input.row_index + 1).to_string();
-    let aria_colindex = (input.column_index + 1).to_string();
+    let aria_rowindex = (row_index + 1).to_string();
+    let aria_colindex = (column_index + 1).to_string();
 
     // --- Keyboard handler (within-cell arrow navigation) ---
     let focus_manager_for_keydown = focus_manager.clone();
@@ -275,7 +282,7 @@ where
 
     // --- Focus handler ---
     let focus_manager_for_focus = focus_manager.clone();
-    let key_for_focus = input.key.clone();
+    let key_for_focus = key.clone();
     let set_focused_key = state.set_focused_key;
     let cell_focus = EventHandler::new(move |e: FocusEvent| {
         // If a child element received focus (target != currentTarget), update the grid's

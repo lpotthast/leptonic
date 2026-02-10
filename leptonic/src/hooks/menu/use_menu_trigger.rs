@@ -159,21 +159,25 @@ pub type UseMenuTriggerAttrs = (
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
+    let UseMenuTriggerInput {
+        menu_type,
+        disabled,
+        trigger,
+        state,
+    } = input;
+
     let menu_trigger_id = format!("menu-trigger-{}", Uuid::new_v4());
     let menu_id = format!("menu-{}", Uuid::new_v4());
-
-    let state = input.state;
 
     // Get overlay trigger ARIA attributes
     let overlay_trigger = use_overlay_trigger(UseOverlayTriggerInput {
         show: state.is_open,
         overlay_id: Oco::Owned(menu_id.clone()),
-        overlay_type: input.menu_type,
+        overlay_type: menu_type,
     });
 
     // Handle keyboard navigation
-    let disabled = input.disabled;
-    let trigger_type = input.trigger;
+    let trigger_type = trigger;
 
     let menu_keydown_handler = EventHandler::new(move |e: KeyboardEvent| {
         if disabled.get_untracked() {
@@ -210,13 +214,11 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
     });
 
     // Handle press events based on trigger type
-    let (press_on_keydown, press_on_click, press_on_pointerdown) = if input.trigger
+    let (press_on_keydown, press_on_click, press_on_pointerdown) = if trigger
         == MenuTriggerType::Press
     {
-        let disabled_for_press = input.disabled;
-
         let press = use_press(UsePressInput {
-            disabled: disabled_for_press,
+            disabled,
             force_prevent_default: false,
             allow_propagation: true,
             allow_text_selection_on_press: false,
@@ -267,7 +269,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
         // the long press callback is fired from a timeout without access to the target.
         // Focus restoration will still work if the trigger had focus when FocusScope mounted.
         let press = use_press(UsePressInput {
-            disabled: input.disabled,
+            disabled,
             force_prevent_default: false,
             allow_propagation: true,
             allow_text_selection_on_press: false,

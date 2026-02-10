@@ -83,13 +83,17 @@ pub struct UseSliderMarksReturn {
 /// Computes slider marks with reactive in-range state.
 #[allow(clippy::too_many_lines)]
 pub fn use_slider_marks(input: UseSliderMarksInput) -> UseSliderMarksReturn {
-    let state = input.state;
+    let UseSliderMarksInput {
+        state,
+        marks,
+        value_display,
+    } = input;
+
     let min = state.min_value;
     let max = state.max_value;
     let step = state.step;
     let values = state.values;
     let num_thumbs = state.num_thumbs;
-    let value_display = input.value_display;
 
     // Helper to create an in_range signal for a given value.
     let make_in_range = move |v: f64| -> Signal<bool> {
@@ -119,7 +123,7 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> UseSliderMarksReturn {
         }
     };
 
-    let marks = match input.marks {
+    let marks = match marks {
         SliderMarks::None => Signal::derive(Vec::new),
         SliderMarks::Automatic { create_names } => Signal::derive(move || match step {
             Some(step) => {

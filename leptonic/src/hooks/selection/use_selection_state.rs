@@ -211,25 +211,26 @@ pub fn use_selection_state<K>(input: UseSelectionStateInput<K>) -> UseSelectionS
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
+    let UseSelectionStateInput {
+        selection_mode,
+        selection_behavior,
+        disabled,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
+        disabled_keys,
+        disallow_empty_selection,
+    } = input;
+
     // Create internal state if uncontrolled
     let (internal_selection, set_internal_selection) = signal(
-        input
-            .default_selected_keys
-            .clone()
-            .unwrap_or_else(|| Selection::Keys(HashSet::new())),
+        default_selected_keys.unwrap_or_else(|| Selection::Keys(HashSet::new())),
     );
 
     // Use controlled or internal state
-    let selected_keys = input
-        .selected_keys
-        .unwrap_or_else(|| internal_selection.into());
+    let selected_keys = selected_keys.unwrap_or_else(|| internal_selection.into());
 
-    let on_selection_change = input.on_selection_change;
-    let selection_mode = input.selection_mode;
-    let _selection_behavior = input.selection_behavior;
-    let disabled = input.disabled;
-    let disabled_keys = input.disabled_keys;
-    let disallow_empty = input.disallow_empty_selection;
+    let disallow_empty = disallow_empty_selection;
 
     // Helper to update selection
     let update_selection = move |new_selection: Selection<K>| {

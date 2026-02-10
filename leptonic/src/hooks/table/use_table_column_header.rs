@@ -99,13 +99,16 @@ pub type UseTableColumnHeaderAttrs = (
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColumnHeaderReturn {
-    let column_key = input.column_key.clone();
-    let is_sortable = input.is_sortable;
-    let is_sorted = input.is_sorted;
-    let sort_direction = input.sort_direction;
-    let is_focused = input.is_focused;
-    let is_disabled = input.is_disabled;
-    let on_sort = input.on_sort;
+    let UseTableColumnHeaderInput {
+        column_key,
+        column_index,
+        is_sortable,
+        is_sorted,
+        sort_direction,
+        is_focused,
+        is_disabled: disabled,
+        on_sort,
+    } = input;
 
     // Compute aria-sort
     let aria_sort = Signal::derive(move || {
@@ -130,11 +133,11 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
     });
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Handle click for sorting
     let handle_click = move |_e: web_sys::MouseEvent| {
-        if is_disabled.get_untracked() || !is_sortable {
+        if disabled.get_untracked() || !is_sortable {
             return;
         }
         if let Some(on_sort) = on_sort {
@@ -144,7 +147,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
 
     // Handle keyboard for sorting
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() || !is_sortable {
+        if disabled.get_untracked() || !is_sortable {
             return;
         }
 
@@ -163,7 +166,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
+        disabled,
         within: false,
         auto_focus: false,
         on_focus: None,
@@ -174,7 +177,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
         focus_ring_props.into_attrs();
 
     // Column index is 1-based for ARIA
-    let aria_colindex = (input.column_index + 1).to_string();
+    let aria_colindex = (column_index + 1).to_string();
 
     UseTableColumnHeaderReturn {
         column_props: (

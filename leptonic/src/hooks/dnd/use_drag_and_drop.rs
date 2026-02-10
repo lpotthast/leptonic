@@ -221,6 +221,15 @@ pub struct UseDragAndDropReturn {
 /// }
 /// ```
 pub fn use_drag_and_drop(input: UseDragAndDropInput) -> UseDragAndDropReturn {
+    let UseDragAndDropInput {
+        is_disabled: disabled,
+        drag_options,
+        drop_options,
+        on_reorder,
+        on_insert,
+        on_remove,
+    } = input;
+
     let (is_dragging, set_is_dragging) = signal(false);
 
     // Track which keys belong to this collection for detecting internal vs external drops.
@@ -234,13 +243,13 @@ pub fn use_drag_and_drop(input: UseDragAndDropInput) -> UseDragAndDropReturn {
     let state = DragAndDropState {
         collection_keys,
         internal_reorder_happened,
-        is_disabled: input.is_disabled,
+        is_disabled: disabled,
         set_is_dragging,
-        on_reorder: input.on_reorder,
-        on_insert: input.on_insert,
-        on_remove: input.on_remove,
-        drag_options: input.drag_options,
-        drop_options: input.drop_options,
+        on_reorder,
+        on_insert,
+        on_remove,
+        drag_options,
+        drop_options,
     };
 
     UseDragAndDropReturn {
@@ -543,14 +552,21 @@ pub struct UseDroppableCollectionReturn {
 pub fn use_droppable_collection(
     input: UseDroppableCollectionInput,
 ) -> UseDroppableCollectionReturn {
-    let on_drop = input.on_drop;
+    let UseDroppableCollectionInput {
+        is_disabled: disabled,
+        accepted_types,
+        get_drop_operation,
+        on_drop,
+        on_drop_enter,
+        on_drop_exit,
+    } = input;
 
     let collection_props = use_droppable(UseDroppableInput {
-        is_disabled: input.is_disabled,
-        accepted_types: input.accepted_types,
-        get_drop_operation: input.get_drop_operation,
-        on_drop_enter: input.on_drop_enter,
-        on_drop_exit: input.on_drop_exit,
+        is_disabled: disabled,
+        accepted_types,
+        get_drop_operation,
+        on_drop_enter,
+        on_drop_exit,
         on_drop_move: None,
         on_drop: Some(Callback::new(move |e: DropEvent| {
             if let Some(on_drop) = on_drop {

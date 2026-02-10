@@ -116,14 +116,16 @@ pub fn use_menu_item<K>(input: UseMenuItemInput<K>) -> UseMenuItemReturn
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    let key = input.key.clone();
-    let is_disabled_input = input.is_disabled;
-    let focused_key = input.focused_key;
-    let selected_keys = input.selected_keys;
-    let on_focus = input.on_focus;
-    let on_action = input.on_action;
-    let on_close = input.on_close;
-    let close_on_select = input.close_on_select;
+    let UseMenuItemInput {
+        key,
+        is_disabled,
+        focused_key,
+        selected_keys,
+        on_focus,
+        on_action,
+        on_close,
+        close_on_select,
+    } = input;
 
     // Compute whether this item is focused
     let key_for_focused = key.clone();
@@ -131,7 +133,7 @@ where
 
     // Use focusable to get element capture and focus handle
     let focusable = use_focusable(UseFocusableInput {
-        disabled: is_disabled_input,
+        disabled: is_disabled,
         auto_focus: false,
         exclude_from_tab_order: Signal::derive(|| true), // Menu items use roving tabindex
         on_focus: None, // We handle focus through focus_ring's on_focus
@@ -167,7 +169,7 @@ where
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || {
-        if is_disabled_input.get() {
+        if is_disabled.get() {
             Some("true")
         } else {
             None
@@ -177,7 +179,7 @@ where
     // Activate the item
     let key_for_action = key.clone();
     let activate = move || {
-        if is_disabled_input.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
 
@@ -199,7 +201,7 @@ where
     // Handle keydown
     let activate_key = activate.clone();
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled_input.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
 
@@ -215,7 +217,7 @@ where
     // Handle focus callback
     let key_for_focus = key.clone();
     let focus_callback = Callback::new(move |_: FocusEvent| {
-        if is_disabled_input.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
         on_focus.run(Some(key_for_focus.clone()));
@@ -224,7 +226,7 @@ where
     // Handle mouse enter (for hover focus)
     let key_for_hover = key.clone();
     let handle_mouseenter = move |_e: MouseEvent| {
-        if is_disabled_input.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
         on_focus.run(Some(key_for_hover.clone()));
@@ -236,7 +238,7 @@ where
         is_focus_visible,
         is_focused: _,
     } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled_input,
+        disabled: is_disabled,
         within: false,
         auto_focus: false,
         on_focus: Some(focus_callback),
@@ -263,7 +265,7 @@ where
         ),
         is_focused,
         is_selected,
-        is_disabled: is_disabled_input,
+        is_disabled,
         is_focus_visible,
     }
 }

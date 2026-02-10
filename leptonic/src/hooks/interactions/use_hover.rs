@@ -125,6 +125,13 @@ impl HoverState {
 /// Panics if the hover state is expected to be present but is not.
 #[allow(clippy::too_many_lines)]
 pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
+    let UseHoverInput {
+        disabled,
+        on_hover_start,
+        on_hover_end,
+        on_hover_change,
+    } = input;
+
     let state: StoredValue<Option<HoverState>, LocalStorage> = StoredValue::new_local(None);
     let (is_hovered, set_is_hovered) = signal(false);
 
@@ -145,14 +152,14 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             }
         });
 
-        if let Some(on_hover_end) = input.on_hover_end {
+        if let Some(on_hover_end) = on_hover_end {
             on_hover_end.run(HoverEndEvent {
                 pointer_type,
                 current_target: target.map(SendWrapper::new),
             });
         }
 
-        if let Some(on_hover_change) = input.on_hover_change {
+        if let Some(on_hover_change) = on_hover_change {
             on_hover_change.run(false);
         }
 
@@ -180,14 +187,14 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
                 return;
             }
 
-            if let Some(on_hover_start) = input.on_hover_start {
+            if let Some(on_hover_start) = on_hover_start {
                 on_hover_start.run(HoverStartEvent {
                     pointer_type: pointer_type.clone(),
                     current_target: current_target.clone().map(SendWrapper::new),
                 });
             }
 
-            if let Some(on_hover_change) = input.on_hover_change {
+            if let Some(on_hover_change) = on_hover_change {
                 on_hover_change.run(true);
             }
 
@@ -230,7 +237,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         };
 
     let on_pointer_enter = move |e: PointerEvent| {
-        if input.disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -272,7 +279,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     };
 
     let on_pointer_leave = move |e: PointerEvent| {
-        if input.disabled.get_untracked()
+        if disabled.get_untracked()
             || state.with_value(Option::is_none)
             || !e.current_target_contains_target()
         {
@@ -283,7 +290,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     };
 
     let _cancel_hover_when_disabled = Effect::new(move |_| {
-        if input.disabled.get() {
+        if disabled.get() {
             trigger_hover_end();
         }
     });

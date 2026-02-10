@@ -201,6 +201,21 @@ pub struct UseDatePickerCalendarProps {
 /// ```
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
+    let UseDatePickerInput {
+        value,
+        min,
+        max,
+        is_open,
+        is_disabled: disabled,
+        is_read_only,
+        is_required,
+        label,
+        description,
+        error_message,
+        on_change,
+        on_open_change,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let picker_id = format!("date-picker-{base_id}");
     let label_id = format!("date-picker-label-{base_id}");
@@ -209,13 +224,9 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
     let dialog_id = format!("date-picker-dialog-{base_id}");
     let calendar_id = format!("date-picker-calendar-{base_id}");
 
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
-    let on_open_change = input.on_open_change;
-
     // Internal open state
     let (internal_open, set_internal_open) = signal(false);
-    let is_open = input.is_open.unwrap_or_else(|| internal_open.into());
+    let is_open = is_open.unwrap_or_else(|| internal_open.into());
 
     // Helper to update open state
     let update_open = move |new_open: bool| {
@@ -227,7 +238,7 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
 
     // Open/close/toggle callbacks
     let open = Callback::new(move |_| {
-        if !is_disabled.get_untracked() && !is_read_only.get_untracked() {
+        if !disabled.get_untracked() && !is_read_only.get_untracked() {
             update_open(true);
         }
     });
@@ -237,34 +248,34 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
     });
 
     let toggle = Callback::new(move |_| {
-        if !is_disabled.get_untracked() && !is_read_only.get_untracked() {
+        if !disabled.get_untracked() && !is_read_only.get_untracked() {
             update_open(!is_open.get_untracked());
         }
     });
 
     // Build aria-labelledby
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
     };
 
     // Build aria-describedby
-    let aria_describedby = if input.description.is_some() {
+    let aria_describedby = if description.is_some() {
         Some(format!("date-picker-desc-{base_id}"))
     } else {
         None
     };
 
     // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     // Compute aria-expanded
     let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_open.get())));
 
     // Handle button click
     let handle_click = move |_e: MouseEvent| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
             return;
         }
         update_open(!is_open.get_untracked());
@@ -272,7 +283,7 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
 
     // Handle button keyboard
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
             return;
         }
 

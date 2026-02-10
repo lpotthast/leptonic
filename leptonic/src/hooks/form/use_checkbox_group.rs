@@ -174,22 +174,30 @@ pub fn use_checkbox_group<T>(input: UseCheckboxGroupInput<T>) -> UseCheckboxGrou
 where
     T: Hash + Eq + Clone + Send + Sync + 'static,
 {
+    let UseCheckboxGroupInput {
+        value,
+        on_change,
+        is_disabled,
+        is_read_only,
+        is_required,
+        validation_state,
+        label,
+        description,
+        error_message,
+        orientation,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let label_id = format!("checkbox-group-label-{base_id}");
     let description_id = format!("checkbox-group-description-{base_id}");
     let error_id = format!("checkbox-group-error-{base_id}");
 
-    let value = input.value;
-    let on_change = input.on_change;
-    let is_disabled = input.is_disabled;
-    let is_read_only = input.is_read_only;
-
     // Build aria-describedby
     let mut describedby_parts = Vec::new();
-    if input.description.is_some() {
+    if description.is_some() {
         describedby_parts.push(description_id.clone());
     }
-    if input.validation_state == ValidationState::Invalid && input.error_message.is_some() {
+    if validation_state == ValidationState::Invalid && error_message.is_some() {
         describedby_parts.push(error_id.clone());
     }
 
@@ -200,7 +208,7 @@ where
     };
 
     // Build aria-labelledby
-    let aria_labelledby = if input.label.is_some() {
+    let aria_labelledby = if label.is_some() {
         Some(label_id.clone())
     } else {
         None
@@ -260,11 +268,11 @@ where
             role: "group",
             aria_labelledby,
             aria_describedby,
-            aria_invalid: (input.validation_state == ValidationState::Invalid)
+            aria_invalid: (validation_state == ValidationState::Invalid)
                 .then_some(AriaInvalid::True),
-            aria_required: input.is_required.then_some(AriaRequired::True),
+            aria_required: is_required.then_some(AriaRequired::True),
             aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-            aria_orientation: AriaOrientation::from(input.orientation),
+            aria_orientation: AriaOrientation::from(orientation),
         },
         label_props: UseCheckboxGroupLabelProps { id: label_id },
         state: UseCheckboxGroupState {

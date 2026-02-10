@@ -107,9 +107,14 @@ pub fn use_radio<T>(input: UseRadioInput<T>) -> UseRadioReturn
 where
     T: PartialEq + Clone + Send + Sync + 'static,
 {
-    let value = input.value.clone();
-    let state = input.state;
-    let local_disabled = input.is_disabled;
+    let UseRadioInput {
+        value,
+        state,
+        is_disabled: local_disabled,
+        validation_state,
+        aria_label,
+        name,
+    } = input;
 
     let (is_pressed, _set_is_pressed) = signal(false);
 
@@ -133,7 +138,7 @@ where
 
     // Compute aria-invalid
     let aria_invalid =
-        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Use focus ring for keyboard focus visibility
     let UseFocusRingReturn {
@@ -154,10 +159,10 @@ where
     UseRadioReturn {
         input_props: (
             Attr(attr::Type, "radio"),
-            Attr(attr::Name, input.name),
+            Attr(attr::Name, name),
             Attr(attr::Checked, is_selected),
             Attr(attr::Disabled, is_disabled),
-            Attr(attr::AriaLabel, input.aria_label),
+            Attr(attr::AriaLabel, aria_label),
             Attr(attr::AriaInvalid, aria_invalid),
             data_focus_visible,
             on(ev::change, handle_change).into_cloneable(),

@@ -118,9 +118,16 @@ pub type UseTabsAttrs = (Attr<attr::Id, String>,);
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_tabs(input: UseTabsInput) -> UseTabsReturn {
+    let UseTabsInput {
+        selected_key,
+        default_selected_key,
+        is_disabled: disabled,
+        orientation,
+        activation_mode,
+        on_selection_change,
+    } = input;
+
     let id_base = format!("tabs-{}", Uuid::new_v4());
-    let selected_key = input.selected_key;
-    let on_selection_change = input.on_selection_change;
 
     let select_tab = Callback::new(move |key: String| {
         if let Some(on_change) = on_selection_change {
@@ -132,8 +139,8 @@ pub fn use_tabs(input: UseTabsInput) -> UseTabsReturn {
         tabs_props: (Attr(attr::Id, id_base.clone()),),
         id_base,
         selected_key,
-        orientation: input.orientation,
-        activation_mode: input.activation_mode,
+        orientation,
+        activation_mode,
         select_tab,
     }
 }

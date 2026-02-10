@@ -139,22 +139,30 @@ pub fn use_selectable_collection<K>(
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    let all_keys = input.all_keys;
-    let should_focus_wrap = input.should_focus_wrap;
-    let disabled_keys = input.disabled_keys;
-    let disabled = input.disabled;
-    let auto_focus = input.auto_focus;
+    let UseSelectableCollectionInput {
+        selection_mode,
+        selection_behavior,
+        disabled,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
+        disabled_keys,
+        disallow_empty_selection,
+        all_keys,
+        should_focus_wrap,
+        auto_focus,
+    } = input;
 
     // Create selection state
     let selection_state = use_selection_state(UseSelectionStateInput {
-        selection_mode: input.selection_mode,
-        selection_behavior: input.selection_behavior,
-        disabled: input.disabled,
-        selected_keys: input.selected_keys,
-        default_selected_keys: input.default_selected_keys,
-        on_selection_change: input.on_selection_change,
-        disabled_keys: input.disabled_keys,
-        disallow_empty_selection: input.disallow_empty_selection,
+        selection_mode,
+        selection_behavior,
+        disabled,
+        selected_keys,
+        default_selected_keys,
+        on_selection_change,
+        disabled_keys,
+        disallow_empty_selection,
     });
 
     // Create focused key state

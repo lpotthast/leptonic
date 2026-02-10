@@ -112,20 +112,24 @@ pub type UseToolbarAttrs = (
 /// }
 /// ```
 pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
+    let UseToolbarInput {
+        label,
+        orientation,
+        is_disabled: disabled,
+        on_focus_next,
+        on_focus_previous,
+        on_focus_first,
+        on_focus_last,
+    } = input;
+
     let toolbar_id = format!("toolbar-{}", Uuid::new_v4());
-    let orientation = input.orientation;
-    let is_disabled = input.is_disabled;
-    let on_focus_next = input.on_focus_next;
-    let on_focus_previous = input.on_focus_previous;
-    let on_focus_first = input.on_focus_first;
-    let on_focus_last = input.on_focus_last;
 
     let aria_orientation = AriaOrientation::from(orientation);
 
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
+    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
 
     let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             return;
         }
 
@@ -177,7 +181,7 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
         toolbar_props: (
             Attr(attr::Id, toolbar_id.clone()),
             Attr(attr::Role, "toolbar"),
-            Attr(attr::AriaLabel, input.label),
+            Attr(attr::AriaLabel, label),
             Attr(attr::AriaOrientation, aria_orientation),
             Attr(attr::AriaDisabled, aria_disabled),
             on(ev::keydown, handle_keydown).into_cloneable(),

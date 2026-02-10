@@ -86,14 +86,20 @@ pub type UseTooltipAttrs = (
 /// }
 /// ```
 pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
+    let UseTooltipInput {
+        disabled,
+        on_open,
+        on_close,
+    } = input;
+
     let hover = use_hover(UseHoverInput {
-        disabled: input.disabled,
-        on_hover_start: input.on_open.map(|on_open| {
+        disabled,
+        on_hover_start: on_open.map(|on_open| {
             Callback::new(move |_| {
                 on_open.run(());
             })
         }),
-        on_hover_end: input.on_close.map(|on_close| {
+        on_hover_end: on_close.map(|on_close| {
             Callback::new(move |_| {
                 on_close.run(());
             })

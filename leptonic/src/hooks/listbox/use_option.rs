@@ -140,16 +140,22 @@ pub fn use_option<K>(input: UseOptionInput<K>) -> UseOptionReturn
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
+    let UseOptionInput {
+        key,
+        state,
+        is_disabled: local_disabled,
+        should_select_on_press_up,
+        should_use_virtual_focus,
+        on_focus,
+        on_press,
+        text_value,
+        focused_key,
+    } = input;
+
     let base_id = Uuid::new_v4();
     let option_id = format!("option-{base_id}");
     let label_id = format!("option-label-{base_id}");
     let description_id = format!("option-description-{base_id}");
-
-    let key = input.key.clone();
-    let state = input.state;
-    let local_disabled = input.is_disabled;
-    let focused_key = input.focused_key;
-    let should_use_virtual_focus = input.should_use_virtual_focus;
 
     let (is_pressed, set_is_pressed) = signal(false);
 
@@ -198,7 +204,7 @@ where
 
     // Handle click
     let key_for_click = key.clone();
-    let on_press_click = input.on_press;
+    let on_press_click = on_press;
     let handle_click = move |_e: web_sys::MouseEvent| {
         if is_disabled.get_untracked() {
             return;
@@ -241,7 +247,7 @@ where
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     // Use focus ring for keyboard focus visibility with user callback
-    let on_focus_input = input.on_focus;
+    let on_focus_input = on_focus;
     let UseFocusRingReturn {
         props: focus_ring_props,
         is_focus_visible,
@@ -264,7 +270,7 @@ where
             Attr(attr::Tabindex, tabindex),
             Attr(attr::AriaSelected, aria_selected),
             Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::AriaLabel, input.text_value),
+            Attr(attr::AriaLabel, text_value),
             Attr(attr::AriaDescribedby, None),
             on(ev::click, handle_click).into_cloneable(),
             on(ev::pointerdown, handle_pointer_down).into_cloneable(),

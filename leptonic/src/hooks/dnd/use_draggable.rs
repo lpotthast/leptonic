@@ -200,22 +200,26 @@ pub type UseDraggableAttrs = (
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
+    let UseDraggableInput {
+        is_disabled: disabled,
+        get_items,
+        allowed_drop_effect,
+        preview,
+        on_drag_start,
+        on_drag_move,
+        on_drag_end,
+    } = input;
+
     let draggable_id = format!("draggable-{}", Uuid::new_v4());
-    let is_disabled = input.is_disabled;
-    let get_items = input.get_items;
-    let allowed_drop_effect = input.allowed_drop_effect;
-    let on_drag_start = input.on_drag_start;
-    let on_drag_move = input.on_drag_move;
-    let on_drag_end = input.on_drag_end;
 
     let (is_dragging, set_is_dragging) = signal(false);
 
-    let draggable_attr = Signal::derive(move || if is_disabled.get() { "false" } else { "true" });
+    let draggable_attr = Signal::derive(move || if disabled.get() { "false" } else { "true" });
 
     let aria_grabbed = Signal::derive(move || is_dragging.get().then_some(AriaGrabbed::True));
 
     let handle_drag_start = move |e: DragEvent| {
-        if is_disabled.get_untracked() {
+        if disabled.get_untracked() {
             e.prevent_default();
             return;
         }

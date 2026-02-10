@@ -129,21 +129,23 @@ pub type UseCalendarCellButtonAttrs = (
 /// ```
 #[allow(clippy::too_many_lines)]
 pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
-    let day = input.day;
-    let is_disabled_input = input.is_disabled;
-    let is_selected = input.is_selected;
-    let is_focused = input.is_focused;
-    let on_select = input.on_select;
-    let on_focus = input.on_focus;
-    let on_previous_month = input.on_previous_month;
-    let on_next_month = input.on_next_month;
-    let on_previous_week = input.on_previous_week;
-    let on_next_week = input.on_next_week;
-    let on_previous_day = input.on_previous_day;
-    let on_next_day = input.on_next_day;
+    let UseCalendarCellInput {
+        day,
+        is_focused,
+        is_selected,
+        is_disabled: disabled,
+        on_select,
+        on_focus,
+        on_previous_month,
+        on_next_month,
+        on_previous_week,
+        on_next_week,
+        on_previous_day,
+        on_next_day,
+    } = input;
 
     // Check if the day is disabled (either from input or from day.disabled)
-    let is_disabled = Signal::derive(move || is_disabled_input.get() || day.disabled);
+    let is_disabled = Signal::derive(move || disabled.get() || day.disabled);
 
     let is_today = day.is_now;
     let is_outside_month = day.in_month != crate::utils::time::InMonth::Current;
