@@ -1,13 +1,14 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use super::use_date_segment::{DateSegment, DateSegmentType};
 use crate::utils::aria::{AriaDisabled, AriaRequired};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useTimeField.ts
 
@@ -121,8 +122,8 @@ impl Default for UseTimeFieldInput {
 /// The return value of the `use_time_field` hook.
 #[derive(Debug, Clone)]
 pub struct UseTimeFieldReturn {
-    /// Props for the field container element.
-    pub field_props: UseTimeFieldAttrs,
+    /// Props for the field container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub field_props: UseTimeFieldProps,
 
     /// Props for the label element.
     pub label_props: UseTimeFieldLabelProps,
@@ -156,6 +157,40 @@ pub struct UseTimeFieldReturn {
 
     /// Decrement the focused segment.
     pub decrement: Callback<()>,
+}
+
+/// Props from `use_time_field` for the field container element.
+#[derive(Debug, Clone)]
+pub struct UseTimeFieldProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_required: Option<AriaRequired>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseTimeFieldProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTimeFieldAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTimeFieldAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaRequired, self.aria_required),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the time field container element.
@@ -213,7 +248,7 @@ pub struct UseTimeFieldErrorProps {
 /// view! {
 ///     <div>
 ///         <label id=field.label_props.id>"Time"</label>
-///         <div {..field.field_props}>
+///         <div {..field.field_props.into_attrs()}>
 ///             // Render segments...
 ///         </div>
 ///     </div>
@@ -480,15 +515,15 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
     };
 
     UseTimeFieldReturn {
-        field_props: (
-            Attr(attr::Id, field_id.clone()),
-            Attr(attr::Role, "group"),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaDescribedby, aria_describedby),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::AriaRequired, aria_required),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        field_props: UseTimeFieldProps {
+            id: field_id.clone(),
+            role: "group",
+            aria_labelledby,
+            aria_describedby,
+            aria_disabled,
+            aria_required,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         label_props: UseTimeFieldLabelProps { id: label_id },
         description_props: UseTimeFieldDescriptionProps { id: description_id },
         error_props: UseTimeFieldErrorProps {

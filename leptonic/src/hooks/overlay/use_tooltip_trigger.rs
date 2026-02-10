@@ -1,10 +1,12 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
+
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tooltip/src/useTooltipTrigger.ts
 
@@ -60,7 +62,7 @@ impl Default for UseTooltipTriggerInput {
 /// The return value of the `use_tooltip_trigger` hook.
 pub struct UseTooltipTriggerReturn {
     /// Props for the trigger element.
-    pub trigger_props: UseTooltipTriggerAttrs,
+    pub trigger_props: UseTooltipTriggerProps,
 
     /// Props for the tooltip element.
     pub tooltip_props: UseTooltipTriggerTooltipProps,
@@ -79,6 +81,40 @@ pub struct UseTooltipTriggerReturn {
 
     /// Close the tooltip.
     pub close: Callback<()>,
+}
+
+/// Props from `use_tooltip_trigger` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTooltipTriggerProps {
+    pub id: String,
+    pub aria_describedby: Signal<Option<String>>,
+    pub on_pointerenter: EventHandler<web_sys::PointerEvent>,
+    pub on_pointerleave: EventHandler<web_sys::PointerEvent>,
+    pub on_focus: EventHandler<web_sys::FocusEvent>,
+    pub on_blur: EventHandler<web_sys::FocusEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseTooltipTriggerProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTooltipTriggerAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTooltipTriggerAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            self.on_pointerenter.into_on(ev::pointerenter),
+            self.on_pointerleave.into_on(ev::pointerleave),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the tooltip trigger element.
@@ -116,7 +152,7 @@ pub struct UseTooltipTriggerTooltipProps {
 /// });
 ///
 /// view! {
-///     <button {..tooltip.trigger_props}>
+///     <button {..tooltip.trigger_props.into_attrs()}>
 ///         "Hover me"
 ///     </button>
 ///     <Show when=move || tooltip.is_open.get()>
@@ -219,15 +255,15 @@ pub fn use_tooltip_trigger(input: UseTooltipTriggerInput) -> UseTooltipTriggerRe
     });
 
     UseTooltipTriggerReturn {
-        trigger_props: (
-            Attr(attr::Id, trigger_id.clone()),
-            Attr(attr::AriaDescribedby, aria_describedby),
-            on(ev::pointerenter, handle_pointer_enter).into_cloneable(),
-            on(ev::pointerleave, handle_pointer_leave).into_cloneable(),
-            on(ev::focus, handle_focus).into_cloneable(),
-            on(ev::blur, handle_blur).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        trigger_props: UseTooltipTriggerProps {
+            id: trigger_id.clone(),
+            aria_describedby,
+            on_pointerenter: EventHandler::new(handle_pointer_enter),
+            on_pointerleave: EventHandler::new(handle_pointer_leave),
+            on_focus: EventHandler::new(handle_focus),
+            on_blur: EventHandler::new(handle_blur),
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         tooltip_props: UseTooltipTriggerTooltipProps {
             id: tooltip_id.clone(),
             role: "tooltip",

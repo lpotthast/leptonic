@@ -44,7 +44,7 @@ impl Default for UseProgressBarInput {
 /// The return value of the `use_progress_bar` hook.
 pub struct UseProgressBarReturn {
     /// Props for the progress bar container element.
-    pub progress_props: UseProgressBarAttrs,
+    pub progress_props: UseProgressBarProps,
 
     /// Props for the label element.
     pub label_props: UseProgressBarLabelProps,
@@ -60,6 +60,40 @@ pub struct UseProgressBarReturn {
 
     /// The ID of the progress bar.
     pub progress_id: String,
+}
+
+/// Props from `use_progress_bar` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseProgressBarProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_valuenow: Signal<Option<String>>,
+    pub aria_valuemin: String,
+    pub aria_valuemax: String,
+    pub aria_valuetext: Signal<Option<String>>,
+    pub aria_labelledby: Option<String>,
+}
+
+impl UseProgressBarProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseProgressBarAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseProgressBarAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaValuenow, self.aria_valuenow),
+            Attr(attr::AriaValuemin, self.aria_valuemin),
+            Attr(attr::AriaValuemax, self.aria_valuemax),
+            Attr(attr::AriaValuetext, self.aria_valuetext),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+        )
+    }
 }
 
 /// Attributes for the progress bar container element.
@@ -171,15 +205,15 @@ pub fn use_progress_bar(input: UseProgressBarInput) -> UseProgressBarReturn {
     };
 
     UseProgressBarReturn {
-        progress_props: (
-            Attr(attr::Id, progress_id.clone()),
-            Attr(attr::Role, "progressbar"),
-            Attr(attr::AriaValuenow, aria_valuenow),
-            Attr(attr::AriaValuemin, min_value.to_string()),
-            Attr(attr::AriaValuemax, max_value.to_string()),
-            Attr(attr::AriaValuetext, aria_valuetext),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-        ),
+        progress_props: UseProgressBarProps {
+            id: progress_id.clone(),
+            role: "progressbar",
+            aria_valuenow,
+            aria_valuemin: min_value.to_string(),
+            aria_valuemax: max_value.to_string(),
+            aria_valuetext,
+            aria_labelledby,
+        },
         label_props: UseProgressBarLabelProps { id: label_id },
         percentage,
         value_label,

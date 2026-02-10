@@ -33,7 +33,7 @@
 //!
 //! - **Naming**: React Aria's `useModalOverlay` with `underlayProps` is renamed to
 //!   `use_modal_backdrop` with `backdrop_props` for clarity. Similarly, `use_popover`'s
-//!   `underlayProps` is renamed to `backdrop_attrs`.
+//!   `underlayProps` is renamed to `backdrop_props`.
 
 pub mod use_modal;
 pub mod use_modal_backdrop;

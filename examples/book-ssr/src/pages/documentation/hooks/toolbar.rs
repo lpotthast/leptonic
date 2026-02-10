@@ -49,7 +49,7 @@ pub fn PageUseToolbar() -> impl IntoView {
 
             <h3>"Horizontal Toolbar"</h3>
             <div
-                {..toolbar.toolbar_props}
+                {..toolbar.toolbar_props.into_attrs()}
                 style="display: flex; gap: 0.5em; padding: 0.5em; background: #f5f5f5; border-radius: 4px; margin: 1em 0;"
             >
                 <button
@@ -100,7 +100,7 @@ pub fn PageUseToolbar() -> impl IntoView {
 
             <h3>"Vertical Toolbar"</h3>
             <div
-                {..vertical_toolbar.toolbar_props}
+                {..vertical_toolbar.toolbar_props.into_attrs()}
                 style="display: flex; flex-direction: column; gap: 0.5em; padding: 0.5em; background: #f5f5f5; border-radius: 4px; width: fit-content; margin: 1em 0;"
             >
                 <button style="padding: 0.5em 1em; border: 1px solid #ccc; border-radius: 4px; cursor: pointer; background: white;">
@@ -127,7 +127,7 @@ pub fn PageUseToolbar() -> impl IntoView {
                     });
 
                     view! {
-                        <div {..toolbar.toolbar_props}>
+                        <div {..toolbar.toolbar_props.into_attrs()}>
                             <button tabindex="0">"Bold"</button>
                             <button tabindex="-1">"Italic"</button>
                             <button tabindex="-1">"Underline"</button>

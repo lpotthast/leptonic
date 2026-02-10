@@ -40,7 +40,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
             <h3>"Horizontal Separator (hr element)"</h3>
             <div style="margin: 1em 0;">
                 <p>"Content above the separator"</p>
-                <hr {..horizontal_sep.separator_props} style="border: none; border-top: 1px solid #ccc; margin: 1em 0;"/>
+                <hr {..horizontal_sep.separator_props.into_attrs()} style="border: none; border-top: 1px solid #ccc; margin: 1em 0;"/>
                 <p>"Content below the separator"</p>
             </div>
 
@@ -48,7 +48,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
             <div style="display: flex; align-items: center; gap: 1em; margin: 1em 0;">
                 <span>"Left content"</span>
                 <div
-                    {..vertical_sep.separator_props}
+                    {..vertical_sep.separator_props.into_attrs()}
                     style="width: 1px; height: 24px; background: #ccc;"
                 ></div>
                 <span>"Right content"</span>
@@ -58,7 +58,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
             <div style="margin: 1em 0;">
                 <p>"This separator is rendered as a div with role=\"separator\""</p>
                 <div
-                    {..div_sep.separator_props}
+                    {..div_sep.separator_props.into_attrs()}
                     style="height: 2px; background: linear-gradient(90deg, transparent, #ccc, transparent); margin: 1em 0;"
                 ></div>
                 <p>"Content continues..."</p>
@@ -79,8 +79,8 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                     });
 
                     view! {
-                        <hr {..hr_sep.separator_props} />
-                        <div {..div_sep.separator_props}></div>
+                        <hr {..hr_sep.separator_props.into_attrs()} />
+                        <div {..div_sep.separator_props.into_attrs()}></div>
                     }
                 "#)}
             </Code>

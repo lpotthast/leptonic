@@ -1,7 +1,7 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -9,6 +9,7 @@ use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaRequired};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/select/src/useSelect.ts
 
@@ -93,7 +94,7 @@ where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
     /// Props for the trigger button element.
-    pub trigger_props: UseSelectTriggerAttrs,
+    pub trigger_props: UseSelectTriggerProps,
 
     /// Props for the value display element.
     pub value_props: UseSelectValueProps,
@@ -130,6 +131,50 @@ where
 
     /// Select a key.
     pub select: Callback<K>,
+}
+
+/// Props from `use_select` for the trigger element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseSelectTriggerProps {
+    pub id: String,
+    pub role: &'static str,
+    pub tabindex: &'static str,
+    pub aria_haspopup: &'static str,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
+    pub aria_controls: String,
+    pub aria_label: Option<&'static str>,
+    pub aria_labelledby: Option<String>,
+    pub aria_required: Option<AriaRequired>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseSelectTriggerProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSelectTriggerAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSelectTriggerAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaHaspopup, self.aria_haspopup),
+            Attr(attr::AriaExpanded, self.aria_expanded),
+            Attr(attr::AriaControls, self.aria_controls),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaRequired, self.aria_required),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the select trigger button.
@@ -202,7 +247,7 @@ pub struct UseSelectHiddenProps {
 ///
 /// view! {
 ///     <div>
-///         <button {..select.trigger_props}>
+///         <button {..select.trigger_props.into_attrs()}>
 ///             {move || select.display_value.get().unwrap_or_else(|| "Choose a fruit".to_string())}
 ///         </button>
 ///         <Show when=move || select.is_open.get()>
@@ -353,20 +398,20 @@ where
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
     UseSelectReturn {
-        trigger_props: (
-            Attr(attr::Id, trigger_id.clone()),
-            Attr(attr::Role, "combobox"),
-            Attr(attr::Tabindex, "0"),
-            Attr(attr::AriaHaspopup, "listbox"),
-            Attr(attr::AriaExpanded, aria_expanded),
-            Attr(attr::AriaControls, listbox_id.clone()),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaRequired, aria_required),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        trigger_props: UseSelectTriggerProps {
+            id: trigger_id.clone(),
+            role: "combobox",
+            tabindex: "0",
+            aria_haspopup: "listbox",
+            aria_expanded,
+            aria_controls: listbox_id.clone(),
+            aria_label,
+            aria_labelledby,
+            aria_required,
+            aria_disabled,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         value_props: UseSelectValueProps { id: value_id },
         listbox_props: UseSelectListBoxProps {
             id: listbox_id.clone(),

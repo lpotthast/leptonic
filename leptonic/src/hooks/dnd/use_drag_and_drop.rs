@@ -544,7 +544,7 @@ pub struct UseDroppableCollectionReturn {
 /// });
 ///
 /// view! {
-///     <ul {..droppable.collection_props.drop_props}>
+///     <ul {..droppable.collection_props.drop_props.into_attrs()}>
 ///         // List items...
 ///     </ul>
 /// }

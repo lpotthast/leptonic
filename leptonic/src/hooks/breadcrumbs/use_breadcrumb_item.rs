@@ -1,11 +1,12 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaCurrent, AriaDisabled};
+use crate::utils::EventHandler;
 
 /// Input parameters for the `use_breadcrumb_item` hook.
 #[derive(Debug, Clone)]
@@ -37,18 +38,69 @@ impl Default for UseBreadcrumbItemInput {
 /// The return value of the `use_breadcrumb_item` hook.
 pub struct UseBreadcrumbItemReturn {
     /// Props for the breadcrumb item container (li).
-    pub item_props: UseBreadcrumbItemAttrs,
+    pub item_props: UseBreadcrumbItemProps,
 
     /// Props for the link/span element.
-    pub link_props: UseBreadcrumbLinkAttrs,
+    pub link_props: UseBreadcrumbLinkProps,
 
     /// Whether this is the current item.
     pub is_current: bool,
 }
 
+/// Props from `use_breadcrumb_item` for the item container element.
+///
+/// Currently empty — CSS class should be applied directly in the component.
+#[derive(Debug, Clone)]
+pub struct UseBreadcrumbItemProps;
+
+impl UseBreadcrumbItemProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseBreadcrumbItemAttrs {
+        ()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseBreadcrumbItemAttrs {
+        ()
+    }
+}
+
 /// Attributes for the breadcrumb item container.
-/// Note: CSS class should be applied directly in the component.
 pub type UseBreadcrumbItemAttrs = ();
+
+/// Props from `use_breadcrumb_item` for the link element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseBreadcrumbLinkProps {
+    pub href: Option<String>,
+    pub aria_current: Option<AriaCurrent>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub tabindex: &'static str,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseBreadcrumbLinkProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseBreadcrumbLinkAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseBreadcrumbLinkAttrs {
+        (
+            Attr(attr::Href, self.href),
+            Attr(attr::AriaCurrent, self.aria_current),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
+}
 
 /// Attributes for the breadcrumb link element.
 pub type UseBreadcrumbLinkAttrs = (
@@ -73,8 +125,8 @@ pub type UseBreadcrumbLinkAttrs = (
 /// });
 ///
 /// view! {
-///     <li {..item.item_props}>
-///         <a {..item.link_props}>"Home"</a>
+///     <li {..item.item_props.into_attrs()}>
+///         <a {..item.link_props.into_attrs()}>"Home"</a>
 ///     </li>
 /// }
 /// ```
@@ -119,15 +171,15 @@ pub fn use_breadcrumb_item(input: UseBreadcrumbItemInput) -> UseBreadcrumbItemRe
     };
 
     UseBreadcrumbItemReturn {
-        item_props: (),
-        link_props: (
-            Attr(attr::Href, if is_current { None } else { href }),
-            Attr(attr::AriaCurrent, aria_current),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::Tabindex, tabindex),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        item_props: UseBreadcrumbItemProps,
+        link_props: UseBreadcrumbLinkProps {
+            href: if is_current { None } else { href },
+            aria_current,
+            aria_disabled,
+            tabindex,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         is_current,
     }
 }

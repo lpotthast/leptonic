@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
 use super::use_tabs::TabsOrientation;
 use crate::utils::aria::{AriaDisabled, AriaOrientation};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
 
@@ -41,11 +42,43 @@ pub struct UseTabListInput {
 /// The return value of the `use_tab_list` hook.
 #[derive(Debug, Clone)]
 pub struct UseTabListReturn {
-    /// Props for the tab list element.
-    pub tab_list_props: UseTabListAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseTabListProps,
 
     /// The ID of the tab list.
     pub tab_list_id: String,
+}
+
+/// Props from `use_tab_list` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTabListProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_label: Option<String>,
+    pub aria_orientation: AriaOrientation,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseTabListProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTabListAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTabListAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaOrientation, self.aria_orientation),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the tab list element.
@@ -73,7 +106,7 @@ pub type UseTabListAttrs = (
 /// });
 ///
 /// view! {
-///     <div {..tab_list.tab_list_props}>
+///     <div {..tab_list.props.into_attrs()}>
 ///         // Tab buttons...
 ///     </div>
 /// }
@@ -147,14 +180,14 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
     };
 
     UseTabListReturn {
-        tab_list_props: (
-            Attr(attr::Id, tab_list_id.clone()),
-            Attr(attr::Role, "tablist"),
-            Attr(attr::AriaLabel, label),
-            Attr(attr::AriaOrientation, aria_orientation),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        props: UseTabListProps {
+            id: tab_list_id.clone(),
+            role: "tablist",
+            aria_label: label,
+            aria_orientation,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         tab_list_id,
     }
 }

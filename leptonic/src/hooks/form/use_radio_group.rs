@@ -1,3 +1,5 @@
+use leptos::attr;
+use leptos::attr::Attr;
 use leptos::prelude::*;
 use uuid::Uuid;
 
@@ -68,7 +70,7 @@ where
     T: Clone + Send + Sync + 'static,
 {
     /// Props for the group container element.
-    pub group_props: UseRadioGroupAttrs,
+    pub group_props: UseRadioGroupProps,
 
     /// Props for the label element.
     pub label_props: UseRadioGroupLabelProps,
@@ -77,9 +79,9 @@ where
     pub state: UseRadioGroupState<T>,
 }
 
-/// Attributes for the radio group container.
+/// Props for the radio group container.
 #[derive(Debug, Clone)]
-pub struct UseRadioGroupAttrs {
+pub struct UseRadioGroupProps {
     /// The role attribute.
     pub role: &'static str,
 
@@ -102,12 +104,56 @@ pub struct UseRadioGroupAttrs {
     pub aria_orientation: AriaOrientation,
 }
 
+impl UseRadioGroupProps {
+    #[must_use]
+    pub fn to_attrs(&self) -> UseRadioGroupAttrs {
+        self.clone().into_attrs()
+    }
+
+    #[must_use]
+    pub fn into_attrs(self) -> UseRadioGroupAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            Attr(attr::AriaRequired, self.aria_required),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaOrientation, self.aria_orientation),
+        )
+    }
+}
+
+pub type UseRadioGroupAttrs = (
+    Attr<attr::Role, &'static str>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaDescribedby, Option<String>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaOrientation, AriaOrientation>,
+);
+
 /// Props for the group label.
 #[derive(Debug, Clone)]
 pub struct UseRadioGroupLabelProps {
     /// The id of the label element.
     pub id: String,
 }
+
+impl UseRadioGroupLabelProps {
+    #[must_use]
+    pub fn to_attrs(&self) -> UseRadioGroupLabelAttrs {
+        self.clone().into_attrs()
+    }
+
+    #[must_use]
+    pub fn into_attrs(self) -> UseRadioGroupLabelAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+pub type UseRadioGroupLabelAttrs = (Attr<attr::Id, String>,);
 
 /// State for a radio group.
 #[derive(Clone, Copy)]
@@ -217,7 +263,7 @@ where
     });
 
     UseRadioGroupReturn {
-        group_props: UseRadioGroupAttrs {
+        group_props: UseRadioGroupProps {
             role: "radiogroup",
             aria_labelledby,
             aria_describedby,

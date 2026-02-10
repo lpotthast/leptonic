@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaModal};
+use crate::utils::EventHandler;
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDatePicker.ts
 
 /// Input parameters for the `use_date_picker` hook.
@@ -71,8 +72,8 @@ impl Default for UseDatePickerInput {
 /// The return value of the `use_date_picker` hook.
 #[derive(Debug, Clone)]
 pub struct UseDatePickerReturn {
-    /// Props for the date picker group container.
-    pub group_props: UseDatePickerGroupAttrs,
+    /// Props for the date picker group container. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub group_props: UseDatePickerGroupProps,
 
     /// Props for the label element.
     pub label_props: UseDatePickerLabelProps,
@@ -80,8 +81,8 @@ pub struct UseDatePickerReturn {
     /// Props for the field container.
     pub field_props: UseDatePickerFieldProps,
 
-    /// Props for the calendar trigger button.
-    pub button_props: UseDatePickerButtonAttrs,
+    /// Props for the calendar trigger button. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub button_props: UseDatePickerButtonProps,
 
     /// Props for the calendar dialog/popover.
     pub dialog_props: UseDatePickerDialogProps,
@@ -103,6 +104,36 @@ pub struct UseDatePickerReturn {
 
     /// Toggle the calendar.
     pub toggle: Callback<()>,
+}
+
+/// Props from `use_date_picker` for the group container.
+#[derive(Debug, Clone)]
+pub struct UseDatePickerGroupProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+}
+
+impl UseDatePickerGroupProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDatePickerGroupAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDatePickerGroupAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+        )
+    }
 }
 
 /// Attributes for the date picker group container.
@@ -133,6 +164,42 @@ pub struct UseDatePickerFieldProps {
     pub aria_haspopup: &'static str,
     /// aria-expanded attribute.
     pub aria_expanded: Signal<Option<AriaExpanded>>,
+}
+
+/// Props from `use_date_picker` for the calendar trigger button.
+#[derive(Debug, Clone)]
+pub struct UseDatePickerButtonProps {
+    pub id: String,
+    pub aria_label: &'static str,
+    pub aria_haspopup: &'static str,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub tabindex: &'static str,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseDatePickerButtonProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDatePickerButtonAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDatePickerButtonAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaHaspopup, self.aria_haspopup),
+            Attr(attr::AriaExpanded, self.aria_expanded),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the calendar trigger button.
@@ -185,12 +252,12 @@ pub struct UseDatePickerCalendarProps {
 /// });
 ///
 /// view! {
-///     <div {..picker.group_props}>
+///     <div {..picker.group_props.into_attrs()}>
 ///         <label id=picker.label_props.id>"Select Date"</label>
 ///         <div id=picker.field_props.id role=picker.field_props.role>
 ///             // Date field segments...
 ///         </div>
-///         <button {..picker.button_props}>"📅"</button>
+///         <button {..picker.button_props.into_attrs()}>"📅"</button>
 ///         <Show when=move || picker.is_open.get()>
 ///             <div id=picker.dialog_props.id role=picker.dialog_props.role>
 ///                 // Calendar component...
@@ -304,13 +371,13 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
     };
 
     UseDatePickerReturn {
-        group_props: (
-            Attr(attr::Id, picker_id.clone()),
-            Attr(attr::Role, "group"),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaDescribedby, aria_describedby),
-            Attr(attr::AriaDisabled, aria_disabled),
-        ),
+        group_props: UseDatePickerGroupProps {
+            id: picker_id.clone(),
+            role: "group",
+            aria_labelledby,
+            aria_describedby,
+            aria_disabled,
+        },
         label_props: UseDatePickerLabelProps {
             id: label_id.clone(),
         },
@@ -320,16 +387,16 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
             aria_haspopup: "dialog",
             aria_expanded,
         },
-        button_props: (
-            Attr(attr::Id, button_id),
-            Attr(attr::AriaLabel, "Open calendar"),
-            Attr(attr::AriaHaspopup, "dialog"),
-            Attr(attr::AriaExpanded, aria_expanded),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::Tabindex, "0"),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        button_props: UseDatePickerButtonProps {
+            id: button_id,
+            aria_label: "Open calendar",
+            aria_haspopup: "dialog",
+            aria_expanded,
+            aria_disabled,
+            tabindex: "0",
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         dialog_props: UseDatePickerDialogProps {
             id: dialog_id,
             role: "dialog",

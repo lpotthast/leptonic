@@ -417,11 +417,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     let (is_pressed, set_is_pressed) = signal(false);
 
-    let supports_long_press = on_long_press.is_some()
-        || on_long_press_start.is_some()
-        || on_long_press_end.is_some();
-    let long_press_threshold = long_press_threshold
-        .unwrap_or_else(|| Signal::stored(DEFAULT_LONG_PRESS_THRESHOLD));
+    let supports_long_press =
+        on_long_press.is_some() || on_long_press_start.is_some() || on_long_press_end.is_some();
+    let long_press_threshold =
+        long_press_threshold.unwrap_or_else(|| Signal::stored(DEFAULT_LONG_PRESS_THRESHOLD));
 
     let state: StoredValue<Option<PressState>, LocalStorage> = StoredValue::new_local(None);
 
@@ -831,7 +830,9 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
 
         if !e.current_target_contains_target() {
-            tracing::trace!("Aborting handle_pointer_down, as current_target did not contain target.");
+            tracing::trace!(
+                "Aborting handle_pointer_down, as current_target did not contain target."
+            );
             return;
         }
 

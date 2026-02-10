@@ -108,14 +108,14 @@ pub fn PageUseLink() -> impl IntoView {
             <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.0)>
                 <div>
                     <strong>"Internal Link: "</strong>
-                    <a {..internal_link.link_props} style="color: var(--brand-color);">
+                    <a {..internal_link.props.into_attrs()} style="color: var(--brand-color);">
                         "Jump to demo section"
                     </a>
                 </div>
 
                 <div>
                     <strong>"External Link: "</strong>
-                    <a {..external_link.link_props} style="color: var(--brand-color);">
+                    <a {..external_link.props.into_attrs()} style="color: var(--brand-color);">
                         "Visit Leptos"
                         <span style="margin-left: 0.25em;">"↗"</span>
                     </a>
@@ -127,7 +127,7 @@ pub fn PageUseLink() -> impl IntoView {
                 <div>
                     <strong>"Disabled Link: "</strong>
                     <a
-                        {..disabled_link.link_props}
+                        {..disabled_link.props.into_attrs()}
                         style=move || format!(
                             "color: {}; cursor: {};",
                             if is_disabled.get() { "#999" } else { "var(--brand-color)" },
@@ -158,7 +158,7 @@ pub fn PageUseLink() -> impl IntoView {
                     });
 
                     view! {
-                        <a {..link.link_props}>"External Link"</a>
+                        <a {..link.props.into_attrs()}>"External Link"</a>
                     }
                 "#)}
             </Code>
@@ -176,7 +176,7 @@ pub fn PageUseLink() -> impl IntoView {
             <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.0)>
                 <div>
                     <a
-                        {..pressed_link.link_props}
+                        {..pressed_link.props.into_attrs()}
                         style=move || format!(
                             "color: var(--brand-color); transition: transform 100ms; transform: {};",
                             if pressed_link_is_pressed.get() { "scale(0.95)" } else { "scale(1)" }
@@ -205,7 +205,7 @@ pub fn PageUseLink() -> impl IntoView {
                 <div>
                     <strong>"Span as Link: "</strong>
                     <span
-                        {..span_link.link_props}
+                        {..span_link.props.into_attrs()}
                         style="color: var(--brand-color); cursor: pointer; text-decoration: underline;"
                     >
                         "Click or press Enter (check console)"
@@ -225,7 +225,7 @@ pub fn PageUseLink() -> impl IntoView {
 
             <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.0)>
                 <div>
-                    <a {..focus_link.link_props} style="color: var(--brand-color);">
+                    <a {..focus_link.props.into_attrs()} style="color: var(--brand-color);">
                         "Target link"
                     </a>
                 </div>

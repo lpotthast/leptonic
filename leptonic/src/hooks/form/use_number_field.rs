@@ -1,8 +1,8 @@
-use leptos::attr;
-use leptos::attr::{Attr, Attribute};
-use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
+use leptos::{attr, ev};
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
@@ -10,6 +10,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaInvalid, AriaLive, AriaRequired};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/numberfield/src/useNumberField.ts
 
@@ -70,7 +71,7 @@ pub struct UseNumberFieldInput {
     /// Number of decimal places.
     pub decimal_places: Option<usize>,
 
-    /// Whether to format with thousands separators.
+    /// Number of decimal places.
     pub format_options: Option<NumberFormatOptions>,
 
     /// Whether to auto-focus the input on mount.
@@ -121,13 +122,13 @@ impl Default for UseNumberFieldInput {
 #[derive(Clone)]
 pub struct UseNumberFieldReturn {
     /// Props for the input element.
-    pub input_props: UseNumberFieldInputAttrs,
+    pub input_props: UseNumberFieldInputProps,
 
     /// Props for the increment button element.
-    pub increment_button_props: UseNumberFieldButtonAttrs,
+    pub increment_button_props: UseNumberFieldButtonProps,
 
     /// Props for the decrement button element.
-    pub decrement_button_props: UseNumberFieldButtonAttrs,
+    pub decrement_button_props: UseNumberFieldButtonProps,
 
     /// Props for the label element.
     pub label_props: UseNumberFieldLabelProps,
@@ -151,7 +152,77 @@ pub struct UseNumberFieldReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
+/// Props from `use_number_field` for the input element.
+/// Call `.to_attrs()` or `.into_attrs()` for view spreading.
+#[derive(Debug, Clone)]
+pub struct UseNumberFieldInputProps {
+    pub id: String,
+    pub r#type: &'static str,
+    pub role: &'static str,
+    pub name: Option<&'static str>,
+    pub placeholder: Option<&'static str>,
+    pub disabled: Signal<bool>,
+    pub readonly: Signal<bool>,
+    pub aria_label: Option<&'static str>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_required: Option<AriaRequired>,
+    pub aria_valuenow: Signal<Option<f64>>,
+    pub aria_valuemin: Option<f64>,
+    pub aria_valuemax: Option<f64>,
+    pub autofocus: bool,
+    pub inputmode: &'static str,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub on_input: EventHandler<Event>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl UseNumberFieldInputProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseNumberFieldInputAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseNumberFieldInputAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Role, self.role),
+            Attr(attr::Name, self.name),
+            Attr(attr::Placeholder, self.placeholder),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::Readonly, self.readonly),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            Attr(attr::AriaRequired, self.aria_required),
+            Attr(attr::AriaValuenow, self.aria_valuenow),
+            Attr(attr::AriaValuemin, self.aria_valuemin),
+            Attr(attr::AriaValuemax, self.aria_valuemax),
+            Attr(attr::Autofocus, self.autofocus),
+            Attr(attr::Inputmode, self.inputmode),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.on_input.into_on(ev::input),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+        )
+    }
+}
+
 /// Attributes for the number field input element.
+/// Spread onto the input element using `<input {..input_props.into_attrs()}>`.
 pub type UseNumberFieldInputAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Type, &'static str>,
@@ -170,7 +241,7 @@ pub type UseNumberFieldInputAttrs = (
     Attr<attr::AriaValuemax, Option<f64>>,
     Attr<attr::Autofocus, bool>,
     Attr<attr::Inputmode, &'static str>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::input, SharedEventCallback<Event>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -179,7 +250,39 @@ pub type UseNumberFieldInputAttrs = (
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
 );
 
+/// Props from `use_number_field` for the increment/decrement button elements.
+/// Call `.to_attrs()` or `.into_attrs()` for view spreading.
+#[derive(Debug, Clone)]
+pub struct UseNumberFieldButtonProps {
+    pub r#type: &'static str,
+    pub aria_label: &'static str,
+    pub tabindex: &'static str,
+    pub disabled: Signal<bool>,
+    pub on_click: EventHandler<MouseEvent>,
+}
+
+impl UseNumberFieldButtonProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseNumberFieldButtonAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseNumberFieldButtonAttrs {
+        (
+            Attr(attr::Type, self.r#type),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::Disabled, self.disabled),
+            self.on_click.into_on(ev::click),
+        )
+    }
+}
+
 /// Attributes for increment/decrement button elements.
+/// Spread onto the button element using `<button {..button_props.into_attrs()}>`.
 pub type UseNumberFieldButtonAttrs = (
     Attr<attr::Type, &'static str>,
     Attr<attr::AriaLabel, &'static str>,
@@ -198,12 +301,48 @@ pub struct UseNumberFieldLabelProps {
     pub html_for: String,
 }
 
+impl UseNumberFieldLabelProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseNumberFieldLabelAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseNumberFieldLabelAttrs {
+        (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
+    }
+}
+
+/// Attributes for the label element (id, for).
+/// Spread onto the label element using `<label {..label_props.into_attrs()}>`.
+pub type UseNumberFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
+
 /// Props for the description element.
 #[derive(Debug, Clone)]
 pub struct UseNumberFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
+
+impl UseNumberFieldDescriptionProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseNumberFieldDescriptionAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseNumberFieldDescriptionAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// Attributes for the description element (id).
+/// Spread onto the description element using `<p {..description_props.into_attrs()}>`.
+pub type UseNumberFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the error message element.
 #[derive(Debug, Clone)]
@@ -217,6 +356,32 @@ pub struct UseNumberFieldErrorProps {
     /// The aria-live attribute.
     pub aria_live: AriaLive,
 }
+
+impl UseNumberFieldErrorProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseNumberFieldErrorAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseNumberFieldErrorAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLive, self.aria_live),
+        )
+    }
+}
+
+/// Attributes for the error message element (id, role, aria-live).
+/// Spread onto the error message element using `<p {..error_props.into_attrs()}>`.
+pub type UseNumberFieldErrorAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, &'static str>,
+    Attr<attr::AriaLive, AriaLive>,
+);
 
 /// Provides the behavior and accessibility implementation for a number field.
 ///
@@ -241,10 +406,10 @@ pub struct UseNumberFieldErrorProps {
 ///
 /// view! {
 ///     <div>
-///         <label {..number_field.label_props}>"Quantity"</label>
-///         <button {..number_field.decrement_button_props}>"-"</button>
-///         <input value=number_field.display_value {..number_field.input_props} />
-///         <button {..number_field.increment_button_props}>"+"</button>
+///         <label {..number_field.label_props.into_attrs()}>"Quantity"</label>
+///         <button {..number_field.decrement_button_props.into_attrs()}>"-"</button>
+///         <input value=number_field.display_value {..number_field.input_props.into_attrs()} />
+///         <button {..number_field.increment_button_props.into_attrs()}>"+"</button>
 ///     </div>
 /// }
 /// ```
@@ -269,7 +434,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         max_value,
         step,
         decimal_places,
-        format_options,
+        format_options: _,
         auto_focus,
     } = input;
 
@@ -427,8 +592,6 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     // Handle increment button click
     let increment_click = increment;
@@ -465,8 +628,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid =
-        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
     let aria_required = is_required.then_some(AriaRequired::True);
@@ -476,46 +638,46 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     let decrement_disabled = Signal::derive(move || !can_decrement.get());
 
     UseNumberFieldReturn {
-        input_props: (
-            Attr(attr::Id, input_id.clone()),
-            Attr(attr::Type, "text"),
-            Attr(attr::Role, "spinbutton"),
-            Attr(attr::Name, name),
-            Attr(attr::Placeholder, placeholder),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::Readonly, is_read_only),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaDescribedby, aria_describedby),
-            Attr(attr::AriaInvalid, aria_invalid),
-            Attr(attr::AriaRequired, aria_required),
-            Attr(attr::AriaValuenow, value),
-            Attr(attr::AriaValuemin, min_value),
-            Attr(attr::AriaValuemax, max_value),
-            Attr(attr::Autofocus, auto_focus),
-            Attr(attr::Inputmode, "decimal"),
-            data_focus_visible,
-            on(ev::input, handle_input).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-        ),
-        increment_button_props: (
-            Attr(attr::Type, "button"),
-            Attr(attr::AriaLabel, "Increase value"),
-            Attr(attr::Tabindex, "-1"),
-            Attr(attr::Disabled, increment_disabled),
-            on(ev::click, handle_increment).into_cloneable(),
-        ),
-        decrement_button_props: (
-            Attr(attr::Type, "button"),
-            Attr(attr::AriaLabel, "Decrease value"),
-            Attr(attr::Tabindex, "-1"),
-            Attr(attr::Disabled, decrement_disabled),
-            on(ev::click, handle_decrement).into_cloneable(),
-        ),
+        input_props: UseNumberFieldInputProps {
+            id: input_id.clone(),
+            r#type: "text",
+            role: "spinbutton",
+            name,
+            placeholder,
+            disabled: is_disabled,
+            readonly: is_read_only,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            aria_invalid,
+            aria_required,
+            aria_valuenow: value,
+            aria_valuemin: min_value,
+            aria_valuemax: max_value,
+            autofocus: auto_focus,
+            inputmode: "decimal",
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            on_input: EventHandler::new(handle_input),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+        },
+        increment_button_props: UseNumberFieldButtonProps {
+            r#type: "button",
+            aria_label: "Increase value",
+            tabindex: "-1",
+            disabled: increment_disabled,
+            on_click: EventHandler::new(handle_increment),
+        },
+        decrement_button_props: UseNumberFieldButtonProps {
+            r#type: "button",
+            aria_label: "Decrease value",
+            tabindex: "-1",
+            disabled: decrement_disabled,
+            on_click: EventHandler::new(handle_decrement),
+        },
         label_props: UseNumberFieldLabelProps {
             id: label_id,
             html_for: input_id,

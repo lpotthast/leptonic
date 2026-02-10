@@ -1,9 +1,9 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
-use web_sys::{FocusEvent, KeyboardEvent};
+use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use super::use_table::TableSelectionMode;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
@@ -48,8 +48,8 @@ pub struct UseTableRowInput {
 
 /// The return value of the `use_table_row` hook.
 pub struct UseTableRowReturn {
-    /// Props for the row element.
-    pub row_props: UseTableRowAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub row_props: UseTableRowProps,
 
     /// The row key.
     pub row_key: String,
@@ -64,6 +64,52 @@ pub struct UseTableRowReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
+/// Props from `use_table_row` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTableRowProps {
+    pub role: &'static str,
+    pub aria_rowindex: String,
+    pub aria_selected: Signal<Option<AriaSelected>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub tabindex: Signal<&'static str>,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_dblclick: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+}
+
+impl UseTableRowProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableRowAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableRowAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaRowindex, self.aria_rowindex),
+            Attr(attr::AriaSelected, self.aria_selected),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_click.into_on(ev::click),
+            self.on_dblclick.into_on(ev::dblclick),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            attr::custom::custom_attribute("data-focus-visible", self.data_focus_visible),
+        )
+    }
+}
+
 /// Attributes for the table row element.
 pub type UseTableRowAttrs = (
     Attr<attr::Role, &'static str>,
@@ -71,8 +117,8 @@ pub type UseTableRowAttrs = (
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
-    On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
-    On<ev::dblclick, SharedEventCallback<web_sys::MouseEvent>>,
+    On<ev::click, SharedEventCallback<MouseEvent>>,
+    On<ev::dblclick, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -101,7 +147,7 @@ pub type UseTableRowAttrs = (
 /// });
 ///
 /// view! {
-///     <tr {..row.row_props}>
+///     <tr {..row.row_props.into_attrs()}>
 ///         // Table cells...
 ///     </tr>
 /// }
@@ -216,28 +262,26 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     // Row index is 1-based for ARIA (add 1 for header row)
     let aria_rowindex = (row_index + 2).to_string();
 
     UseTableRowReturn {
-        row_props: (
-            Attr(attr::Role, "row"),
-            Attr(attr::AriaRowindex, aria_rowindex),
-            Attr(attr::AriaSelected, aria_selected),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::Tabindex, tabindex),
-            on(ev::click, handle_click).into_cloneable(),
-            handle_dblclick.into_on(ev::dblclick),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-        ),
+        row_props: UseTableRowProps {
+            role: "row",
+            aria_rowindex,
+            aria_selected,
+            aria_disabled,
+            tabindex,
+            on_click: EventHandler::new(handle_click),
+            on_dblclick: handle_dblclick,
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+        },
         row_key,
         is_selected,
         is_focused,
@@ -254,8 +298,32 @@ pub struct UseTableHeaderRowInput {
 
 /// Return value for the table header row.
 pub struct UseTableHeaderRowReturn {
-    /// Props for the header row element.
-    pub row_props: UseTableHeaderRowAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub row_props: UseTableHeaderRowProps,
+}
+
+/// Props from `use_table_header_row` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTableHeaderRowProps {
+    pub role: &'static str,
+    pub aria_rowindex: &'static str,
+}
+
+impl UseTableHeaderRowProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableHeaderRowAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableHeaderRowAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaRowindex, self.aria_rowindex),
+        )
+    }
 }
 
 /// Attributes for the table header row element.
@@ -266,9 +334,12 @@ pub type UseTableHeaderRowAttrs = (
 
 /// Provides the behavior and accessibility for a table header row.
 pub fn use_table_header_row(input: UseTableHeaderRowInput) -> UseTableHeaderRowReturn {
-    let UseTableHeaderRowInput { row_index } = input;
+    let UseTableHeaderRowInput { row_index: _ } = input;
 
     UseTableHeaderRowReturn {
-        row_props: (Attr(attr::Role, "row"), Attr(attr::AriaRowindex, "1")),
+        row_props: UseTableHeaderRowProps {
+            role: "row",
+            aria_rowindex: "1",
+        },
     }
 }

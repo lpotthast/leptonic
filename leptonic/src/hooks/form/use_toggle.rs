@@ -1,10 +1,11 @@
-use leptos::attr::Attribute;
+use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toggle/src/useToggle.ts
 
@@ -42,8 +43,8 @@ impl Default for UseToggleInput {
 /// The return value of the `use_toggle` hook.
 #[derive(Debug, Clone)]
 pub struct UseToggleReturn {
-    /// Props for the toggle element.
-    pub toggle_props: UseToggleAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseToggleProps,
 
     /// Whether the toggle is currently selected.
     pub is_selected: Signal<bool>,
@@ -55,7 +56,41 @@ pub struct UseToggleReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
-/// Attributes for the toggle element.
+/// Props from `use_toggle` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseToggleProps {
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+}
+
+impl UseToggleProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseToggleAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseToggleAttrs {
+        (
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+        )
+    }
+}
+
+/// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UseToggleAttrs = (
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -63,7 +98,7 @@ pub type UseToggleAttrs = (
     On<ev::blur, SharedEventCallback<FocusEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    leptos::attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 /// Provides the behavior for toggle elements like checkboxes and switches.
@@ -151,19 +186,17 @@ pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     UseToggleReturn {
-        toggle_props: (
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-        ),
+        props: UseToggleProps {
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+        },
         is_selected,
         is_pressed: is_pressed.into(),
         is_focus_visible,

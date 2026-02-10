@@ -37,7 +37,10 @@ pub fn PageUseSwitchHook() -> impl IntoView {
         ..
     } = use_toggle_state(false);
 
-    let UseToggleReturn { toggle_props, .. } = use_toggle(UseToggleInput {
+    let UseToggleReturn {
+        props: toggle_props,
+        ..
+    } = use_toggle(UseToggleInput {
         is_selected: toggle_selected.into(),
         is_disabled: false.into(),
         is_read_only: false.into(),
@@ -76,8 +79,8 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                     });
 
                     view! {
-                        <label {..switch_props}>
-                            <input type="checkbox" {..input_props} /> // Hidden
+                        <label {..switch_props.into_attrs()}>
+                            <input type="checkbox" {..input_props.into_attrs()} /> // Hidden
                             <span class="switch-track">
                                 <span class="switch-thumb"></span>
                             </span>
@@ -89,12 +92,12 @@ pub fn PageUseSwitchHook() -> impl IntoView {
 
             <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
                 <label
-                    {..switch_props}
+                    {..switch_props.into_attrs()}
                     on:click=move |_| toggle.run(())
                     style="display: flex; align-items: center; gap: 1em; cursor: pointer; user-select: none;"
                 >
                     // Hidden input for form submission
-                    <input type="checkbox" {..input_props} style="position: absolute; opacity: 0; width: 0; height: 0;" />
+                    <input type="checkbox" {..input_props.into_attrs()} style="position: absolute; opacity: 0; width: 0; height: 0;" />
 
                     // Visual switch
                     <div style=move || format!(
@@ -134,7 +137,7 @@ pub fn PageUseSwitchHook() -> impl IntoView {
                 {indoc!(r#"
                     let UseToggleStateReturn { is_selected, toggle, .. } = use_toggle_state(false);
 
-                    let UseToggleReturn { toggle_props, .. } = use_toggle(UseToggleInput {
+                    let UseToggleReturn { props: toggle_props, .. } = use_toggle(UseToggleInput {
                         is_selected: is_selected.into(),
                         is_disabled: false.into(),
                         is_read_only: false.into(),
@@ -151,7 +154,7 @@ pub fn PageUseSwitchHook() -> impl IntoView {
 
             <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
                 <button
-                    {..toggle_props}
+                    {..toggle_props.into_attrs()}
                     on:click=move |_| do_toggle.run(())
                     aria-pressed=move || toggle_selected.get()
                     style=move || format!(

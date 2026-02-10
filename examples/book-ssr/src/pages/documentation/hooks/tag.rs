@@ -50,7 +50,7 @@ pub fn PageUseTag() -> impl IntoView {
                 <label id={label_props.id} style="display: block; margin-bottom: 0.5em; font-weight: 500;">
                     "Technologies"
                 </label>
-                <div {..group_props} style="display: flex; flex-wrap: wrap; gap: 0.5em;">
+                <div {..group_props.into_attrs()} style="display: flex; flex-wrap: wrap; gap: 0.5em;">
                     <For
                         each=move || tags.get().into_iter().enumerate()
                         key=|(_, tag)| tag.clone()
@@ -82,13 +82,13 @@ pub fn PageUseTag() -> impl IntoView {
 
                             view! {
                                 <div
-                                    {..tag_hook.row_props}
+                                    {..tag_hook.row_props.into_attrs()}
                                     style="display: inline-flex; align-items: center; gap: 0.25em; padding: 0.25em 0.5em; background: #e3f2fd; border-radius: 16px; cursor: pointer; outline: none;"
                                     style:box-shadow=move || if is_focused.get() { "0 0 0 2px var(--brand-color)" } else { "none" }
                                 >
-                                    <span {..tag_hook.cell_props}>{ tag_key }</span>
+                                    <span {..tag_hook.cell_props.into_attrs()}>{ tag_key }</span>
                                     <button
-                                        {..tag_hook.remove_button_props}
+                                        {..tag_hook.remove_button_props.into_attrs()}
                                         style="border: none; background: none; cursor: pointer; padding: 0; width: 16px; height: 16px; border-radius: 50%; display: flex; align-items: center; justify-content: center;"
                                     >
                                         "×"
@@ -126,9 +126,9 @@ pub fn PageUseTag() -> impl IntoView {
 
                     view! {
                         <div {..group_props}>
-                            <div {..tag.row_props}>
-                                <span {..tag.cell_props}>"Rust"</span>
-                                <button {..tag.remove_button_props}>"×"</button>
+                            <div {..tag.row_props.into_attrs()}>
+                                <span {..tag.cell_props.into_attrs()}>"Rust"</span>
+                                <button {..tag.remove_button_props.into_attrs()}>"×"</button>
                             </div>
                         </div>
                     }

@@ -1,8 +1,9 @@
-use leptos::attr::Attribute;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::KeyboardEvent;
+
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useDismissButton.ts
 
@@ -36,7 +37,31 @@ impl Default for UseDismissInput {
 /// The return value of the `use_dismiss` hook.
 pub struct UseDismissReturn {
     /// Props for the dismissable container element.
-    pub dismiss_props: UseDismissAttrs,
+    pub dismiss_props: UseDismissProps,
+}
+
+/// Props from `use_dismiss` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseDismissProps {
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_blur: EventHandler<web_sys::FocusEvent>,
+}
+
+impl UseDismissProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDismissAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDismissAttrs {
+        (
+            self.on_keydown.into_on(ev::keydown),
+            self.on_blur.into_on(ev::blur),
+        )
+    }
 }
 
 /// Attributes for the dismissable container element.
@@ -63,7 +88,7 @@ pub type UseDismissAttrs = (
 /// });
 ///
 /// view! {
-///     <div {..dismiss.dismiss_props}>
+///     <div {..dismiss.dismiss_props.into_attrs()}>
 ///         "Dismissable content"
 ///     </div>
 /// }
@@ -107,10 +132,10 @@ pub fn use_dismiss(input: UseDismissInput) -> UseDismissReturn {
     };
 
     UseDismissReturn {
-        dismiss_props: (
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on(ev::blur, handle_blur).into_cloneable(),
-        ),
+        dismiss_props: UseDismissProps {
+            on_keydown: EventHandler::new(handle_keydown),
+            on_blur: EventHandler::new(handle_blur),
+        },
     }
 }
 
@@ -119,7 +144,27 @@ pub fn use_dismiss(input: UseDismissInput) -> UseDismissReturn {
 /// This provides an accessible way for screen reader users to dismiss overlays.
 pub struct UseDismissButtonReturn {
     /// Props for the dismiss button.
-    pub button_props: UseDismissButtonAttrs,
+    pub button_props: UseDismissButtonProps,
+}
+
+/// Props from `use_dismiss_button` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseDismissButtonProps {
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+}
+
+impl UseDismissButtonProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDismissButtonAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDismissButtonAttrs {
+        (self.on_click.into_on(ev::click),)
+    }
 }
 
 /// Attributes for the dismiss button.
@@ -148,7 +193,7 @@ pub struct UseDismissButtonInput {
 ///     <button
 ///         class="visually-hidden"
 ///         aria-label="Dismiss"
-///         {..dismiss_button.button_props}
+///         {..dismiss_button.button_props.into_attrs()}
 ///     >
 ///         "Dismiss"
 ///     </button>
@@ -164,6 +209,8 @@ pub fn use_dismiss_button(input: UseDismissButtonInput) -> UseDismissButtonRetur
     };
 
     UseDismissButtonReturn {
-        button_props: (on(ev::click, handle_click).into_cloneable(),),
+        button_props: UseDismissButtonProps {
+            on_click: EventHandler::new(handle_click),
+        },
     }
 }

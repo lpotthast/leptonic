@@ -1,11 +1,12 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 
 use crate::hooks::interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput};
+use crate::utils::EventHandler;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModalOverlay.ts
 // React Aria calls this "useModalOverlay" with "underlay" props. We use "backdrop" terminology for clarity.
@@ -39,14 +40,35 @@ impl Default for UseModalBackdropInput {
 
 /// The return value of the `use_modal_backdrop` hook.
 pub struct UseModalBackdropReturn {
-    /// Props for the backdrop element (the semi-transparent layer behind the modal).
-    pub backdrop_props: UseModalBackdropAttrs,
+    /// Props for the backdrop element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub backdrop_props: UseModalBackdropProps,
 
-    /// Props for the modal content element (stops click propagation).
-    pub content_props: UseModalBackdropContentAttrs,
+    /// Props for the modal content element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub content_props: UseModalBackdropContentProps,
 
     /// The ID of the backdrop element.
     pub backdrop_id: String,
+}
+
+/// Props from `use_modal_backdrop` for the backdrop element.
+#[derive(Debug, Clone)]
+pub struct UseModalBackdropProps {
+    pub id: String,
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+}
+
+impl UseModalBackdropProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseModalBackdropAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseModalBackdropAttrs {
+        (Attr(attr::Id, self.id), self.on_click.into_on(ev::click))
+    }
 }
 
 /// Attributes for the backdrop element.
@@ -54,6 +76,26 @@ pub type UseModalBackdropAttrs = (
     Attr<attr::Id, String>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
 );
+
+/// Props from `use_modal_backdrop` for the modal content container.
+#[derive(Debug, Clone)]
+pub struct UseModalBackdropContentProps {
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+}
+
+impl UseModalBackdropContentProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseModalBackdropContentAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseModalBackdropContentAttrs {
+        (self.on_click.into_on(ev::click),)
+    }
+}
 
 /// Attributes for the modal content container (to stop click propagation).
 pub type UseModalBackdropContentAttrs = (On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,);
@@ -80,8 +122,8 @@ pub type UseModalBackdropContentAttrs = (On<ev::click, SharedEventCallback<web_s
 ///
 /// view! {
 ///     <Show when=move || is_open.get()>
-///         <div class="backdrop" {..backdrop.backdrop_props}>
-///             <div class="modal" {..backdrop.content_props}>
+///         <div class="backdrop" {..backdrop.backdrop_props.into_attrs()}>
+///             <div class="modal" {..backdrop.content_props.into_attrs()}>
 ///                 "Modal content"
 ///             </div>
 ///         </div>
@@ -123,11 +165,13 @@ pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropRetur
     };
 
     UseModalBackdropReturn {
-        backdrop_props: (
-            Attr(attr::Id, backdrop_id.clone()),
-            on(ev::click, handle_backdrop_click).into_cloneable(),
-        ),
-        content_props: (on(ev::click, handle_content_click).into_cloneable(),),
+        backdrop_props: UseModalBackdropProps {
+            id: backdrop_id.clone(),
+            on_click: EventHandler::new(handle_backdrop_click),
+        },
+        content_props: UseModalBackdropContentProps {
+            on_click: EventHandler::new(handle_content_click),
+        },
         backdrop_id,
     }
 }

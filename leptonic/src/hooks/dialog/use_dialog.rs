@@ -1,15 +1,16 @@
 use std::time::Duration;
 
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::FocusEvent;
 
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_safely;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dialog/src/useDialog.ts
 
@@ -92,9 +93,10 @@ pub enum DialogRole {
 pub struct UseDialogReturn {
     /// Props for the dialog container element.
     ///
-    /// Spread these onto the dialog element. The element is automatically captured
-    /// for focus-on-mount behavior via an included [`ElementCaptureAttr`].
-    pub dialog_props: UseDialogAttrs,
+    /// Call `.to_attrs()` or `.into_attrs()` to get spreadable attributes.
+    /// The element is automatically captured for focus-on-mount behavior
+    /// via an included [`ElementCaptureAttr`].
+    pub dialog_props: UseDialogProps,
 
     /// Props for the title element.
     pub title_props: UseDialogTitleProps,
@@ -106,7 +108,53 @@ pub struct UseDialogReturn {
     pub dialog_id: String,
 }
 
+/// Props from `use_dialog` that can be extracted and merged programmatically.
+///
+/// Call `.to_attrs()` or `.into_attrs()` to produce spreadable [`UseDialogAttrs`].
+#[derive(Debug, Clone)]
+pub struct UseDialogProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub tabindex: &'static str,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub element_capture: ElementCaptureAttr,
+}
+
+impl UseDialogProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDialogAttrs {
+        (
+            Attr(attr::Id, self.id.clone()),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby.clone()),
+            Attr(attr::AriaDescribedby, self.aria_describedby.clone()),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_blur.to_on(ev::blur),
+            self.element_capture.clone(),
+        )
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDialogAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_blur.into_on(ev::blur),
+            self.element_capture,
+        )
+    }
+}
+
 /// Attributes for the dialog container element.
+///
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseDialogAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
@@ -124,12 +172,50 @@ pub struct UseDialogTitleProps {
     pub id: String,
 }
 
+impl UseDialogTitleProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDialogTitleAttrs {
+        (Attr(attr::Id, self.id.clone()),)
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDialogTitleAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// Attributes for the dialog title element.
+///
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
+pub type UseDialogTitleAttrs = (Attr<attr::Id, String>,);
+
 /// Props for the dialog description element.
 #[derive(Debug, Clone)]
 pub struct UseDialogDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
+
+impl UseDialogDescriptionProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDialogDescriptionAttrs {
+        (Attr(attr::Id, self.id.clone()),)
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDialogDescriptionAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// Attributes for the dialog description element.
+///
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
+pub type UseDialogDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Provides the behavior and accessibility implementation for a dialog.
 ///
@@ -159,7 +245,7 @@ pub struct UseDialogDescriptionProps {
 /// });
 ///
 /// view! {
-///     <div {..dialog.dialog_props}>
+///     <div {..dialog.dialog_props.into_attrs()}>
 ///         <h2 id=dialog.title_props.id>"Confirm Action"</h2>
 ///         <p id=dialog.description_props.id>"Are you sure you want to proceed?"</p>
 ///         <button>"Cancel"</button>
@@ -271,15 +357,15 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     };
 
     UseDialogReturn {
-        dialog_props: (
-            Attr(attr::Id, dialog_id.clone()),
-            Attr(attr::Role, role),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaDescribedby, aria_describedby),
-            Attr(attr::Tabindex, "-1"),
-            on(ev::blur, handle_blur).into_cloneable(),
-            element.attr(),
-        ),
+        dialog_props: UseDialogProps {
+            id: dialog_id.clone(),
+            role,
+            aria_labelledby,
+            aria_describedby,
+            tabindex: "-1",
+            on_blur: EventHandler::new(handle_blur),
+            element_capture: element.attr(),
+        },
         title_props: UseDialogTitleProps { id: title_id },
         description_props: UseDialogDescriptionProps { id: description_id },
         dialog_id,

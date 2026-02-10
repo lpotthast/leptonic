@@ -174,30 +174,28 @@ where
         None => 0.0,
     };
 
-    let placement_x = Memo::new(move |_| {
-        match placement_x
-            .get()
-            .direction_aware(writing_direction.get())
-        {
-            original @ PhysicalPlacementX::OuterLeft => {
-                let space_left = target_bounding.left.get();
-                if overlay_bounding.width.get() > space_left {
-                    PhysicalPlacementX::OuterRight
-                } else {
-                    original
+    let placement_x =
+        Memo::new(
+            move |_| match placement_x.get().direction_aware(writing_direction.get()) {
+                original @ PhysicalPlacementX::OuterLeft => {
+                    let space_left = target_bounding.left.get();
+                    if overlay_bounding.width.get() > space_left {
+                        PhysicalPlacementX::OuterRight
+                    } else {
+                        original
+                    }
                 }
-            }
-            original @ PhysicalPlacementX::OuterRight => {
-                let space_right = container_width() - target_bounding.right.get();
-                if overlay_bounding.width.get() > space_right {
-                    PhysicalPlacementX::OuterLeft
-                } else {
-                    original
+                original @ PhysicalPlacementX::OuterRight => {
+                    let space_right = container_width() - target_bounding.right.get();
+                    if overlay_bounding.width.get() > space_right {
+                        PhysicalPlacementX::OuterLeft
+                    } else {
+                        original
+                    }
                 }
-            }
-            other => other,
-        }
-    });
+                other => other,
+            },
+        );
 
     let placement_y = Memo::new(move |_| match placement_y.get() {
         original @ PlacementY::Above => {

@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::utils::aria::AriaDisabled;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tag/src/useTagGroup.ts
 
@@ -65,7 +66,7 @@ impl Default for UseTagGroupInput {
 #[derive(Debug, Clone)]
 pub struct UseTagGroupReturn {
     /// Props for the tag group container element.
-    pub group_props: UseTagGroupAttrs,
+    pub group_props: UseTagGroupProps,
 
     /// Props for the label element.
     pub label_props: UseTagGroupLabelProps,
@@ -78,6 +79,38 @@ pub struct UseTagGroupReturn {
 
     /// Set the focused tag.
     pub set_focused_key: Callback<Option<String>>,
+}
+
+/// Props from `use_tag_group` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTagGroupProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_label: Option<String>,
+    pub aria_labelledby: Option<String>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseTagGroupProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTagGroupAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTagGroupAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the tag group container element.
@@ -156,14 +189,14 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
     };
 
     UseTagGroupReturn {
-        group_props: (
-            Attr(attr::Id, group_id.clone()),
-            Attr(attr::Role, "grid"),
-            Attr(attr::AriaLabel, None),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        group_props: UseTagGroupProps {
+            id: group_id.clone(),
+            role: "grid",
+            aria_label: None,
+            aria_labelledby,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         label_props: UseTagGroupLabelProps { id: label_id },
         group_id,
         focused_key: focused_key.into(),

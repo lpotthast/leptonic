@@ -1,7 +1,7 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -10,6 +10,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaExpanded, AriaRequired};
+use crate::utils::EventHandler;
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/combobox/src/useComboBox.ts
 
 /// Input parameters for the `use_combobox` hook.
@@ -134,10 +135,10 @@ where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
     /// Props for the input element.
-    pub input_props: UseComboBoxInputAttrs,
+    pub input_props: UseComboBoxInputProps,
 
     /// Props for the trigger button element.
-    pub button_props: UseComboBoxButtonAttrs,
+    pub button_props: UseComboBoxButtonProps,
 
     /// Props for the listbox element.
     pub listbox_props: UseComboBoxListBoxProps,
@@ -180,6 +181,100 @@ where
 
     /// Clear the input and selection.
     pub clear: Callback<()>,
+}
+
+/// Props from `use_combobox` for the input element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseComboBoxInputProps {
+    pub id: String,
+    pub r#type: &'static str,
+    pub role: &'static str,
+    pub value: Signal<String>,
+    pub placeholder: Option<&'static str>,
+    pub disabled: Signal<bool>,
+    pub readonly: Signal<bool>,
+    pub aria_autocomplete: &'static str,
+    pub aria_haspopup: &'static str,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
+    pub aria_controls: String,
+    pub aria_label: Option<&'static str>,
+    pub aria_labelledby: Option<String>,
+    pub aria_required: Option<AriaRequired>,
+    pub aria_activedescendant: Signal<Option<String>>,
+    pub on_input: EventHandler<Event>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+}
+
+impl UseComboBoxInputProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseComboBoxInputAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseComboBoxInputAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Role, self.role),
+            Attr(attr::Value, self.value),
+            Attr(attr::Placeholder, self.placeholder),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::Readonly, self.readonly),
+            Attr(attr::AriaAutocomplete, self.aria_autocomplete),
+            Attr(attr::AriaHaspopup, self.aria_haspopup),
+            Attr(attr::AriaExpanded, self.aria_expanded),
+            Attr(attr::AriaControls, self.aria_controls),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaRequired, self.aria_required),
+            Attr(attr::AriaActivedescendant, self.aria_activedescendant),
+            self.on_input.into_on(ev::input),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+        )
+    }
+}
+
+/// Props from `use_combobox` for the button element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseComboBoxButtonProps {
+    pub id: String,
+    pub r#type: &'static str,
+    pub tabindex: &'static str,
+    pub aria_label: &'static str,
+    pub aria_haspopup: &'static str,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
+    pub disabled: Signal<bool>,
+    pub on_click: EventHandler<MouseEvent>,
+}
+
+impl UseComboBoxButtonProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseComboBoxButtonAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseComboBoxButtonAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaHaspopup, self.aria_haspopup),
+            Attr(attr::AriaExpanded, self.aria_expanded),
+            Attr(attr::Disabled, self.disabled),
+            self.on_click.into_on(ev::click),
+        )
+    }
 }
 
 /// Attributes for the combobox input element.
@@ -253,8 +348,8 @@ pub struct UseComboBoxListBoxProps {
 ///
 /// view! {
 ///     <div>
-///         <input {..combobox.input_props} />
-///         <button {..combobox.button_props}>"▼"</button>
+///         <input {..combobox.input_props.into_attrs()} />
+///         <button {..combobox.button_props.into_attrs()}>"▼"</button>
 ///         <Show when=move || combobox.is_open.get()>
 ///             <ul {..combobox.listbox_props}>
 ///                 <For
@@ -579,37 +674,37 @@ where
     });
 
     UseComboBoxReturn {
-        input_props: (
-            Attr(attr::Id, input_id.clone()),
-            Attr(attr::Type, "text"),
-            Attr(attr::Role, "combobox"),
-            Attr(attr::Value, input_value),
-            Attr(attr::Placeholder, placeholder),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::Readonly, is_read_only),
-            Attr(attr::AriaAutocomplete, "list"),
-            Attr(attr::AriaHaspopup, "listbox"),
-            Attr(attr::AriaExpanded, aria_expanded),
-            Attr(attr::AriaControls, listbox_id.clone()),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaRequired, aria_required),
-            Attr(attr::AriaActivedescendant, aria_activedescendant),
-            on(ev::input, handle_input).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on(ev::focus, handle_focus).into_cloneable(),
-            on(ev::blur, handle_blur).into_cloneable(),
-        ),
-        button_props: (
-            Attr(attr::Id, button_id),
-            Attr(attr::Type, "button"),
-            Attr(attr::Tabindex, "-1"),
-            Attr(attr::AriaLabel, "Show suggestions"),
-            Attr(attr::AriaHaspopup, "listbox"),
-            Attr(attr::AriaExpanded, aria_expanded),
-            Attr(attr::Disabled, is_disabled),
-            on(ev::click, handle_button_click).into_cloneable(),
-        ),
+        input_props: UseComboBoxInputProps {
+            id: input_id.clone(),
+            r#type: "text",
+            role: "combobox",
+            value: input_value,
+            placeholder,
+            disabled: is_disabled,
+            readonly: is_read_only,
+            aria_autocomplete: "list",
+            aria_haspopup: "listbox",
+            aria_expanded,
+            aria_controls: listbox_id.clone(),
+            aria_label,
+            aria_labelledby,
+            aria_required,
+            aria_activedescendant,
+            on_input: EventHandler::new(handle_input),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: EventHandler::new(handle_focus),
+            on_blur: EventHandler::new(handle_blur),
+        },
+        button_props: UseComboBoxButtonProps {
+            id: button_id,
+            r#type: "button",
+            tabindex: "-1",
+            aria_label: "Show suggestions",
+            aria_haspopup: "listbox",
+            aria_expanded,
+            disabled: is_disabled,
+            on_click: EventHandler::new(handle_button_click),
+        },
         listbox_props: UseComboBoxListBoxProps {
             id: listbox_id.clone(),
             role: "listbox",

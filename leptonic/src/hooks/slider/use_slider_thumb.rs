@@ -519,8 +519,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     });
 
     // Compute aria-invalid
-    let aria_invalid =
-        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));

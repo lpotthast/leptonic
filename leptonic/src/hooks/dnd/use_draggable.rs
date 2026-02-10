@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::DragEvent;
 
 use crate::utils::aria::AriaGrabbed;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrag.ts
 
@@ -159,13 +160,47 @@ pub struct DragEndEvent {
 /// The return value of the `use_draggable` hook.
 pub struct UseDraggableReturn {
     /// Props for the draggable element.
-    pub drag_props: UseDraggableAttrs,
+    pub drag_props: UseDraggableProps,
 
     /// The ID of the draggable element.
     pub draggable_id: String,
 
     /// Whether a drag is currently in progress.
     pub is_dragging: Signal<bool>,
+}
+
+/// Props from `use_draggable` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseDraggableProps {
+    pub id: String,
+    pub draggable: Signal<&'static str>,
+    pub role: &'static str,
+    pub aria_grabbed: Signal<Option<AriaGrabbed>>,
+    pub on_dragstart: EventHandler<DragEvent>,
+    pub on_drag: EventHandler<DragEvent>,
+    pub on_dragend: EventHandler<DragEvent>,
+}
+
+impl UseDraggableProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDraggableAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDraggableAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Draggable, self.draggable),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaGrabbed, self.aria_grabbed),
+            self.on_dragstart.into_on(ev::dragstart),
+            self.on_drag.into_on(ev::drag),
+            self.on_dragend.into_on(ev::dragend),
+        )
+    }
 }
 
 /// Attributes for the draggable element.
@@ -276,15 +311,15 @@ pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
     };
 
     UseDraggableReturn {
-        drag_props: (
-            Attr(attr::Id, draggable_id.clone()),
-            Attr(attr::Draggable, draggable_attr),
-            Attr(attr::Role, "button"),
-            Attr(attr::AriaGrabbed, aria_grabbed),
-            on(ev::dragstart, handle_drag_start).into_cloneable(),
-            on(ev::drag, handle_drag).into_cloneable(),
-            on(ev::dragend, handle_drag_end).into_cloneable(),
-        ),
+        drag_props: UseDraggableProps {
+            id: draggable_id.clone(),
+            draggable: draggable_attr,
+            role: "button",
+            aria_grabbed,
+            on_dragstart: EventHandler::new(handle_drag_start),
+            on_drag: EventHandler::new(handle_drag),
+            on_dragend: EventHandler::new(handle_drag_end),
+        },
         draggable_id,
         is_dragging: is_dragging.into(),
     }

@@ -93,8 +93,7 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
             aria_haspopup: aria_has_popup,
             aria_expanded: Signal::derive(move || Some(AriaExpanded::from(show.get()))),
             aria_controls: Signal::derive(move || {
-                show
-                    .get()
+                show.get()
                     .then(|| AriaControls(vec![overlay_id.to_string()]).into_attribute_value())
             }),
         },

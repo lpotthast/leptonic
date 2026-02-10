@@ -1,7 +1,8 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{Event, FocusEvent};
 
@@ -9,6 +10,7 @@ use super::use_field::ValidationState;
 use super::use_radio_group::UseRadioGroupState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaInvalid;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadio.ts
 
@@ -40,8 +42,8 @@ where
 /// The return value of the `use_radio` hook.
 #[derive(Debug, Clone)]
 pub struct UseRadioReturn {
-    /// Props for the radio input element.
-    pub input_props: UseRadioInputAttrs,
+    /// Props for the radio input element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub input_props: UseRadioInputProps,
 
     /// Whether this radio is currently selected.
     pub is_selected: Signal<bool>,
@@ -56,7 +58,51 @@ pub struct UseRadioReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
-/// Attributes for the radio input element.
+/// Props from `use_radio` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseRadioInputProps {
+    pub r#type: &'static str,
+    pub name: Option<&'static str>,
+    pub checked: Signal<bool>,
+    pub disabled: Signal<bool>,
+    pub aria_label: Option<&'static str>,
+    pub aria_invalid: Option<AriaInvalid>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub on_change: EventHandler<Event>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl UseRadioInputProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseRadioInputAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseRadioInputAttrs {
+        (
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Name, self.name),
+            Attr(attr::Checked, self.checked),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.on_change.into_on(ev::change),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+        )
+    }
+}
+
+/// These attributes must be spread onto the target element using the spread syntax `<input {..attrs}/>`.
 pub type UseRadioInputAttrs = (
     Attr<attr::Type, &'static str>,
     Attr<attr::Name, Option<&'static str>>,
@@ -64,7 +110,7 @@ pub type UseRadioInputAttrs = (
     Attr<attr::Disabled, Signal<bool>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaInvalid, Option<AriaInvalid>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::change, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -98,7 +144,7 @@ pub type UseRadioInputAttrs = (
 ///
 /// view! {
 ///     <label>
-///         <input {..radio.input_props} />
+///         <input {..radio.input_props.into_attrs()} />
 ///         "Option 1"
 ///     </label>
 /// }
@@ -137,8 +183,7 @@ where
     };
 
     // Compute aria-invalid
-    let aria_invalid =
-        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Use focus ring for keyboard focus visibility
     let UseFocusRingReturn {
@@ -153,24 +198,21 @@ where
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
-
     UseRadioReturn {
-        input_props: (
-            Attr(attr::Type, "radio"),
-            Attr(attr::Name, name),
-            Attr(attr::Checked, is_selected),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaInvalid, aria_invalid),
-            data_focus_visible,
-            on(ev::change, handle_change).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-        ),
+        input_props: UseRadioInputProps {
+            r#type: "radio",
+            name,
+            checked: is_selected,
+            disabled: is_disabled,
+            aria_label,
+            aria_invalid,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            on_change: EventHandler::new(handle_change),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+        },
         is_selected,
         is_disabled,
         is_pressed: is_pressed.into(),

@@ -23,7 +23,7 @@
 //
 // ## API DIFFERENCES
 //
-// - `underlayProps` is renamed to `backdrop_attrs` for consistency with
+// - `underlayProps` is renamed to `backdrop_props` for consistency with
 //   `use_modal_backdrop` naming conventions.
 //
 // =============================================================================
@@ -31,15 +31,16 @@
 use std::marker::PhantomData;
 
 use educe::Educe;
-use leptos::attr::Attribute;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
-use leptos::tachys::html::style::Style;
+use leptos::tachys::html::style::{style, Style};
 use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::use_event_listener;
 use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
+
+use crate::utils::EventHandler;
 
 use super::use_overlay_position::{
     use_overlay_position, PlacementX, PlacementY, UseOverlayPositionInput,
@@ -94,11 +95,52 @@ where
 #[derive(Debug, Clone)]
 pub struct UsePopoverReturn {
     /// Props for the popover element.
-    pub popover_attrs: UsePopoverAttrs,
+    pub popover_props: UsePopoverProps,
 
     /// Props to apply to a backdrop element, if any.
     /// The backdrop is an optional overlay behind the popover that captures clicks.
-    pub backdrop_attrs: UsePopoverBackdropAttrs,
+    pub backdrop_props: UsePopoverBackdropProps,
+}
+
+/// Props from `use_popover` for the popover element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UsePopoverProps {
+    pub position: Signal<(&'static str, String)>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UsePopoverProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UsePopoverAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UsePopoverAttrs {
+        (style(self.position), self.on_keydown.into_on(ev::keydown))
+    }
+}
+
+/// Props from `use_popover` for the backdrop element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UsePopoverBackdropProps {
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+}
+
+impl UsePopoverBackdropProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UsePopoverBackdropAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UsePopoverBackdropAttrs {
+        (self.on_click.into_on(ev::click),)
+    }
 }
 
 /// These attributes must be spread onto the popover element.
@@ -135,8 +177,8 @@ pub type UsePopoverBackdropAttrs = (On<ev::click, SharedEventCallback<web_sys::M
 ///
 /// view! {
 ///     <Show when=move || is_open.get()>
-///         <div class="backdrop" {..popover.backdrop_attrs}/>
-///         <div class="popover" {..popover.popover_attrs}>
+///         <div class="backdrop" {..popover.backdrop_props.into_attrs()}/>
+///         <div class="popover" {..popover.popover_props.into_attrs()}>
 ///             "Popover content"
 ///         </div>
 ///     </Show>
@@ -249,13 +291,13 @@ where
         }
     };
 
-    let (position_style, _z_index, _top, _left) = position.props.into_attrs();
-
     UsePopoverReturn {
-        popover_attrs: (
-            position_style,
-            on(ev::keydown, on_key_down).into_cloneable(),
-        ),
-        backdrop_attrs: (on(ev::click, on_backdrop_click).into_cloneable(),),
+        popover_props: UsePopoverProps {
+            position: position.props.position,
+            on_keydown: EventHandler::new(on_key_down),
+        },
+        backdrop_props: UsePopoverBackdropProps {
+            on_click: EventHandler::new(on_backdrop_click),
+        },
     }
 }

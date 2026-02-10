@@ -1,3 +1,5 @@
+use leptos::attr;
+use leptos::attr::Attr;
 use uuid::Uuid;
 
 use crate::utils::aria::AriaHidden;
@@ -34,6 +36,29 @@ pub struct UseListBoxSectionGroupProps {
     pub aria_labelledby: Option<String>,
 }
 
+impl UseListBoxSectionGroupProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseListBoxSectionGroupAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseListBoxSectionGroupAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+        )
+    }
+}
+
+/// Attributes for the section group element.
+pub type UseListBoxSectionGroupAttrs = (
+    Attr<attr::Role, &'static str>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+);
+
 /// Props for the section heading element.
 #[derive(Debug, Clone)]
 pub struct UseListBoxSectionHeadingProps {
@@ -47,12 +72,54 @@ pub struct UseListBoxSectionHeadingProps {
     pub aria_hidden: AriaHidden,
 }
 
+impl UseListBoxSectionHeadingProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseListBoxSectionHeadingAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseListBoxSectionHeadingAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaHidden, self.aria_hidden),
+        )
+    }
+}
+
+/// Attributes for the section heading element.
+pub type UseListBoxSectionHeadingAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, &'static str>,
+    Attr<attr::AriaHidden, AriaHidden>,
+);
+
 /// Props for section items container.
 #[derive(Debug, Clone)]
 pub struct UseListBoxSectionItemsProps {
     /// The role attribute.
     pub role: &'static str,
 }
+
+impl UseListBoxSectionItemsProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseListBoxSectionItemsAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseListBoxSectionItemsAttrs {
+        (Attr(attr::Role, self.role),)
+    }
+}
+
+/// Attributes for the section items container.
+pub type UseListBoxSectionItemsAttrs = (Attr<attr::Role, &'static str>,);
 
 /// Provides accessibility attributes for a section within a listbox.
 ///

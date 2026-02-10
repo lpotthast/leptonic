@@ -1,13 +1,14 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
-use web_sys::{FocusEvent, KeyboardEvent};
+use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use super::use_table::SortDirection;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaDisabled;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableColumnHeader.ts
 
@@ -41,8 +42,8 @@ pub struct UseTableColumnHeaderInput {
 
 /// The return value of the `use_table_column_header` hook.
 pub struct UseTableColumnHeaderReturn {
-    /// Props for the column header element.
-    pub column_props: UseTableColumnHeaderAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub column_props: UseTableColumnHeaderProps,
 
     /// The column key.
     pub column_key: String,
@@ -54,6 +55,50 @@ pub struct UseTableColumnHeaderReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
+/// Props from `use_table_column_header` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTableColumnHeaderProps {
+    pub role: &'static str,
+    pub aria_colindex: String,
+    pub aria_sort: Signal<Option<&'static str>>,
+    pub tabindex: Signal<&'static str>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+}
+
+impl UseTableColumnHeaderProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableColumnHeaderAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableColumnHeaderAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaColindex, self.aria_colindex),
+            Attr(attr::AriaSort, self.aria_sort),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            attr::custom::custom_attribute("data-focus-visible", self.data_focus_visible),
+        )
+    }
+}
+
 /// Attributes for the table column header element.
 pub type UseTableColumnHeaderAttrs = (
     Attr<attr::Role, &'static str>,
@@ -61,7 +106,7 @@ pub type UseTableColumnHeaderAttrs = (
     Attr<attr::AriaSort, Signal<Option<&'static str>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
+    On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -89,7 +134,7 @@ pub type UseTableColumnHeaderAttrs = (
 /// });
 ///
 /// view! {
-///     <th {..column.column_props}>
+///     <th {..column.column_props.into_attrs()}>
 ///         "Name"
 ///         {move || if column.is_sortable {
 ///             // Show sort indicator
@@ -173,27 +218,25 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     // Column index is 1-based for ARIA
     let aria_colindex = (column_index + 1).to_string();
 
     UseTableColumnHeaderReturn {
-        column_props: (
-            Attr(attr::Role, "columnheader"),
-            Attr(attr::AriaColindex, aria_colindex),
-            Attr(attr::AriaSort, aria_sort),
-            Attr(attr::Tabindex, tabindex),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-        ),
+        column_props: UseTableColumnHeaderProps {
+            role: "columnheader",
+            aria_colindex,
+            aria_sort,
+            tabindex,
+            aria_disabled,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+        },
         column_key,
         is_sortable,
         is_focus_visible,

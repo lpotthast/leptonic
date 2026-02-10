@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaOrientation};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toolbar/src/useToolbar.ts
 
@@ -72,13 +73,45 @@ impl Default for UseToolbarInput {
 #[derive(Debug, Clone)]
 pub struct UseToolbarReturn {
     /// Props for the toolbar element.
-    pub toolbar_props: UseToolbarAttrs,
+    pub toolbar_props: UseToolbarProps,
 
     /// The ID of the toolbar.
     pub toolbar_id: String,
 
     /// The orientation.
     pub orientation: ToolbarOrientation,
+}
+
+/// Props from `use_toolbar` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseToolbarProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_label: Option<String>,
+    pub aria_orientation: AriaOrientation,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseToolbarProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseToolbarAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseToolbarAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaOrientation, self.aria_orientation),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the toolbar element.
@@ -178,14 +211,14 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
     };
 
     UseToolbarReturn {
-        toolbar_props: (
-            Attr(attr::Id, toolbar_id.clone()),
-            Attr(attr::Role, "toolbar"),
-            Attr(attr::AriaLabel, label),
-            Attr(attr::AriaOrientation, aria_orientation),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        toolbar_props: UseToolbarProps {
+            id: toolbar_id.clone(),
+            role: "toolbar",
+            aria_label: label,
+            aria_orientation,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         toolbar_id,
         orientation,
     }

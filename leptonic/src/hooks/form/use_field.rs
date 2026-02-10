@@ -71,6 +71,12 @@ pub struct UseFieldLabelProps {
 }
 
 impl UseFieldLabelProps {
+    #[must_use]
+    pub fn to_attrs(&self) -> UseFieldLabelAttrs {
+        self.clone().into_attrs()
+    }
+
+    #[must_use]
     pub fn into_attrs(self) -> UseFieldLabelAttrs {
         (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
     }
@@ -106,6 +112,12 @@ pub struct UseFieldProps {
 }
 
 impl UseFieldProps {
+    #[must_use]
+    pub fn to_attrs(&self) -> UseFieldAttrs {
+        self.clone().into_attrs()
+    }
+
+    #[must_use]
     pub fn into_attrs(self) -> UseFieldAttrs {
         (
             Attr(attr::Id, self.id),
@@ -139,6 +151,12 @@ pub struct UseFieldDescriptionProps {
 }
 
 impl UseFieldDescriptionProps {
+    #[must_use]
+    pub fn to_attrs(&self) -> UseFieldDescriptionAttrs {
+        self.clone().into_attrs()
+    }
+
+    #[must_use]
     pub fn into_attrs(self) -> UseFieldDescriptionAttrs {
         (Attr(attr::Id, self.id),)
     }
@@ -162,6 +180,12 @@ pub struct UseFieldErrorMessageProps {
 }
 
 impl UseFieldErrorMessageProps {
+    #[must_use]
+    pub fn to_attrs(&self) -> UseFieldErrorMessageAttrs {
+        self.clone().into_attrs()
+    }
+
+    #[must_use]
     pub fn into_attrs(self) -> UseFieldErrorMessageAttrs {
         (
             Attr(attr::Id, self.id),

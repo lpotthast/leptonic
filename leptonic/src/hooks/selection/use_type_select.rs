@@ -1,9 +1,10 @@
-use leptos::attr::Attribute;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::hash::Hash;
 use web_sys::KeyboardEvent;
+
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useTypeSelect.ts
 
@@ -48,8 +49,8 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseTypeSelectInpu
 /// The return value of the `use_type_select` hook.
 #[derive(Debug, Clone)]
 pub struct UseTypeSelectReturn {
-    /// Props for the container element.
-    pub type_select_props: UseTypeSelectAttrs,
+    /// Props for the container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub type_select_props: UseTypeSelectProps,
 
     /// The current search string.
     pub search_string: Signal<String>,
@@ -59,6 +60,26 @@ pub struct UseTypeSelectReturn {
 
     /// The keyboard event handler callback. Can be called directly to delegate keyboard handling.
     pub on_keydown: Callback<KeyboardEvent>,
+}
+
+/// Props from `use_type_select` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTypeSelectProps {
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseTypeSelectProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTypeSelectAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTypeSelectAttrs {
+        (self.on_keydown.into_on(ev::keydown),)
+    }
 }
 
 /// Attributes for the type select container element.
@@ -85,7 +106,7 @@ pub type UseTypeSelectAttrs = (On<ev::keydown, SharedEventCallback<KeyboardEvent
 /// });
 ///
 /// view! {
-///     <ul role="listbox" {..type_select.type_select_props}>
+///     <ul role="listbox" {..type_select.type_select_props.into_attrs()}>
 ///         // Items here
 ///     </ul>
 /// }
@@ -203,14 +224,14 @@ where
     });
 
     // Create event handler for type_select_props using the callback
-    let handle_keydown = {
-        move |e: KeyboardEvent| {
-            on_keydown.run(e);
-        }
+    let handle_keydown = move |e: KeyboardEvent| {
+        on_keydown.run(e);
     };
 
     UseTypeSelectReturn {
-        type_select_props: (on(ev::keydown, handle_keydown).into_cloneable(),),
+        type_select_props: UseTypeSelectProps {
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         search_string: search_string.into(),
         clear_search,
         on_keydown,

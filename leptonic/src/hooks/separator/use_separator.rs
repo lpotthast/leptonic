@@ -58,7 +58,31 @@ impl Default for UseSeparatorInput {
 /// The return value of the `use_separator` hook.
 pub struct UseSeparatorReturn {
     /// Props for the separator element.
-    pub separator_props: UseSeparatorAttrs,
+    pub separator_props: UseSeparatorProps,
+}
+
+/// Props from `use_separator` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseSeparatorProps {
+    pub role: Option<&'static str>,
+    pub aria_orientation: Option<AriaOrientation>,
+}
+
+impl UseSeparatorProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSeparatorAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSeparatorAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaOrientation, self.aria_orientation),
+        )
+    }
 }
 
 /// Attributes for the separator element.
@@ -93,16 +117,15 @@ pub fn use_separator(input: UseSeparatorInput) -> UseSeparatorReturn {
     // Other elements need role="separator"
     let (role, aria_orientation) = match element_type {
         SeparatorElementType::Hr => (None, None),
-        SeparatorElementType::Div | SeparatorElementType::Span => (
-            Some("separator"),
-            Some(AriaOrientation::from(orientation)),
-        ),
+        SeparatorElementType::Div | SeparatorElementType::Span => {
+            (Some("separator"), Some(AriaOrientation::from(orientation)))
+        }
     };
 
     UseSeparatorReturn {
-        separator_props: (
-            Attr(attr::Role, role),
-            Attr(attr::AriaOrientation, aria_orientation),
-        ),
+        separator_props: UseSeparatorProps {
+            role,
+            aria_orientation,
+        },
     }
 }

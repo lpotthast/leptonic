@@ -14,14 +14,14 @@ pub struct UseBreadcrumbsInput {
     pub label: Option<String>,
 
     /// Whether the breadcrumbs are disabled.
-    pub is_disabled: Signal<bool>,
+    pub disabled: Signal<bool>,
 }
 
 impl Default for UseBreadcrumbsInput {
     fn default() -> Self {
         Self {
             label: Some("Breadcrumbs".to_string()),
-            is_disabled: Signal::derive(|| false),
+            disabled: Signal::derive(|| false),
         }
     }
 }
@@ -29,10 +29,34 @@ impl Default for UseBreadcrumbsInput {
 /// The return value of the `use_breadcrumbs` hook.
 pub struct UseBreadcrumbsReturn {
     /// Props for the breadcrumbs navigation element.
-    pub nav_props: UseBreadcrumbsAttrs,
+    pub nav_props: UseBreadcrumbsProps,
 
     /// The ID of the navigation.
     pub nav_id: String,
+}
+
+/// Props from `use_breadcrumbs` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseBreadcrumbsProps {
+    pub id: String,
+    pub aria_label: Option<String>,
+}
+
+impl UseBreadcrumbsProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseBreadcrumbsAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseBreadcrumbsAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::AriaLabel, self.aria_label),
+        )
+    }
 }
 
 /// Attributes for the breadcrumbs navigation element.
@@ -59,18 +83,15 @@ pub type UseBreadcrumbsAttrs = (
 /// }
 /// ```
 pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
-    let UseBreadcrumbsInput {
-        label,
-        is_disabled: disabled,
-    } = input;
+    let UseBreadcrumbsInput { label, disabled } = input;
 
     let nav_id = format!("breadcrumbs-{}", Uuid::new_v4());
 
     UseBreadcrumbsReturn {
-        nav_props: (
-            Attr(attr::Id, nav_id.clone()),
-            Attr(attr::AriaLabel, label),
-        ),
+        nav_props: UseBreadcrumbsProps {
+            id: nav_id.clone(),
+            aria_label: label,
+        },
         nav_id,
     }
 }

@@ -53,7 +53,7 @@ fn MenuItem(
     view! {
         // No node_ref needed - just spread item_props!
         <li
-            {..item_props}
+            {..item_props.into_attrs()}
             style=move || {
                 format!(
                     "padding: 0.75em 1em; cursor: {}; list-style: none; transition: background 0.15s; {}{}",
@@ -158,7 +158,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
     let set_focused_key = menu.list.collection.set_focused_key;
 
     // Clone menu props for use in the Show component (needs Fn, not FnOnce)
-    let menu_props = menu.menu_props.clone();
+    let menu_props = menu.menu_props;
 
     view! {
         <Article>
@@ -206,7 +206,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         view! {
                             <FocusScope restore_focus=true>
                                 <ul
-                                    {..menu_props}
+                                    {..menu_props.into_attrs()}
                                     style="position: absolute; top: 100%; left: 0; margin: 4px 0 0 0; padding: 0.25em 0; min-width: 180px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100;"
                                 >
                                     {items
@@ -379,7 +379,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     });
 
                     view! {
-                        <ul {..menu.menu_props}>
+                        <ul {..menu.menu_props.into_attrs()}>
                             // Menu items here
                         </ul>
                     }
@@ -433,7 +433,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
                     view! {
                         // Just spread item_props - focus management works automatically
-                        <li {..item.item_props}>
+                        <li {..item.item_props.into_attrs()}>
                             "Edit"
                         </li>
                     }

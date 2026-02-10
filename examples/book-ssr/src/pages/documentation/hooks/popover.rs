@@ -119,11 +119,11 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             <Code>
                 {indoc!(r"
                     pub struct UsePopoverReturn {
-                        /// Spread onto the popover element (positioning + keydown handler)
-                        pub popover_attrs: UsePopoverAttrs,
+                        /// Props for the popover element (positioning + keydown handler)
+                        pub popover_props: UsePopoverProps,
 
-                        /// Spread onto an optional backdrop element (click handler)
-                        pub backdrop_attrs: UsePopoverBackdropAttrs,
+                        /// Props for an optional backdrop element (click handler)
+                        pub backdrop_props: UsePopoverBackdropProps,
                     }
                 ")}
             </Code>
@@ -201,7 +201,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
 
             <h3>"API Differences"</h3>
             <ul>
-                <li><code>"underlayProps"</code>" renamed to "<code>"backdrop_attrs"</code>" for consistency with "<code>"use_modal_backdrop"</code></li>
+                <li><code>"underlayProps"</code>" renamed to "<code>"backdrop_props"</code>" for consistency with "<code>"use_modal_backdrop"</code></li>
             </ul>
         </Article>
 
@@ -230,8 +230,8 @@ fn BasicPopoverDemo() -> impl IntoView {
     let popover_el: NodeRef<html::Div> = NodeRef::new();
 
     let UsePopoverReturn {
-        popover_attrs,
-        backdrop_attrs,
+        popover_props,
+        backdrop_props,
     } = use_popover(UsePopoverInput {
         trigger_ref: trigger_el,
         popover_ref: popover_el,
@@ -246,8 +246,8 @@ fn BasicPopoverDemo() -> impl IntoView {
         phantom_data: PhantomData,
     });
 
-    let popover_attrs = StoredValue::new(popover_attrs);
-    let backdrop_attrs = StoredValue::new(backdrop_attrs);
+    let popover_props = StoredValue::new(popover_props.into_attrs());
+    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
 
     view! {
         <div style="display: flex; justify-content: center; padding: 2em;">
@@ -264,12 +264,12 @@ fn BasicPopoverDemo() -> impl IntoView {
             <Show when=move || is_open.get()>
                 // Optional backdrop - click to close
                 <div
-                    {..backdrop_attrs.get_value()}
+                    {..backdrop_props.get_value()}
                     style="position: fixed; inset: 0; z-index: 999;"
                 />
                 // Popover content
                 <div
-                    {..popover_attrs.get_value()}
+                    {..popover_props.get_value()}
                     node_ref=popover_el
                     style="
                         background: white;
@@ -302,8 +302,8 @@ fn PlacementPopoverDemo() -> impl IntoView {
     let popover_el: NodeRef<html::Div> = NodeRef::new();
 
     let UsePopoverReturn {
-        popover_attrs,
-        backdrop_attrs,
+        popover_props,
+        backdrop_props,
     } = use_popover(UsePopoverInput {
         trigger_ref: trigger_el,
         popover_ref: popover_el,
@@ -318,8 +318,8 @@ fn PlacementPopoverDemo() -> impl IntoView {
         phantom_data: PhantomData,
     });
 
-    let popover_attrs = StoredValue::new(popover_attrs);
-    let backdrop_attrs = StoredValue::new(backdrop_attrs);
+    let popover_props = StoredValue::new(popover_props.into_attrs());
+    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
 
     view! {
         <Grid gap=Size::Em(0.5) attr:style="margin-bottom: 1em;">
@@ -428,11 +428,11 @@ fn PlacementPopoverDemo() -> impl IntoView {
         <Portal>
             <Show when=move || is_open.get()>
                 <div
-                    {..backdrop_attrs.get_value()}
+                    {..backdrop_props.get_value()}
                     style="position: fixed; inset: 0; z-index: 999;"
                 />
                 <div
-                    {..popover_attrs.get_value()}
+                    {..popover_props.get_value()}
                     node_ref=popover_el
                     style="
                         background: white;
@@ -462,8 +462,8 @@ fn NonModalPopoverDemo() -> impl IntoView {
     let popover_el: NodeRef<html::Div> = NodeRef::new();
 
     let UsePopoverReturn {
-        popover_attrs,
-        backdrop_attrs: _,
+        popover_props,
+        backdrop_props: _,
     } = use_popover(UsePopoverInput {
         trigger_ref: trigger_el,
         popover_ref: popover_el,
@@ -478,7 +478,7 @@ fn NonModalPopoverDemo() -> impl IntoView {
         phantom_data: PhantomData,
     });
 
-    let popover_attrs = StoredValue::new(popover_attrs);
+    let popover_props = StoredValue::new(popover_props.into_attrs());
 
     view! {
         <div style="display: flex; gap: 1em; align-items: center; justify-content: center; padding: 2em;">
@@ -506,7 +506,7 @@ fn NonModalPopoverDemo() -> impl IntoView {
             <Show when=move || is_open.get()>
                 // No backdrop for non-modal popover
                 <div
-                    {..popover_attrs.get_value()}
+                    {..popover_props.get_value()}
                     node_ref=popover_el
                     style="
                         background: white;

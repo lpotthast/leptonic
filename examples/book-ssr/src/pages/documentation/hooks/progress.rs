@@ -61,7 +61,7 @@ pub fn PageUseProgressBar() -> impl IntoView {
                     <span>{ move || format!("{}%", value.get() as i32) }</span>
                 </div>
                 <div
-                    {..progress_props}
+                    {..progress_props.into_attrs()}
                     style="height: 8px; background: #ddd; border-radius: 4px; overflow: hidden;"
                 >
                     <div style=move || format!(
@@ -110,7 +110,7 @@ pub fn PageUseProgressBar() -> impl IntoView {
 
             <div style="margin: 1em 0; max-width: 400px;">
                 <div
-                    {..indeterminate_props}
+                    {..indeterminate_props.into_attrs()}
                     style="height: 8px; background: #ddd; border-radius: 4px; overflow: hidden; position: relative;"
                 >
                     <div style="

@@ -42,7 +42,7 @@ pub fn PageUseDnd() -> impl IntoView {
                     });
 
                     view! {
-                        <div {..draggable.drag_props}>"Drag me"</div>
+                        <div {..draggable.drag_props.into_attrs()}>"Drag me"</div>
                     }
                 "#)}
             </Code>
@@ -77,7 +77,7 @@ pub fn PageUseDnd() -> impl IntoView {
 
                     view! {
                         <div
-                            {..droppable.drop_props}
+                            {..droppable.drop_props.into_attrs()}
                             class:drop-target=move || droppable.is_drop_target.get()
                         >
                             "Drop here"
@@ -140,7 +140,7 @@ pub fn PageUseDnd() -> impl IntoView {
 
                         // Then spread the props:
                         if let (Some(drag), Some(drop)) = (drag, drop) {
-                            view! { <div {..drag.drag_props} {..drop.drop_props}>...</div> }
+                            view! { <div {..drag.drag_props.into_attrs()} {..drop.drop_props.into_attrs()}>...</div> }
                         }
                     }
                 "#)}
@@ -272,7 +272,7 @@ fn DraggableDemo() -> impl IntoView {
     view! {
         <div style="display: flex; gap: 1em; margin: 1em 0;">
             <div
-                {..draggable.drag_props}
+                {..draggable.drag_props.into_attrs()}
                 style=move || format!(
                     "padding: 1em 2em; border-radius: 8px; cursor: grab; user-select: none; \
                     background: {}; color: white; font-weight: bold;",
@@ -356,7 +356,7 @@ fn DroppableDemo() -> impl IntoView {
     view! {
         <div style="display: flex; gap: 1em; margin: 1em 0;">
             <div
-                {..droppable.drop_props}
+                {..droppable.drop_props.into_attrs()}
                 style=move || format!(
                     "padding: 2em; border-radius: 8px; min-width: 200px; min-height: 100px; \
                     border: 2px dashed {}; background: {};",
@@ -460,7 +460,7 @@ fn DragToDropDemo() -> impl IntoView {
     view! {
         <div style="display: flex; gap: 2em; margin: 1em 0; align-items: center;">
             <div
-                {..draggable.drag_props}
+                {..draggable.drag_props.into_attrs()}
                 style=move || format!(
                     "padding: 1em 2em; border-radius: 8px; cursor: grab; user-select: none; \
                     background: {}; color: white; display: flex; align-items: center; gap: 0.5em;",
@@ -474,7 +474,7 @@ fn DragToDropDemo() -> impl IntoView {
             <div style="font-size: 2em; color: #ccc;">"→"</div>
 
             <div
-                {..droppable.drop_props}
+                {..droppable.drop_props.into_attrs()}
                 style=move || format!(
                     "padding: 2em; border-radius: 8px; min-width: 150px; text-align: center; \
                     border: 2px dashed {}; background: {};",
@@ -672,21 +672,21 @@ fn ReorderItem(
     // We need to conditionally spread the props
     match (drag, drop) {
         (Some(drag), Some(drop)) => view! {
-            <div {..drag.drag_props} {..drop.drop_props} style=style>
+            <div {..drag.drag_props.into_attrs()} {..drop.drop_props.into_attrs()} style=style>
                 <span style="color: #999;">"⋮⋮"</span>
                 { label }
             </div>
         }
         .into_any(),
         (Some(drag), None) => view! {
-            <div {..drag.drag_props} style=style>
+            <div {..drag.drag_props.into_attrs()} style=style>
                 <span style="color: #999;">"⋮⋮"</span>
                 { label }
             </div>
         }
         .into_any(),
         (None, Some(drop)) => view! {
-            <div {..drop.drop_props} style=style>
+            <div {..drop.drop_props.into_attrs()} style=style>
                 <span style="color: #999;">"⋮⋮"</span>
                 { label }
             </div>

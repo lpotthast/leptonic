@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaDisabled;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableCell.ts
 
@@ -51,14 +52,54 @@ impl Default for UseTableCellInput {
 
 /// The return value of the `use_table_cell` hook.
 pub struct UseTableCellReturn {
-    /// Props for the cell element.
-    pub cell_props: UseTableCellAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub cell_props: UseTableCellProps,
 
     /// Whether the cell is focused.
     pub is_focused: Signal<bool>,
 
     /// Whether the focus ring should be visible (keyboard navigation only).
     pub is_focus_visible: Signal<bool>,
+}
+
+/// Props from `use_table_cell` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTableCellProps {
+    pub role: &'static str,
+    pub aria_colindex: String,
+    pub tabindex: Signal<&'static str>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+}
+
+impl UseTableCellProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableCellAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableCellAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaColindex, self.aria_colindex),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            attr::custom::custom_attribute("data-focus-visible", self.data_focus_visible),
+        )
+    }
 }
 
 /// Attributes for the table cell element.
@@ -90,7 +131,7 @@ pub type UseTableCellAttrs = (
 /// });
 ///
 /// view! {
-///     <td {..cell.cell_props}>
+///     <td {..cell.cell_props.into_attrs()}>
 ///         {data}
 ///     </td>
 /// }
@@ -155,25 +196,23 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     // Column index is 1-based for ARIA
     let aria_colindex = (column_index + 1).to_string();
 
     UseTableCellReturn {
-        cell_props: (
-            Attr(attr::Role, "gridcell"),
-            Attr(attr::AriaColindex, aria_colindex),
-            Attr(attr::Tabindex, tabindex),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-        ),
+        cell_props: UseTableCellProps {
+            role: "gridcell",
+            aria_colindex,
+            tabindex,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+        },
         is_focused,
         is_focus_visible,
     }
@@ -197,11 +236,61 @@ pub struct UseTableCheckboxCellInput {
 
 /// Return value for a checkbox cell.
 pub struct UseTableCheckboxCellReturn {
-    /// Props for the checkbox cell.
-    pub cell_props: UseTableCheckboxCellAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub cell_props: UseTableCheckboxCellProps,
 
-    /// Props for the checkbox input.
-    pub checkbox_props: UseTableCheckboxAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub checkbox_props: UseTableCheckboxProps,
+}
+
+/// Props from `use_table_checkbox_cell` for the cell element.
+#[derive(Debug, Clone)]
+pub struct UseTableCheckboxCellProps {
+    pub role: &'static str,
+}
+
+impl UseTableCheckboxCellProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableCheckboxCellAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableCheckboxCellAttrs {
+        (Attr(attr::Role, self.role),)
+    }
+}
+
+/// Props from `use_table_checkbox_cell` for the checkbox input element.
+#[derive(Debug, Clone)]
+pub struct UseTableCheckboxProps {
+    pub r#type: &'static str,
+    pub checked: Signal<bool>,
+    pub aria_label: &'static str,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_change: EventHandler<web_sys::Event>,
+}
+
+impl UseTableCheckboxProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableCheckboxAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableCheckboxAttrs {
+        (
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Checked, self.checked),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_change.into_on(ev::change),
+        )
+    }
 }
 
 /// Attributes for the checkbox cell.
@@ -229,8 +318,8 @@ pub type UseTableCheckboxAttrs = (
 /// });
 ///
 /// view! {
-///     <td {..checkbox.cell_props}>
-///         <input {..checkbox.checkbox_props} />
+///     <td {..checkbox.cell_props.into_attrs()}>
+///         <input {..checkbox.checkbox_props.into_attrs()} />
 ///     </td>
 /// }
 /// ```
@@ -254,13 +343,13 @@ pub fn use_table_checkbox_cell(input: UseTableCheckboxCellInput) -> UseTableChec
     };
 
     UseTableCheckboxCellReturn {
-        cell_props: (Attr(attr::Role, "gridcell"),),
-        checkbox_props: (
-            Attr(attr::Type, "checkbox"),
-            Attr(attr::Checked, is_selected),
-            Attr(attr::AriaLabel, "Select row"),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::change, handle_change).into_cloneable(),
-        ),
+        cell_props: UseTableCheckboxCellProps { role: "gridcell" },
+        checkbox_props: UseTableCheckboxProps {
+            r#type: "checkbox",
+            checked: is_selected,
+            aria_label: "Select row",
+            aria_disabled,
+            on_change: EventHandler::new(handle_change),
+        },
     }
 }

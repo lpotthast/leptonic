@@ -6,10 +6,9 @@ use crate::hooks::{
 };
 use crate::utils::aria::{AriaCurrent, AriaDisabled};
 use crate::utils::{ElementCaptureAttr, MergeWith};
-use educe::Educe;
+use leptos::attr;
 use leptos::attr::Attr;
 use leptos::oco::Oco;
-use leptos::attr;
 use reactive_graph::callback::{Callable, Callback};
 use reactive_graph::prelude::Get;
 use reactive_graph::wrappers::read::Signal;
@@ -71,15 +70,10 @@ pub enum LinkElementType {
 }
 
 /// The return value of the `use_link` hook.
-#[derive(Clone, Educe)]
-#[educe(Debug)]
+#[derive(Clone, Debug)]
 pub struct UseLinkReturn {
     /// Props for the link element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
     pub props: UseLinkProps,
-
-    /// Shorthand for `props.to_attrs()`.
-    #[educe(Debug(ignore))]
-    pub link_props: UseLinkAttrs,
 
     /// Whether the link is disabled.
     pub is_disabled: Signal<bool>,
@@ -239,11 +233,12 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
 
     #[cfg(debug_assertions)]
     let merged = MergedFocusablePressFocusRingProps {
-        element_capture: merged.element_capture.clone().chain(
-            ElementCaptureAttr::new(move |el| {
+        element_capture: merged
+            .element_capture
+            .clone()
+            .chain(ElementCaptureAttr::new(move |el| {
                 super::debug_validate_element_type(element_type, &el);
-            }),
-        ),
+            })),
         ..merged
     };
 
@@ -257,11 +252,8 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         merged,
     };
 
-    let link_props = props.to_attrs();
-
     UseLinkReturn {
         props,
-        link_props,
         is_disabled,
         is_pressed,
         is_focus_visible,

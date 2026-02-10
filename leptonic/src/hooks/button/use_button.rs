@@ -159,17 +159,9 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
     UseButtonReturn {
         props: UseButtonProps {
             role: "button",
-            tabindex: Signal::derive(move || {
-                if disabled.get() {
-                    None
-                } else {
-                    Some("0")
-                }
-            }),
+            tabindex: Signal::derive(move || if disabled.get() { None } else { Some("0") }),
             disabled: Signal::derive(move || disabled.get().into_attribute_value()),
-            aria_disabled: Signal::derive(move || {
-                disabled.get().then_some(AriaDisabled::True)
-            }),
+            aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
             aria_haspopup,
             aria_expanded,
             aria_describedby: press_props.aria_describedby,

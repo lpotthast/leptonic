@@ -1,7 +1,7 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -9,6 +9,7 @@ use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaMultiselectable, AriaOrientation};
+use crate::utils::EventHandler;
 
 use crate::hooks::selection::{
     use_selectable_collection::FocusStrategy,
@@ -126,8 +127,8 @@ pub struct UseListBoxReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    /// Props for the listbox container element.
-    pub listbox_props: UseListBoxAttrs,
+    /// Props for the listbox container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub listbox_props: UseListBoxProps,
 
     /// The selection and navigation state.
     pub state: UseSelectableListReturn<K>,
@@ -136,7 +137,55 @@ where
     pub id: String,
 }
 
-/// Attributes for the listbox container element.
+/// Props from `use_listbox` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseListBoxProps {
+    pub id: String,
+    pub role: &'static str,
+    pub tabindex: &'static str,
+    pub aria_label: Option<&'static str>,
+    pub aria_labelledby: Option<String>,
+    pub aria_multiselectable: Option<AriaMultiselectable>,
+    pub aria_orientation: AriaOrientation,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseListBoxProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseListBoxAttrs {
+        (
+            Attr(attr::Id, self.id.clone()),
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby.clone()),
+            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            Attr(attr::AriaOrientation, self.aria_orientation),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.to_on(ev::keydown),
+        )
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseListBoxAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            Attr(attr::AriaOrientation, self.aria_orientation),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
+}
+
+/// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UseListBoxAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
@@ -166,7 +215,7 @@ pub type UseListBoxAttrs = (
 /// });
 ///
 /// view! {
-///     <ul {..listbox.listbox_props}>
+///     <ul {..listbox.listbox_props.into_attrs()}>
 ///         <For
 ///             each=move || items.get()
 ///             key=|item| item.to_string()
@@ -177,7 +226,7 @@ pub type UseListBoxAttrs = (
 ///                     ..Default::default()
 ///                 });
 ///                 view! {
-///                     <li {..option.option_props}>{item}</li>
+///                     <li {..option.option_props.into_attrs()}>{item}</li>
 ///                 }
 ///             }
 ///         />
@@ -356,17 +405,17 @@ where
     let aria_orientation = AriaOrientation::from(orientation);
 
     UseListBoxReturn {
-        listbox_props: (
-            Attr(attr::Id, listbox_id.clone()),
-            Attr(attr::Role, "listbox"),
-            Attr(attr::Tabindex, "0"),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaMultiselectable, aria_multiselectable),
-            Attr(attr::AriaOrientation, aria_orientation),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        listbox_props: UseListBoxProps {
+            id: listbox_id.clone(),
+            role: "listbox",
+            tabindex: "0",
+            aria_label,
+            aria_labelledby,
+            aria_multiselectable,
+            aria_orientation,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         state,
         id: listbox_id,
     }

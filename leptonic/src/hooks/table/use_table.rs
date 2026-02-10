@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTable.ts
 
@@ -91,8 +92,8 @@ impl Default for UseTableInput {
 
 /// The return value of the `use_table` hook.
 pub struct UseTableReturn {
-    /// Props for the table element.
-    pub table_props: UseTableAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub table_props: UseTableProps,
 
     /// The ID of the table.
     pub table_id: String,
@@ -122,6 +123,40 @@ pub struct UseTableReturn {
     pub clear_selection: Callback<()>,
 }
 
+/// Props from `use_table` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTableProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_label: Option<String>,
+    pub aria_rowcount: Option<String>,
+    pub aria_multiselectable: Option<AriaMultiselectable>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseTableProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaRowcount, self.aria_rowcount),
+            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
+}
+
 /// Attributes for the table element.
 pub type UseTableAttrs = (
     Attr<attr::Id, String>,
@@ -148,7 +183,7 @@ pub type UseTableAttrs = (
 /// });
 ///
 /// view! {
-///     <table {..table.table_props}>
+///     <table {..table.table_props.into_attrs()}>
 ///         <thead>
 ///             // Table header...
 ///         </thead>
@@ -297,15 +332,15 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
     };
 
     UseTableReturn {
-        table_props: (
-            Attr(attr::Id, table_id.clone()),
-            Attr(attr::Role, "grid"),
-            Attr(attr::AriaLabel, label),
-            Attr(attr::AriaRowcount, None), // Set by component based on data
-            Attr(attr::AriaMultiselectable, aria_multiselectable),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        table_props: UseTableProps {
+            id: table_id.clone(),
+            role: "grid",
+            aria_label: label,
+            aria_rowcount: None, // Set by component based on data
+            aria_multiselectable,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         table_id,
         selection_mode,
         is_disabled: disabled,

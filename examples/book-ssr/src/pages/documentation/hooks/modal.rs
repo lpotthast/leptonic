@@ -142,7 +142,7 @@ pub fn PageUseModalHook() -> impl IntoView {
 
                     view! {
                         <Show when=move || is_open.get()>
-                            <div {..modal_props}>
+                            <div {..modal_props.into_attrs()}>
                                 "Modal content"
                             </div>
                         </Show>
@@ -175,9 +175,9 @@ pub fn PageUseModalHook() -> impl IntoView {
                     view! {
                         <Show when=move || is_open.get()>
                             // Backdrop - spread backdrop_props for click handling
-                            <div {..backdrop_props} class="backdrop">
+                            <div {..backdrop_props.into_attrs()} class="backdrop">
                                 // Modal content - spread content_props to stop propagation
-                                <div {..content_props} class="modal">
+                                <div {..content_props.into_attrs()} class="modal">
                                     "Modal content"
                                 </div>
                             </div>
@@ -211,7 +211,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                     // dialog_props includes an ElementCaptureAttr that automatically captures
                     // the DOM element for focus-on-mount — no manual NodeRef wiring needed.
                     view! {
-                        <div {..dialog_props}>
+                        <div {..dialog_props.into_attrs()}>
                             <h2 id=title_props.id>"Title"</h2>
                             <p id=description_props.id>"Description"</p>
                         </div>
@@ -339,8 +339,8 @@ fn BasicModalDemo() -> impl IntoView {
 
     // Store in StoredValue so it can be copied into nested closures
     let modal_props = StoredValue::new(modal_props);
-    let content_props = StoredValue::new(content_props);
-    let backdrop_props = StoredValue::new(backdrop_props);
+    let content_props = StoredValue::new(content_props.into_attrs());
+    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
 
     view! {
         <button
@@ -360,7 +360,7 @@ fn BasicModalDemo() -> impl IntoView {
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     // Modal - spread both modal_props and content_props
                     <div
-                        {..modal_props.get_value()}
+                        {..modal_props.get_value().into_attrs()}
                         {..content_props.get_value()}
                         aria-labelledby="basic-modal-title"
                         aria-describedby="basic-modal-description"
@@ -441,8 +441,8 @@ fn AlertDialogDemo() -> impl IntoView {
 
     let modal_props = StoredValue::new(modal_props);
     let dialog_props = StoredValue::new(dialog_props);
-    let content_props = StoredValue::new(content_props);
-    let backdrop_props = StoredValue::new(backdrop_props);
+    let content_props = StoredValue::new(content_props.into_attrs());
+    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
     let title_props = StoredValue::new(title_props);
     let description_props = StoredValue::new(description_props);
 
@@ -461,8 +461,8 @@ fn AlertDialogDemo() -> impl IntoView {
             >
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     <div
-                        {..modal_props.get_value()}
-                        {..dialog_props.get_value()}
+                        {..modal_props.get_value().into_attrs()}
+                        {..dialog_props.get_value().into_attrs()}
                         {..content_props.get_value()}
                         style="background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
                     >
@@ -525,8 +525,8 @@ fn NonDismissableModalDemo() -> impl IntoView {
     });
 
     let modal_props = StoredValue::new(modal_props);
-    let content_props = StoredValue::new(content_props);
-    let backdrop_props = StoredValue::new(backdrop_props);
+    let content_props = StoredValue::new(content_props.into_attrs());
+    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
 
     view! {
         <button
@@ -543,7 +543,7 @@ fn NonDismissableModalDemo() -> impl IntoView {
             >
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     <div
-                        {..modal_props.get_value()}
+                        {..modal_props.get_value().into_attrs()}
                         {..content_props.get_value()}
                         aria-labelledby="non-dismissable-title"
                         aria-describedby="non-dismissable-description"
@@ -628,8 +628,8 @@ fn ConfirmationDialogDemo() -> impl IntoView {
 
     let modal_props = StoredValue::new(modal_props);
     let dialog_props = StoredValue::new(dialog_props);
-    let content_props = StoredValue::new(content_props);
-    let backdrop_props = StoredValue::new(backdrop_props);
+    let content_props = StoredValue::new(content_props.into_attrs());
+    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
     let title_props = StoredValue::new(title_props);
     let description_props = StoredValue::new(description_props);
 
@@ -661,8 +661,8 @@ fn ConfirmationDialogDemo() -> impl IntoView {
             >
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     <div
-                        {..modal_props.get_value()}
-                        {..dialog_props.get_value()}
+                        {..modal_props.get_value().into_attrs()}
+                        {..dialog_props.get_value().into_attrs()}
                         {..content_props.get_value()}
                         style="background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
                     >

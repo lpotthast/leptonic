@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::utils::aria::AriaModal;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModal.ts
 
@@ -43,14 +44,44 @@ impl Default for UseModalInput {
 
 /// The return value of the `use_modal` hook.
 pub struct UseModalReturn {
-    /// Props for the modal container element.
-    pub modal_props: UseModalAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub modal_props: UseModalProps,
 
     /// The ID of the modal.
     pub id: String,
 }
 
-/// Attributes for the modal container element.
+/// Props from `use_modal` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseModalProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_modal: AriaModal,
+    pub tabindex: &'static str,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseModalProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseModalAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseModalAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaModal, self.aria_modal),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
+}
+
+/// These attributes must be spread onto the target element: `<div {..attrs} />`
 pub type UseModalAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
@@ -78,7 +109,7 @@ pub type UseModalAttrs = (
 ///
 /// view! {
 ///     <Show when=move || is_open.get()>
-///         <div {..modal.modal_props}>
+///         <div {..modal.modal_props.into_attrs()}>
 ///             "Modal content"
 ///             <button on:click=move |_| set_is_open.set(false)>"Close"</button>
 ///         </div>
@@ -108,13 +139,13 @@ pub fn use_modal(input: UseModalInput) -> UseModalReturn {
     };
 
     UseModalReturn {
-        modal_props: (
-            Attr(attr::Id, modal_id.clone()),
-            Attr(attr::Role, "dialog"),
-            Attr(attr::AriaModal, AriaModal::True),
-            Attr(attr::Tabindex, "-1"),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        modal_props: UseModalProps {
+            id: modal_id.clone(),
+            role: "dialog",
+            aria_modal: AriaModal::True,
+            tabindex: "-1",
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         id: modal_id,
     }
 }

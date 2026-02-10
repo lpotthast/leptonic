@@ -1,12 +1,13 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tree/src/useTree.ts
 
@@ -68,7 +69,7 @@ impl Default for UseTreeInput {
 /// The return value of the `use_tree` hook.
 pub struct UseTreeReturn {
     /// Props for the tree element.
-    pub tree_props: UseTreeAttrs,
+    pub tree_props: UseTreeProps,
 
     /// The ID of the tree.
     pub tree_id: String,
@@ -87,6 +88,38 @@ pub struct UseTreeReturn {
 
     /// Toggle item selection.
     pub toggle_selected: Callback<String>,
+}
+
+/// Props from `use_tree` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTreeProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_label: Option<String>,
+    pub aria_multiselectable: Option<AriaMultiselectable>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseTreeProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTreeAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTreeAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the tree element.
@@ -217,14 +250,14 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
     };
 
     UseTreeReturn {
-        tree_props: (
-            Attr(attr::Id, tree_id.clone()),
-            Attr(attr::Role, "tree"),
-            Attr(attr::AriaLabel, label),
-            Attr(attr::AriaMultiselectable, aria_multiselectable),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        tree_props: UseTreeProps {
+            id: tree_id.clone(),
+            role: "tree",
+            aria_label: label,
+            aria_multiselectable,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         tree_id,
         selection_mode,
         focused_key: focused_key.into(),

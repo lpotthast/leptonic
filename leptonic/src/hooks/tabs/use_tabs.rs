@@ -73,8 +73,8 @@ impl Default for UseTabsInput {
 
 /// The return value of the `use_tabs` hook.
 pub struct UseTabsReturn {
-    /// Props for the tabs container element.
-    pub tabs_props: UseTabsAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseTabsProps,
 
     /// The ID base for the tabs.
     pub id_base: String,
@@ -90,6 +90,26 @@ pub struct UseTabsReturn {
 
     /// Select a tab.
     pub select_tab: Callback<String>,
+}
+
+/// Props from `use_tabs` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTabsProps {
+    pub id: String,
+}
+
+impl UseTabsProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTabsAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTabsAttrs {
+        (Attr(attr::Id, self.id),)
+    }
 }
 
 /// Attributes for the tabs container element.
@@ -111,7 +131,7 @@ pub type UseTabsAttrs = (Attr<attr::Id, String>,);
 /// });
 ///
 /// view! {
-///     <div {..tabs.tabs_props}>
+///     <div {..tabs.props.into_attrs()}>
 ///         // Tab list and panels...
 ///     </div>
 /// }
@@ -136,7 +156,9 @@ pub fn use_tabs(input: UseTabsInput) -> UseTabsReturn {
     });
 
     UseTabsReturn {
-        tabs_props: (Attr(attr::Id, id_base.clone()),),
+        props: UseTabsProps {
+            id: id_base.clone(),
+        },
         id_base,
         selected_key,
         orientation,

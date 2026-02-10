@@ -1,7 +1,7 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
@@ -9,6 +9,7 @@ use web_sys::KeyboardEvent;
 use super::use_date_segment::{DateSegment, DateSegmentType};
 use crate::utils::aria::{AriaDisabled, AriaRequired};
 use crate::utils::time::whole_days_in;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDateField.ts
 
@@ -74,8 +75,8 @@ impl Default for UseDateFieldInput {
 /// The return value of the `use_date_field` hook.
 #[derive(Debug, Clone)]
 pub struct UseDateFieldReturn {
-    /// Props for the field container element.
-    pub field_props: UseDateFieldAttrs,
+    /// Props for the field container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub field_props: UseDateFieldProps,
 
     /// Props for the label element.
     pub label_props: UseDateFieldLabelProps,
@@ -112,6 +113,40 @@ pub struct UseDateFieldReturn {
 
     /// Set a segment value.
     pub set_segment: Callback<(usize, i32)>,
+}
+
+/// Props from `use_date_field` for the field container element.
+#[derive(Debug, Clone)]
+pub struct UseDateFieldProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_required: Option<AriaRequired>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseDateFieldProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDateFieldAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDateFieldAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaRequired, self.aria_required),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the date field container element.
@@ -169,7 +204,7 @@ pub struct UseDateFieldErrorProps {
 /// view! {
 ///     <div>
 ///         <label id=field.label_props.id>"Date"</label>
-///         <div {..field.field_props}>
+///         <div {..field.field_props.into_attrs()}>
 ///             // Render segments...
 ///         </div>
 ///     </div>
@@ -488,15 +523,15 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
     };
 
     UseDateFieldReturn {
-        field_props: (
-            Attr(attr::Id, field_id.clone()),
-            Attr(attr::Role, "group"),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaDescribedby, aria_describedby),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::AriaRequired, aria_required),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        field_props: UseDateFieldProps {
+            id: field_id.clone(),
+            role: "group",
+            aria_labelledby,
+            aria_describedby,
+            aria_disabled,
+            aria_required,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         label_props: UseDateFieldLabelProps { id: label_id },
         description_props: UseDateFieldDescriptionProps { id: description_id },
         error_props: UseDateFieldErrorProps {

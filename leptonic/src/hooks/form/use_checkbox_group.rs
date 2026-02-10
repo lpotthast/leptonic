@@ -1,3 +1,5 @@
+use leptos::attr;
+use leptos::attr::Attr;
 use leptos::prelude::*;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -72,7 +74,7 @@ where
     T: Hash + Eq + Clone + Send + Sync + 'static,
 {
     /// Props for the group container element.
-    pub group_props: UseCheckboxGroupAttrs,
+    pub group_props: UseCheckboxGroupProps,
 
     /// Props for the label element.
     pub label_props: UseCheckboxGroupLabelProps,
@@ -81,9 +83,9 @@ where
     pub state: UseCheckboxGroupState<T>,
 }
 
-/// Attributes for the checkbox group container.
+/// Props from `use_checkbox_group` for the checkbox group container.
 #[derive(Debug, Clone)]
-pub struct UseCheckboxGroupAttrs {
+pub struct UseCheckboxGroupProps {
     /// The role attribute.
     pub role: &'static str,
 
@@ -106,12 +108,64 @@ pub struct UseCheckboxGroupAttrs {
     pub aria_orientation: AriaOrientation,
 }
 
+impl UseCheckboxGroupProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseCheckboxGroupAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseCheckboxGroupAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            Attr(attr::AriaRequired, self.aria_required),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaOrientation, self.aria_orientation),
+        )
+    }
+}
+
+/// Attributes for the checkbox group container.
+/// Spread onto the group element using `<fieldset {..group_props.into_attrs()}>`.
+pub type UseCheckboxGroupAttrs = (
+    Attr<attr::Role, &'static str>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+    Attr<attr::AriaDescribedby, Option<String>>,
+    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaRequired, Option<AriaRequired>>,
+    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaOrientation, AriaOrientation>,
+);
+
 /// Props for the group label.
 #[derive(Debug, Clone)]
 pub struct UseCheckboxGroupLabelProps {
     /// The id of the label element.
     pub id: String,
 }
+
+impl UseCheckboxGroupLabelProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseCheckboxGroupLabelAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseCheckboxGroupLabelAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// Attributes for the group label element.
+/// Spread onto the label element using `<legend {..label_props.into_attrs()}>`.
+pub type UseCheckboxGroupLabelAttrs = (Attr<attr::Id, String>,);
 
 /// State for a checkbox group.
 #[derive(Clone, Copy)]
@@ -264,7 +318,7 @@ where
     });
 
     UseCheckboxGroupReturn {
-        group_props: UseCheckboxGroupAttrs {
+        group_props: UseCheckboxGroupProps {
             role: "group",
             aria_labelledby,
             aria_describedby,

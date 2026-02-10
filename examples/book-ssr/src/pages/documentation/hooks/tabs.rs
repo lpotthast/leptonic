@@ -143,14 +143,14 @@ pub fn PageUseTabsHook() -> impl IntoView {
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <div style="margin: 1em 0;" {..tabs.tabs_props}>
+            <div style="margin: 1em 0;" {..tabs.props.into_attrs()}>
                 // Tab list
                 <div
-                    {..tab_list.tab_list_props}
+                    {..tab_list.props.into_attrs()}
                     style="display: flex; border-bottom: 2px solid #ddd;"
                 >
                     <button
-                        {..tab_account.tab_props}
+                        {..tab_account.props.into_attrs()}
                         style=move || format!(
                             "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
                             if tab_account.is_selected.get() {
@@ -163,7 +163,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         {tab_labels[0]}
                     </button>
                     <button
-                        {..tab_password.tab_props}
+                        {..tab_password.props.into_attrs()}
                         style=move || format!(
                             "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
                             if tab_password.is_selected.get() {
@@ -176,7 +176,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                         {tab_labels[1]}
                     </button>
                     <button
-                        {..tab_notifications.tab_props}
+                        {..tab_notifications.props.into_attrs()}
                         style=move || format!(
                             "padding: 0.75em 1.5em; border: none; background: transparent; cursor: pointer; font-size: 1em; position: relative; transition: all 0.2s; {}",
                             if tab_notifications.is_selected.get() {
@@ -192,7 +192,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
                 // Tab panels
                 <div
-                    {..panel0.panel_props}
+                    {..panel0.props.into_attrs()}
                     style=move || format!(
                         "padding: 1.5em; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; {}",
                         if panel0.is_selected.get() { "" } else { "display: none;" }
@@ -202,7 +202,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     <p style="margin: 0; color: #666;">"Configure your account settings here."</p>
                 </div>
                 <div
-                    {..panel1.panel_props}
+                    {..panel1.props.into_attrs()}
                     style=move || format!(
                         "padding: 1.5em; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; {}",
                         if panel1.is_selected.get() { "" } else { "display: none;" }
@@ -212,7 +212,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
                     <p style="margin: 0; color: #666;">"Configure your password settings here."</p>
                 </div>
                 <div
-                    {..panel2.panel_props}
+                    {..panel2.props.into_attrs()}
                     style=move || format!(
                         "padding: 1.5em; border: 1px solid #ddd; border-top: none; border-radius: 0 0 8px 8px; {}",
                         if panel2.is_selected.get() { "" } else { "display: none;" }
@@ -230,7 +230,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let UseTabsReturn { tabs_props, id_base, select_tab, .. } = use_tabs(UseTabsInput {
+                    let UseTabsReturn { props: tabs_props, id_base, select_tab, .. } = use_tabs(UseTabsInput {
                         selected_key: selected_tab.into(),
                         default_selected_key: Some("tab1".to_string()),
                         orientation: TabsOrientation::Horizontal,
@@ -248,7 +248,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let UseTabListReturn { tab_list_props, .. } = use_tab_list(UseTabListInput {
+                    let UseTabListReturn { props: tab_list_props, .. } = use_tab_list(UseTabListInput {
                         id_base: tabs.id_base.clone(),
                         orientation: TabsOrientation::Horizontal,
                         is_disabled: false.into(),
@@ -276,7 +276,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let UseTabReturn { tab_props, is_selected, is_focus_visible, .. } = use_tab(UseTabInput {
+                    let UseTabReturn { props: tab_props, is_selected, is_focus_visible, .. } = use_tab(UseTabInput {
                         tab_key: "tab1".to_string(),
                         id_base: tabs.id_base.clone(),
                         is_selected: Signal::derive(move || selected_tab.get() == Some("tab1".to_string())),
@@ -304,7 +304,7 @@ pub fn PageUseTabsHook() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let UseTabPanelReturn { panel_props, is_selected, .. } = use_tab_panel(UseTabPanelInput {
+                    let UseTabPanelReturn { props: panel_props, is_selected, .. } = use_tab_panel(UseTabPanelInput {
                         panel_key: "tab1".to_string(),
                         id_base: tabs.id_base.clone(),
                         is_selected: Signal::derive(move || selected_tab.get() == Some("tab1".to_string())),

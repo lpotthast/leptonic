@@ -47,22 +47,22 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <nav {..nav_props} style="margin: 1em 0;">
+            <nav {..nav_props.into_attrs()} style="margin: 1em 0;">
                 <ol style="display: flex; list-style: none; padding: 0; margin: 0; gap: 0.5em;">
                     <li>
-                        <a {..home_item.link_props} style="color: var(--brand-color); text-decoration: none;">
+                        <a {..home_item.link_props.into_attrs()} style="color: var(--brand-color); text-decoration: none;">
                             "Home"
                         </a>
                         <span style="margin-left: 0.5em;">"/"</span>
                     </li>
                     <li>
-                        <a {..products_item.link_props} style="color: var(--brand-color); text-decoration: none;">
+                        <a {..products_item.link_props.into_attrs()} style="color: var(--brand-color); text-decoration: none;">
                             "Products"
                         </a>
                         <span style="margin-left: 0.5em;">"/"</span>
                     </li>
                     <li>
-                        <span {..current_item.link_props} style="color: inherit;">
+                        <span {..current_item.link_props.into_attrs()} style="color: inherit;">
                             "Widget Pro"
                         </span>
                     </li>
@@ -75,6 +75,7 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                         label: Some("Navigation".to_string()),
                         ..Default::default()
                     });
+                    let nav_props = nav_props.into_attrs();
 
                     let home_item = use_breadcrumb_item(UseBreadcrumbItemInput {
                         href: Some("/".to_string()),
@@ -87,7 +88,7 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                         <nav {..nav_props}>
                             <ol>
                                 <li>
-                                    <a {..home_item.link_props}>"Home"</a>
+                                    <a {..home_item.link_props.into_attrs()}>"Home"</a>
                                 </li>
                                 // More items...
                             </ol>

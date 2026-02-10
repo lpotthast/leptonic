@@ -1,13 +1,14 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaReadonly};
 use crate::utils::time::Week;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useCalendarGrid.ts
 
@@ -52,8 +53,8 @@ impl Default for UseCalendarGridInput {
 
 /// The return value of the `use_calendar_grid` hook.
 pub struct UseCalendarGridReturn {
-    /// Props for the grid (table) element.
-    pub grid_props: UseCalendarGridAttrs,
+    /// Props for the grid (table) element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub grid_props: UseCalendarGridProps,
 
     /// Props for the header row element.
     pub header_props: UseCalendarGridHeaderProps,
@@ -63,6 +64,36 @@ pub struct UseCalendarGridReturn {
 
     /// The ID of the grid.
     pub grid_id: String,
+}
+
+/// Props from `use_calendar_grid` for the grid element.
+#[derive(Debug, Clone)]
+pub struct UseCalendarGridProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_readonly: Signal<Option<AriaReadonly>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseCalendarGridProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseCalendarGridAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseCalendarGridAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaReadonly, self.aria_readonly),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the calendar grid element.
@@ -97,7 +128,7 @@ pub struct UseCalendarGridHeaderProps {
 /// });
 ///
 /// view! {
-///     <table {..grid.grid_props}>
+///     <table {..grid.grid_props.into_attrs()}>
 ///         <thead>
 ///             <tr {..grid.header_props}>
 ///                 {grid.weekday_labels.iter().map(|label| {
@@ -161,13 +192,13 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
     };
 
     UseCalendarGridReturn {
-        grid_props: (
-            Attr(attr::Id, grid_id.clone()),
-            Attr(attr::Role, "grid"),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::AriaReadonly, aria_readonly),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        grid_props: UseCalendarGridProps {
+            id: grid_id.clone(),
+            role: "grid",
+            aria_disabled,
+            aria_readonly,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         header_props: UseCalendarGridHeaderProps { role: "row" },
         weekday_labels,
         grid_id,

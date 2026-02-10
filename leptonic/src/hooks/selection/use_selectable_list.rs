@@ -1,10 +1,11 @@
-use leptos::attr::Attribute;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::collections::HashSet;
 use std::hash::Hash;
 use web_sys::KeyboardEvent;
+
+use crate::utils::EventHandler;
 
 use super::use_selectable_collection::{
     use_selectable_collection, FocusStrategy, UseSelectableCollectionInput,
@@ -86,11 +87,31 @@ where
     /// The collection state with selection and focus management.
     pub collection: UseSelectableCollectionReturn<K>,
 
-    /// Props for the list container element.
-    pub list_props: UseSelectableListAttrs,
+    /// Props for the list container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub list_props: UseSelectableListProps,
 
     /// The keyboard event handler callback. Can be called directly to delegate keyboard handling.
     pub on_keydown: Callback<KeyboardEvent>,
+}
+
+/// Props from `use_selectable_list` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseSelectableListProps {
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseSelectableListProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSelectableListAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSelectableListAttrs {
+        (self.on_keydown.into_on(ev::keydown),)
+    }
 }
 
 /// Attributes for the list container element.
@@ -114,7 +135,7 @@ pub type UseSelectableListAttrs = (On<ev::keydown, SharedEventCallback<KeyboardE
 /// });
 ///
 /// view! {
-///     <ul role="listbox" {..list.list_props}>
+///     <ul role="listbox" {..list.list_props.into_attrs()}>
 ///         // Items here
 ///     </ul>
 /// }
@@ -246,15 +267,15 @@ where
     });
 
     // Create event handler for list_props using the callback
-    let handle_keydown = {
-        move |e: KeyboardEvent| {
-            on_keydown.run(e);
-        }
+    let handle_keydown = move |e: KeyboardEvent| {
+        on_keydown.run(e);
     };
 
     UseSelectableListReturn {
         collection,
-        list_props: (on(ev::keydown, handle_keydown).into_cloneable(),),
+        list_props: UseSelectableListProps {
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         on_keydown,
     }
 }

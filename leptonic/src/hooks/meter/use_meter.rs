@@ -64,7 +64,7 @@ impl Default for UseMeterInput {
 /// The return value of the `use_meter` hook.
 pub struct UseMeterReturn {
     /// Props for the meter container element.
-    pub meter_props: UseMeterAttrs,
+    pub meter_props: UseMeterProps,
 
     /// Props for the label element.
     pub label_props: UseMeterLabelProps,
@@ -77,6 +77,40 @@ pub struct UseMeterReturn {
 
     /// The ID of the meter.
     pub meter_id: String,
+}
+
+/// Props from `use_meter` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseMeterProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_valuenow: Signal<String>,
+    pub aria_valuemin: String,
+    pub aria_valuemax: String,
+    pub aria_valuetext: Signal<String>,
+    pub aria_labelledby: Option<String>,
+}
+
+impl UseMeterProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseMeterAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseMeterAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaValuenow, self.aria_valuenow),
+            Attr(attr::AriaValuemin, self.aria_valuemin),
+            Attr(attr::AriaValuemax, self.aria_valuemax),
+            Attr(attr::AriaValuetext, self.aria_valuetext),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+        )
+    }
 }
 
 /// Attributes for the meter container element.
@@ -172,15 +206,15 @@ pub fn use_meter(input: UseMeterInput) -> UseMeterReturn {
     };
 
     UseMeterReturn {
-        meter_props: (
-            Attr(attr::Id, meter_id.clone()),
-            Attr(attr::Role, "meter"),
-            Attr(attr::AriaValuenow, aria_valuenow),
-            Attr(attr::AriaValuemin, min_value.to_string()),
-            Attr(attr::AriaValuemax, max_value.to_string()),
-            Attr(attr::AriaValuetext, aria_valuetext),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-        ),
+        meter_props: UseMeterProps {
+            id: meter_id.clone(),
+            role: "meter",
+            aria_valuenow,
+            aria_valuemin: min_value.to_string(),
+            aria_valuemax: max_value.to_string(),
+            aria_valuetext,
+            aria_labelledby,
+        },
         label_props: UseMeterLabelProps { id: label_id },
         percentage,
         value_label,

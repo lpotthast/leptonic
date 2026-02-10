@@ -1,11 +1,12 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaSelected};
+use crate::utils::EventHandler;
 
 /// Input parameters for the `use_tree_item` hook.
 #[derive(Debug, Clone)]
@@ -63,10 +64,10 @@ pub struct UseTreeItemInput {
 #[derive(Debug, Clone)]
 pub struct UseTreeItemReturn {
     /// Props for the tree item element.
-    pub item_props: UseTreeItemAttrs,
+    pub item_props: UseTreeItemProps,
 
     /// Props for the content element (label area).
-    pub content_props: UseTreeItemContentAttrs,
+    pub content_props: UseTreeItemContentProps,
 
     /// The item key.
     pub item_key: String,
@@ -76,6 +77,43 @@ pub struct UseTreeItemReturn {
 
     /// Whether the item is selected.
     pub is_selected: Signal<bool>,
+}
+
+/// Props from `use_tree_item` for the item element that can be extracted and merged programmatically.
+/// Note: aria-level, aria-setsize, aria-posinset should be set via custom attributes.
+#[derive(Debug, Clone)]
+pub struct UseTreeItemProps {
+    pub role: &'static str,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
+    pub aria_selected: Signal<Option<AriaSelected>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub tabindex: Signal<&'static str>,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+}
+
+impl UseTreeItemProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTreeItemAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTreeItemAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaExpanded, self.aria_expanded),
+            Attr(attr::AriaSelected, self.aria_selected),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+        )
+    }
 }
 
 /// Attributes for the tree item element.
@@ -90,6 +128,26 @@ pub type UseTreeItemAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
 );
+
+/// Props from `use_tree_item` for the content element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTreeItemContentProps {
+    pub role: &'static str,
+}
+
+impl UseTreeItemContentProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTreeItemContentAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTreeItemContentAttrs {
+        (Attr(attr::Role, self.role),)
+    }
+}
 
 /// Attributes for the tree item content element.
 pub type UseTreeItemContentAttrs = (Attr<attr::Role, &'static str>,);
@@ -221,17 +279,19 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
     // let aria_posinset = input.position_in_set.to_string();
 
     UseTreeItemReturn {
-        item_props: (
-            Attr(attr::Role, "treeitem"),
-            Attr(attr::AriaExpanded, aria_expanded),
-            Attr(attr::AriaSelected, aria_selected),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::Tabindex, tabindex),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on(ev::focus, handle_focus).into_cloneable(),
-        ),
-        content_props: (Attr(attr::Role, "presentation"),),
+        item_props: UseTreeItemProps {
+            role: "treeitem",
+            aria_expanded,
+            aria_selected,
+            aria_disabled,
+            tabindex,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: EventHandler::new(handle_focus),
+        },
+        content_props: UseTreeItemContentProps {
+            role: "presentation",
+        },
         item_key,
         is_expanded,
         is_selected,

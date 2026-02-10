@@ -83,7 +83,6 @@ where
 {
     let UseLinkReturn {
         props,
-        link_props: _,
         is_disabled: _,
         is_pressed: _,
         is_focus_visible: _,
@@ -154,7 +153,6 @@ where
 
     let UseLinkReturn {
         props,
-        link_props: _,
         is_disabled: _,
         is_pressed: _,
         is_focus_visible: _,

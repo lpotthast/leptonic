@@ -53,8 +53,8 @@ pub fn PageUseCombobox() -> impl IntoView {
                     });
 
                     view! {
-                        <input {..combobox.input_props} />
-                        <button {..combobox.button_props}>"▼"</button>
+                        <input {..combobox.input_props.into_attrs()} />
+                        <button {..combobox.button_props.into_attrs()}>"▼"</button>
                         <Show when=move || combobox.is_open.get()>
                             <ul
                                 id=combobox.listbox_props.id.clone()
@@ -237,7 +237,7 @@ fn ComboboxDemo() -> impl IntoView {
                         border-radius: 8px;
                         font-size: 1em;
                     "
-                    {..combobox.input_props}
+                    {..combobox.input_props.into_attrs()}
                 />
                 <button
                     style="
@@ -248,7 +248,7 @@ fn ComboboxDemo() -> impl IntoView {
                         color: white;
                         cursor: pointer;
                     "
-                    {..combobox.button_props}
+                    {..combobox.button_props.into_attrs()}
                 >
                     "▼"
                 </button>

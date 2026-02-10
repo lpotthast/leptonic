@@ -1,13 +1,15 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::time::Day;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useCalendarCell.ts
 
@@ -53,11 +55,11 @@ pub struct UseCalendarCellInput {
 
 /// The return value of the `use_calendar_cell` hook.
 pub struct UseCalendarCellReturn {
-    /// Props for the cell element.
-    pub cell_props: UseCalendarCellAttrs,
+    /// Props for the cell element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub cell_props: UseCalendarCellProps,
 
-    /// Props for the button inside the cell.
-    pub button_props: UseCalendarCellButtonAttrs,
+    /// Props for the button inside the cell. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub button_props: UseCalendarCellButtonProps,
 
     /// Whether the cell is disabled.
     pub is_disabled: Signal<bool>,
@@ -81,12 +83,80 @@ pub struct UseCalendarCellReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
+/// Props from `use_calendar_cell` for the cell element (td).
+#[derive(Debug, Clone)]
+pub struct UseCalendarCellProps {
+    pub role: &'static str,
+    pub aria_disabled: Option<AriaDisabled>,
+    pub aria_selected: Signal<Option<AriaSelected>>,
+}
+
+impl UseCalendarCellProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseCalendarCellAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseCalendarCellAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaSelected, self.aria_selected),
+        )
+    }
+}
+
 /// Attributes for the calendar cell element (td).
 pub type UseCalendarCellAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaDisabled, Option<AriaDisabled>>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
 );
+
+/// Props from `use_calendar_cell` for the button inside the cell.
+#[derive(Debug, Clone)]
+pub struct UseCalendarCellButtonProps {
+    pub role: &'static str,
+    pub tabindex: Signal<&'static str>,
+    pub aria_label: String,
+    pub aria_disabled: Option<AriaDisabled>,
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+}
+
+impl UseCalendarCellButtonProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseCalendarCellButtonAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseCalendarCellButtonAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+        )
+    }
+}
 
 /// Attributes for the button inside the calendar cell.
 pub type UseCalendarCellButtonAttrs = (
@@ -100,7 +170,7 @@ pub type UseCalendarCellButtonAttrs = (
     On<ev::blur, SharedEventCallback<FocusEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 /// Provides the behavior and accessibility for a calendar cell.
@@ -120,8 +190,8 @@ pub type UseCalendarCellButtonAttrs = (
 /// });
 ///
 /// view! {
-///     <td {..cell.cell_props}>
-///         <button {..cell.button_props}>
+///     <td {..cell.cell_props.into_attrs()}>
+///         <button {..cell.button_props.into_attrs()}>
 ///             {cell.formatted_date}
 ///         </button>
 ///     </td>
@@ -251,28 +321,26 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     UseCalendarCellReturn {
-        cell_props: (
-            Attr(attr::Role, "gridcell"),
-            Attr(attr::AriaDisabled, cell_disabled),
-            Attr(attr::AriaSelected, aria_selected),
-        ),
-        button_props: (
-            Attr(attr::Role, "button"),
-            Attr(attr::Tabindex, tabindex),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaDisabled, cell_disabled),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-        ),
+        cell_props: UseCalendarCellProps {
+            role: "gridcell",
+            aria_disabled: cell_disabled,
+            aria_selected,
+        },
+        button_props: UseCalendarCellButtonProps {
+            role: "button",
+            tabindex,
+            aria_label,
+            aria_disabled: cell_disabled,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+        },
         is_disabled,
         is_selected,
         is_focused,

@@ -12,8 +12,28 @@ pub struct UseTableHeaderInput {
 
 /// The return value of the `use_table_header` hook.
 pub struct UseTableHeaderReturn {
-    /// Props for the thead element.
-    pub header_props: UseTableHeaderAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub header_props: UseTableHeaderProps,
+}
+
+/// Props from `use_table_header` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTableHeaderProps {
+    pub role: &'static str,
+}
+
+impl UseTableHeaderProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableHeaderAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableHeaderAttrs {
+        (Attr(attr::Role, self.role),)
+    }
 }
 
 /// Attributes for the table header element.
@@ -29,7 +49,7 @@ pub type UseTableHeaderAttrs = (Attr<attr::Role, &'static str>,);
 /// let header = use_table_header(UseTableHeaderInput::default());
 ///
 /// view! {
-///     <thead {..header.header_props}>
+///     <thead {..header.header_props.into_attrs()}>
 ///         <tr>
 ///             // Column headers...
 ///         </tr>
@@ -39,7 +59,7 @@ pub type UseTableHeaderAttrs = (Attr<attr::Role, &'static str>,);
 pub fn use_table_header(_input: UseTableHeaderInput) -> UseTableHeaderReturn {
     // The role is "rowgroup" for table headers
     UseTableHeaderReturn {
-        header_props: (Attr(attr::Role, "rowgroup"),),
+        header_props: UseTableHeaderProps { role: "rowgroup" },
     }
 }
 
@@ -49,8 +69,28 @@ pub struct UseTableBodyInput {}
 
 /// The return value of the `use_table_body` hook.
 pub struct UseTableBodyReturn {
-    /// Props for the tbody element.
-    pub body_props: UseTableBodyAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub body_props: UseTableBodyProps,
+}
+
+/// Props from `use_table_body` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTableBodyProps {
+    pub role: &'static str,
+}
+
+impl UseTableBodyProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTableBodyAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTableBodyAttrs {
+        (Attr(attr::Role, self.role),)
+    }
 }
 
 /// Attributes for the table body element.
@@ -64,13 +104,13 @@ pub type UseTableBodyAttrs = (Attr<attr::Role, &'static str>,);
 /// let body = use_table_body(UseTableBodyInput::default());
 ///
 /// view! {
-///     <tbody {..body.body_props}>
+///     <tbody {..body.body_props.into_attrs()}>
 ///         // Table rows...
 ///     </tbody>
 /// }
 /// ```
 pub fn use_table_body(_input: UseTableBodyInput) -> UseTableBodyReturn {
     UseTableBodyReturn {
-        body_props: (Attr(attr::Role, "rowgroup"),),
+        body_props: UseTableBodyProps { role: "rowgroup" },
     }
 }

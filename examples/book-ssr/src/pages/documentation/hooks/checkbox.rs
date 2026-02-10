@@ -90,7 +90,7 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
 
             <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
                 <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer;">
-                    <input type="checkbox" {..input_props} />
+                    <input type="checkbox" {..input_props.into_attrs()} />
                     <span>"Accept terms and conditions"</span>
                 </label>
 

@@ -1,7 +1,8 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::hash::Hash;
 use uuid::Uuid;
@@ -12,6 +13,7 @@ use crate::hooks::focus::use_focusable::{use_focusable, UseFocusableInput};
 use crate::hooks::selection::use_selection_state::{Selection, UseSelectionStateReturn};
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::ElementCaptureAttr;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useOption.ts
 
@@ -56,7 +58,7 @@ where
 #[derive(Clone)]
 pub struct UseOptionReturn {
     /// Props for the option element.
-    pub option_props: UseOptionAttrs,
+    pub option_props: UseOptionProps,
 
     /// Props for the label element inside the option.
     pub label_props: UseOptionLabelProps,
@@ -80,7 +82,59 @@ pub struct UseOptionReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
-/// Attributes for the option element.
+/// Props from `use_option` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseOptionProps {
+    pub id: String,
+    pub role: &'static str,
+    pub tabindex: Signal<&'static str>,
+    pub aria_selected: Signal<Option<AriaSelected>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_label: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+    pub on_pointerdown: EventHandler<web_sys::PointerEvent>,
+    pub on_pointerup: EventHandler<web_sys::PointerEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub element_capture: ElementCaptureAttr,
+}
+
+impl UseOptionProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseOptionAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseOptionAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaSelected, self.aria_selected),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            self.on_click.into_on(ev::click),
+            self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_pointerup.into_on(ev::pointerup),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.element_capture,
+        )
+    }
+}
+
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseOptionAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, &'static str>,
@@ -96,7 +150,7 @@ pub type UseOptionAttrs = (
     On<ev::blur, SharedEventCallback<FocusEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     ElementCaptureAttr,
 );
 
@@ -107,12 +161,46 @@ pub struct UseOptionLabelProps {
     pub id: String,
 }
 
+impl UseOptionLabelProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseOptionLabelAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseOptionLabelAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// These attributes must be spread onto the label element: `<span {..attrs} />`
+pub type UseOptionLabelAttrs = (Attr<attr::Id, String>,);
+
 /// Props for the description element.
 #[derive(Debug, Clone)]
 pub struct UseOptionDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
+
+impl UseOptionDescriptionProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseOptionDescriptionAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseOptionDescriptionAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// These attributes must be spread onto the description element: `<span {..attrs} />`
+pub type UseOptionDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Provides the behavior and accessibility implementation for an option in a listbox.
 ///
@@ -130,8 +218,8 @@ pub struct UseOptionDescriptionProps {
 /// });
 ///
 /// view! {
-///     <li {..option.option_props}>
-///         <span id=option.label_props.id>"Apple"</span>
+///     <li {..option.option_props.into_attrs()}>
+///         <span {..option.label_props.into_attrs()}>"Apple"</span>
 ///     </li>
 /// }
 /// ```
@@ -260,28 +348,26 @@ where
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     UseOptionReturn {
-        option_props: (
-            Attr(attr::Id, option_id),
-            Attr(attr::Role, "option"),
-            Attr(attr::Tabindex, tabindex),
-            Attr(attr::AriaSelected, aria_selected),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::AriaLabel, text_value),
-            Attr(attr::AriaDescribedby, None),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::pointerdown, handle_pointer_down).into_cloneable(),
-            on(ev::pointerup, handle_pointer_up).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-            focusable.props.element_capture,
-        ),
+        option_props: UseOptionProps {
+            id: option_id,
+            role: "option",
+            tabindex,
+            aria_selected,
+            aria_disabled,
+            aria_label: text_value,
+            aria_describedby: None,
+            on_click: EventHandler::new(handle_click),
+            on_pointerdown: EventHandler::new(handle_pointer_down),
+            on_pointerup: EventHandler::new(handle_pointer_up),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            element_capture: focusable.props.element_capture,
+        },
         label_props: UseOptionLabelProps { id: label_id },
         description_props: UseOptionDescriptionProps { id: description_id },
         is_selected,

@@ -1,7 +1,8 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
@@ -10,6 +11,7 @@ use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, Use
 use crate::hooks::focus::use_focusable::{use_focusable, UseFocusableInput};
 use crate::utils::aria::{AriaDisabled, AriaHidden, AriaSelected};
 use crate::utils::element_capture::ElementCaptureAttr;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTab.ts
 
@@ -48,8 +50,8 @@ pub struct UseTabInput {
 /// The return value of the `use_tab` hook.
 #[derive(Clone)]
 pub struct UseTabReturn {
-    /// Props for the tab button element.
-    pub tab_props: UseTabAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseTabProps,
 
     /// The ID of the tab.
     pub tab_id: String,
@@ -64,6 +66,54 @@ pub struct UseTabReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
+/// Props from `use_tab` that can be extracted and merged programmatically.
+#[derive(Clone)]
+pub struct UseTabProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_selected: Signal<Option<AriaSelected>>,
+    pub aria_controls: String,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub tabindex: Signal<&'static str>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub element_capture: ElementCaptureAttr,
+}
+
+impl UseTabProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTabAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTabAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaSelected, self.aria_selected),
+            Attr(attr::AriaControls, self.aria_controls),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::Tabindex, self.tabindex),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            self.element_capture,
+        )
+    }
+}
+
 /// Attributes for the tab button element.
 pub type UseTabAttrs = (
     Attr<attr::Id, String>,
@@ -72,7 +122,7 @@ pub type UseTabAttrs = (
     Attr<attr::AriaControls, String>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -101,7 +151,7 @@ pub type UseTabAttrs = (
 /// });
 ///
 /// view! {
-///     <button {..tab.tab_props}>
+///     <button {..tab.props.into_attrs()}>
 ///         "Tab 1"
 ///     </button>
 /// }
@@ -217,26 +267,23 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
-
     UseTabReturn {
-        tab_props: (
-            Attr(attr::Id, tab_id.clone()),
-            Attr(attr::Role, "tab"),
-            Attr(attr::AriaSelected, aria_selected),
-            Attr(attr::AriaControls, panel_id.clone()),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::Tabindex, tabindex),
-            data_focus_visible,
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            focusable.props.element_capture,
-        ),
+        props: UseTabProps {
+            id: tab_id.clone(),
+            role: "tab",
+            aria_selected,
+            aria_controls: panel_id.clone(),
+            aria_disabled,
+            tabindex,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            element_capture: focusable.props.element_capture,
+        },
         tab_id,
         panel_id,
         is_selected,
@@ -259,8 +306,8 @@ pub struct UseTabPanelInput {
 
 /// The return value of the `use_tab_panel` hook.
 pub struct UseTabPanelReturn {
-    /// Props for the tab panel element.
-    pub panel_props: UseTabPanelAttrs,
+    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub props: UseTabPanelProps,
 
     /// The ID of the panel.
     pub panel_id: String,
@@ -270,6 +317,36 @@ pub struct UseTabPanelReturn {
 
     /// Whether the panel is visible.
     pub is_selected: Signal<bool>,
+}
+
+/// Props from `use_tab_panel` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTabPanelProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_labelledby: String,
+    pub tabindex: &'static str,
+    pub aria_hidden: Signal<Option<AriaHidden>>,
+}
+
+impl UseTabPanelProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTabPanelAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTabPanelAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaHidden, self.aria_hidden),
+        )
+    }
 }
 
 /// Attributes for the tab panel element.
@@ -295,7 +372,7 @@ pub type UseTabPanelAttrs = (
 /// });
 ///
 /// view! {
-///     <div {..panel.panel_props}>
+///     <div {..panel.props.into_attrs()}>
 ///         "Panel 1 content"
 ///     </div>
 /// }
@@ -315,13 +392,13 @@ pub fn use_tab_panel(input: UseTabPanelInput) -> UseTabPanelReturn {
     let aria_hidden = Signal::derive(move || (!is_selected.get()).then_some(AriaHidden::True));
 
     UseTabPanelReturn {
-        panel_props: (
-            Attr(attr::Id, panel_id.clone()),
-            Attr(attr::Role, "tabpanel"),
-            Attr(attr::AriaLabelledby, tab_id.clone()),
-            Attr(attr::Tabindex, "0"),
-            Attr(attr::AriaHidden, aria_hidden),
-        ),
+        props: UseTabPanelProps {
+            id: panel_id.clone(),
+            role: "tabpanel",
+            aria_labelledby: tab_id.clone(),
+            tabindex: "0",
+            aria_hidden,
+        },
         panel_id,
         tab_id,
         is_selected,

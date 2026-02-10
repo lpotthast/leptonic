@@ -53,7 +53,7 @@ pub fn PageUseMeter() -> impl IntoView {
                         <span>{ move || disk_meter.value_label.get() }</span>
                     </div>
                     <div
-                        {..disk_meter.meter_props}
+                        {..disk_meter.meter_props.into_attrs()}
                         style="height: 20px; background: #e0e0e0; border-radius: 4px; overflow: hidden;"
                     >
                         <div style=move || format!(
@@ -72,7 +72,7 @@ pub fn PageUseMeter() -> impl IntoView {
                         <span>{ move || battery_meter.value_label.get() }</span>
                     </div>
                     <div
-                        {..battery_meter.meter_props}
+                        {..battery_meter.meter_props.into_attrs()}
                         style="height: 20px; background: #e0e0e0; border-radius: 4px; overflow: hidden;"
                     >
                         <div style=move || format!(

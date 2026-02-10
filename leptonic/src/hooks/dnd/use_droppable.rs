@@ -1,8 +1,9 @@
 use crate::hooks::{DragItem, DropEffect};
+use crate::utils::EventHandler;
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::DragEvent;
@@ -101,13 +102,47 @@ pub struct DropEvent {
 /// The return value of the `use_droppable` hook.
 pub struct UseDroppableReturn {
     /// Props for the droppable element.
-    pub drop_props: UseDroppableAttrs,
+    pub drop_props: UseDroppableProps,
 
     /// The ID of the droppable element.
     pub droppable_id: String,
 
     /// Whether a drag is currently over this drop zone.
     pub is_drop_target: Signal<bool>,
+}
+
+/// Props from `use_droppable` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseDroppableProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_dropeffect: Signal<&'static str>,
+    pub on_dragenter: EventHandler<DragEvent>,
+    pub on_dragover: EventHandler<DragEvent>,
+    pub on_dragleave: EventHandler<DragEvent>,
+    pub on_drop: EventHandler<DragEvent>,
+}
+
+impl UseDroppableProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDroppableAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDroppableAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaDropeffect, self.aria_dropeffect),
+            self.on_dragenter.into_on(ev::dragenter),
+            self.on_dragover.into_on(ev::dragover),
+            self.on_dragleave.into_on(ev::dragleave),
+            self.on_drop.into_on(ev::drop),
+        )
+    }
 }
 
 /// Attributes for the droppable element.
@@ -373,15 +408,15 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
     };
 
     UseDroppableReturn {
-        drop_props: (
-            Attr(attr::Id, droppable_id.clone()),
-            Attr(attr::Role, "button"),
-            Attr(attr::AriaDropeffect, aria_dropeffect),
-            on(ev::dragenter, handle_drag_enter).into_cloneable(),
-            on(ev::dragover, handle_drag_over).into_cloneable(),
-            on(ev::dragleave, handle_drag_leave).into_cloneable(),
-            on(ev::drop, handle_drop).into_cloneable(),
-        ),
+        drop_props: UseDroppableProps {
+            id: droppable_id.clone(),
+            role: "button",
+            aria_dropeffect,
+            on_dragenter: EventHandler::new(handle_drag_enter),
+            on_dragover: EventHandler::new(handle_drag_over),
+            on_dragleave: EventHandler::new(handle_drag_leave),
+            on_drop: EventHandler::new(handle_drop),
+        },
         droppable_id,
         is_drop_target: is_drop_target.into(),
     }

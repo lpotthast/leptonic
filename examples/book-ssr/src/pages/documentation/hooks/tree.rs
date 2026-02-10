@@ -40,7 +40,7 @@ pub fn PageUseTree() -> impl IntoView {
             </h2>
 
             <div style="margin: 1em 0; max-width: 300px; border: 1px solid #ccc; border-radius: 4px; padding: 0.5em;">
-                <ul {..tree.tree_props} style="list-style: none; padding: 0; margin: 0;">
+                <ul {..tree.tree_props.into_attrs()} style="list-style: none; padding: 0; margin: 0;">
                     <TreeItem
                         key="documents"
                         label="Documents"
@@ -128,7 +128,7 @@ pub fn PageUseTree() -> impl IntoView {
                     });
 
                     view! {
-                        <ul {..tree.tree_props}>
+                        <ul {..tree.tree_props.into_attrs()}>
                             // Tree items...
                         </ul>
                     }
@@ -258,7 +258,7 @@ fn TreeItem(
 
     view! {
         <li
-            {..tree_item.item_props}
+            {..tree_item.item_props.into_attrs()}
             style=format!("padding-left: {}; cursor: pointer; padding: 0.25em 0.5em; border-radius: 4px;", padding)
             style:background=move || if is_selected.get() { "#e3f2fd" } else { "transparent" }
         >

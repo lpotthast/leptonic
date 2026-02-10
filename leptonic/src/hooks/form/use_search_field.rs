@@ -1,7 +1,8 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
@@ -10,6 +11,7 @@ use web_sys::KeyboardEvent;
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaInvalid;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/searchfield/src/useSearchField.ts
 
@@ -91,16 +93,16 @@ impl Default for UseSearchFieldInput {
 /// The return value of the `use_search_field` hook.
 #[derive(Clone)]
 pub struct UseSearchFieldReturn {
-    /// Props for the input element.
-    pub input_props: UseSearchFieldInputAttrs,
+    /// Props for the input element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub input_props: UseSearchFieldInputProps,
 
-    /// Props for the clear button element.
-    pub clear_button_props: UseSearchFieldClearButtonAttrs,
+    /// Props for the clear button element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub clear_button_props: UseSearchFieldClearButtonProps,
 
-    /// Props for the label element.
+    /// Props for the label element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
     pub label_props: UseSearchFieldLabelProps,
 
-    /// Props for the description element.
+    /// Props for the description element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
     pub description_props: UseSearchFieldDescriptionProps,
 
     /// Whether there is a value to clear.
@@ -108,6 +110,68 @@ pub struct UseSearchFieldReturn {
 
     /// Whether the focus ring should be visible (keyboard navigation only).
     pub is_focus_visible: Signal<bool>,
+}
+
+/// Props from `use_search_field` for the input element.
+#[derive(Debug, Clone)]
+pub struct UseSearchFieldInputProps {
+    pub id: String,
+    pub r#type: &'static str,
+    pub role: &'static str,
+    pub name: Option<&'static str>,
+    pub value: Signal<String>,
+    pub placeholder: Option<&'static str>,
+    pub disabled: Signal<bool>,
+    pub readonly: Signal<bool>,
+    pub aria_label: Option<&'static str>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_invalid: Option<AriaInvalid>,
+    pub maxlength: Option<u32>,
+    pub autofocus: bool,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub on_input: EventHandler<web_sys::Event>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<web_sys::FocusEvent>,
+    pub on_blur: EventHandler<web_sys::FocusEvent>,
+    pub on_focusin: EventHandler<web_sys::FocusEvent>,
+    pub on_focusout: EventHandler<web_sys::FocusEvent>,
+}
+
+impl UseSearchFieldInputProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSearchFieldInputAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSearchFieldInputAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Role, self.role),
+            Attr(attr::Name, self.name),
+            Attr(attr::Value, self.value),
+            Attr(attr::Placeholder, self.placeholder),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::Readonly, self.readonly),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            Attr(attr::Maxlength, self.maxlength),
+            Attr(attr::Autofocus, self.autofocus),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.on_input.into_on(ev::input),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+        )
+    }
 }
 
 /// Attributes for the search field input element.
@@ -126,14 +190,44 @@ pub type UseSearchFieldInputAttrs = (
     Attr<attr::AriaInvalid, Option<AriaInvalid>>,
     Attr<attr::Maxlength, Option<u32>>,
     Attr<attr::Autofocus, bool>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::input, SharedEventCallback<web_sys::Event>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<web_sys::FocusEvent>>,
     On<ev::blur, SharedEventCallback<web_sys::FocusEvent>>,
     On<ev::focusin, SharedEventCallback<web_sys::FocusEvent>>,
     On<ev::focusout, SharedEventCallback<web_sys::FocusEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
+
+/// Props from `use_search_field` for the clear button element.
+#[derive(Debug, Clone)]
+pub struct UseSearchFieldClearButtonProps {
+    pub r#type: &'static str,
+    pub aria_label: &'static str,
+    pub tabindex: &'static str,
+    pub disabled: Signal<bool>,
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+}
+
+impl UseSearchFieldClearButtonProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSearchFieldClearButtonAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSearchFieldClearButtonAttrs {
+        (
+            Attr(attr::Type, self.r#type),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::Disabled, self.disabled),
+            self.on_click.into_on(ev::click),
+        )
+    }
+}
 
 /// Attributes for the clear button element.
 pub type UseSearchFieldClearButtonAttrs = (
@@ -154,12 +248,46 @@ pub struct UseSearchFieldLabelProps {
     pub html_for: String,
 }
 
+impl UseSearchFieldLabelProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSearchFieldLabelAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSearchFieldLabelAttrs {
+        (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
+    }
+}
+
+/// Attributes for the search field label element.
+pub type UseSearchFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
+
 /// Props for the description element.
 #[derive(Debug, Clone)]
 pub struct UseSearchFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
+
+impl UseSearchFieldDescriptionProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSearchFieldDescriptionAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSearchFieldDescriptionAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// Attributes for the search field description element.
+pub type UseSearchFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Provides the behavior and accessibility implementation for a search field.
 ///
@@ -188,9 +316,9 @@ pub struct UseSearchFieldDescriptionProps {
 ///
 /// view! {
 ///     <div>
-///         <input {..search_field.input_props} />
+///         <input {..search_field.input_props.into_attrs()} />
 ///         <Show when=move || search_field.show_clear_button.get()>
-///             <button {..search_field.clear_button_props}>"Clear"</button>
+///             <button {..search_field.clear_button_props.into_attrs()}>"Clear"</button>
 ///         </Show>
 ///     </div>
 /// }
@@ -283,8 +411,6 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     // Handle clear button click
     let handle_clear = move |_e: web_sys::MouseEvent| {
@@ -315,40 +441,39 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid =
-        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     UseSearchFieldReturn {
-        input_props: (
-            Attr(attr::Id, input_id.clone()),
-            Attr(attr::Type, "search"),
-            Attr(attr::Role, "searchbox"),
-            Attr(attr::Name, name),
-            Attr(attr::Value, value),
-            Attr(attr::Placeholder, placeholder),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::Readonly, is_read_only),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaDescribedby, aria_describedby),
-            Attr(attr::AriaInvalid, aria_invalid),
-            Attr(attr::Maxlength, max_length),
-            Attr(attr::Autofocus, auto_focus),
-            on(ev::input, handle_input).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-        ),
-        clear_button_props: (
-            Attr(attr::Type, "button"),
-            Attr(attr::AriaLabel, "Clear search"),
-            Attr(attr::Tabindex, "-1"),
-            Attr(attr::Disabled, is_disabled),
-            on(ev::click, handle_clear).into_cloneable(),
-        ),
+        input_props: UseSearchFieldInputProps {
+            id: input_id.clone(),
+            r#type: "search",
+            role: "searchbox",
+            name,
+            value,
+            placeholder,
+            disabled: is_disabled,
+            readonly: is_read_only,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            aria_invalid,
+            maxlength: max_length,
+            autofocus: auto_focus,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            on_input: EventHandler::new(handle_input),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+        },
+        clear_button_props: UseSearchFieldClearButtonProps {
+            r#type: "button",
+            aria_label: "Clear search",
+            tabindex: "-1",
+            disabled: is_disabled,
+            on_click: EventHandler::new(handle_clear),
+        },
         label_props: UseSearchFieldLabelProps {
             id: label_id,
             html_for: input_id,

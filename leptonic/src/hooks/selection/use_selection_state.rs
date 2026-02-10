@@ -223,9 +223,8 @@ where
     } = input;
 
     // Create internal state if uncontrolled
-    let (internal_selection, set_internal_selection) = signal(
-        default_selected_keys.unwrap_or_else(|| Selection::Keys(HashSet::new())),
-    );
+    let (internal_selection, set_internal_selection) =
+        signal(default_selected_keys.unwrap_or_else(|| Selection::Keys(HashSet::new())));
 
     // Use controlled or internal state
     let selected_keys = selected_keys.unwrap_or_else(|| internal_selection.into());

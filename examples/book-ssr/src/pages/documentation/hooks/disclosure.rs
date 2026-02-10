@@ -40,7 +40,7 @@ pub fn PageUseDisclosure() -> impl IntoView {
 
             <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin: 1em 0; max-width: 500px;">
                 <button
-                    {..trigger_props}
+                    {..trigger_props.into_attrs()}
                     on:click=move |_| toggle.run(())
                     style="
                         width: 100%;
@@ -63,7 +63,7 @@ pub fn PageUseDisclosure() -> impl IntoView {
                 </button>
 
                 <div
-                    {..content_props}
+                    {..content_props.into_attrs()}
                     style=move || format!(
                         "overflow: hidden; transition: all 0.3s; {}",
                         if is_expanded.get() { "max-height: 200px; padding: 1em;" } else { "max-height: 0; padding: 0 1em;" }

@@ -1,10 +1,12 @@
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaInvalid, AriaLive, AriaRequired};
+use crate::utils::EventHandler;
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
@@ -106,8 +108,8 @@ impl Default for UseTextFieldInput {
 /// The return value of the `use_text_field` hook.
 #[derive(Clone)]
 pub struct UseTextFieldReturn {
-    /// Props for the input element.
-    pub input_props: UseTextFieldInputAttrs,
+    /// Props for the input element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub input_props: UseTextFieldInputProps,
 
     /// Props for the label element.
     pub label_props: UseTextFieldLabelProps,
@@ -120,6 +122,72 @@ pub struct UseTextFieldReturn {
 
     /// Whether the focus ring should be visible (keyboard navigation only).
     pub is_focus_visible: Signal<bool>,
+}
+
+/// Props from `use_text_field` for the input element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseTextFieldInputProps {
+    pub id: String,
+    pub r#type: &'static str,
+    pub name: Option<&'static str>,
+    pub value: Signal<String>,
+    pub placeholder: Option<&'static str>,
+    pub disabled: Signal<bool>,
+    pub readonly: Signal<bool>,
+    pub aria_label: Option<&'static str>,
+    pub aria_labelledby: Option<String>,
+    pub aria_describedby: Option<String>,
+    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_required: Option<AriaRequired>,
+    pub minlength: Option<u32>,
+    pub maxlength: Option<u32>,
+    pub pattern: Option<&'static str>,
+    pub autocomplete: Option<&'static str>,
+    pub autofocus: bool,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub on_input: EventHandler<Event>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl UseTextFieldInputProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTextFieldInputAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTextFieldInputAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Name, self.name),
+            Attr(attr::Value, self.value),
+            Attr(attr::Placeholder, self.placeholder),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::Readonly, self.readonly),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaDescribedby, self.aria_describedby),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            Attr(attr::AriaRequired, self.aria_required),
+            Attr(attr::Minlength, self.minlength),
+            Attr(attr::Maxlength, self.maxlength),
+            Attr(attr::Pattern, self.pattern),
+            Attr(attr::Autocomplete, self.autocomplete),
+            Attr(attr::Autofocus, self.autofocus),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.on_input.into_on(ev::input),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+        )
+    }
 }
 
 /// Attributes for the text field input element.
@@ -141,7 +209,7 @@ pub type UseTextFieldInputAttrs = (
     Attr<attr::Pattern, Option<&'static str>>,
     Attr<attr::Autocomplete, Option<&'static str>>,
     Attr<attr::Autofocus, bool>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::input, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -159,12 +227,46 @@ pub struct UseTextFieldLabelProps {
     pub html_for: String,
 }
 
+impl UseTextFieldLabelProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTextFieldLabelAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTextFieldLabelAttrs {
+        (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
+    }
+}
+
+/// Attributes for the text field label element.
+pub type UseTextFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
+
 /// Props for the description element.
 #[derive(Debug, Clone)]
 pub struct UseTextFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
+
+impl UseTextFieldDescriptionProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTextFieldDescriptionAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTextFieldDescriptionAttrs {
+        (Attr(attr::Id, self.id),)
+    }
+}
+
+/// Attributes for the text field description element.
+pub type UseTextFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the error message element.
 #[derive(Debug, Clone)]
@@ -178,6 +280,31 @@ pub struct UseTextFieldErrorProps {
     /// The aria-live attribute.
     pub aria_live: AriaLive,
 }
+
+impl UseTextFieldErrorProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseTextFieldErrorAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseTextFieldErrorAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLive, self.aria_live),
+        )
+    }
+}
+
+/// Attributes for the text field error message element.
+pub type UseTextFieldErrorAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, &'static str>,
+    Attr<attr::AriaLive, AriaLive>,
+);
 
 /// Provides the behavior and accessibility implementation for a text field.
 ///
@@ -202,9 +329,9 @@ pub struct UseTextFieldErrorProps {
 ///
 /// view! {
 ///     <div>
-///         <label {..text_field.label_props}>"Email"</label>
-///         <input {..text_field.input_props} />
-///         <p {..text_field.description_props}>"We'll never share your email"</p>
+///         <label {..text_field.label_props.into_attrs()}>"Email"</label>
+///         <input {..text_field.input_props.into_attrs()} />
+///         <p {..text_field.description_props.into_attrs()}>"We'll never share your email"</p>
 ///     </div>
 /// }
 /// ```
@@ -269,8 +396,6 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     // Build aria-describedby
     let mut describedby_parts = Vec::new();
@@ -295,38 +420,37 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid =
-        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
     let aria_required = is_required.then_some(AriaRequired::True);
 
     UseTextFieldReturn {
-        input_props: (
-            Attr(attr::Id, input_id.clone()),
-            Attr(attr::Type, input_type),
-            Attr(attr::Name, name),
-            Attr(attr::Value, value),
-            Attr(attr::Placeholder, placeholder),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::Readonly, is_read_only),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-            Attr(attr::AriaDescribedby, aria_describedby),
-            Attr(attr::AriaInvalid, aria_invalid),
-            Attr(attr::AriaRequired, aria_required),
-            Attr(attr::Minlength, min_length),
-            Attr(attr::Maxlength, max_length),
-            Attr(attr::Pattern, pattern),
-            Attr(attr::Autocomplete, auto_complete),
-            Attr(attr::Autofocus, auto_focus),
-            data_focus_visible,
-            on(ev::input, handle_input).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-        ),
+        input_props: UseTextFieldInputProps {
+            id: input_id.clone(),
+            r#type: input_type,
+            name,
+            value,
+            placeholder,
+            disabled: is_disabled,
+            readonly: is_read_only,
+            aria_label,
+            aria_labelledby,
+            aria_describedby,
+            aria_invalid,
+            aria_required,
+            minlength: min_length,
+            maxlength: max_length,
+            pattern,
+            autocomplete: auto_complete,
+            autofocus: auto_focus,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            on_input: EventHandler::new(handle_input),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+        },
         label_props: UseTextFieldLabelProps {
             id: label_id,
             html_for: input_id,

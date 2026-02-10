@@ -50,7 +50,7 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                     });
 
                     view! {
-                        <button {..tooltip.trigger_props}>
+                        <button {..tooltip.trigger_props.into_attrs()}>
                             "Hover me"
                         </button>
                         <Portal>
@@ -108,7 +108,7 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                     });
 
                     view! {
-                        <button node_ref=trigger_ref {..tooltip.trigger_props}>
+                        <button node_ref=trigger_ref {..tooltip.trigger_props.into_attrs()}>
                             "Hover me"
                         </button>
                         <Portal>
@@ -227,7 +227,7 @@ fn TooltipDemo() -> impl IntoView {
             <button
                 node_ref=trigger_ref
                 style="padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; background: var(--brand-color); color: white; border: none; font-size: 1em;"
-                {..tooltip.trigger_props}
+                {..tooltip.trigger_props.into_attrs()}
             >
                 "Hover me"
             </button>
@@ -318,7 +318,7 @@ fn PositionedTooltip(
             <button
                 node_ref=trigger_ref
                 style="padding: 0.5em 1em; border-radius: 6px; cursor: pointer; background: #555; color: white; border: none; font-size: 0.9em; min-width: 80px;"
-                {..tooltip.trigger_props}
+                {..tooltip.trigger_props.into_attrs()}
             >
                 {label}
             </button>

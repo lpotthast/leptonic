@@ -7,10 +7,10 @@ use crate::utils::aria::*;
 use crate::utils::scroll_behavior::ScrollBehavior;
 use crate::utils::{ElementCaptureAttr, MergeWith};
 use educe::Educe;
+use leptos::attr;
 use leptos::attr::Attr;
 use leptos::oco::Oco;
 use leptos::prelude::*;
-use leptos::attr;
 use leptos_use::{use_document, use_window};
 use reactive_graph::callback::{Callable, Callback};
 use wasm_bindgen::JsValue;
@@ -239,11 +239,12 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
 
     #[cfg(debug_assertions)]
     let merged = MergedFocusablePressFocusRingProps {
-        element_capture: merged.element_capture.clone().chain(
-            ElementCaptureAttr::new(move |el| {
+        element_capture: merged
+            .element_capture
+            .clone()
+            .chain(ElementCaptureAttr::new(move |el| {
                 super::debug_validate_element_type(element_type, &el);
-            }),
-        ),
+            })),
         ..merged
     };
 
@@ -252,9 +253,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
             href: href.0,
             role,
             aria_label: description,
-            aria_disabled: Signal::derive(move || {
-                disabled.get().then_some(AriaDisabled::True)
-            }),
+            aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
             merged,
         },
         is_pressed,

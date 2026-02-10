@@ -1,7 +1,7 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
@@ -9,6 +9,7 @@ use web_sys::KeyboardEvent;
 use super::use_calendar::create_weeks;
 use crate::utils::aria::AriaDisabled;
 use crate::utils::time::{start_of_next_month, start_of_previous_month, Day, Week};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useRangeCalendar.ts
 
@@ -98,8 +99,8 @@ impl Default for UseRangeCalendarInput {
 /// The return value of the `use_range_calendar` hook.
 #[derive(Debug, Clone)]
 pub struct UseRangeCalendarReturn {
-    /// Props for the calendar container.
-    pub calendar_props: UseRangeCalendarAttrs,
+    /// Props for the calendar container. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub calendar_props: UseRangeCalendarProps,
 
     /// The current focused/staging date.
     pub staging: ReadSignal<time::OffsetDateTime>,
@@ -138,6 +139,36 @@ pub struct UseRangeCalendarReturn {
     pub set_highlighted: Callback<Option<time::OffsetDateTime>>,
 }
 
+/// Props from `use_range_calendar` for the calendar container.
+#[derive(Debug, Clone)]
+pub struct UseRangeCalendarProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_label: &'static str,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseRangeCalendarProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseRangeCalendarAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseRangeCalendarAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
+}
+
 /// Attributes for the range calendar container.
 pub type UseRangeCalendarAttrs = (
     Attr<attr::Id, String>,
@@ -162,7 +193,7 @@ pub type UseRangeCalendarAttrs = (
 /// });
 ///
 /// view! {
-///     <div {..range_calendar.calendar_props}>
+///     <div {..range_calendar.calendar_props.into_attrs()}>
 ///         <div class="calendar-header">
 ///             <button on:click=move |_| range_calendar.previous_month.run(())>"<"</button>
 ///             <span>{move || range_calendar.staging_month_name.get()}</span>
@@ -293,13 +324,13 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
     };
 
     UseRangeCalendarReturn {
-        calendar_props: (
-            Attr(attr::Id, calendar_id.clone()),
-            Attr(attr::Role, "application"),
-            Attr(attr::AriaLabel, "Date range picker"),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        calendar_props: UseRangeCalendarProps {
+            id: calendar_id.clone(),
+            role: "application",
+            aria_label: "Date range picker",
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         staging,
         staging_year,
         staging_month_name,

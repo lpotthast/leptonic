@@ -1,7 +1,8 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::hash::Hash;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
@@ -10,6 +11,7 @@ use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, Use
 use crate::hooks::focus::use_focusable::{use_focusable, UseFocusableInput};
 use crate::hooks::selection::use_selection_state::Selection;
 use crate::utils::element_capture::ElementCaptureAttr;
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenuItem.ts
 
@@ -46,8 +48,8 @@ where
 
 /// The return value of the `use_menu_item` hook.
 pub struct UseMenuItemReturn {
-    /// Props for the menu item element.
-    pub item_props: UseMenuItemAttrs,
+    /// Props for the menu item element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub item_props: UseMenuItemProps,
 
     /// Whether this item is currently focused.
     pub is_focused: Signal<bool>,
@@ -62,7 +64,51 @@ pub struct UseMenuItemReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
-/// Attributes for a menu item element.
+/// Props from `use_menu_item` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseMenuItemProps {
+    pub role: &'static str,
+    pub tabindex: Signal<i32>,
+    pub aria_disabled: Signal<Option<&'static str>>,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub on_mouseenter: EventHandler<MouseEvent>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub element_capture: ElementCaptureAttr,
+}
+
+impl UseMenuItemProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseMenuItemAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseMenuItemAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            self.on_mouseenter.into_on(ev::mouseenter),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.element_capture,
+        )
+    }
+}
+
+/// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseMenuItemAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::Tabindex, Signal<i32>>,
@@ -74,7 +120,7 @@ pub type UseMenuItemAttrs = (
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
     On<ev::mouseenter, SharedEventCallback<MouseEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     ElementCaptureAttr,
 );
 
@@ -106,7 +152,7 @@ pub type UseMenuItemAttrs = (
 /// });
 ///
 /// view! {
-///     <li {..item.item_props}>
+///     <li {..item.item_props.into_attrs()}>
 ///         "Copy"
 ///     </li>
 /// }
@@ -245,24 +291,22 @@ where
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     UseMenuItemReturn {
-        item_props: (
-            Attr(attr::Role, "menuitem"),
-            Attr(attr::Tabindex, tabindex),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            on(ev::mouseenter, handle_mouseenter).into_cloneable(),
-            data_focus_visible,
-            focusable.props.element_capture,
-        ),
+        item_props: UseMenuItemProps {
+            role: "menuitem",
+            tabindex,
+            aria_disabled,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            on_mouseenter: EventHandler::new(handle_mouseenter),
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            element_capture: focusable.props.element_capture,
+        },
         is_focused,
         is_selected,
         is_disabled,

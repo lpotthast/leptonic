@@ -1,13 +1,15 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaChecked, AriaDisabled, AriaHidden, AriaInvalid};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/switch/src/useSwitch.ts
 
@@ -57,11 +59,11 @@ impl Default for UseSwitchInput {
 /// The return value of the `use_switch` hook.
 #[derive(Clone)]
 pub struct UseSwitchReturn {
-    /// Props for the switch element (use with a button or div).
-    pub switch_props: UseSwitchAttrs,
+    /// Props for the switch element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub switch_props: UseSwitchProps,
 
-    /// Props for a hidden input for form submission.
-    pub input_props: UseSwitchInputAttrs,
+    /// Props for a hidden input for form submission. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub input_props: UseSwitchInputProps,
 
     /// Whether the switch is currently selected.
     pub is_selected: Signal<bool>,
@@ -73,7 +75,53 @@ pub struct UseSwitchReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
-/// Attributes for the switch element.
+/// Props from `use_switch` for the switch element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseSwitchProps {
+    pub role: &'static str,
+    pub aria_checked: Signal<AriaChecked>,
+    pub aria_label: Option<&'static str>,
+    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub tabindex: &'static str,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub on_click: EventHandler<web_sys::MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl UseSwitchProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSwitchAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSwitchAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaChecked, self.aria_checked),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+        )
+    }
+}
+
+/// These attributes must be spread onto the switch element using the spread syntax `<div {..attrs}/>`.
 pub type UseSwitchAttrs = (
     Attr<attr::Role, &'static str>,
     Attr<attr::AriaChecked, Signal<AriaChecked>>,
@@ -87,10 +135,42 @@ pub type UseSwitchAttrs = (
     On<ev::blur, SharedEventCallback<FocusEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
-/// Attributes for the hidden input element (for form submission).
+/// Props from `use_switch` for the hidden input element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseSwitchInputProps {
+    pub r#type: &'static str,
+    pub name: Option<&'static str>,
+    pub value: Option<&'static str>,
+    pub checked: Signal<bool>,
+    pub disabled: Signal<bool>,
+    pub aria_hidden: AriaHidden,
+}
+
+impl UseSwitchInputProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseSwitchInputAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseSwitchInputAttrs {
+        (
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Name, self.name),
+            Attr(attr::Value, self.value),
+            Attr(attr::Checked, self.checked),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::AriaHidden, self.aria_hidden),
+        )
+    }
+}
+
+/// These attributes must be spread onto the hidden input element using the spread syntax `<input {..attrs}/>`.
 pub type UseSwitchInputAttrs = (
     Attr<attr::Type, &'static str>,
     Attr<attr::Name, Option<&'static str>>,
@@ -120,12 +200,12 @@ pub type UseSwitchInputAttrs = (
 /// });
 ///
 /// view! {
-///     <div {..switch.switch_props}>
+///     <div {..switch.switch_props.into_attrs()}>
 ///         <span class="switch-track">
 ///             <span class="switch-thumb" />
 ///         </span>
 ///     </div>
-///     <input {..switch.input_props} />
+///     <input {..switch.input_props.into_attrs()} />
 /// }
 /// ```
 pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
@@ -180,8 +260,7 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
     let aria_checked = Signal::derive(move || AriaChecked::from(is_selected.get()));
 
     // Compute aria-invalid
-    let aria_invalid =
-        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
@@ -198,33 +277,31 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     UseSwitchReturn {
-        switch_props: (
-            Attr(attr::Role, "switch"),
-            Attr(attr::AriaChecked, aria_checked),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaInvalid, aria_invalid),
-            Attr(attr::AriaDisabled, aria_disabled),
-            Attr(attr::Tabindex, "0"),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-        ),
-        input_props: (
-            Attr(attr::Type, "checkbox"),
-            Attr(attr::Name, name),
-            Attr(attr::Value, value),
-            Attr(attr::Checked, is_selected),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::AriaHidden, AriaHidden::True),
-        ),
+        switch_props: UseSwitchProps {
+            role: "switch",
+            aria_checked,
+            aria_label,
+            aria_invalid,
+            aria_disabled,
+            tabindex: "0",
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+        },
+        input_props: UseSwitchInputProps {
+            r#type: "checkbox",
+            name,
+            value,
+            checked: is_selected,
+            disabled: is_disabled,
+            aria_hidden: AriaHidden::True,
+        },
         is_selected,
         is_pressed: is_pressed.into(),
         is_focus_visible,

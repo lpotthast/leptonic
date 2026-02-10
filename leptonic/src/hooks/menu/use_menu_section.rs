@@ -1,3 +1,5 @@
+use leptos::attr;
+use leptos::attr::Attr;
 use uuid::Uuid;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuSection.ts
@@ -26,11 +28,28 @@ pub struct UseMenuSectionReturn {
 }
 
 /// Props for the menu section wrapper item.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct UseMenuSectionItemProps {
     /// The role attribute.
     pub role: &'static str,
 }
+
+impl UseMenuSectionItemProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseMenuSectionItemAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseMenuSectionItemAttrs {
+        (Attr(attr::Role, self.role),)
+    }
+}
+
+/// Attributes for a menu section wrapper item.
+pub type UseMenuSectionItemAttrs = (Attr<attr::Role, &'static str>,);
 
 /// Props for the menu section heading element.
 #[derive(Debug, Clone)]
@@ -41,6 +60,26 @@ pub struct UseMenuSectionHeadingProps {
     /// The role attribute. Set to "presentation" to hide from assistive technology.
     pub role: Option<&'static str>,
 }
+
+impl UseMenuSectionHeadingProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseMenuSectionHeadingAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseMenuSectionHeadingAttrs {
+        (Attr(attr::Id, self.id), Attr(attr::Role, self.role))
+    }
+}
+
+/// Attributes for a menu section heading element.
+pub type UseMenuSectionHeadingAttrs = (
+    Attr<attr::Id, Option<String>>,
+    Attr<attr::Role, Option<&'static str>>,
+);
 
 /// Props for the menu section group element.
 #[derive(Debug, Clone)]
@@ -54,6 +93,31 @@ pub struct UseMenuSectionGroupProps {
     /// The id of the heading that labels this group.
     pub aria_labelledby: Option<String>,
 }
+
+impl UseMenuSectionGroupProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseMenuSectionGroupAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseMenuSectionGroupAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+        )
+    }
+}
+
+/// Attributes for a menu section group element.
+pub type UseMenuSectionGroupAttrs = (
+    Attr<attr::Role, &'static str>,
+    Attr<attr::AriaLabel, Option<String>>,
+    Attr<attr::AriaLabelledby, Option<String>>,
+);
 
 /// Provides the behavior and accessibility implementation for a section in a menu.
 ///
@@ -70,11 +134,11 @@ pub struct UseMenuSectionGroupProps {
 /// });
 ///
 /// view! {
-///     <li {..section.item_props}>
-///         <span {..section.heading_props}>
+///     <li {..section.item_props.into_attrs()}>
+///         <span {..section.heading_props.into_attrs()}>
 ///             { section_heading }
 ///         </span>
-///         <ul {..section.group_props}>
+///         <ul {..section.group_props.into_attrs()}>
 ///             // Menu items here
 ///         </ul>
 ///     </li>

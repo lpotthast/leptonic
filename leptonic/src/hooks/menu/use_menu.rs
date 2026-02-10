@@ -1,7 +1,7 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -14,6 +14,7 @@ use crate::hooks::selection::use_selection_state::{Selection, SelectionBehavior,
 use crate::hooks::selection::use_type_select::{
     use_type_select, UseTypeSelectInput, UseTypeSelectReturn,
 };
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenu.ts
 
@@ -76,14 +77,42 @@ pub struct UseMenuReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    /// Props for the menu element.
-    pub menu_props: UseMenuAttrs,
+    /// Props for the menu element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub menu_props: UseMenuProps,
 
     /// The selectable list state.
     pub list: UseSelectableListReturn<K>,
 
     /// The type select state.
     pub type_select: UseTypeSelectReturn,
+}
+
+/// Props from `use_menu` that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseMenuProps {
+    pub role: &'static str,
+    pub aria_label: Option<String>,
+    pub tabindex: i32,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+}
+
+impl UseMenuProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseMenuAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseMenuAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::Tabindex, self.tabindex),
+            self.on_keydown.into_on(ev::keydown),
+        )
+    }
 }
 
 /// Attributes for the menu element.
@@ -118,7 +147,7 @@ pub type UseMenuAttrs = (
 /// });
 ///
 /// view! {
-///     <ul {..menu.menu_props}>
+///     <ul {..menu.menu_props.into_attrs()}>
 ///         // Menu items here
 ///     </ul>
 /// }
@@ -220,12 +249,12 @@ where
     };
 
     UseMenuReturn {
-        menu_props: (
-            Attr(attr::Role, "menu"),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::Tabindex, 0),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-        ),
+        menu_props: UseMenuProps {
+            role: "menu",
+            aria_label,
+            tabindex: 0,
+            on_keydown: EventHandler::new(handle_keydown),
+        },
         list,
         type_select,
     }

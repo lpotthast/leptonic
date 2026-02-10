@@ -1,13 +1,14 @@
-use leptos::attr;
-use leptos::attr::{Attr, Attribute};
-use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
+use leptos::{attr, ev};
 use web_sys::{Event, FocusEvent};
 
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaInvalid, AriaRequired};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckbox.ts
 
@@ -65,8 +66,8 @@ impl Default for UseCheckboxInput {
 /// The return value of the `use_checkbox` hook.
 #[derive(Clone)]
 pub struct UseCheckboxReturn {
-    /// Props for the checkbox input element.
-    pub input_props: UseCheckboxInputAttrs,
+    /// Props for the checkbox input element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub input_props: UseCheckboxInputProps,
 
     /// Whether the checkbox is currently selected.
     pub is_selected: Signal<bool>,
@@ -81,6 +82,54 @@ pub struct UseCheckboxReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
+/// Props from `use_checkbox` that can be extracted and merged programmatically.
+#[derive(Clone)]
+pub struct UseCheckboxInputProps {
+    pub r#type: &'static str,
+    pub name: Option<&'static str>,
+    pub value: Option<&'static str>,
+    pub checked: Signal<bool>,
+    pub disabled: Signal<bool>,
+    pub aria_label: Option<&'static str>,
+    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_required: Option<AriaRequired>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+    pub on_change: EventHandler<Event>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl UseCheckboxInputProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseCheckboxInputAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseCheckboxInputAttrs {
+        (
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Name, self.name),
+            Attr(attr::Value, self.value),
+            Attr(attr::Checked, self.checked),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::AriaLabel, self.aria_label),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            Attr(attr::AriaRequired, self.aria_required),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.on_change.into_on(ev::change),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+        )
+    }
+}
+
 /// Attributes for the checkbox input element.
 pub type UseCheckboxInputAttrs = (
     Attr<attr::Type, &'static str>,
@@ -91,7 +140,7 @@ pub type UseCheckboxInputAttrs = (
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaInvalid, Option<AriaInvalid>>,
     Attr<attr::AriaRequired, Option<AriaRequired>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::change, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -120,7 +169,7 @@ pub type UseCheckboxInputAttrs = (
 ///
 /// view! {
 ///     <label>
-///         <input {..checkbox.input_props} />
+///         <input {..checkbox.input_props.into_attrs()} />
 ///         "Accept terms and conditions"
 ///     </label>
 /// }
@@ -155,8 +204,7 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid =
-        (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
     let aria_required = is_required.then_some(AriaRequired::True);
@@ -173,26 +221,24 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     UseCheckboxReturn {
-        input_props: (
-            Attr(attr::Type, "checkbox"),
-            Attr(attr::Name, name),
-            Attr(attr::Value, value),
-            Attr(attr::Checked, is_selected),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::AriaLabel, aria_label),
-            Attr(attr::AriaInvalid, aria_invalid),
-            Attr(attr::AriaRequired, aria_required),
-            data_focus_visible,
-            on(ev::change, handle_change).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-        ),
+        input_props: UseCheckboxInputProps {
+            r#type: "checkbox",
+            name,
+            value,
+            checked: is_selected,
+            disabled: is_disabled,
+            aria_label,
+            aria_invalid,
+            aria_required,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+            on_change: EventHandler::new(handle_change),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+        },
         is_selected,
         is_indeterminate,
         is_pressed: is_pressed.into(),

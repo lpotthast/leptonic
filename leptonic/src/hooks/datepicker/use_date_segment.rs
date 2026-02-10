@@ -1,11 +1,12 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::utils::aria::{AriaDisabled, AriaReadonly};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDateSegment.ts
 
@@ -199,11 +200,51 @@ pub struct UseDateSegmentInput {
 /// The return value of the `use_date_segment` hook.
 #[derive(Debug, Clone)]
 pub struct UseDateSegmentReturn {
-    /// Props for the segment element.
-    pub segment_props: UseDateSegmentAttrs,
+    /// Props for the segment element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    pub segment_props: UseDateSegmentProps,
 
     /// The segment data.
     pub segment: DateSegment,
+}
+
+/// Props from `use_date_segment` for the segment element.
+#[derive(Debug, Clone)]
+pub struct UseDateSegmentProps {
+    pub role: &'static str,
+    pub tabindex: Signal<&'static str>,
+    pub aria_valuenow: Option<String>,
+    pub aria_valuemin: Option<String>,
+    pub aria_valuemax: Option<String>,
+    pub aria_valuetext: String,
+    pub aria_readonly: Signal<Option<AriaReadonly>>,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+}
+
+impl UseDateSegmentProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDateSegmentAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDateSegmentAttrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaValuenow, self.aria_valuenow),
+            Attr(attr::AriaValuemin, self.aria_valuemin),
+            Attr(attr::AriaValuemax, self.aria_valuemax),
+            Attr(attr::AriaValuetext, self.aria_valuetext),
+            Attr(attr::AriaReadonly, self.aria_readonly),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+        )
+    }
 }
 
 /// Attributes for the date segment element.
@@ -238,7 +279,7 @@ pub type UseDateSegmentAttrs = (
 /// });
 ///
 /// view! {
-///     <span {..segment.segment_props}>
+///     <span {..segment.segment_props.into_attrs()}>
 ///         {segment.segment.text.clone()}
 ///     </span>
 /// }
@@ -359,18 +400,18 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
     };
 
     UseDateSegmentReturn {
-        segment_props: (
-            Attr(attr::Role, role),
-            Attr(attr::Tabindex, tabindex),
-            Attr(attr::AriaValuenow, aria_valuenow),
-            Attr(attr::AriaValuemin, aria_valuemin),
-            Attr(attr::AriaValuemax, aria_valuemax),
-            Attr(attr::AriaValuetext, aria_valuetext),
-            Attr(attr::AriaReadonly, aria_readonly),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on(ev::focus, handle_focus).into_cloneable(),
-        ),
+        segment_props: UseDateSegmentProps {
+            role,
+            tabindex,
+            aria_valuenow,
+            aria_valuemin,
+            aria_valuemax,
+            aria_valuetext,
+            aria_readonly,
+            aria_disabled,
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: EventHandler::new(handle_focus),
+        },
         segment,
     }
 }

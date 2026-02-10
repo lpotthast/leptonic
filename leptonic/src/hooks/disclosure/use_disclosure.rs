@@ -1,13 +1,15 @@
 use leptos::attr;
-use leptos::attr::{Attr, Attribute};
+use leptos::attr::custom::{custom_attribute, CustomAttr};
+use leptos::attr::Attr;
 use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
+use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHidden};
+use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/disclosure/src/useDisclosure.ts
 
@@ -38,10 +40,10 @@ impl Default for UseDisclosureInput {
 #[derive(Debug, Clone)]
 pub struct UseDisclosureReturn {
     /// Props for the disclosure trigger button.
-    pub trigger_props: UseDisclosureTriggerAttrs,
+    pub trigger_props: UseDisclosureTriggerProps,
 
     /// Props for the disclosure content panel.
-    pub content_props: UseDisclosureContentAttrs,
+    pub content_props: UseDisclosureContentProps,
 
     /// The ID of the trigger.
     pub trigger_id: String,
@@ -59,6 +61,48 @@ pub struct UseDisclosureReturn {
     pub is_focus_visible: Signal<bool>,
 }
 
+/// Props from `use_disclosure` for the trigger that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseDisclosureTriggerProps {
+    pub id: String,
+    pub aria_expanded: Signal<Option<AriaExpanded>>,
+    pub aria_controls: String,
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub on_click: EventHandler<MouseEvent>,
+    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
+}
+
+impl UseDisclosureTriggerProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDisclosureTriggerAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDisclosureTriggerAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::AriaExpanded, self.aria_expanded),
+            Attr(attr::AriaControls, self.aria_controls),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            self.on_click.into_on(ev::click),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
+        )
+    }
+}
+
 /// Attributes for the disclosure trigger button.
 pub type UseDisclosureTriggerAttrs = (
     Attr<attr::Id, String>,
@@ -71,8 +115,36 @@ pub type UseDisclosureTriggerAttrs = (
     On<ev::blur, SharedEventCallback<FocusEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
+
+/// Props from `use_disclosure` for the content panel that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseDisclosureContentProps {
+    pub id: String,
+    pub role: &'static str,
+    pub aria_labelledby: String,
+    pub aria_hidden: Signal<Option<AriaHidden>>,
+}
+
+impl UseDisclosureContentProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseDisclosureContentAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseDisclosureContentAttrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+            Attr(attr::AriaHidden, self.aria_hidden),
+        )
+    }
+}
 
 /// Attributes for the disclosure content panel.
 pub type UseDisclosureContentAttrs = (
@@ -167,29 +239,27 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
         on_blur: None,
         on_focus_change: None,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
 
     UseDisclosureReturn {
-        trigger_props: (
-            Attr(attr::Id, trigger_id.clone()),
-            Attr(attr::AriaExpanded, aria_expanded),
-            Attr(attr::AriaControls, content_id.clone()),
-            Attr(attr::AriaDisabled, aria_disabled),
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-            data_focus_visible,
-        ),
-        content_props: (
-            Attr(attr::Id, content_id.clone()),
-            Attr(attr::Role, "region"),
-            Attr(attr::AriaLabelledby, trigger_id.clone()),
-            Attr(attr::AriaHidden, aria_hidden),
-        ),
+        trigger_props: UseDisclosureTriggerProps {
+            id: trigger_id.clone(),
+            aria_expanded,
+            aria_controls: content_id.clone(),
+            aria_disabled,
+            on_click: EventHandler::new(handle_click),
+            on_keydown: EventHandler::new(handle_keydown),
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
+            data_focus_visible: focus_ring_props.data_focus_visible,
+        },
+        content_props: UseDisclosureContentProps {
+            id: content_id.clone(),
+            role: "region",
+            aria_labelledby: trigger_id.clone(),
+            aria_hidden,
+        },
         trigger_id,
         content_id,
         is_expanded,

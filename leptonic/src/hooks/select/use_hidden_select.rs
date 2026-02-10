@@ -51,16 +51,36 @@ impl<K: Clone + Send + Sync + 'static + Default> Default for UseHiddenSelectInpu
 /// The return value of the `use_hidden_select` hook.
 pub struct UseHiddenSelectReturn {
     /// Props for the container div that holds the hidden elements.
-    pub container_props: UseHiddenSelectContainerAttrs,
+    pub container_props: UseHiddenSelectContainerProps,
 
     /// Props for the hidden input element.
-    pub input_props: UseHiddenSelectInputAttrs,
+    pub input_props: UseHiddenSelectInputProps,
 
     /// Props for the hidden select element.
-    pub select_props: UseHiddenSelectSelectAttrs,
+    pub select_props: UseHiddenSelectSelectProps,
 
     /// The current value for the hidden input.
     pub value: Signal<String>,
+}
+
+/// Props from `use_hidden_select` for the container that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseHiddenSelectContainerProps {
+    pub aria_hidden: AriaHidden,
+}
+
+impl UseHiddenSelectContainerProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseHiddenSelectContainerAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseHiddenSelectContainerAttrs {
+        (Attr(attr::AriaHidden, self.aria_hidden),)
+    }
 }
 
 /// Attributes for the hidden container.
@@ -68,6 +88,38 @@ pub type UseHiddenSelectContainerAttrs = (Attr<attr::AriaHidden, AriaHidden>,);
 
 /// The style string for hiding the container visually.
 pub const HIDDEN_SELECT_CONTAINER_STYLE: &str = "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;";
+
+/// Props from `use_hidden_select` for the input element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseHiddenSelectInputProps {
+    pub r#type: &'static str,
+    pub name: Option<&'static str>,
+    pub value: Signal<String>,
+    pub disabled: Signal<bool>,
+    pub required: bool,
+    pub tabindex: &'static str,
+}
+
+impl UseHiddenSelectInputProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseHiddenSelectInputAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseHiddenSelectInputAttrs {
+        (
+            Attr(attr::Type, self.r#type),
+            Attr(attr::Name, self.name),
+            Attr(attr::Value, self.value),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::Required, self.required),
+            Attr(attr::Tabindex, self.tabindex),
+        )
+    }
+}
 
 /// Attributes for the hidden input element.
 pub type UseHiddenSelectInputAttrs = (
@@ -78,6 +130,36 @@ pub type UseHiddenSelectInputAttrs = (
     Attr<attr::Required, bool>,
     Attr<attr::Tabindex, &'static str>,
 );
+
+/// Props from `use_hidden_select` for the select element that can be extracted and merged programmatically.
+#[derive(Debug, Clone)]
+pub struct UseHiddenSelectSelectProps {
+    pub name: Option<&'static str>,
+    pub disabled: Signal<bool>,
+    pub required: bool,
+    pub tabindex: &'static str,
+    pub aria_labelledby: Option<String>,
+}
+
+impl UseHiddenSelectSelectProps {
+    /// Convert to spreadable attributes for Leptos views, cloning internally.
+    #[must_use]
+    pub fn to_attrs(&self) -> UseHiddenSelectSelectAttrs {
+        self.clone().into_attrs()
+    }
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    pub fn into_attrs(self) -> UseHiddenSelectSelectAttrs {
+        (
+            Attr(attr::Name, self.name),
+            Attr(attr::Disabled, self.disabled),
+            Attr(attr::Required, self.required),
+            Attr(attr::Tabindex, self.tabindex),
+            Attr(attr::AriaLabelledby, self.aria_labelledby),
+        )
+    }
+}
 
 /// Attributes for the hidden select element.
 pub type UseHiddenSelectSelectAttrs = (
@@ -105,8 +187,8 @@ pub type UseHiddenSelectSelectAttrs = (
 /// });
 ///
 /// view! {
-///     <div {..hidden.container_props}>
-///         <input {..hidden.input_props} />
+///     <div {..hidden.container_props.into_attrs()}>
+///         <input {..hidden.input_props.into_attrs()} />
 ///     </div>
 /// }
 /// ```
@@ -144,22 +226,24 @@ where
     };
 
     UseHiddenSelectReturn {
-        container_props: (Attr(attr::AriaHidden, AriaHidden::True),),
-        input_props: (
-            Attr(attr::Type, "hidden"),
-            Attr(attr::Name, name),
-            Attr(attr::Value, value),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::Required, is_required),
-            Attr(attr::Tabindex, "-1"),
-        ),
-        select_props: (
-            Attr(attr::Name, name),
-            Attr(attr::Disabled, is_disabled),
-            Attr(attr::Required, is_required),
-            Attr(attr::Tabindex, "-1"),
-            Attr(attr::AriaLabelledby, aria_labelledby),
-        ),
+        container_props: UseHiddenSelectContainerProps {
+            aria_hidden: AriaHidden::True,
+        },
+        input_props: UseHiddenSelectInputProps {
+            r#type: "hidden",
+            name,
+            value,
+            disabled: is_disabled,
+            required: is_required,
+            tabindex: "-1",
+        },
+        select_props: UseHiddenSelectSelectProps {
+            name,
+            disabled: is_disabled,
+            required: is_required,
+            tabindex: "-1",
+            aria_labelledby,
+        },
         value,
     }
 }
