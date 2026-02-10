@@ -51,7 +51,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                     <strong>"Dialog Layer"</strong>
                     " - "
                     <code>"use_dialog"</code>
-                    " (optional): aria-labelledby/describedby, Dialog vs AlertDialog role"
+                    " (optional): ARIA labeling (aria-labelledby/describedby), Dialog vs AlertDialog role, focus on mount"
                 </li>
                 <li>
                     <strong>"Focus Layer"</strong>
@@ -66,7 +66,9 @@ pub fn PageUseModalHook() -> impl IntoView {
                <code>"use_modal"</code>", "
                <code>"use_modal_backdrop"</code>", and "
                <code>"FocusScope"</code>". Add "
-               <code>"use_dialog"</code>" when you need title/description ARIA associations."
+               <code>"use_dialog"</code>" when you need title/description ARIA associations or focus-on-mount behavior. "
+               "Use "<code>"use_dialog"</code>" for ARIA semantics and focus management. "
+               "Use "<code>"use_modal"</code>" for dismiss behavior and aria-modal. Compose both for full accessible dialogs."
             </p>
 
             <h2 id="demo" class="anchor">
@@ -202,11 +204,12 @@ pub fn PageUseModalHook() -> impl IntoView {
                         use_dialog(UseDialogInput {
                             title: Some("Title".to_string()),
                             description: Some("Description".to_string()),
+                            aria_label: None,
                             role: DialogRole::Dialog, // or DialogRole::AlertDialog
-                            is_dismissable: true,
-                            on_close: Some(Callback::new(move |_| close.run(()))),
                         });
 
+                    // dialog_props includes an ElementCaptureAttr that automatically captures
+                    // the DOM element for focus-on-mount — no manual NodeRef wiring needed.
                     view! {
                         <div {..dialog_props}>
                             <h2 id=title_props.id>"Title"</h2>
@@ -221,7 +224,11 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <li>"role=\"dialog\" or role=\"alertdialog\""</li>
                 <li>"aria-labelledby (links to title)"</li>
                 <li>"aria-describedby (links to description)"</li>
+                <li>"Focus on mount (focuses the dialog unless a child already has focus)"</li>
+                <li>"iOS Safari VoiceOver workaround (blur/refocus after 500ms)"</li>
             </ul>
+
+            <p>"For dismiss behavior (Escape key, aria-modal), compose with "<code>"use_modal"</code>"."</p>
 
             <h2 id="use_dialog_state" class="anchor">
                 "use_dialog_state"
@@ -267,11 +274,12 @@ pub fn PageUseModalHook() -> impl IntoView {
             </h2>
 
             <ul>
-                <li>"Escape key dismissal"</li>
-                <li>"Click outside to close"</li>
-                <li>"Proper ARIA roles and associations"</li>
+                <li>"Escape key dismissal (via use_modal)"</li>
+                <li>"Click outside to close (via use_modal_backdrop)"</li>
+                <li>"Proper ARIA roles and associations (via use_dialog)"</li>
+                <li>"Focus on mount with iOS Safari VoiceOver workaround (via use_dialog)"</li>
                 <li>"Focus trapping (when combined with FocusScope)"</li>
-                <li>"Scroll prevention on body"</li>
+                <li>"Scroll prevention on body (via use_modal_backdrop)"</li>
                 <li>"Dismissable and non-dismissable modes"</li>
             </ul>
         </Article>
@@ -386,7 +394,8 @@ fn BasicModalDemo() -> impl IntoView {
     }
 }
 
-/// Alert dialog demo with AlertDialog role
+/// Alert dialog demo with AlertDialog role.
+/// Composes use_modal (for dismiss behavior) + use_dialog (for ARIA semantics + focus).
 #[component]
 fn AlertDialogDemo() -> impl IntoView {
     let UseModalStateReturn {
@@ -396,7 +405,16 @@ fn AlertDialogDemo() -> impl IntoView {
         toggle: _,
     } = use_modal_state(false);
 
-    // Use use_dialog with AlertDialog role
+    // Behavior layer - non-dismissable for alert dialogs
+    let UseModalReturn { modal_props, id: _ } = use_modal(UseModalInput {
+        is_open,
+        on_close: Some(close),
+        is_dismissable: false, // AlertDialogs typically aren't dismissable with Escape
+        should_close_on_interact_outside: false,
+        is_keyboard_dismiss_disabled: true,
+    });
+
+    // Dialog layer - ARIA labeling, alertdialog role, focus on mount
     let UseDialogReturn {
         dialog_props,
         title_props,
@@ -405,9 +423,8 @@ fn AlertDialogDemo() -> impl IntoView {
     } = use_dialog(UseDialogInput {
         title: Some("Delete Item".to_string()),
         description: Some("This action cannot be undone. Are you sure?".to_string()),
+        aria_label: None,
         role: DialogRole::AlertDialog,
-        is_dismissable: false, // AlertDialogs typically aren't dismissable with Escape
-        on_close: Some(close),
     });
 
     // Backdrop layer
@@ -422,6 +439,7 @@ fn AlertDialogDemo() -> impl IntoView {
         prevent_scroll: true,
     });
 
+    let modal_props = StoredValue::new(modal_props);
     let dialog_props = StoredValue::new(dialog_props);
     let content_props = StoredValue::new(content_props);
     let backdrop_props = StoredValue::new(backdrop_props);
@@ -443,6 +461,7 @@ fn AlertDialogDemo() -> impl IntoView {
             >
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     <div
+                        {..modal_props.get_value()}
                         {..dialog_props.get_value()}
                         {..content_props.get_value()}
                         style="background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
@@ -550,7 +569,8 @@ fn NonDismissableModalDemo() -> impl IntoView {
     }
 }
 
-/// Confirmation dialog demo using use_dialog_state
+/// Confirmation dialog demo using use_dialog_state.
+/// Composes use_modal (for dismiss behavior) + use_dialog (for ARIA semantics + focus).
 #[component]
 fn ConfirmationDialogDemo() -> impl IntoView {
     // Use dialog state with confirmation tracking
@@ -573,6 +593,16 @@ fn ConfirmationDialogDemo() -> impl IntoView {
         }
     });
 
+    // Behavior layer - dismissable confirmation dialog
+    let UseModalReturn { modal_props, id: _ } = use_modal(UseModalInput {
+        is_open,
+        on_close: Some(close),
+        is_dismissable: true,
+        should_close_on_interact_outside: true,
+        is_keyboard_dismiss_disabled: false,
+    });
+
+    // Dialog layer - ARIA labeling and focus on mount
     let UseDialogReturn {
         dialog_props,
         title_props,
@@ -581,9 +611,8 @@ fn ConfirmationDialogDemo() -> impl IntoView {
     } = use_dialog(UseDialogInput {
         title: Some("Confirm Action".to_string()),
         description: Some("Do you want to proceed with this action?".to_string()),
+        aria_label: None,
         role: DialogRole::Dialog,
-        is_dismissable: true,
-        on_close: Some(close),
     });
 
     let UseModalBackdropReturn {
@@ -597,6 +626,7 @@ fn ConfirmationDialogDemo() -> impl IntoView {
         prevent_scroll: true,
     });
 
+    let modal_props = StoredValue::new(modal_props);
     let dialog_props = StoredValue::new(dialog_props);
     let content_props = StoredValue::new(content_props);
     let backdrop_props = StoredValue::new(backdrop_props);
@@ -618,8 +648,8 @@ fn ConfirmationDialogDemo() -> impl IntoView {
             <span style="color: #666;">
                 {move || match last_result.get() {
                     None => "No action taken yet".to_string(),
-                    Some(true) => "✓ Confirmed!".to_string(),
-                    Some(false) => "✗ Cancelled".to_string(),
+                    Some(true) => "Confirmed!".to_string(),
+                    Some(false) => "Cancelled".to_string(),
                 }}
             </span>
         </div>
@@ -631,6 +661,7 @@ fn ConfirmationDialogDemo() -> impl IntoView {
             >
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     <div
+                        {..modal_props.get_value()}
                         {..dialog_props.get_value()}
                         {..content_props.get_value()}
                         style="background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
