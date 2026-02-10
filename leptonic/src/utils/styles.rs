@@ -9,6 +9,7 @@ use leptos::typed_builder::TypedBuilder;
 use reactive_graph::effect::RenderEffect;
 use reactive_graph::signal::ReadSignal;
 use smallvec::SmallVec;
+use std::backtrace::Backtrace;
 use std::borrow::Cow;
 use std::sync::Arc;
 
@@ -45,10 +46,10 @@ impl StyleList {
     fn push(&mut self, style: StyleEntry) {
         #[cfg(debug_assertions)]
         {
+            let backtrace = Backtrace::force_capture();
             if self.0.iter().any(|it| it.property() == style.property()) {
                 tracing::warn!(
-                    "Duplicate style property '{}' added to Styles. \
-                     This may indicate conflicting styles.",
+                    "Duplicate style property '{}' added to Styles. This may indicate a bug. At: {backtrace}",
                     style.property()
                 );
             }
