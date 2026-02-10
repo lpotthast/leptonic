@@ -87,6 +87,15 @@ impl CapturedElement {
         self.storage.get_value()
     }
 
+    /// Programmatically set the captured element and notify dependents.
+    ///
+    /// This is useful when a hook needs to forward an element to a parent's
+    /// `CapturedElement` (e.g., via `FocusableContext`).
+    pub fn set(&self, el: web_sys::Element) {
+        self.storage.set_value(Some(SendWrapper::new(el)));
+        self.trigger.notify();
+    }
+
     /// Access the captured element without reactive tracking.
     ///
     /// Use this inside event handlers where tracking is not needed.
@@ -162,6 +171,22 @@ impl ElementCaptureAttr {
             Self {
                 callback: Some(SendWrapper::new(Arc::new(callback))),
             }
+        }
+    }
+
+    /// Combines two element capture attributes into one that invokes both callbacks.
+    ///
+    /// This is the `ElementCaptureAttr` equivalent of [`EventHandler::chain`].
+    #[must_use]
+    pub fn chain(self, other: Self) -> Self {
+        match (self.callback, other.callback) {
+            (Some(a), Some(b)) => Self::new(move |el: web_sys::Element| {
+                (*a)(el.clone());
+                (*b)(el);
+            }),
+            (a @ Some(_), None) => Self { callback: a },
+            (None, b @ Some(_)) => Self { callback: b },
+            (None, None) => Self { callback: None },
         }
     }
 

@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
@@ -12,7 +12,7 @@ pub fn PageAtomAnchorLink() -> impl IntoView {
         <Article>
             <h1 id="anchor-link" class="anchor">
                 "AnchorLink"
-                <AnchorLink href="#anchor-link" description="Direct link to article header"/>
+                <AnchorLink href="#anchor-link" description="Direct link to article header">#</AnchorLink>
             </h1>
 
             <p>
@@ -32,7 +32,7 @@ pub fn PageAtomAnchorLink() -> impl IntoView {
 
             <Code>
                 {indoc!(r##"
-                    use leptonic::atoms::link::AnchorLink;
+
                     use leptonic::components::typography::H1;
 
                     view! {
@@ -51,7 +51,7 @@ pub fn PageAtomAnchorLink() -> impl IntoView {
             ">
                 <h2 id="my-section-anchor">
                     "My Section"
-                    <AnchorLink href="#my-section-anchor" description="Direct link to section: My Section"/>
+                    <AnchorLink href="#my-section-anchor" description="Direct link to section: My Section">#</AnchorLink>
                 </h2>
             </div>
 

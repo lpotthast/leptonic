@@ -2,7 +2,7 @@ use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
 use leptonic::atoms::label::Label as LabelAtom;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::atoms::slider::{
     Slider as SliderAtom, SliderMark, SliderMarks as SliderMarksAtom, SliderOutput, SliderThumb,
     SliderTrack, SliderTrackFill,

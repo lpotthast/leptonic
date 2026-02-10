@@ -1,4 +1,3 @@
-use leptonic::atoms::link::AnchorLink;
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptos::prelude::*;

@@ -3,5 +3,6 @@ pub mod button;
 pub mod focus_ring;
 pub mod focus_scope;
 pub mod grid;
+pub mod link;
 pub mod popover;
 pub mod slider;

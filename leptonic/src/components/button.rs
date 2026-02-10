@@ -3,7 +3,7 @@ use std::fmt::{Display, Formatter};
 use leptos::prelude::*;
 use leptos_router::components::ToHref;
 
-use crate::atoms::button::LinkTarget;
+use crate::hooks::LinkTarget;
 use crate::utils::classes::Classes;
 use crate::{
     atoms,

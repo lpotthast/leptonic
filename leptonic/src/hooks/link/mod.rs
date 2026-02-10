@@ -1,191 +1,122 @@
-use leptos::attr;
-use leptos::attr::{Attr, Attribute};
-use leptos::ev;
-use leptos::ev::{on, On, SharedEventCallback};
-use leptos::prelude::*;
-use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
+mod use_anchor_link;
+mod use_link;
 
-use super::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
-use crate::utils::aria::AriaDisabled;
+pub use use_anchor_link::*;
+pub use use_link::*;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/link/src/useLink.ts
+use leptos::oco::Oco;
+use std::fmt;
 
-/// Input parameters for the `use_link` hook.
-#[derive(Debug, Clone)]
-pub struct UseLinkInput {
-    /// The href for the link.
-    pub href: Option<String>,
-
-    /// Whether the link opens in a new tab.
-    pub is_external: bool,
-
-    /// Whether the link is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// The element type (for non-anchor elements).
-    pub element_type: LinkElementType,
-
-    /// Callback when the link is pressed.
-    pub on_press: Option<Callback<()>>,
+#[cfg(debug_assertions)]
+pub(crate) fn debug_validate_element_type(element_type: LinkElementType, el: &web_sys::Element) {
+    let actual = el.tag_name().to_uppercase();
+    let expected = match element_type {
+        LinkElementType::Anchor => "A",
+        LinkElementType::Span => "SPAN",
+        LinkElementType::Button => "BUTTON",
+    };
+    debug_assert_eq!(
+        actual, expected,
+        "element_type is {element_type:?} but actual element is <{actual}>. \
+         Update element_type to match the element used in the view."
+    );
 }
 
-/// The element type for a link.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum LinkElementType {
-    /// An anchor (<a>) element.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Default)]
+pub enum LinkTarget {
+    /// Opens the linked document in a new window or tab.
+    _Blank,
+    /// Opens the linked document in the same frame as it was clicked (this is the default).
     #[default]
-    Anchor,
-    /// A span element styled as a link.
-    Span,
-    /// A button element styled as a link.
-    Button,
+    _Self,
+    /// Opens the linked document in the parent frame.
+    _Parent,
+    /// Opens the linked document in the full body of the window.
+    _Top,
+    /// Opens the linked document in the frame with the given name.
+    Frame { with_name: Oco<'static, str> },
 }
 
-impl Default for UseLinkInput {
-    fn default() -> Self {
-        Self {
-            href: None,
-            is_external: false,
-            is_disabled: Signal::derive(|| false),
-            element_type: LinkElementType::Anchor,
-            on_press: None,
+impl LinkTarget {
+    /// Returns the corresponding HTML `target` attribute string.
+    pub(crate) fn to_oco(&self) -> Oco<'static, str> {
+        match &self {
+            LinkTarget::_Blank => Oco::Borrowed("_blank"),
+            LinkTarget::_Self => Oco::Borrowed("_self"),
+            LinkTarget::_Parent => Oco::Borrowed("_parent"),
+            LinkTarget::_Top => Oco::Borrowed("_top"),
+            LinkTarget::Frame { with_name } => with_name.clone(),
         }
     }
 }
 
-/// The return value of the `use_link` hook.
-#[derive(Clone)]
-pub struct UseLinkReturn {
-    /// Props for the link element.
-    pub link_props: UseLinkAttrs,
-
-    /// Whether the link is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Whether the focus ring should be visible (keyboard navigation only).
-    pub is_focus_visible: Signal<bool>,
+impl fmt::Display for LinkTarget {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.to_oco().as_str())
+    }
 }
 
-/// Attributes for the link element.
-pub type UseLinkAttrs = (
-    Attr<attr::Href, Option<String>>,
-    Attr<attr::Target, Option<&'static str>>,
-    Attr<attr::Rel, Option<&'static str>>,
-    Attr<attr::Role, Option<&'static str>>,
-    Attr<attr::Tabindex, &'static str>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    attr::custom::CustomAttr<&'static str, Signal<Option<&'static str>>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-);
+/// Valid `rel` attribute values for `<a>` elements.
+///
+/// See the [HTML spec](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/rel)
+/// for details on each value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LinkRel {
+    Alternate,
+    Author,
+    Bookmark,
+    External,
+    Help,
+    License,
+    Me,
+    Next,
+    NoFollow,
+    NoOpener,
+    NoReferrer,
+    Opener,
+    Prev,
+    PrivacyPolicy,
+    Search,
+    Tag,
+    TermsOfService,
+}
 
-/// Provides the behavior and accessibility for a link.
-///
-/// A link allows users to navigate to another page or resource.
-///
-/// # Example
-///
-/// ```ignore
-/// let link = use_link(UseLinkInput {
-///     href: Some("https://example.com".to_string()),
-///     is_external: true,
-///     on_press: Some(Callback::new(|_| { /* track click */ })),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <a {..link.link_props}>
-///         "Visit Example"
-///     </a>
-/// }
-/// ```
-#[allow(clippy::needless_pass_by_value)]
-pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
-    let is_disabled = input.is_disabled;
-    let on_press = input.on_press;
-    let href = input.href.clone();
-    let is_external = input.is_external;
-    let element_type = input.element_type;
+impl fmt::Display for LinkRel {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Alternate => f.write_str("alternate"),
+            Self::Author => f.write_str("author"),
+            Self::Bookmark => f.write_str("bookmark"),
+            Self::External => f.write_str("external"),
+            Self::Help => f.write_str("help"),
+            Self::License => f.write_str("license"),
+            Self::Me => f.write_str("me"),
+            Self::Next => f.write_str("next"),
+            Self::NoFollow => f.write_str("nofollow"),
+            Self::NoOpener => f.write_str("noopener"),
+            Self::NoReferrer => f.write_str("noreferrer"),
+            Self::Opener => f.write_str("opener"),
+            Self::Prev => f.write_str("prev"),
+            Self::PrivacyPolicy => f.write_str("privacy-policy"),
+            Self::Search => f.write_str("search"),
+            Self::Tag => f.write_str("tag"),
+            Self::TermsOfService => f.write_str("terms-of-service"),
+        }
+    }
+}
 
-    // External links should open in new tab with security attributes
-    let target = if is_external { Some("_blank") } else { None };
-    let rel = if is_external {
-        Some("noopener noreferrer")
-    } else {
+/// Joins a slice of `LinkRel` values into a space-separated string
+/// suitable for the HTML `rel` attribute. Returns `None` if the slice is empty.
+#[must_use]
+pub fn link_rel_to_string(rels: &[LinkRel]) -> Option<String> {
+    if rels.is_empty() {
         None
-    };
-
-    // Non-anchor elements need role="link"
-    let role = match element_type {
-        LinkElementType::Anchor => None,
-        LinkElementType::Span | LinkElementType::Button => Some("link"),
-    };
-
-    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
-
-    let handle_click = move |e: MouseEvent| {
-        if is_disabled.get_untracked() {
-            e.prevent_default();
-            return;
-        }
-        if let Some(on_press) = on_press {
-            on_press.run(());
-        }
-    };
-
-    let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
-            return;
-        }
-
-        // For non-anchor elements, handle Enter/Space
-        if element_type != LinkElementType::Anchor {
-            let key = e.key();
-            if key == "Enter" || key == " " {
-                e.prevent_default();
-                if let Some(on_press) = on_press {
-                    on_press.run(());
-                }
-            }
-        }
-    };
-
-    let UseFocusRingReturn {
-        props: focus_ring_props,
-        is_focus_visible,
-        is_focused: _,
-    } = use_focus_ring(UseFocusRingInput {
-        disabled: is_disabled,
-        within: false,
-        auto_focus: false,
-        on_focus: None,
-        on_blur: None,
-        on_focus_change: None,
-    });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
-
-    UseLinkReturn {
-        link_props: (
-            Attr(attr::Href, href),
-            Attr(attr::Target, target),
-            Attr(attr::Rel, rel),
-            Attr(attr::Role, role),
-            Attr(attr::Tabindex, "0"),
-            Attr(attr::AriaDisabled, aria_disabled),
-            data_focus_visible,
-            on(ev::click, handle_click).into_cloneable(),
-            on(ev::keydown, handle_keydown).into_cloneable(),
-            on_focus,
-            on_blur,
-            on_focusin,
-            on_focusout,
-        ),
-        is_disabled,
-        is_focus_visible,
+    } else {
+        Some(
+            rels.iter()
+                .map(ToString::to_string)
+                .collect::<Vec<_>>()
+                .join(" "),
+        )
     }
 }

@@ -1,5 +1,5 @@
 use educe::Educe;
-use leptos::attr::custom::CustomAttr;
+use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::attr::Attr;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
@@ -41,8 +41,7 @@ pub struct UseButtonReturn {
 }
 
 /// Props from `use_button` that can be extracted and merged programmatically.
-#[derive(Clone, Educe)]
-#[educe(Debug)]
+#[derive(Debug, Clone)]
 pub struct UseButtonProps {
     pub role: &'static str,
     pub tabindex: Signal<Option<&'static str>>,
@@ -51,8 +50,7 @@ pub struct UseButtonProps {
     pub aria_haspopup: Signal<AriaHasPopup>,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_describedby: Option<&'static str>,
-    #[educe(Debug(ignore))]
-    pub data_focus_visible: CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
@@ -83,7 +81,7 @@ impl UseButtonProps {
             Attr(attr::AriaHaspopup, self.aria_haspopup),
             Attr(attr::AriaExpanded, self.aria_expanded),
             Attr(attr::AriaDescribedby, self.aria_describedby),
-            self.data_focus_visible,
+            custom_attribute("data-focus-visible", self.data_focus_visible),
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),

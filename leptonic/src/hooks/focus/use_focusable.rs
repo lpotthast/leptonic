@@ -10,20 +10,31 @@ use crate::hooks::interactions::use_keyboard::{
     use_keyboard, KeyboardEventWrapper, UseKeyboardInput,
 };
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::utils::focus::focus_element;
+use crate::utils::focus::focus_safely;
 use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusable.tsx
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## React-aria deviation
+// ## OMITTED FUNCTIONALITY
 //
-// **React-aria pattern**: `useFocusable(props, domRef)` - caller passes a ref as parameter.
+// - useSyntheticBlurEvent
+//   React-aria includes a synthetic blur event workaround for React < 17 where
+//   blur events do not fire on disabled elements. Native DOM handles this
+//   correctly. Not needed in Leptos.
 //
-// **Leptonic pattern**: `use_focusable(input)` returns props with `ElementCaptureAttr` that
-// automatically captures the element when spread.
+// ## DIFFERENT BEHAVIOR
 //
-// This is a deliberate deviation for better ergonomics - users don't need to manually create
-// and wire up NodeRefs. The element is captured automatically when attributes are spread.
+// - Handler optimization when disabled
+//   React-aria returns `undefined` props when no callbacks are provided,
+//   relying on React's reconciliation to avoid attaching empty listeners.
+//   Our `EventHandler` always attaches a listener but checks the disabled
+//   state inside the handler. The overhead is negligible.
+//
+// =============================================================================
 
 /// Input parameters for the `use_focusable` hook.
 #[derive(Debug, Clone, Copy)]
@@ -69,6 +80,40 @@ impl Default for UseFocusableInput {
     }
 }
 
+/// Context for parent-to-child interaction prop forwarding.
+///
+/// Parent components (e.g., `TooltipTrigger`) can provide a `FocusableContext` to inject
+/// additional event handlers and element capture into a focusable child without the child
+/// needing to know about the parent's needs.
+///
+/// This mirrors react-aria's `FocusableContext` from
+/// `packages/@react-aria/interactions/src/useFocusable.tsx`.
+///
+/// # Example
+///
+/// ```ignore
+/// // Parent provides context:
+/// provide_context(FocusableContext {
+///     on_focus: Some(EventHandler::new(|_| { /* parent focus handler */ })),
+///     ..Default::default()
+/// });
+///
+/// // Child's use_focusable automatically reads and chains the context handlers.
+/// ```
+#[derive(Clone, Default)]
+pub struct FocusableContext {
+    /// Additional focus handler chained with the focusable element's own.
+    pub on_focus: Option<EventHandler<FocusEvent>>,
+    /// Additional blur handler chained with the focusable element's own.
+    pub on_blur: Option<EventHandler<FocusEvent>>,
+    /// Additional keydown handler chained with the focusable element's own.
+    pub on_keydown: Option<EventHandler<KeyboardEvent>>,
+    /// Additional keyup handler chained with the focusable element's own.
+    pub on_keyup: Option<EventHandler<KeyboardEvent>>,
+    /// Parent's element capture — the focusable element will be captured here too.
+    pub element: Option<CapturedElement>,
+}
+
 /// A handle for programmatically focusing an element.
 ///
 /// Obtained from the `use_focusable` hook, this handle allows you to
@@ -88,13 +133,14 @@ pub struct FocusHandle {
 }
 
 impl FocusHandle {
-    /// Focuses the element.
+    /// Focuses the element safely, deferring during screen reader interactions.
     ///
-    /// This uses `focus_safely` which prevents scrolling.
+    /// Uses [`focus_safely`] which avoids page scrolling and defers focus during
+    /// virtual (screen reader) modality to prevent VoiceOver scroll issues.
     /// If the element hasn't been captured yet (e.g., during SSR), this is a no-op.
     pub fn focus(&self) {
         if let Some(el) = self.element.get_untracked() {
-            focus_element(&el, true);
+            focus_safely(&el);
         }
     }
 
@@ -256,6 +302,9 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
     // Create the focus handle
     let focus_handle = FocusHandle { element };
 
+    // Read parent-provided context (e.g., from TooltipTrigger).
+    let ctx = use_context::<FocusableContext>();
+
     // Use the focus hook
     let focus = use_focus(UseFocusInput {
         disabled,
@@ -269,6 +318,35 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
         disabled,
         on_key_down: input.on_key_down,
         on_key_up: input.on_key_up,
+    });
+
+    // When not disabled, chain context handlers with own handlers (own first, context second).
+    // This matches react-aria's mergeProps order where the component's own handlers fire first.
+    // When disabled, context props are ignored (react-aria: `let interactionProps = props.isDisabled ? {} : domProps`).
+    let on_focus = match ctx.as_ref().and_then(|c| c.on_focus.clone()) {
+        Some(ctx_handler) => focus.props.on_focus.chain(ctx_handler),
+        None => focus.props.on_focus,
+    };
+    let on_blur = match ctx.as_ref().and_then(|c| c.on_blur.clone()) {
+        Some(ctx_handler) => focus.props.on_blur.chain(ctx_handler),
+        None => focus.props.on_blur,
+    };
+    let on_keydown = match ctx.as_ref().and_then(|c| c.on_keydown.clone()) {
+        Some(ctx_handler) => keyboard.props.on_keydown.chain(ctx_handler),
+        None => keyboard.props.on_keydown,
+    };
+    let on_keyup = match ctx.as_ref().and_then(|c| c.on_keyup.clone()) {
+        Some(ctx_handler) => keyboard.props.on_keyup.chain(ctx_handler),
+        None => keyboard.props.on_keyup,
+    };
+
+    // Create combined element capture that updates both own and parent's CapturedElement.
+    let parent_element = ctx.as_ref().and_then(|c| c.element);
+    let element_capture = ElementCaptureAttr::new(move |el| {
+        element.set(el.clone());
+        if let Some(parent) = parent_element {
+            parent.set(el);
+        }
     });
 
     // Handle auto-focus.
@@ -303,11 +381,11 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
     UseFocusableReturn {
         props: UseFocusableProps {
             tabindex: tab_index,
-            on_focus: focus.props.on_focus,
-            on_blur: focus.props.on_blur,
-            on_keydown: keyboard.props.on_keydown,
-            on_keyup: keyboard.props.on_keyup,
-            element_capture: element.attr(),
+            on_focus,
+            on_blur,
+            on_keydown,
+            on_keyup,
+            element_capture,
         },
         focus_handle,
     }

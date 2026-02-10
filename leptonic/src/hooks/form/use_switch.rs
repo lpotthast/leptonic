@@ -174,7 +174,8 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
     let aria_checked = Signal::derive(move || AriaChecked::from(is_selected.get()));
 
     // Compute aria-invalid
-    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid =
+        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));

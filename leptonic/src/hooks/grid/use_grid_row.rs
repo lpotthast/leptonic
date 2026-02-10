@@ -10,9 +10,9 @@ use send_wrapper::SendWrapper;
 
 use crate::hooks::selection::use_selectable_item::{use_selectable_item, UseSelectableItemInput};
 use crate::hooks::selection::use_selection_state::SelectionMode;
+use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_element;
-use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::EventHandler;
 
 use super::use_grid::UseGridState;
@@ -206,9 +206,7 @@ where
             tabindex,
             aria_rowindex,
             aria_selected,
-            aria_disabled: Signal::derive(move || {
-                is_disabled.get().then_some(AriaDisabled::True)
-            }),
+            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
             element_capture: row_element.attr(),
             on_click,
             on_dblclick,

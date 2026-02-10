@@ -279,7 +279,8 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid =
+        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Compute aria-required
     let aria_required = input.is_required.then_some(AriaRequired::True);

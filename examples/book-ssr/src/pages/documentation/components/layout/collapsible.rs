@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::{atoms::link::AnchorLink, components::prelude::*, prelude::*};
+use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
 
 use crate::pages::documentation::{article::Article, toc::Toc};

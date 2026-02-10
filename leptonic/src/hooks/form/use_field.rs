@@ -253,7 +253,8 @@ pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
             id: field_id,
             aria_labelledby,
             aria_describedby,
-            aria_invalid: (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True),
+            aria_invalid: (input.validation_state == ValidationState::Invalid)
+                .then_some(AriaInvalid::True),
             aria_required: input.is_required.then_some(AriaRequired::True),
             aria_disabled: input.is_disabled.then_some(AriaDisabled::True),
             aria_readonly: input.is_read_only.then_some(AriaReadonly::True),

@@ -2,7 +2,7 @@ use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
 use leptonic::atoms::focus_ring::FocusRing;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptos::prelude::*;

@@ -1,6 +1,6 @@
 use indoc::indoc;
 use leptonic::atoms::focus_ring::FocusRing;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 

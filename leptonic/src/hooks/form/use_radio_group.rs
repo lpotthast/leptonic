@@ -213,7 +213,8 @@ where
             role: "radiogroup",
             aria_labelledby,
             aria_describedby,
-            aria_invalid: (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True),
+            aria_invalid: (input.validation_state == ValidationState::Invalid)
+                .then_some(AriaInvalid::True),
             aria_required: input.is_required.then_some(AriaRequired::True),
             aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
             aria_orientation: AriaOrientation::from(input.orientation),

@@ -1,15 +1,15 @@
-use indoc::{formatdoc, indoc};
-use leptonic::atoms::link::AnchorLink;
-use leptonic::components::prelude::*;
-use leptonic::prelude::*;
-use leptos::prelude::*;
-
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 use crate::routes;
+use indoc::{formatdoc, indoc};
+
+use leptonic::components::prelude::*;
+use leptonic::hooks::LinkTarget;
+use leptonic::prelude::*;
+use leptos::prelude::*;
 
 #[component]
-pub fn PageLink() -> impl IntoView {
+pub fn PageAtomLink() -> impl IntoView {
     view! {
         <Article>
             <h1 id="link" class="anchor">
@@ -31,10 +31,10 @@ pub fn PageLink() -> impl IntoView {
                     <Link href="{}">
                         "This is a link to the current route."
                     </Link>
-                "#, routes::doc::components::Link.materialize())}
+                "#, routes::doc::atoms::Link.materialize())}
             </Code>
 
-            <Link href=routes::doc::components::Link.materialize()>"This is a link to the current route."</Link>
+            <Link href=routes::doc::atoms::Link.materialize()>"This is a link to the current route."</Link>
 
             <h2 id="external-links" class="anchor">
                 "External links"
@@ -45,14 +45,46 @@ pub fn PageLink() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
+                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank>
                         <Icon id="github-icon" icon=icondata::BsGithub style="font-size: 3em;"/>
                     </LinkExt>
                 "#)}
             </Code>
 
-            <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
+            <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank>
                 <Icon attr:id="github-icon" icon=icondata::BsGithub attr:style="font-size: 3em;"/>
+            </LinkExt>
+
+            <h2 id="rel-attribute" class="anchor">
+                "Rel Attribute"
+                <AnchorLink href="#rel-attribute" description="Direct link to section: Rel Attribute"/>
+            </h2>
+
+            <p>
+                "The "<Code inline=true>"rel"</Code>" prop accepts a "<Code inline=true>"Vec<LinkRel>"</Code>
+                " to set semantic relationship values on the link. "
+                "When "<Code inline=true>"target=LinkTarget::_Blank"</Code>", "
+                <Code inline=true>"LinkRel::NoOpener"</Code>" is automatically added for security."
+            </p>
+
+            <Code>
+                {indoc!(r#"
+                    <LinkExt
+                        href="https://example.com"
+                        target=LinkTarget::_Blank
+                        rel=vec![LinkRel::NoFollow, LinkRel::NoReferrer]
+                    >
+                        "Link with nofollow and noreferrer"
+                    </LinkExt>
+                "#)}
+            </Code>
+
+            <LinkExt
+                href="https://example.com"
+                target=LinkTarget::_Blank
+                rel=vec![LinkRel::NoFollow, LinkRel::NoReferrer]
+            >
+                "Link with nofollow and noreferrer"
             </LinkExt>
 
             <h2 id="link-buttons" class="anchor">
@@ -97,6 +129,7 @@ pub fn PageLink() -> impl IntoView {
                 Toc::Leaf { title: "Link", link: "#link" },
                 Toc::Leaf { title: "Internal links", link: "#internal-links" },
                 Toc::Leaf { title: "External links", link: "#external-links" },
+                Toc::Leaf { title: "Rel Attribute", link: "#rel-attribute" },
                 Toc::Leaf { title: "Link buttons", link: "#link-buttons" },
                 Toc::Leaf { title: "Styling", link: "#styling" },
             ]

@@ -1,10 +1,11 @@
 use crate::hooks::{UseFocusRingProps, UsePressProps};
 use crate::utils::{EventHandler, MergeWith};
 use leptos::attr;
-use leptos::attr::custom::CustomAttr;
+use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
+use leptos::prelude::*;
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 /// Combined props from `use_press` and `use_focus_ring` hooks (without hover).
@@ -43,7 +44,7 @@ pub struct MergedPressFocusRingProps {
     pub on_blur: EventHandler<FocusEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
-    pub data_focus_visible: CustomAttr<&'static str, leptos::prelude::Signal<Option<&'static str>>>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
 /// Attribute tuple type for [`MergedPressFocusRingProps`].
@@ -61,7 +62,7 @@ pub type MergedPressFocusRingAttrs = (
     On<ev::blur, SharedEventCallback<FocusEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    CustomAttr<&'static str, leptos::prelude::Signal<Option<&'static str>>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 impl MergedPressFocusRingProps {
@@ -85,7 +86,7 @@ impl MergedPressFocusRingProps {
             self.on_blur.into_on(ev::blur),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
-            self.data_focus_visible,
+            custom_attribute("data-focus-visible", self.data_focus_visible),
         )
     }
 }

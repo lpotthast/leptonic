@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::atoms::prelude as atoms;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;

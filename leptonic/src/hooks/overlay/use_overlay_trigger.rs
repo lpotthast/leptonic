@@ -86,13 +86,12 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
     UseOverlayTriggerReturn {
         props: UseOverlayTriggerProps {
             aria_haspopup: aria_has_popup,
-            aria_expanded: Signal::derive(move || {
-                Some(AriaExpanded::from(input.show.get()))
-            }),
+            aria_expanded: Signal::derive(move || Some(AriaExpanded::from(input.show.get()))),
             aria_controls: Signal::derive(move || {
-                input.show.get().then(|| {
-                    AriaControls(vec![overlay_id.to_string()]).into_attribute_value()
-                })
+                input
+                    .show
+                    .get()
+                    .then(|| AriaControls(vec![overlay_id.to_string()]).into_attribute_value())
             }),
         },
     }

@@ -305,7 +305,8 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     };
 
     // Compute aria-invalid
-    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid =
+        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     UseSearchFieldReturn {
         input_props: (

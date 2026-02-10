@@ -1,6 +1,7 @@
 use crate::pages::documentation::{article::Article, toc::Toc};
 use crate::routes;
-use leptonic::{atoms::link::AnchorLink, components::prelude::*};
+use leptonic::components::prelude::*;
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
 #[component]
@@ -13,7 +14,7 @@ pub fn PageOverview() -> impl IntoView {
             </h1>
 
             <p>
-                "Leptonic is a rich component library for the "<LinkExt href="https://leptos.dev/" target=LinkExtTarget::Blank>"Leptos"</LinkExt>" web framework."
+                "Leptonic is a rich component library for the "<LinkExt href="https://leptos.dev/" target=LinkTarget::_Blank>"Leptos"</LinkExt>" web framework."
             </p>
 
             <p>
@@ -38,9 +39,9 @@ pub fn PageOverview() -> impl IntoView {
                 "If you get stuck at any point integrating or using Leptonic, these are things you may find helpful: "
             </p>
             <ul>
-                <li>"Look for help in the Leptos "<LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkExtTarget::Blank>"Discord"</LinkExt>" server."</li>
-                <li>"If you think you encountered a bug, open a ticket in our " <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>"repository"</LinkExt></li>
-                <li>"Compare the implementation of this book at "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/examples/book" target=LinkExtTarget::Blank>"GitHub"</LinkExt>" with what you currently have."</li>
+                <li>"Look for help in the Leptos "<LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkTarget::_Blank>"Discord"</LinkExt>" server."</li>
+                <li>"If you think you encountered a bug, open a ticket in our " <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank>"repository"</LinkExt></li>
+                <li>"Compare the implementation of this book at "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/examples/book" target=LinkTarget::_Blank>"GitHub"</LinkExt>" with what you currently have."</li>
             </ul>
 
             <h2 id="contribute">
@@ -53,8 +54,8 @@ pub fn PageOverview() -> impl IntoView {
                 "feel free to contribute back to the project by reaching the community or us through"
             </p>
             <ul>
-                <li>"the Leptos "<LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkExtTarget::Blank>"Discord"</LinkExt>" server or "</li>
-                <li>"the "<LinkExt href="https://github.com/lpotthast/leptonic/issues" target=LinkExtTarget::Blank>"Issues"</LinkExt>" section of the Leptonic repository."</li>
+                <li>"the Leptos "<LinkExt href="https://discord.gg/x8NhWWYTV2" target=LinkTarget::_Blank>"Discord"</LinkExt>" server or "</li>
+                <li>"the "<LinkExt href="https://github.com/lpotthast/leptonic/issues" target=LinkTarget::_Blank>"Issues"</LinkExt>" section of the Leptonic repository."</li>
             </ul>
 
             <p>

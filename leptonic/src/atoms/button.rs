@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use leptos::tachys::html::class::class;
 use leptos_router::components::{AProps, ToHref, A};
 
+use crate::hooks::LinkTarget;
 use crate::utils::classes::Classes;
 use crate::{
     hooks::{
@@ -76,33 +77,6 @@ pub fn Button(
     }
 }
 
-#[derive(Debug, Default, PartialEq, Eq)]
-pub enum LinkTarget {
-    /// Opens the linked document in a new window or tab.
-    _Blank,
-    /// Opens the linked document in the same frame as it was clicked (this is the default).
-    #[default]
-    _Self,
-    /// Opens the linked document in the parent frame.
-    _Parent,
-    /// Opens the linked document in the full body of the window.
-    _Top,
-    /// Opens the linked document in the frame with the given name.
-    Frame { with_name: Oco<'static, str> },
-}
-
-impl LinkTarget {
-    fn to_oco(&self) -> Oco<'static, str> {
-        match self {
-            LinkTarget::_Blank => Oco::Borrowed("_blank"),
-            LinkTarget::_Self => Oco::Borrowed("_self"),
-            LinkTarget::_Parent => Oco::Borrowed("_parent"),
-            LinkTarget::_Top => Oco::Borrowed("_top"),
-            LinkTarget::Frame { with_name } => with_name.clone(),
-        }
-    }
-}
-
 #[component]
 pub fn LinkButton<H>(
     href: H,
@@ -120,6 +94,7 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
 
     #[prop(into, optional)] aria_expanded: Option<Signal<Option<AriaExpanded>>>,
+
     #[prop(into, optional)] classes: Classes,
 
     /// If `true`, the link is marked active when the location matches exactly;

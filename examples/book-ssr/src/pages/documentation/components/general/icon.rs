@@ -1,11 +1,11 @@
-use indoc::indoc;
-use leptonic::atoms::link::AnchorLink;
-use leptonic::components::prelude::*;
-use leptonic::prelude::*;
-use leptos::prelude::*;
-
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
+use indoc::indoc;
+
+use leptonic::components::prelude::*;
+use leptonic::hooks::LinkTarget;
+use leptonic::prelude::*;
+use leptos::prelude::*;
 
 #[component]
 pub fn PageIcon() -> impl IntoView {
@@ -17,11 +17,11 @@ pub fn PageIcon() -> impl IntoView {
             </h1>
 
             <p>
-                "Icons are supported through the "<LinkExt target=LinkExtTarget::Blank href="https://crates.io/crates/icondata">"https://crates.io/crates/icondata"</LinkExt> " crate. "
+                "Icons are supported through the "<LinkExt target=LinkTarget::_Blank href="https://crates.io/crates/icondata">"https://crates.io/crates/icondata"</LinkExt> " crate. "
                 "The crates readme show the available icon packages and their current versions."
             </p>
 
-            <p style="font-weight: bold;">"Browse through available icons at "<LinkExt target=LinkExtTarget::Blank href="https://carlosted.github.io/icondata/">"https://carlosted.github.io/icondata/"</LinkExt> "!"</p>
+            <p style="font-weight: bold;">"Browse through available icons at "<LinkExt target=LinkTarget::_Blank href="https://carlosted.github.io/icondata/">"https://carlosted.github.io/icondata/"</LinkExt> "!"</p>
 
             <p>"Leptonic provides a re-export of the "<Code inline=true>"icondata"</Code>" crate when using the prelude module."</p>
 

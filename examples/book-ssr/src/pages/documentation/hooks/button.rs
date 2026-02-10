@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};

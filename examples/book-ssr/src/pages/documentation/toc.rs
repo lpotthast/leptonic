@@ -1,7 +1,6 @@
-use leptonic::atoms::link::AnchorLink;
-use leptos::prelude::*;
-
 use crate::app::AppLayoutContext;
+use leptonic::components::prelude::*;
+use leptos::prelude::*;
 
 pub enum Toc {
     Leaf {

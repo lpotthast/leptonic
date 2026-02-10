@@ -1,7 +1,7 @@
-use leptonic::{atoms::link::AnchorLink, components::prelude::*};
-use leptos::prelude::*;
-
 use crate::pages::documentation::{article::Article, toc::Toc};
+use leptonic::components::prelude::*;
+use leptonic::hooks::LinkTarget;
+use leptos::prelude::*;
 
 #[component]
 #[allow(clippy::too_many_lines)]
@@ -73,9 +73,9 @@ pub fn PageChangelog() -> impl IntoView {
             <p>"Leptonic now supports server-side-rendering (SSR). This book is now deployed with SSR enabled."</p>
             <p>
                 "The "
-                <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkExtTarget::Blank>"leptonic-template-ssr"</LinkExt>
+                <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkTarget::_Blank>"leptonic-template-ssr"</LinkExt>
                 " and "
-                <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkExtTarget::Blank>"leptonic-template-csr"</LinkExt>
+                <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkTarget::_Blank>"leptonic-template-csr"</LinkExt>
                 " templates were created. Use them to get started quickly."
             </p>
 

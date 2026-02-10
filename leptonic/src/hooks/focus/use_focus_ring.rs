@@ -72,15 +72,13 @@ pub struct UseFocusRingReturn {
 }
 
 /// Props from `use_focus_ring` that can be extracted and merged programmatically.
-#[derive(Clone, educe::Educe)]
-#[educe(Debug)]
+#[derive(Debug, Clone)]
 pub struct UseFocusRingProps {
     pub handle_focus: EventHandler<FocusEvent>,
     pub handle_blur: EventHandler<FocusEvent>,
     pub handle_focusin: EventHandler<FocusEvent>,
     pub handle_focusout: EventHandler<FocusEvent>,
-    #[educe(Debug(ignore))]
-    pub data_focus_visible: CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
 impl UseFocusRingProps {
@@ -98,7 +96,7 @@ impl UseFocusRingProps {
             self.handle_blur.into_on(ev::blur),
             self.handle_focusin.into_on(ev::focusin),
             self.handle_focusout.into_on(ev::focusout),
-            self.data_focus_visible,
+            custom_attribute("data-focus-visible", self.data_focus_visible),
         )
     }
 }
@@ -197,7 +195,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
             handle_blur,
             handle_focusin,
             handle_focusout,
-            data_focus_visible: custom_attribute("data-focus-visible", data_focus_visible),
+            data_focus_visible,
         },
     }
 }

@@ -6,8 +6,8 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
-use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHidden};
 use super::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHidden};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/disclosure/src/useDisclosure.ts
 

@@ -132,7 +132,8 @@ where
     };
 
     // Compute aria-invalid
-    let aria_invalid = (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid =
+        (input.validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
 
     // Use focus ring for keyboard focus visibility
     let UseFocusRingReturn {

@@ -239,7 +239,7 @@ pub fn DocLayout() -> impl IntoView {
         }>
             <DrawerSection level=3 header=move || "Link">
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Link.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Link"</Link>
+                    <Link href=routes::doc::atoms::Link.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "Link"</Link>
                     <Link href=routes::doc::hooks::UseLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_link"</Link>
                 </Stack>
             </DrawerSection>

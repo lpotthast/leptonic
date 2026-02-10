@@ -41,12 +41,12 @@
 //
 // =============================================================================
 
-mod anchor_link;
 mod breadcrumbs;
 mod button;
 mod calendar;
 mod combobox;
 mod datepicker;
+mod dialog;
 mod disclosure;
 mod dnd;
 mod focus;
@@ -58,6 +58,7 @@ mod listbox;
 mod menu;
 mod merged;
 mod meter;
+mod modal;
 mod overlay;
 mod progress;
 mod select;
@@ -71,12 +72,12 @@ mod toolbar;
 mod tooltip;
 mod tree;
 
-pub use anchor_link::*;
 pub use breadcrumbs::*;
 pub use button::*;
 pub use calendar::*;
 pub use combobox::*;
 pub use datepicker::*;
+pub use dialog::*;
 pub use disclosure::*;
 pub use dnd::*;
 pub use focus::*;
@@ -88,6 +89,7 @@ pub use listbox::*;
 pub use menu::*;
 pub use merged::*;
 pub use meter::*;
+pub use modal::*;
 pub use overlay::*;
 pub use progress::*;
 pub use select::*;

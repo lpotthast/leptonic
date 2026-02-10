@@ -2,7 +2,7 @@ use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
 use leptonic::atoms::focus_ring::FocusRing;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
 use leptonic::prelude::Size;
@@ -13,6 +13,8 @@ pub fn PageUseFocusable() -> impl IntoView {
     let (disabled, set_disabled) = signal(false);
     let (exclude_from_tab, set_exclude_from_tab) = signal(false);
     let (focus_count, set_focus_count) = signal(0);
+    let (blur_count, set_blur_count) = signal(0);
+    let (is_focused, set_is_focused) = signal(false);
     let (key_events, set_key_events) = signal(Vec::<String>::new());
 
     let UseFocusableReturn {
@@ -25,8 +27,12 @@ pub fn PageUseFocusable() -> impl IntoView {
         on_focus: Some(Callback::new(move |_| {
             set_focus_count.update(|c| *c += 1);
         })),
-        on_blur: None,
-        on_focus_change: None,
+        on_blur: Some(Callback::new(move |_| {
+            set_blur_count.update(|c| *c += 1);
+        })),
+        on_focus_change: Some(Callback::new(move |focused: bool| {
+            set_is_focused.set(focused);
+        })),
         on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
             set_key_events.update(|events| {
                 events.push(format!("Key: {}", e.key()));
@@ -56,8 +62,8 @@ pub fn PageUseFocusable() -> impl IntoView {
                         auto_focus: false,
                         exclude_from_tab_order: Signal::derive(|| false),
                         on_focus: Some(Callback::new(|_| { /* focused */ })),
-                        on_blur: None,
-                        on_focus_change: None,
+                        on_blur: Some(Callback::new(|_| { /* blurred */ })),
+                        on_focus_change: Some(Callback::new(|focused: bool| { /* focus state changed */ })),
                         on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
                             if e.key() == "Enter" {
                                 // Handle enter key
@@ -81,7 +87,7 @@ pub fn PageUseFocusable() -> impl IntoView {
                 "#)}
             </Code>
 
-            <p>"Focus the custom element below using Tab, click, or the button:"</p>
+            <p>"Focus the custom element below using Tab, click, or the button. The demo uses " <code>"FocusRing"</code> " (powered by " <code>"use_focus_ring"</code> ") to show a visible ring on keyboard focus:"</p>
 
             <div style="display: flex; gap: 1em; align-items: center;">
                 <FocusRing>
@@ -131,7 +137,13 @@ pub fn PageUseFocusable() -> impl IntoView {
                 </FormControl>
             </Stack>
 
-            <p>"Focus count: " { move || focus_count.get() }</p>
+            <div style="margin-top: 1em; display: flex; gap: 2em; flex-wrap: wrap;">
+                <p>"Focus count: " { move || focus_count.get() }</p>
+                <p>"Blur count: " { move || blur_count.get() }</p>
+                <p style:color=move || if is_focused.get() { "green" } else { "gray" }>
+                    { move || if is_focused.get() { "Focused" } else { "Not focused" } }
+                </p>
+            </div>
 
             <p>"Last key events: " { move || {
                 let events = key_events.get();
@@ -147,7 +159,7 @@ pub fn PageUseFocusable() -> impl IntoView {
                 <AnchorLink href="#programmatic-focus" description="Direct link to programmatic focus"/>
             </h2>
 
-            <p>"The hook returns a " <code>"FocusHandle"</code> " that allows you to programmatically focus the element:"</p>
+            <p>"The hook returns a " <code>"FocusHandle"</code> " that allows you to programmatically focus the element. The " <code>"focus()"</code> " method uses " <code>"focus_safely"</code> " which defers focus during screen reader (virtual) modality to avoid VoiceOver scroll issues during CSS transitions:"</p>
 
             <Code>
                 {indoc!(r"
@@ -198,18 +210,26 @@ pub fn PageUseFocusable() -> impl IntoView {
                 ")}
             </Code>
 
-            <h2 id="features" class="anchor">
-                "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
+            <h2 id="related-hooks" class="anchor">
+                "Related Hooks"
+                <AnchorLink href="#related-hooks" description="Direct link to related hooks"/>
             </h2>
 
             <ul>
-                <li>"Automatic tabindex management"</li>
-                <li>"Combined focus and keyboard event handling"</li>
-                <li>"Auto-focus on mount"</li>
-                <li>"Programmatic focus via " <code>"FocusHandle"</code></li>
-                <li>"Option to exclude from tab order while remaining programmatically focusable"</li>
-                <li>"Automatic element capture via " <code>"ElementCaptureAttr"</code></li>
+                <li><code>"use_focus"</code> " — Low-level focus/blur event handling. Used internally by " <code>"use_focusable"</code> "."</li>
+                <li><code>"use_keyboard"</code> " — Low-level keyboard event handling. Used internally by " <code>"use_focusable"</code> "."</li>
+                <li><code>"use_focus_ring"</code> " — Tracks whether a focus ring should be visible (keyboard navigation only). The " <code>"FocusRing"</code> " atom wraps this hook."</li>
+                <li><code>"use_focus_visible"</code> " — Tracks the current input modality (keyboard, pointer, virtual) to decide focus visibility."</li>
+            </ul>
+
+            <h2 id="deviations" class="anchor">
+                "Deviations from react-aria"
+                <AnchorLink href="#deviations" description="Direct link to deviations"/>
+            </h2>
+
+            <ul>
+                <li><b>"useSyntheticBlurEvent"</b> " — React-aria includes a workaround for React < 17 where blur events do not fire on disabled elements. Native DOM handles this correctly, so it is not needed."</li>
+                <li><b>"Handler optimization"</b> " — React-aria returns " <code>"undefined"</code> " props when no callbacks are provided. Our " <code>"EventHandler"</code> " always attaches a listener but checks the disabled state inside. The overhead is negligible."</li>
             </ul>
         </Article>
 
@@ -219,7 +239,8 @@ pub fn PageUseFocusable() -> impl IntoView {
                 Toc::Leaf { title: "Programmatic Focus", link: "#programmatic-focus" },
                 Toc::Leaf { title: "Tab Index Management", link: "#tab-index" },
                 Toc::Leaf { title: "Auto Focus", link: "#auto-focus" },
-                Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "Related Hooks", link: "#related-hooks" },
+                Toc::Leaf { title: "Deviations from react-aria", link: "#deviations" },
             ]
         }/>
     }

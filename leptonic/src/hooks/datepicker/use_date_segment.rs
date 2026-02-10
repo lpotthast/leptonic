@@ -271,9 +271,8 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
     });
 
     // Compute aria-readonly
-    let aria_readonly = Signal::derive(move || {
-        (is_read_only.get() || !is_editable).then_some(AriaReadonly::True)
-    });
+    let aria_readonly =
+        Signal::derive(move || (is_read_only.get() || !is_editable).then_some(AriaReadonly::True));
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));

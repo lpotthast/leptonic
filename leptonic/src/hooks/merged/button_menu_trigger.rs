@@ -4,7 +4,7 @@
 //! button semantics with menu trigger behavior.
 
 use leptos::attr;
-use leptos::attr::custom::CustomAttr;
+use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
@@ -88,7 +88,7 @@ pub struct MergedButtonMenuTriggerProps {
 
     // Button's focus-visible data attribute
     /// Data attribute for focus-visible styling.
-    pub data_focus_visible: CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    pub data_focus_visible: Signal<Option<&'static str>>,
 
     // Chained event handlers (button first, then menu trigger)
     /// Keyboard event handler (chained: button, then menu trigger).
@@ -135,7 +135,7 @@ impl MergedButtonMenuTriggerProps {
             // Long press accessibility
             Attr(attr::AriaDescribedby, self.aria_describedby),
             // Focus visible
-            self.data_focus_visible,
+            custom_attribute("data-focus-visible", self.data_focus_visible),
             // Chained event handlers
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),

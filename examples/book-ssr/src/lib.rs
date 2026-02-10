@@ -185,6 +185,9 @@ pub mod routes {
 
             #[route("/slider")]
             pub mod slider {}
+
+            #[route("/link")]
+            pub mod link {}
         }
 
         #[route("/components")]
@@ -277,9 +280,6 @@ pub mod routes {
 
             #[route("/icon")]
             pub mod icon {}
-
-            #[route("/link")]
-            pub mod link {}
 
             #[route("/callback")]
             pub mod callback {}

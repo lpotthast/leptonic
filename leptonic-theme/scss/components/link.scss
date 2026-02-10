@@ -1,31 +1,26 @@
 .leptonic-link {
-    display: inline-flex;
-    color: var(--link-color);
-
-    a {
-        display: inline-flex;
-        justify-content: center;
-        align-items: center;
-        text-decoration: auto;
-        color: inherit;
-        cursor: pointer;
-        font-size: 1em;
-    }
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: auto;
+  color: var(--link-color);
+  cursor: pointer;
+  font-size: 1em;
 }
 
 .leptonic-anchor-link {
-    display: inline;
-    text-decoration: auto;
-    color: var(--link-color);
-    font-size: 1em;
-    cursor: pointer;
+  display: inline;
+  text-decoration: auto;
+  color: var(--link-color);
+  font-size: 1em;
+  cursor: pointer;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    .leptonic-anchor-link {
-        &::before, &::after {
-            display: inline;
-            content: ' ';
-        }
+  .leptonic-anchor-link {
+    &::before, &::after {
+      display: inline;
+      content: ' ';
     }
+  }
 }

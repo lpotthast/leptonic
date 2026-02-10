@@ -205,33 +205,30 @@ body {
         font-size: 1.1em;
       }
 
-      leptonic-stack [data-orientation="vertical"] {
+      .leptonic-stack [data-orientation="vertical"] {
         align-items: flex-start;
       }
 
-      .item {
-        width: 100%;
+      a.item {
+        width: fit-content;
+        display: flex;
+        justify-content: flex-start;
+        align-items: center;
+        color: var(--book-menu-item-color);
+        font-weight: 400;
+        border-radius: 0.4em;
+        padding: 0.25em 0.75em;
+        margin: 0.075em 0.75em;
+        margin-left: 1.5em;
+        cursor: pointer;
+        user-select: none;
 
-        a {
-          display: flex;
-          justify-content: flex-start;
-          align-items: center;
-          color: var(--book-menu-item-color);
-          font-weight: 400;
-          border-radius: 0.4em;
-          padding: 0.25em 0.75em;
-          margin: 0.075em 0.75em;
-          margin-left: 1.5em;
-          cursor: pointer;
-          user-select: none;
-        }
-
-        a[aria-current] {
+        &[aria-current] {
           background-color: var(--brand-color);
           color: var(--book-menu-item-active-color);
         }
 
-        a:hover {
+        &:hover {
           background-color: var(--brand-color);
           color: var(--book-menu-item-hover-color);
         }

@@ -14,7 +14,7 @@ use crate::utils::math::percentage_in_range;
 use crate::utils::CapturedElement;
 use crate::utils::EventHandler;
 use leptos::attr;
-use leptos::attr::custom::CustomAttr;
+use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
@@ -124,6 +124,7 @@ pub struct UseSliderThumbProps {
     aria_describedby: Option<&'static str>,
     aria_details: Option<&'static str>,
     aria_errormessage: Option<&'static str>,
+    data_focus_visible: Signal<Option<&'static str>>,
     on_keydown: EventHandler<KeyboardEvent>,
     on_pointerdown: EventHandler<PointerEvent>,
     on_focus: EventHandler<FocusEvent>,
@@ -132,10 +133,14 @@ pub struct UseSliderThumbProps {
     on_focusout: EventHandler<FocusEvent>,
     on_pointerenter: EventHandler<PointerEvent>,
     on_pointerleave: EventHandler<PointerEvent>,
-    data_focus_visible: CustomAttr<&'static str, Signal<Option<&'static str>>>,
 }
 
 impl UseSliderThumbProps {
+    /// Converts these props into spreadable attributes by cloning.
+    pub fn to_attrs(&self) -> UseSliderThumbAttrs {
+        self.clone().into_attrs()
+    }
+
     /// Converts these props into spreadable attributes, consuming self.
     pub fn into_attrs(self) -> UseSliderThumbAttrs {
         (
@@ -155,6 +160,7 @@ impl UseSliderThumbProps {
             Attr(attr::AriaDescribedby, self.aria_describedby),
             Attr(attr::AriaDetails, self.aria_details),
             Attr(attr::AriaErrormessage, self.aria_errormessage),
+            custom_attribute("data-focus-visible", self.data_focus_visible),
             self.on_keydown.into_on(ev::keydown),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_focus.into_on(ev::focus),
@@ -163,13 +169,7 @@ impl UseSliderThumbProps {
             self.on_focusout.into_on(ev::focusout),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
-            self.data_focus_visible,
         )
-    }
-
-    /// Converts these props into spreadable attributes by cloning.
-    pub fn to_attrs(&self) -> UseSliderThumbAttrs {
-        self.clone().into_attrs()
     }
 }
 
@@ -191,6 +191,7 @@ pub type UseSliderThumbAttrs = (
     Attr<attr::AriaDescribedby, Option<&'static str>>,
     Attr<attr::AriaDetails, Option<&'static str>>,
     Attr<attr::AriaErrormessage, Option<&'static str>>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -199,7 +200,6 @@ pub type UseSliderThumbAttrs = (
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
-    CustomAttr<&'static str, Signal<Option<&'static str>>>,
 );
 
 #[derive(Debug, Clone)]

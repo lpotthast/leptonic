@@ -1,7 +1,7 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::components::prelude::*;
 use leptonic::hooks::{use_combobox, MenuTriggerAction, UseComboBoxInput};
 use leptos::prelude::*;

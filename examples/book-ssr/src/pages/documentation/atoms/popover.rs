@@ -1,9 +1,8 @@
 use indoc::indoc;
 use leptonic::atoms::button::Button;
 use leptonic::atoms::hoverable::Hoverable;
-use leptonic::atoms::link::AnchorLink;
 use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger};
-use leptonic::components::typography::Code;
+use leptonic::components::prelude::*;
 use leptonic::hooks::{PlacementX, PlacementY};
 use leptonic::utils::locale::WritingDirection;
 use leptos::prelude::*;
@@ -26,7 +25,7 @@ pub fn PageAtomPopover() -> impl IntoView {
                 {indoc!(r#"
                     use leptonic::atoms::button::Button;
                     use leptonic::atoms::hoverable::Hoverable;
-                    use leptonic::atoms::link::AnchorLink;
+
                     use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger};
 
                     view! {

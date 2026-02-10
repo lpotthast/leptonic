@@ -1,16 +1,9 @@
-use leptonic::{components::prelude::*, prelude::*};
-use leptos::prelude::*;
-use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, MetaTags, Stylesheet, Title};
-use leptos_router::components::*;
-use leptos_router::hooks::use_location;
-use leptos_router::path;
-use leptos_use::use_media_query;
-
 use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
 use crate::pages::documentation::atoms::button::PageAtomButton;
 use crate::pages::documentation::atoms::focus_ring::PageAtomFocusRing;
 use crate::pages::documentation::atoms::focus_scope::PageAtomFocusScope;
 use crate::pages::documentation::atoms::grid::PageAtomGrid;
+use crate::pages::documentation::atoms::link::PageAtomLink;
 use crate::pages::documentation::atoms::popover::PageAtomPopover;
 use crate::pages::documentation::atoms::slider::PageAtomSlider;
 use crate::pages::documentation::components::feedback::alert::PageAlert;
@@ -22,7 +15,6 @@ use crate::pages::documentation::components::feedback::progress::PageProgress;
 use crate::pages::documentation::components::feedback::toast::PageToast;
 use crate::pages::documentation::components::general::callback::PageCallback;
 use crate::pages::documentation::components::general::icon::PageIcon;
-use crate::pages::documentation::components::general::link::PageLink;
 use crate::pages::documentation::components::general::typography::PageTypography;
 use crate::pages::documentation::components::input::button::PageButton;
 use crate::pages::documentation::components::input::checkbox::PageCheckbox;
@@ -94,6 +86,14 @@ use crate::pages::documentation::hooks::tooltip::PageUseTooltipHook;
 use crate::pages::documentation::hooks::tree::PageUseTree;
 use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
 use crate::routes;
+use leptonic::hooks::LinkTarget;
+use leptonic::{components::prelude::*, prelude::*};
+use leptos::prelude::*;
+use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, MetaTags, Stylesheet, Title};
+use leptos_router::components::*;
+use leptos_router::hooks::use_location;
+use leptos_router::path;
+use leptos_use::use_media_query;
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
 
@@ -204,6 +204,7 @@ pub fn App() -> impl IntoView {
                                 <Route path=routes::doc::atoms::FocusRing.path() view=PageAtomFocusRing/>
                                 <Route path=routes::doc::atoms::Grid.path() view=PageAtomGrid/>
                                 <Route path=routes::doc::atoms::Slider.path() view=PageAtomSlider/>
+                                <Route path=routes::doc::atoms::Link.path() view=PageAtomLink/>
                             </ParentRoute>
 
                             <ParentRoute path=routes::doc::Components.path() view=||view! { <Outlet/> }>
@@ -238,7 +239,6 @@ pub fn App() -> impl IntoView {
 
                                 <Route path=routes::doc::components::Typography.path() view=PageTypography/>
                                 <Route path=routes::doc::components::Icon.path() view=PageIcon/>
-                                <Route path=routes::doc::components::Link.path() view=PageLink/>
                                 <Route path=routes::doc::components::Callback.path() view=PageCallback/>
 
                                 //<Route path=routes::doc::components::Transition view=PageTransition/>
@@ -394,7 +394,7 @@ pub fn Layout(children: Children) -> impl IntoView {
             "Typography",
         ),
         create_search_option(routes::doc::components::Icon.materialize(), "Icon"),
-        create_search_option(routes::doc::components::Link.materialize(), "Link"),
+        create_search_option(routes::doc::atoms::Link.materialize(), "Link"),
         create_search_option(routes::doc::components::Callback.materialize(), "Callback"),
         //create_search_option(routes::doc::components::Transition.materialize(), "Transition"),
     ];
@@ -467,7 +467,7 @@ pub fn Layout(children: Children) -> impl IntoView {
                         false => view! {
                             <Link href=routes::doc::Changelog.materialize()>"v0.6.0 (main)"</Link>
 
-                            <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank>
+                            <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank>
                                 <Icon attr:id="github-icon" icon=icondata::BsGithub aria_label="GitHub icon"/>
                             </LinkExt>
 
@@ -493,7 +493,7 @@ pub fn Layout(children: Children) -> impl IntoView {
             >
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Em(2.0) attr:class="menu">
 
-                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkExtTarget::Blank attr:style="font-size: 3em;">
+                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank attr:style="font-size: 3em;">
                         <Icon attr:id="github-icon" icon=icondata::BsGithub/>
                     </LinkExt>
 

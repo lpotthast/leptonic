@@ -10,9 +10,9 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use crate::hooks::focus::use_focus_manager::{FocusManager, FocusManagerOptions};
 use crate::hooks::selection::use_selectable_item::{use_selectable_item, UseSelectableItemInput};
 use crate::hooks::selection::use_selection_state::SelectionMode;
+use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_element;
-use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::EventHandler;
 
 use super::use_grid::UseGridState;
@@ -313,9 +313,7 @@ where
             aria_rowindex,
             aria_colindex,
             aria_selected,
-            aria_disabled: Signal::derive(move || {
-                is_disabled.get().then_some(AriaDisabled::True)
-            }),
+            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
             element_capture: scope_element.attr(),
             on_click,
             on_keydown,

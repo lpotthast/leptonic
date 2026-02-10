@@ -235,8 +235,7 @@ where
     });
 
     // Compute aria-selected
-    let aria_selected =
-        Signal::derive(move || Some(AriaSelected::from(is_selected.get())));
+    let aria_selected = Signal::derive(move || Some(AriaSelected::from(is_selected.get())));
 
     // Compute aria-disabled (reactive)
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));

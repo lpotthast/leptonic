@@ -1,8 +1,52 @@
-use crate::hooks::{use_press, PressEvent, UsePressInput, UsePressReturn};
-use leptos::html;
+use crate::atoms::link::{AnchorLink as AnchorLinkAtom, Link as LinkAtom, LinkExt as LinkExtAtom};
+pub use crate::hooks::LinkRel;
+use crate::hooks::{LinkTarget, PressEvent};
+use crate::utils::classes::Classes;
+use crate::utils::styles::Styles;
+use crate::ScrollBehavior;
 use leptos::prelude::*;
-use leptos_router::components::{ToHref, A};
+use leptos_router::components::ToHref;
 
+#[component]
+pub fn AnchorLink(
+    /// The anchor link. For example: "#my-anchor".
+    #[prop(into)]
+    href: Oco<'static, str>,
+
+    #[prop(into, optional)] scroll_behavior: Option<ScrollBehavior>,
+
+    /// Description of this anchor for accessibility.
+    /// If text is provided in children, this could be omitted.
+    /// If no children are provided, this component renders a single `#`,
+    /// which should be described using this field.
+    #[prop(into, optional)]
+    description: Option<Oco<'static, str>>,
+
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+
+    /// If no children are provided, this component renders a single `#` character.
+    #[prop(optional)]
+    children: Option<Children>,
+) -> impl IntoView {
+    view! {
+        <AnchorLinkAtom
+            href
+            nostrip:scroll_behavior
+            nostrip:description
+            classes=classes.add("leptonic-anchor-link")
+            styles
+        >
+            {match children {
+                Some(children) => children().into_any(),
+                None => "#".into_any(),
+            }}
+        </AnchorLinkAtom>
+    }
+}
+
+/// A link to a location internal to this application. Potentially resolvable via
+/// client-side-routing.
 // TODO: Use router state again (leptos_router::location::State) (accepting a prop)
 #[component]
 #[allow(clippy::needless_pass_by_value)]
@@ -17,106 +61,63 @@ pub fn Link<H>(
     #[prop(optional)]
     exact: bool,
 
+    #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
-
-    #[prop(into, optional)] on_press: Option<Callback<(PressEvent, NodeRef<html::Span>)>>,
 ) -> impl IntoView
 where
     H: ToHref + Send + Sync + 'static,
 {
-    let el: NodeRef<html::Span> = NodeRef::new();
-
-    // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
-    // and so that a custom `on_press` handler can immediately work with the underlying link element.
-    let UsePressReturn {
-        props,
-        is_pressed: _,
-    } = use_press(UsePressInput {
-        // Links cannot be disabled (for now).
-        disabled: false.into(),
-        force_prevent_default: false,
-        // Without setting this, Leptos' client-side navigation would not take place.
-        allow_propagation: true,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        on_press: Callback::new(move |e: PressEvent| {
-            if let Some(on_press) = on_press {
-                on_press.run((e, el));
-            }
-        }),
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
-    });
-
-    // TODO: propagate missing A props
-    // TODO: do not wrap A, make this an atom
     view! {
-        <span class="leptonic-link" {..props.into_attrs()} node_ref=el>
-            <A href=href exact=exact>
-                {children()}
-            </A>
-        </span>
+        <LinkAtom
+            href
+            exact
+            nostrip:on_press
+            classes=classes.add("leptonic-link")
+            styles=styles
+        >
+            {children()}
+        </LinkAtom>
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum LinkExtTarget {
-    Blank,
-    Parent,
-    Sel,
-    Top,
-}
-
-impl std::fmt::Display for LinkExtTarget {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Blank => f.write_str("_blank"),
-            Self::Parent => f.write_str("_parent"),
-            Self::Sel => f.write_str("_self"),
-            Self::Top => f.write_str("_top"),
-        }
-    }
-}
-
+/// A link to a location external to this application.
 #[component]
 #[allow(clippy::needless_pass_by_value)] // `H` could be `&H`.
 pub fn LinkExt<H>(
     /// Used to calculate the link's `href` attribute.
     href: H,
-    target: LinkExtTarget,
+    target: LinkTarget,
+    /// The `rel` attribute values for the link. `NoOpener` is automatically
+    /// added when `target` is `Blank` for security reasons.
+    #[prop(optional)]
+    rel: Vec<LinkRel>,
     #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] on_press: Option<Callback<PressEvent>>,
     // TODO: Impl this prop
     // /// If `true`, the link will not add to the browser's history (so, pressing `Back`
     // /// will skip this page.)
     // #[prop(optional)]
     // replace: bool,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView
 where
     H: ToHref + Send + Sync + 'static,
 {
-    // NOTE(lukas): rel="noopener" is added for security reasons. See: https://developer.chrome.com/docs/lighthouse/best-practices/external-anchors-use-rel-noopener/
     view! {
-        <span class="leptonic-link">
-            <a
-                href=move || href.to_href()()
-                target=format!("{target}")
-                prop:disabled=move || disabled.get()
-                rel=match target {
-                    LinkExtTarget::Blank => Some("noopener"),
-                    _ => None,
-                }
-            >
-                {children()}
-            </a>
-        </span>
+        <LinkExtAtom
+            href
+            target
+            rel
+            disabled
+            nostrip:on_press
+            classes=classes.add("leptonic-link")
+            styles
+        >
+            {children()}
+        </LinkExtAtom>
     }
 }

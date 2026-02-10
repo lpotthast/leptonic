@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::components::prelude::*;
 use leptonic::utils::time::GuideMode;
 use leptos::prelude::*;

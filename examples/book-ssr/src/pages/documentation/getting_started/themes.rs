@@ -1,7 +1,8 @@
 use crate::pages::documentation::{article::Article, toc::Toc};
 use crate::routes;
 use indoc::indoc;
-use leptonic::{atoms::link::AnchorLink, components::prelude::*};
+use leptonic::components::prelude::*;
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
 #[component]
@@ -21,7 +22,7 @@ pub fn PageThemes() -> impl IntoView {
             </p>
 
             <p>
-                "All styling is provided through the "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkExtTarget::Blank>"leptonic-theme"</LinkExt>" crate. "
+                "All styling is provided through the "<LinkExt href="https://github.com/lpotthast/leptonic/tree/main/leptonic-theme" target=LinkTarget::_Blank>"leptonic-theme"</LinkExt>" crate. "
                 "When used as a build.rs dependency, this crate can write out SCSS code, styling the Leptonic components in two themes: "<Code inline=true>"light"</Code>" and "<Code inline=true>"dark"</Code>"."
             </p>
 

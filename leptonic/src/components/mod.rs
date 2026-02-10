@@ -16,7 +16,7 @@ pub mod icon;
 pub mod input;
 pub mod kbd;
 pub mod label;
-pub mod link;
+mod link;
 pub mod modal;
 pub mod popover;
 pub mod progress_bar;
@@ -92,9 +92,10 @@ pub mod prelude {
     pub use super::kbd::KbdShortcutRoot;
     pub use super::kbd::Key;
     pub use super::label::Label;
+    pub use super::link::AnchorLink;
     pub use super::link::Link;
     pub use super::link::LinkExt;
-    pub use super::link::LinkExtTarget;
+    pub use super::link::LinkRel;
     pub use super::modal::Modal;
     pub use super::modal::ModalBody;
     pub use super::modal::ModalFooter;
@@ -164,4 +165,5 @@ pub mod prelude {
     pub use super::typography::Code;
     pub use super::typography::Li;
     pub use super::typography::Ul;
+    pub use crate::hooks::LinkTarget;
 }

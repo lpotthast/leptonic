@@ -1,7 +1,8 @@
 use crate::pages::documentation::{article::Article, toc::Toc};
 use crate::routes;
 use indoc::indoc;
-use leptonic::{atoms::link::AnchorLink, components::prelude::*};
+use leptonic::components::prelude::*;
+use leptonic::hooks::LinkTarget;
 use leptos::prelude::*;
 
 #[component]
@@ -16,8 +17,8 @@ pub fn PageInstallation() -> impl IntoView {
 
             <p>
                 "The easiest way to get started is by cloning either "
-                <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkExtTarget::Blank>"template-ssr"</LinkExt> " or "
-                <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkExtTarget::Blank>"template-csr"</LinkExt> "."
+                <LinkExt href="https://github.com/lpotthast/leptonic-template-ssr" target=LinkTarget::_Blank>"template-ssr"</LinkExt> " or "
+                <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkTarget::_Blank>"template-csr"</LinkExt> "."
             </p>
 
             <Code>
@@ -48,7 +49,7 @@ pub fn PageInstallation() -> impl IntoView {
             </Code>
 
             <p>
-                "Leptonic comes with default styling in form of the "<LinkExt href="https://github.com/lpotthast/leptonic-theme/tree/main" target=LinkExtTarget::Blank>"leptonic-theme"</LinkExt>" crate. "
+                "Leptonic comes with default styling in form of the "<LinkExt href="https://github.com/lpotthast/leptonic-theme/tree/main" target=LinkTarget::_Blank>"leptonic-theme"</LinkExt>" crate. "
                 "The themes, as well as other static files, are automatically copied to your project root directory when building your application. "
                 "You have to tell Leptonic where you want these files to be stored. "
                 "We recommend not excluding them from your VCS."

@@ -6,6 +6,7 @@ use leptos::typed_builder::TypedBuilder;
 use reactive_graph::effect::RenderEffect;
 use reactive_graph::signal::ReadSignal;
 use smallvec::SmallVec;
+use std::backtrace::Backtrace;
 use std::borrow::Cow;
 
 /// Fast FNV-1a hash for quick string comparison.
@@ -36,8 +37,9 @@ impl ClassList {
         #[cfg(debug_assertions)]
         {
             if self.0.iter().any(|it| it.name() == class.name()) {
+                let backtrace = Backtrace::force_capture();
                 tracing::warn!(
-                    "Duplicate class '{}' added to Classes. This may indicate a bug.",
+                    "Duplicate class '{}' added to Classes. This may indicate a bug. At: {backtrace}",
                     class.name()
                 );
             }
@@ -214,7 +216,10 @@ impl IntoClass for Classes {
 
     fn html_len(&self) -> usize {
         // Estimate: sum of class names + spaces
-        self.classes.iter().map(|e| e.name().len() + 1).sum()
+        self.classes
+            .iter()
+            .map(|class| class.name().len() + 1)
+            .sum()
     }
 
     fn to_html(self, class: &mut String) {

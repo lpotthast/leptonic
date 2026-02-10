@@ -1,5 +1,5 @@
 use indoc::indoc;
-use leptonic::atoms::link::AnchorLink;
+
 use leptonic::atoms::slider::{
     Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
 };
