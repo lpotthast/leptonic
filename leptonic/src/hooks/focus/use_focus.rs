@@ -70,7 +70,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         on_focus_change,
     } = input;
 
-    let on_focus_handler = move |e: FocusEvent| {
+    let handle_focus = move |e: FocusEvent| {
         // Double check that document.activeElement actually matches e.target in case a previously chained
         // focus handler already moved focus somewhere else.
         if e.target() == e.current_target()
@@ -87,7 +87,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         }
     };
 
-    let on_blur_handler = move |e: FocusEvent| {
+    let handle_blur = move |e: FocusEvent| {
         // In certain situations, we saw this blur handler being called after the disabled signal
         // was disposed. Mostly when interaction with this use_focus enabled element
         // lead to removal from said element from the DOM.
@@ -106,8 +106,8 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
 
     UseFocusReturn {
         props: UseFocusProps {
-            on_focus: EventHandler::new(on_focus_handler),
-            on_blur: EventHandler::new(on_blur_handler),
+            on_focus: EventHandler::new(handle_focus),
+            on_blur: EventHandler::new(handle_blur),
         },
     }
 }

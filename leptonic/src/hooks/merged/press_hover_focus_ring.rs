@@ -114,10 +114,10 @@ impl MergeWith<UseFocusRingProps> for MergedPressHoverProps {
             on_pointerenter: self.on_pointerenter,
             on_pointerleave: self.on_pointerleave,
             // From focus ring (distinct)
-            on_focus: other.handle_focus,
-            on_blur: other.handle_blur,
-            on_focusin: other.handle_focusin,
-            on_focusout: other.handle_focusout,
+            on_focus: other.on_focus,
+            on_blur: other.on_blur,
+            on_focusin: other.on_focusin,
+            on_focusout: other.on_focusout,
             data_focus_visible: other.data_focus_visible,
         }
     }

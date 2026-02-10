@@ -552,7 +552,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         state.set_value(None);
     };
 
-    let on_key_up = move |e: KeyboardEvent| {
+    let handle_key_up = move |e: KeyboardEvent| {
         // First check if we should handle this event (immutable check).
         let should_handle = state.with_value(|s| {
             s.is_some()
@@ -609,11 +609,11 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         state.set_value(None);
     };
 
-    let on_key_down_handler = move |e: KeyboardEvent| {
+    let handle_key_down = move |e: KeyboardEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
         {
-            tracing::debug!("Aborting on_key_down, as current_target did not contain target.");
+            tracing::debug!("Aborting handle_key_down, as current_target did not contain target.");
             return;
         }
 
@@ -650,7 +650,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     global_on_key_up_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         ev::keyup,
-                        on_key_up,
+                        handle_key_up,
                     )),
                 },
             );
@@ -663,11 +663,11 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
     };
 
-    let on_click_handler = move |e: MouseEvent| {
+    let handle_click = move |e: MouseEvent| {
         if !current_target_contains_target(e.current_target().as_ref(), e.target().as_ref())
             .unwrap_or(true)
         {
-            tracing::debug!("Aborting on_click, as current_target did not contain target.");
+            tracing::debug!("Aborting handle_click, as current_target did not contain target.");
             return;
         }
 
@@ -730,7 +730,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     };
 
     // Pointer move handler for drag-in / drag-out behavior.
-    let on_pointer_move = move |e: PointerEvent| {
+    let handle_pointer_move = move |e: PointerEvent| {
         state.update_value(|s| {
             if let Some(s) = s.as_mut() {
                 if e.pointer_id() != s.pointer_id {
@@ -767,7 +767,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     };
 
     // Pointer up: defer press completion to onClick for DOM mutation safety.
-    let on_pointer_up = move |e: PointerEvent| {
+    let handle_pointer_up = move |e: PointerEvent| {
         if !e.current_target_contains_target() {
             return;
         }
@@ -820,18 +820,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     };
 
     // Cancel the ongoing press.
-    let on_pointer_cancel = move |e: PointerEvent| {
+    let handle_pointer_cancel = move |e: PointerEvent| {
         cancel_active_press(EventRef::Pointer(&e));
     };
 
     // Start a press.
-    let on_pointer_down_handler = move |e: PointerEvent| {
+    let handle_pointer_down = move |e: PointerEvent| {
         if e.button() != 0 {
             return;
         }
 
         if !e.current_target_contains_target() {
-            tracing::trace!("Aborting on_pointer_down, as current_target did not contain target.");
+            tracing::trace!("Aborting handle_pointer_down, as current_target did not contain target.");
             return;
         }
 
@@ -870,17 +870,17 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     global_on_pointer_move_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         ev::pointermove,
-                        on_pointer_move,
+                        handle_pointer_move,
                     )),
                     global_on_pointer_up_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         ev::pointerup,
-                        on_pointer_up,
+                        handle_pointer_up,
                     )),
                     global_on_pointer_cancel_cleanup: Box::new(use_event_listener(
                         e.current_target().unwrap().get_owner_document(),
                         ev::pointercancel,
-                        on_pointer_cancel,
+                        handle_pointer_cancel,
                     )),
                 },
             );
@@ -912,7 +912,6 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                         let modifiers = EventRef::Pointer(&e).modifiers();
                         let target = s.target.clone();
                         let (x, y) = EventRef::Pointer(&e).coordinates();
-                        let on_long_press = on_long_press;
 
                         s.long_press_timeout_handle = set_timeout_with_handle(
                             move || {
@@ -968,14 +967,14 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
     };
 
     // Safari doesn't fire pointercancel on drag. Handle dragstart to cancel the press.
-    let on_dragstart_handler = move |_e: web_sys::DragEvent| {
+    let handle_dragstart = move |_e: web_sys::DragEvent| {
         cancel_active_press(EventRef::Pointer(
             &PointerEvent::new("pointercancel").unwrap(),
         ));
     };
 
     // Handle native dblclick for on_double_press.
-    let on_dblclick_handler = move |e: MouseEvent| {
+    let handle_dblclick = move |e: MouseEvent| {
         let Some(on_double_press) = on_double_press else {
             return;
         };
@@ -1006,11 +1005,11 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
     UsePressReturn {
         props: UsePressProps {
-            on_keydown: EventHandler::new(on_key_down_handler),
-            on_click: EventHandler::new(on_click_handler),
-            on_pointerdown: EventHandler::new(on_pointer_down_handler),
-            on_dragstart: EventHandler::new(on_dragstart_handler),
-            on_dblclick: EventHandler::new(on_dblclick_handler),
+            on_keydown: EventHandler::new(handle_key_down),
+            on_click: EventHandler::new(handle_click),
+            on_pointerdown: EventHandler::new(handle_pointer_down),
+            on_dragstart: EventHandler::new(handle_dragstart),
+            on_dblclick: EventHandler::new(handle_dblclick),
             aria_describedby,
         },
         is_pressed: is_pressed.into(),

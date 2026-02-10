@@ -412,7 +412,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
     // Focus the thumb element explicitly. use_move calls prevent_default()
     // on pointerdown which suppresses the browser's default focus behavior.
-    let on_pointerdown = EventHandler::new(move |e: PointerEvent| {
+    let handle_pointerdown = EventHandler::new(move |e: PointerEvent| {
         if let Some(target) = e.current_target() {
             if let Some(el) = target.dyn_ref::<web_sys::Element>() {
                 focus_element(el, true);
@@ -550,11 +550,11 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             aria_details,
             aria_errormessage,
             on_keydown: EventHandler::new(handle_keydown),
-            on_pointerdown,
-            on_focus: focus_ring_props.handle_focus,
-            on_blur: focus_ring_props.handle_blur,
-            on_focusin: focus_ring_props.handle_focusin,
-            on_focusout: focus_ring_props.handle_focusout,
+            on_pointerdown: handle_pointerdown,
+            on_focus: focus_ring_props.on_focus,
+            on_blur: focus_ring_props.on_blur,
+            on_focusin: focus_ring_props.on_focusin,
+            on_focusout: focus_ring_props.on_focusout,
             on_pointerenter: hover_props.on_pointerenter,
             on_pointerleave: hover_props.on_pointerleave,
             data_focus_visible: focus_ring_props.data_focus_visible,

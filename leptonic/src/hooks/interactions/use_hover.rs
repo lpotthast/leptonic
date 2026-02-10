@@ -236,7 +236,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
             }));
         };
 
-    let on_pointer_enter = move |e: PointerEvent| {
+    let handle_pointer_enter = move |e: PointerEvent| {
         if disabled.get_untracked() {
             return;
         }
@@ -278,7 +278,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         );
     };
 
-    let on_pointer_leave = move |e: PointerEvent| {
+    let handle_pointer_leave = move |e: PointerEvent| {
         if disabled.get_untracked()
             || state.with_value(Option::is_none)
             || !e.current_target_contains_target()
@@ -306,8 +306,8 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
     UseHoverReturn {
         props: UseHoverProps {
-            on_pointerenter: EventHandler::new(on_pointer_enter),
-            on_pointerleave: EventHandler::new(on_pointer_leave),
+            on_pointerenter: EventHandler::new(handle_pointer_enter),
+            on_pointerleave: EventHandler::new(handle_pointer_leave),
         },
         is_hovered: is_hovered.into(),
     }

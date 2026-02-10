@@ -288,7 +288,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
     // Handle track clicks immediately on pointerdown (before use_move processes the event).
     // This is the react-aria "onDownTrack" pattern: click-to-position happens here,
     // while use_move only handles subsequent drag deltas.
-    let on_track_pointerdown = move |e: PointerEvent| {
+    let handle_track_pointerdown = move |e: PointerEvent| {
         if disabled.get_untracked() {
             return;
         }
@@ -473,7 +473,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
         track_props: UseSliderTrackProps {
             role: "presentation",
             style_touch_action: "none",
-            on_pointerdown: EventHandler::new(on_track_pointerdown)
+            on_pointerdown: EventHandler::new(handle_track_pointerdown)
                 .chain(track_move_props.props.on_pointerdown),
             element_capture: track_element.attr(),
         },

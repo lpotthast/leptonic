@@ -112,10 +112,10 @@ impl MergeWith<UseFocusRingProps> for MergedFocusablePressProps {
         } = self;
 
         let UseFocusRingProps {
-            handle_focus: focus_ring_handle_focus,
-            handle_blur: focus_ring_handle_blur,
-            handle_focusin: focus_ring_handle_focusin,
-            handle_focusout: focus_ring_handle_focusout,
+            on_focus: focus_ring_on_focus,
+            on_blur: focus_ring_on_blur,
+            on_focusin: focus_ring_on_focusin,
+            on_focusout: focus_ring_on_focusout,
             data_focus_visible: focus_ring_data_focus_visible,
         } = focus_ring;
 
@@ -126,10 +126,10 @@ impl MergeWith<UseFocusRingProps> for MergedFocusablePressProps {
             element_capture: merged_element_capture,
             on_keydown: merged_on_keydown,
             on_keyup: merged_on_keyup,
-            on_focus: merged_on_focus.chain(focus_ring_handle_focus),
-            on_blur: merged_on_blur.chain(focus_ring_handle_blur),
-            on_focusin: focus_ring_handle_focusin,
-            on_focusout: focus_ring_handle_focusout,
+            on_focus: merged_on_focus.chain(focus_ring_on_focus),
+            on_blur: merged_on_blur.chain(focus_ring_on_blur),
+            on_focusin: focus_ring_on_focusin,
+            on_focusout: focus_ring_on_focusout,
             on_click: merged_on_click,
             on_dblclick: merged_on_dblclick,
             on_pointerdown: merged_on_pointerdown,

@@ -123,8 +123,6 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
             return;
         };
 
-        let on_interact_outside_start = on_interact_outside_start;
-
         let _cleanup_pointerdown = use_event_listener_with_options(
             document.clone(),
             leptos::ev::pointerdown,
@@ -144,8 +142,6 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
             },
             UseEventListenerOptions::default().capture(true),
         );
-
-        let on_interact_outside = on_interact_outside;
 
         let _cleanup_click = use_event_listener_with_options(
             document,

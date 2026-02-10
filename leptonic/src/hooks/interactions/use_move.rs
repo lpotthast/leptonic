@@ -109,13 +109,13 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     } = input;
 
     // Note: There may be multiple pointers. Every pointer event contains a unique identifier of the pointer used for the interaction.
-    // We start movement tracking by listening for on_pointer_down events.
+    // We start movement tracking by listening for pointerdown events.
     // Only movements from the pointer which initiated the tracking is propagated.
 
     let state: StoredValue<Option<MoveState>, LocalStorage> = StoredValue::new_local(None);
 
     // Handle pointer move during drag
-    let on_pointer_move = move |e: PointerEvent| {
+    let handle_pointer_move = move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         state.update_value(move |s| {
@@ -155,7 +155,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     };
 
     // Handle pointer up to end the drag
-    let on_pointer_up = move |e: PointerEvent| {
+    let handle_pointer_up = move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         let should_clear = state.with_value(|s| {
@@ -177,7 +177,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
     };
 
     // Handle pointer cancel to end the drag
-    let on_pointer_cancel = move |e: PointerEvent| {
+    let handle_pointer_cancel = move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         let should_clear = state.with_value(|s| {
@@ -198,7 +198,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         }
     };
 
-    let on_pointer_down = move |e: PointerEvent| {
+    let handle_pointer_down = move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         if e.button() == 0 && state.with_value(Option::is_none) {
@@ -214,17 +214,17 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                 global_on_pointer_move_cleanup: Box::new(use_event_listener(
                     doc.clone(),
                     ev::pointermove,
-                    on_pointer_move,
+                    handle_pointer_move,
                 )),
                 global_on_pointer_up_cleanup: Box::new(use_event_listener(
                     doc.clone(),
                     ev::pointerup,
-                    on_pointer_up,
+                    handle_pointer_up,
                 )),
                 global_on_pointer_cancel_cleanup: Box::new(use_event_listener(
                     doc,
                     ev::pointercancel,
-                    on_pointer_cancel,
+                    handle_pointer_cancel,
                 )),
             };
 
@@ -249,7 +249,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
 
     UseMoveReturn {
         props: UseMoveProps {
-            on_pointerdown: EventHandler::new(on_pointer_down),
+            on_pointerdown: EventHandler::new(handle_pointer_down),
         },
     }
 }

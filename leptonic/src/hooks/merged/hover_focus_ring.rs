@@ -69,10 +69,10 @@ impl MergeWith<UseFocusRingProps> for UseHoverProps {
         MergedHoverFocusRingProps {
             on_pointerenter: hover.on_pointerenter,
             on_pointerleave: hover.on_pointerleave,
-            on_focus: focus_ring.handle_focus,
-            on_blur: focus_ring.handle_blur,
-            on_focusin: focus_ring.handle_focusin,
-            on_focusout: focus_ring.handle_focusout,
+            on_focus: focus_ring.on_focus,
+            on_blur: focus_ring.on_blur,
+            on_focusin: focus_ring.on_focusin,
+            on_focusout: focus_ring.on_focusout,
             data_focus_visible: focus_ring.data_focus_visible,
         }
     }

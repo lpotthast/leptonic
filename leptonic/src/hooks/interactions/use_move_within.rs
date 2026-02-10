@@ -351,7 +351,7 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
         };
 
     // Handler for pointer move during drag
-    let on_pointer_move = move |e: PointerEvent| {
+    let handle_pointer_move = move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         state.update_value(move |s| {
@@ -392,7 +392,7 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
     };
 
     // Handler for pointer up to end drag
-    let on_pointer_up = move |e: PointerEvent| {
+    let handle_pointer_up = move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         let should_clear = state.with_value(|s| {
@@ -424,7 +424,7 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
     };
 
     // Handler for pointer cancel
-    let on_pointer_cancel = move |e: PointerEvent| {
+    let handle_pointer_cancel = move |e: PointerEvent| {
         let pointer_id = e.pointer_id();
 
         let should_clear = state.with_value(|s| {
@@ -530,17 +530,17 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
                 global_on_pointer_move_cleanup: Box::new(use_event_listener(
                     doc.clone(),
                     ev::pointermove,
-                    on_pointer_move,
+                    handle_pointer_move,
                 )),
                 global_on_pointer_up_cleanup: Box::new(use_event_listener(
                     doc.clone(),
                     ev::pointerup,
-                    on_pointer_up,
+                    handle_pointer_up,
                 )),
                 global_on_pointer_cancel_cleanup: Box::new(use_event_listener(
                     doc,
                     ev::pointercancel,
-                    on_pointer_cancel,
+                    handle_pointer_cancel,
                 )),
             };
 
@@ -555,12 +555,12 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
     };
 
     // Handler for movable element pointer down
-    let on_movable_pointer_down = move |e: PointerEvent| {
+    let handle_movable_pointer_down = move |e: PointerEvent| {
         start_drag(e, false);
     };
 
     // Handler for container pointer down (when allow_container_click is true)
-    let on_container_pointer_down = move |e: PointerEvent| {
+    let handle_container_pointer_down = move |e: PointerEvent| {
         if !allow_container_click {
             return;
         }
@@ -628,12 +628,12 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
     // Build container props
     let container_props = UseMoveWithinContainerProps {
         element_capture: container_element.attr(),
-        on_pointerdown: EventHandler::new(on_container_pointer_down),
+        on_pointerdown: EventHandler::new(handle_container_pointer_down),
     };
 
     // Build movable props
     let movable_props = UseMoveWithinMovableProps {
-        on_pointerdown: EventHandler::new(on_movable_pointer_down),
+        on_pointerdown: EventHandler::new(handle_movable_pointer_down),
         element_capture: movable_element.attr(),
     };
 
