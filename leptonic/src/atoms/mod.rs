@@ -1,4 +1,5 @@
 pub mod button;
+pub mod focus_manager;
 pub mod focus_ring;
 pub mod focus_scope;
 pub mod grid;
@@ -6,7 +7,7 @@ pub mod grid_list;
 pub mod hoverable;
 pub mod label;
 pub mod link;
-mod modal;
+pub mod modal;
 pub mod popover;
 pub mod press;
 pub mod slider;
@@ -15,6 +16,7 @@ pub mod prelude {
     pub use super::button::Button;
     pub use super::button::ButtonWrapper;
     pub use super::button::LinkButton;
+    pub use super::focus_manager::FocusManager;
     pub use super::focus_ring::FocusRing;
     pub use super::focus_ring::FocusRingContext;
     pub use super::focus_scope::FocusScope;
