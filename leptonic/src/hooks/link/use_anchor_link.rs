@@ -18,6 +18,14 @@ use web_sys::ScrollIntoViewOptions;
 
 use super::LinkElementType;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Href(Oco<'static, str>);
 

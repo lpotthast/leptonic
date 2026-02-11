@@ -6,6 +6,14 @@ use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, Aria
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useField.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Validation state for a field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ValidationState {

@@ -1,5 +1,13 @@
 use leptos::prelude::*;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// State for managing disclosure visibility.
 #[derive(Clone, Copy)]
 pub struct UseDisclosureStateReturn {

@@ -13,6 +13,14 @@ use super::use_move::MoveAxis;
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::{EventHandler, EventTargetExt};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Event fired when movement starts.
 #[derive(Debug, Clone, Copy)]
 pub struct MoveWithinStartEvent {

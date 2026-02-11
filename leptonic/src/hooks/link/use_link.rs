@@ -14,17 +14,25 @@ use reactive_graph::prelude::Get;
 use reactive_graph::wrappers::read::Signal;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/link/src/useLink.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## DEVIATIONS FROM REACT-ARIA
+// ## DIFFERENT BEHAVIOR
 //
 // - Client-side router integration is NOT handled at the hook level.
 //   Rationale: Leptos router handles client-side navigation at the component
 //   level via `<A>`. The hook focuses purely on interaction, ARIA attributes,
 //   and focus management, matching its role as a low-level building block.
 //
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+//
 // - `use_focus_ring` is composed in addition to `use_focusable` and `use_press`.
 //   Rationale: React-aria handles focus ring visibility at the component level.
 //   Leptonic includes it in the hook for consistency with `use_button`.
+//
+// =============================================================================
 
 /// Input parameters for the `use_link` hook.
 #[derive(Debug, Clone)]

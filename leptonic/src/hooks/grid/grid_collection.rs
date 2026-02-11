@@ -4,6 +4,20 @@ use std::hash::Hash;
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-types/grid/src/index.d.ts
 // Specifically the `GridCollection<T>` interface.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - Standalone struct wrapping `Vec<GridRow<K>>` instead of extending a generic
+//   `Collection` trait with node-tree traversal.
+//
+// ## OMITTED FEATURES
+// - No column span support yet.
+// - No virtualization support.
+//
+// =============================================================================
+
 /// A row in the grid, containing a key and its child cell keys.
 #[derive(Debug, Clone)]
 pub struct GridRow<K> {
@@ -16,13 +30,6 @@ pub struct GridRow<K> {
 /// An indexed grid collection providing O(1) lookups for navigation.
 ///
 /// Wraps `Vec<GridRow<K>>` with pre-computed indexes for fast key resolution.
-///
-/// ## DEVIATIONS FROM REACT-ARIA
-///
-/// - Standalone struct wrapping `Vec<GridRow<K>>` instead of extending a generic
-///   `Collection` trait with node-tree traversal.
-/// - No column span support yet.
-/// - No virtualization support.
 #[derive(Debug, Clone)]
 pub struct GridCollection<K: Hash + Eq> {
     rows: Vec<GridRow<K>>,

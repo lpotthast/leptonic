@@ -6,12 +6,20 @@ use leptos::prelude::*;
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
-use super::use_calendar::create_weeks;
+use super::use_calendar_state::create_weeks;
 use crate::utils::aria::AriaDisabled;
 use crate::utils::time::{start_of_next_month, start_of_previous_month, Day, Week};
 use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useRangeCalendar.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
 
 /// A date range with start and end dates.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -346,26 +354,3 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
     }
 }
 
-/// State for managing range calendar selection.
-#[derive(Clone, Copy)]
-pub struct UseRangeCalendarStateReturn {
-    /// The current selected range.
-    pub value: Signal<DateRange>,
-
-    /// Set the selected range.
-    pub set_value: Callback<DateRange>,
-
-    /// Clear the selection.
-    pub clear: Callback<()>,
-}
-
-/// Creates internal state for a range calendar.
-pub fn use_range_calendar_state(default_value: Option<DateRange>) -> UseRangeCalendarStateReturn {
-    let (value, set_value) = signal(default_value.unwrap_or_default());
-
-    UseRangeCalendarStateReturn {
-        value: value.into(),
-        set_value: Callback::new(move |range| set_value.set(range)),
-        clear: Callback::new(move |_| set_value.set(DateRange::empty())),
-    }
-}

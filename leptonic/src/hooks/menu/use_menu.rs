@@ -18,6 +18,14 @@ use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenu.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 use crate::hooks::selection::use_selectable_collection::FocusStrategy;
 
 /// Input parameters for the `use_menu` hook.

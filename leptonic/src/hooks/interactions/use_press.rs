@@ -25,17 +25,23 @@ use crate::utils::{
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## DEVIATIONS FROM REACT-ARIA
+// ## DIFFERENT BEHAVIOR
 //
-// React-aria's `usePress` does not handle double-click. Double-click behavior
-// lives in `useSelectableItem` (where double-click triggers an action). We add
-// `on_double_press` here as a convenience so that any pressable element can opt
-// into double-press handling without requiring a full selection model.
+// - React-aria's `usePress` does not handle double-click. Double-click behavior
+//   lives in `useSelectableItem` (where double-click triggers an action). We add
+//   `on_double_press` here as a convenience so that any pressable element can opt
+//   into double-press handling without requiring a full selection model.
 //
-// React-aria has a separate `useLongPress` hook that wraps `usePress`. We merged
-// long press detection directly into `usePress` to avoid double-hook overhead
-// when both press and long press are needed on the same element (e.g. menu triggers).
+// - React-aria has a separate `useLongPress` hook that wraps `usePress`. We merged
+//   long press detection directly into `usePress` to avoid double-hook overhead
+//   when both press and long press are needed on the same element (e.g. menu triggers).
+//
+// =============================================================================
 
 /// The default long press threshold in milliseconds.
 pub const DEFAULT_LONG_PRESS_THRESHOLD: u64 = 500;

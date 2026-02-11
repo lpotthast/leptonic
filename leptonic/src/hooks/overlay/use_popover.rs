@@ -270,7 +270,7 @@ where
 
     // Handle Escape key
     let on_close_for_escape = on_close;
-    let on_key_down = move |e: KeyboardEvent| {
+    let handle_key_down = move |e: KeyboardEvent| {
         if is_keyboard_dismiss_disabled {
             return;
         }
@@ -284,7 +284,7 @@ where
 
     // Handle backdrop click
     let on_close_for_backdrop = on_close;
-    let on_backdrop_click = move |e: web_sys::MouseEvent| {
+    let handle_backdrop_click = move |e: web_sys::MouseEvent| {
         // Only close if clicking directly on the backdrop, not a child
         if e.target() == e.current_target() {
             on_close_for_backdrop.run(());
@@ -294,10 +294,10 @@ where
     UsePopoverReturn {
         popover_props: UsePopoverProps {
             position: position.props.position,
-            on_keydown: EventHandler::new(on_key_down),
+            on_keydown: EventHandler::new(handle_key_down),
         },
         backdrop_props: UsePopoverBackdropProps {
-            on_click: EventHandler::new(on_backdrop_click),
+            on_click: EventHandler::new(handle_backdrop_click),
         },
     }
 }

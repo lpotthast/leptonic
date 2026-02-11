@@ -4,6 +4,14 @@ use std::hash::Hash;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/selection/src/useMultipleSelectionState.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// The type of selection allowed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum SelectionMode {

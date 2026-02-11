@@ -12,10 +12,17 @@ use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 // and `createFocusManager(scopeRef)` is used elsewhere with an explicit ref.
 //
 // **Leptonic pattern**: `use_focus_manager(input)` returns props with `ElementCaptureAttr` that
-// automatically captures the element when spread.
+// automatically captures the element when spread. This is a deliberate deviation for better
+// ergonomics. Users don't need to manually create and wire up NodeRefs. The element is captured
+// automatically when attributes are spread.
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// This is a deliberate deviation for better ergonomics - users don't need to manually create
-// and wire up NodeRefs. The element is captured automatically when attributes are spread.
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
 
 /// Options for focus movement.
 #[derive(Debug, Clone, Default)]

@@ -3,6 +3,14 @@ use std::sync::atomic::{AtomicIsize, Ordering::SeqCst};
 use leptos::prelude::*;
 use leptos_use::use_window;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 static PREVENT_SCROLL_COUNT: AtomicIsize = AtomicIsize::new(0);
 
 #[derive(Debug, Clone, Copy)]

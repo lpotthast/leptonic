@@ -9,6 +9,14 @@ use leptos_use::{use_document, use_element_bounding};
 
 use crate::utils::locale::WritingDirection;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 // TODO: Serialize, Deserialize, Display, FormStr ???
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

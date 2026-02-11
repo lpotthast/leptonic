@@ -58,8 +58,16 @@ use leptos_use::use_event_listener;
 use uuid::Uuid;
 use web_sys::PointerEvent;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_slider` hook.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseSliderInput {
     /// The slider state (from `use_slider_state`). Also provides the `disabled` info.
     pub state: UseSliderStateReturn,
@@ -75,7 +83,7 @@ pub struct UseSliderInput {
 }
 
 /// The return value of the `use_slider` hook.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseSliderReturn {
     /// Props for the slider group/container element.
     pub group_props: UseSliderGroupProps,
@@ -105,6 +113,10 @@ pub struct UseSliderGroupProps {
 }
 
 impl UseSliderGroupProps {
+    pub fn to_attrs(&self) -> UseSliderGroupAttrs {
+        self.clone().into_attrs()
+    }
+
     pub fn into_attrs(self) -> UseSliderGroupAttrs {
         (
             Attr(attr::Role, self.role),
@@ -134,6 +146,10 @@ pub struct UseSliderTrackProps {
 }
 
 impl UseSliderTrackProps {
+    pub fn to_attrs(&self) -> UseSliderTrackAttrs {
+        self.clone().into_attrs()
+    }
+
     pub fn into_attrs(self) -> UseSliderTrackAttrs {
         (
             Attr(attr::Role, self.role),
@@ -174,6 +190,10 @@ pub struct UseSliderOutputProps {
 }
 
 impl UseSliderOutputProps {
+    pub fn to_attrs(&self) -> UseSliderOutputAttrs {
+        self.clone().into_attrs()
+    }
+
     pub fn into_attrs(self) -> UseSliderOutputAttrs {
         (
             Attr(attr::Id, self.id),

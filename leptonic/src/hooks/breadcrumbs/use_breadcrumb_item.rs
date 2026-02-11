@@ -8,6 +8,14 @@ use web_sys::{KeyboardEvent, MouseEvent};
 use crate::utils::aria::{AriaCurrent, AriaDisabled};
 use crate::utils::EventHandler;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_breadcrumb_item` hook.
 #[derive(Debug, Clone)]
 pub struct UseBreadcrumbItemInput {

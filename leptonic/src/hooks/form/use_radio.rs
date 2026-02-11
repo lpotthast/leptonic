@@ -14,6 +14,14 @@ use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadio.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_radio` hook.
 #[derive(Clone, Copy)]
 pub struct UseRadioInput<T>

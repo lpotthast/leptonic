@@ -8,6 +8,14 @@ use web_sys::KeyboardEvent;
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::EventHandler;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_tag` hook.
 #[derive(Debug, Clone)]
 pub struct UseTagInput {

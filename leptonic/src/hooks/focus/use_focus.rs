@@ -8,6 +8,14 @@ use crate::utils::{EventHandler, EventTargetExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocus.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 #[derive(Debug, Clone, Copy)]
 pub struct UseFocusInput {
     /// Disables the handling focus events when true.

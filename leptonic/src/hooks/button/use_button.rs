@@ -18,6 +18,14 @@ use crate::hooks::{
     UseFocusRingReturn, UseHoverReturn, UsePressReturn,
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 #[derive(Clone, Copy, Educe)]
 #[educe(Debug)]
 pub struct UseButtonInput {

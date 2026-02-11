@@ -13,6 +13,14 @@ use crate::utils::{
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useHover.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 // iOS fires onPointerEnter twice: once with pointerType="touch" and again with
 // pointerType="mouse". We want to ignore these emulated events so they do not trigger hover
 // behavior. See https://bugs.webkit.org/show_bug.cgi?id=214609.

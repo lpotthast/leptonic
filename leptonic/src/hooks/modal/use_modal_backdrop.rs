@@ -11,6 +11,14 @@ use crate::utils::EventHandler;
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModalOverlay.ts
 // React Aria calls this "useModalOverlay" with "underlay" props. We use "backdrop" terminology for clarity.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_modal_backdrop` hook.
 #[derive(Debug, Clone, Copy)]
 pub struct UseModalBackdropInput {

@@ -10,6 +10,14 @@ use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDateSegment.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// The type of date segment.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DateSegmentType {

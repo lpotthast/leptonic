@@ -12,6 +12,14 @@ use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useCalendarGrid.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_calendar_grid` hook.
 #[derive(Debug, Clone)]
 pub struct UseCalendarGridInput {
@@ -120,7 +128,11 @@ pub struct UseCalendarGridHeaderProps {
 /// # Example
 ///
 /// ```ignore
-/// let calendar = use_calendar(time::OffsetDateTime::now_utc(), None, None);
+/// let calendar = use_calendar_state(UseCalendarStateInput {
+///     initial_value: time::OffsetDateTime::now_utc(),
+///     min: None,
+///     max: None,
+/// });
 ///
 /// let grid = use_calendar_grid(UseCalendarGridInput {
 ///     weeks: calendar.weeks,

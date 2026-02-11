@@ -32,15 +32,19 @@
 //!   provided as a component/atom (`<FocusScope>`) that wraps modal content.
 
 pub mod use_dismiss;
+pub mod use_dismiss_button;
 pub mod use_overlay;
 pub mod use_overlay_position;
 pub mod use_overlay_trigger;
 pub mod use_popover;
 pub mod use_tooltip_trigger;
+pub mod use_tooltip_trigger_state;
 
 pub use use_dismiss::*;
+pub use use_dismiss_button::*;
 pub use use_overlay::*;
 pub use use_overlay_position::*;
 pub use use_overlay_trigger::*;
 pub use use_popover::*;
 pub use use_tooltip_trigger::*;
+pub use use_tooltip_trigger_state::*;

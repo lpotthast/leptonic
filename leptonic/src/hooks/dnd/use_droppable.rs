@@ -9,6 +9,14 @@ use uuid::Uuid;
 use web_sys::DragEvent;
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrop.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_droppable` hook.
 #[derive(Clone)]
 pub struct UseDroppableInput {

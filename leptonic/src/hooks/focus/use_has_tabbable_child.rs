@@ -15,6 +15,14 @@ use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 // This is a deliberate deviation for better ergonomics - users don't need to manually create
 // and wire up NodeRefs. The element is captured automatically when attributes are spread.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_has_tabbable_child` hook.
 #[derive(Debug, Clone, Copy)]
 pub struct UseHasTabbableChildInput {

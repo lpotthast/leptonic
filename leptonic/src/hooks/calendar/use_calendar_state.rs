@@ -7,8 +7,16 @@ use crate::utils::time::{
     SaveReplaceYear, Week, Year,
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 #[derive(Debug, Clone, Copy)]
-pub struct UseCalendarReturn {
+pub struct UseCalendarStateReturn {
     pub staging: ReadSignal<time::OffsetDateTime>,
     pub staging_year: Memo<i32>,
     pub staging_month_name: Memo<String>,
@@ -23,7 +31,7 @@ pub struct UseCalendarReturn {
     pub weeks: Signal<Vec<Week>>,
 }
 
-impl UseCalendarReturn {
+impl UseCalendarStateReturn {
     pub fn select_previous_month(&self) {
         self.set_staging
             .update(move |staging| *staging = start_of_previous_month(*staging));
@@ -103,11 +111,28 @@ impl UseCalendarReturn {
     }
 }
 
-pub fn use_calendar(
-    initial_value: time::OffsetDateTime,
-    min: Option<time::OffsetDateTime>,
-    max: Option<time::OffsetDateTime>,
-) -> UseCalendarReturn {
+/// Input parameters for the `use_calendar_state` hook.
+#[derive(Debug, Clone, Copy)]
+pub struct UseCalendarStateInput {
+    /// The initial value for the calendar.
+    pub initial_value: time::OffsetDateTime,
+
+    /// The minimum selectable date.
+    pub min: Option<time::OffsetDateTime>,
+
+    /// The maximum selectable date.
+    pub max: Option<time::OffsetDateTime>,
+}
+
+/// Creates internal state for a calendar.
+#[allow(clippy::needless_pass_by_value)]
+pub fn use_calendar_state(input: UseCalendarStateInput) -> UseCalendarStateReturn {
+    let UseCalendarStateInput {
+        initial_value,
+        min,
+        max,
+    } = input;
+
     let (staging, set_staging) = signal(initial_value);
 
     let staging_year = Memo::new(move |_| staging.get().year());
@@ -134,7 +159,7 @@ pub fn use_calendar(
     });
     let weeks = Signal::derive(move || create_weeks(&staging.get(), min.as_ref(), max.as_ref()));
 
-    UseCalendarReturn {
+    UseCalendarStateReturn {
         staging,
         staging_year,
         staging_month_name,

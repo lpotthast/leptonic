@@ -9,6 +9,14 @@ use super::use_selection_state::{
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableCollection.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Focus strategy when items change.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum FocusStrategy {

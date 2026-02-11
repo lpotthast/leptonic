@@ -18,24 +18,28 @@ use crate::utils::EventHandler;
 use super::use_grid::UseGridState;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridCell.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## DEVIATIONS FROM REACT-ARIA
-//
-// ### Omitted
+// ## OMITTED FEATURES
 // - `isVirtualized`, `colSpan`, `keyWhenFocused` — no virtualization support.
 // - `onPointerDown` tabindex workaround — no drag support.
 // - RTL direction swapping — `ArrowLeft`/`ArrowRight` don't swap based on locale.
 // - `isPressed` — not tracked; use `use_press` separately if needed.
 //
-// ### Different
+// ## DIFFERENT BEHAVIOR
 // - Bubble-phase keydown instead of capture-phase + re-dispatch. ArrowUp/Down
 //   bubble naturally to the grid handler.
 // - Shared state struct (`UseGridState<K>`) instead of `gridMap` `WeakMap`.
 //
-// ### Leptos-specific
+// ## LEPTOS-SPECIFIC ADAPTATIONS
 // - `ElementCaptureAttr` instead of React refs for DOM element access.
 // - `FocusManager` from `use_focus_manager` instead of `getFocusableTreeWalker`.
 // - `EventHandler<E>` for composable event handler chaining.
+//
+// =============================================================================
 
 /// Controls how focus behaves when a grid cell receives focus.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

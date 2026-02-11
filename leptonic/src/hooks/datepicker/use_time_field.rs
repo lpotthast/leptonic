@@ -12,6 +12,14 @@ use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useTimeField.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// A time value with hours, minutes, and optional seconds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct TimeValue {
@@ -542,26 +550,3 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
     }
 }
 
-/// State for managing time field.
-#[derive(Clone, Copy)]
-pub struct UseTimeFieldStateReturn {
-    /// The current value.
-    pub value: Signal<Option<TimeValue>>,
-
-    /// Set the value.
-    pub set_value: Callback<Option<TimeValue>>,
-
-    /// Clear the value.
-    pub clear: Callback<()>,
-}
-
-/// Creates internal state for a time field.
-pub fn use_time_field_state(default_value: Option<TimeValue>) -> UseTimeFieldStateReturn {
-    let (value, set_value_signal) = signal(default_value);
-
-    UseTimeFieldStateReturn {
-        value: value.into(),
-        set_value: Callback::new(move |v| set_value_signal.set(v)),
-        clear: Callback::new(move |_| set_value_signal.set(None)),
-    }
-}

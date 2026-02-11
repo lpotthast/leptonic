@@ -8,6 +8,22 @@ use crate::hooks::selection::keyboard_delegate::KeyboardDelegate;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/GridKeyboardDelegate.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## DIFFERENT BEHAVIOR
+// - Reads signals lazily via `get_untracked()` instead of react-aria's `useMemo`
+//   recreation pattern. This is always up-to-date but uses untracked reads in
+//   event handlers (appropriate since these run outside the reactive graph).
+//
+// ## OMITTED FEATURES
+// - No RTL support — `get_key_left_of`/`get_key_right_of` don't swap direction
+//   based on locale. Can be added later.
+// - No `ref` / scrollable element for page-up/page-down calculation.
+//
+// =============================================================================
+
 /// Controls how focus moves within a grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GridFocusMode {
@@ -23,15 +39,6 @@ pub enum GridFocusMode {
 /// Implements `KeyboardDelegate<K>` using a `GridCollection<K>` to resolve
 /// navigation targets. Reads `Signal`s lazily via `get_untracked()` — the
 /// delegate does not need to be recreated when the collection changes.
-///
-/// ## DEVIATIONS FROM REACT-ARIA
-///
-/// - Reads signals lazily via `get_untracked()` instead of react-aria's `useMemo`
-///   recreation pattern. This is always up-to-date but uses untracked reads in
-///   event handlers (appropriate since these run outside the reactive graph).
-/// - No RTL support — `get_key_left_of`/`get_key_right_of` don't swap direction
-///   based on locale. Can be added later.
-/// - No `ref` / scrollable element for page-up/page-down calculation.
 pub struct GridKeyboardDelegate<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,

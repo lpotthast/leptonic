@@ -18,22 +18,26 @@ use crate::utils::EventHandler;
 use super::use_grid::UseGridState;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridRow.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## DEVIATIONS FROM REACT-ARIA
-//
-// ### Omitted
+// ## OMITTED FEATURES
 // - `isVirtualized` — no virtualization support.
 // - `shouldSelectOnPressUp` — not configurable per-row; always selects on press down.
 // - `isPressed` — not tracked; use `use_press` separately if needed.
 // - Deprecated per-row `onAction` prop — use `UseGridInput::on_row_action` instead.
 //
-// ### Different
+// ## DIFFERENT BEHAVIOR
 // - Always emits `aria-rowindex` (not only when virtualized).
 // - Double-click triggers row action (in addition to Enter at grid level).
 // - Shared state struct (`UseGridState<K>`) instead of `gridMap` `WeakMap`.
 //
-// ### Leptos-specific
+// ## LEPTOS-SPECIFIC ADAPTATIONS
 // - `EventHandler<E>` for composable event handler chaining.
+//
+// =============================================================================
 
 /// Input for a grid row.
 pub struct UseGridRowInput<K>

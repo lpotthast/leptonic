@@ -2,14 +2,18 @@ use leptos::attr;
 use leptos::attr::Attr;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridRowGroup.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## DEVIATIONS FROM REACT-ARIA
-//
-// ### Omitted
+// ## OMITTED FEATURES
 // - `isVirtualized` — no virtualization support.
 //
-// ### Different
+// ## LEPTOS-SPECIFIC ADAPTATIONS
 // - Returns a props struct with `to_attrs()`/`into_attrs()` instead of React props.
+//
+// =============================================================================
 
 /// Return value for a grid row group.
 pub struct UseGridRowGroupReturn {

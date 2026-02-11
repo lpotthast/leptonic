@@ -17,6 +17,14 @@ use crate::utils::EventHandler;
 
 use super::use_grid_list::UseGridListState;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input for a grid list item.
 pub struct UseGridListItemInput<K>
 where

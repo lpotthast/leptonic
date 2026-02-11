@@ -5,6 +5,14 @@ use uuid::Uuid;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/breadcrumbs/src/useBreadcrumbs.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 // TODO: This tries to reimplement behavior already covered by use_press.
 
 /// Input parameters for the `use_breadcrumbs` hook.

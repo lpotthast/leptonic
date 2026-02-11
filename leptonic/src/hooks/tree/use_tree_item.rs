@@ -8,6 +8,14 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaSelected};
 use crate::utils::EventHandler;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_tree_item` hook.
 #[derive(Debug, Clone)]
 pub struct UseTreeItemInput {

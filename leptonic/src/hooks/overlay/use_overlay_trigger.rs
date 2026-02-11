@@ -8,6 +8,14 @@ use crate::{
     utils::aria::AriaControls,
 };
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 #[derive(Debug, Clone)]
 pub struct UseOverlayTriggerInput {
     /// Whether the overlay is currently shown.

@@ -11,6 +11,14 @@ use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tree/src/useTree.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// The selection mode for a tree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TreeSelectionMode {

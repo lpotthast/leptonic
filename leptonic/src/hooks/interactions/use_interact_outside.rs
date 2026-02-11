@@ -6,23 +6,30 @@ use wasm_bindgen::JsCast;
 use web_sys::PointerEvent;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useInteractOutside.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## DEVIATIONS FROM REACT-ARIA
+// ## OMITTED FEATURES
 //
-// ### Omitted
 // - Legacy mouse/touch fallback (`process.env.NODE_ENV === 'test'` branch) — WASM always has `PointerEvent`.
 //
-// ### Different
+// ## DIFFERENT BEHAVIOR
+//
 // - Click handler passes `MouseEvent` as `PointerEvent` via `unchecked_into` (matches react-aria's
 //   JS loose typing — PointerEvent-specific fields return defaults).
 // - Document containment uses native `Node.contains()` instead of react-aria's shadow-DOM-aware
 //   `nodeContains()`. The `composedPath()` check handles the primary shadow DOM case.
 //
-// ### Leptos-specific
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+//
 // - Uses `ElementCaptureAttr` instead of `RefObject`.
+//
+// =============================================================================
 
 /// Input parameters for the `use_interact_outside` hook.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseInteractOutsideInput {
     /// Whether the interact outside events should be disabled.
     pub disabled: Signal<bool>,
@@ -34,7 +41,7 @@ pub struct UseInteractOutsideInput {
     pub on_interact_outside: Option<Callback<PointerEvent>>,
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseInteractOutsideReturn {
     /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
     pub props: UseInteractOutsideProps,

@@ -20,10 +20,12 @@ use super::use_grid::EscapeKeyBehavior;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridList.ts
 // and: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridListItem.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## DEVIATIONS FROM REACT-ARIA
-//
-// ### Omitted
+// ## OMITTED FEATURES
 // - Virtualization (`isVirtualized`, `aria-rowcount`, `aria-colcount`).
 // - Tree support (`hasChildItems`, `expandedKeys`, `aria-expanded`, `aria-level`,
 //   `aria-posinset`, `aria-setsize`).
@@ -36,18 +38,20 @@ use super::use_grid::EscapeKeyBehavior;
 // - Drag-and-drop.
 // - Capture-phase keydown re-dispatch (we use bubble phase).
 //
-// ### Different
+// ## DIFFERENT BEHAVIOR
 // - Selection is delegated to `use_selection_state` directly.
 // - `UseGridListState<K>` struct instead of `listMap` `WeakMap`.
 // - `aria_multiselectable` only sets `"true"` for Multiple mode and omits it otherwise
 //   (matching React Aria, which doesn't set `"false"` for Single).
 // - Bubble-phase keydown instead of capture-phase + re-dispatch.
 //
-// ### Leptos-specific
+// ## LEPTOS-SPECIFIC ADAPTATIONS
 // - `ElementCaptureAttr` instead of React refs for DOM element access.
 // - `FocusManager` from `use_focus_manager` instead of `getFocusableTreeWalker`.
 // - `EventHandler<E>` for composable event handler chaining.
 // - Generic `K` key type instead of React Aria's `Key`.
+//
+// =============================================================================
 
 /// Input parameters for the `use_grid_list` hook.
 #[derive(Clone)]
@@ -316,18 +320,6 @@ where
 ///
 /// ArrowUp/ArrowDown navigate between rows at the container level.
 /// ArrowLeft/ArrowRight are reserved for within-row child navigation at the item level.
-///
-/// ## DEVIATIONS FROM REACT-ARIA
-///
-/// - Selection is delegated to `use_selection_state` instead of react-aria's
-///   `useGridSelectionState` + `useSelectableCollection`.
-/// - No `listMap` `WeakMap` equivalent — child hooks (`use_grid_list_item`) receive
-///   a `UseGridListState<K>` struct explicitly instead of looking up shared state
-///   from a mutable `WeakMap`.
-/// - No virtualization (`is_virtualized`, `aria-rowcount`, `aria-colcount`).
-/// - No selection announcements (`useGridSelectionAnnouncement`).
-/// - No RTL direction swapping in keyboard navigation.
-/// - Uses `EventHandler` pattern for composable event handlers.
 ///
 /// # Example
 ///

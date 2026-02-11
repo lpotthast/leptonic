@@ -20,6 +20,14 @@ use super::use_menu_trigger_state::UseMenuTriggerStateReturn;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuTrigger.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// How the menu is triggered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum MenuTriggerType {

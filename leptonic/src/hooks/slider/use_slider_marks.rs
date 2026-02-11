@@ -5,6 +5,14 @@ use std::borrow::Cow;
 
 // Note: This hooks is not available in react-aria.
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Configuration for slider marks.
 #[derive(Default, Debug, Clone)]
 #[allow(variant_size_differences)]

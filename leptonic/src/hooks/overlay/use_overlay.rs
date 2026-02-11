@@ -3,6 +3,14 @@ use leptos::attr::Attr;
 use leptos::oco::Oco;
 use leptos::prelude::*;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 #[derive(Debug, Clone, Copy)]
 pub struct UseOverlayInput {
     /// Disables the handling overlay events when true.

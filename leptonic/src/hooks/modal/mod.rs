@@ -37,6 +37,8 @@
 
 pub mod use_modal;
 pub mod use_modal_backdrop;
+pub mod use_modal_state;
 
 pub use use_modal::*;
 pub use use_modal_backdrop::*;
+pub use use_modal_state::*;

@@ -6,6 +6,14 @@ use uuid::Uuid;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/progress/src/useProgressBar.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_progress_bar` hook.
 #[derive(Debug, Clone)]
 pub struct UseProgressBarInput {

@@ -7,6 +7,14 @@ use crate::utils::aria::AriaOrientation;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// The orientation of the tab list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TabsOrientation {

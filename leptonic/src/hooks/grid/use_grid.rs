@@ -22,6 +22,27 @@ use super::grid_keyboard_delegate::{GridFocusMode, GridKeyboardDelegate};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGrid.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## OMITTED FEATURES
+// - No virtualization (`is_virtualized`, `aria-rowcount`, `aria-colcount`).
+// - No selection announcements (`useGridSelectionAnnouncement`).
+// - No RTL direction swapping in keyboard navigation.
+//
+// ## DIFFERENT BEHAVIOR
+// - Selection is delegated to `use_selection_state` instead of react-aria's
+//   `useGridSelectionState` + `useSelectableCollection`.
+// - No `gridMap` `WeakMap` equivalent — child hooks (`use_grid_cell`) receive
+//   a `UseGridState<K>` struct explicitly instead of looking up shared state
+//   from a mutable `WeakMap`.
+//
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+// - Uses `EventHandler` pattern for composable event handlers.
+//
+// =============================================================================
+
 /// Controls Escape key behavior in the grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum EscapeKeyBehavior {
@@ -204,18 +225,6 @@ pub type UseGridAttrs = (
 /// A grid displays items in a two-dimensional layout with keyboard navigation,
 /// selection, and ARIA accessibility. This hook centralizes ALL keyboard
 /// navigation at the grid container level using a `GridKeyboardDelegate`.
-///
-/// ## DEVIATIONS FROM REACT-ARIA
-///
-/// - Selection is delegated to `use_selection_state` instead of react-aria's
-///   `useGridSelectionState` + `useSelectableCollection`.
-/// - No `gridMap` `WeakMap` equivalent — child hooks (`use_grid_cell`) receive
-///   a `UseGridState<K>` struct explicitly instead of looking up shared state
-///   from a mutable `WeakMap`.
-/// - No virtualization (`is_virtualized`, `aria-rowcount`, `aria-colcount`).
-/// - No selection announcements (`useGridSelectionAnnouncement`).
-/// - No RTL direction swapping in keyboard navigation.
-/// - Uses `EventHandler` pattern for composable event handlers.
 ///
 /// # Example
 ///

@@ -15,6 +15,14 @@ use super::use_selection_state::{Selection, SelectionBehavior, SelectionMode};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableList.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_selectable_list` hook.
 #[derive(Clone)]
 pub struct UseSelectableListInput<K>

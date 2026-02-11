@@ -8,12 +8,18 @@ use super::use_selection_state::{Selection, SelectionBehavior, SelectionMode};
 use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableItem.ts
+
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// ## DEVIATIONS FROM REACT-ARIA
+// ## DIFFERENT BEHAVIOR
 //
-// In react-aria's `useSelectableItem`, double-click triggers the `onAction`
-// callback provided to the collection (e.g. `useListBox`). We expose it (`on_double_click`)
-// directly on the item input so callers can wire it without a full collection.
+// - In react-aria's `useSelectableItem`, double-click triggers the `onAction`
+//   callback provided to the collection (e.g. `useListBox`). We expose it (`on_double_click`)
+//   directly on the item input so callers can wire it without a full collection.
+//
+// =============================================================================
 
 /// Input parameters for the `use_selectable_item` hook.
 #[derive(Clone, Copy)]

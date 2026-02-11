@@ -2,6 +2,14 @@ use leptos::prelude::*;
 
 use crate::hooks::selection::use_selectable_collection::FocusStrategy;
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input for `use_menu_trigger_state` hook.
 #[derive(Debug, Clone, Default)]
 pub struct UseMenuTriggerStateInput {

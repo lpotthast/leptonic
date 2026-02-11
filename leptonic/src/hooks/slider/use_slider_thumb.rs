@@ -24,8 +24,16 @@ use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// No intentional deviations from the react-aria implementation.
+//
+// =============================================================================
+
 /// Input parameters for the `use_slider_thumb` hook.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseSliderThumbInput {
     /// The slider state (from `use_slider_state`).
     pub state: UseSliderStateReturn,
@@ -71,7 +79,7 @@ pub struct UseSliderThumbInput {
 }
 
 /// The return value of the `use_slider_thumb` hook.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseSliderThumbReturn {
     /// Props for the thumb element.
     pub thumb_props: UseSliderThumbProps,
@@ -212,6 +220,10 @@ pub struct UseSliderThumbInputProps {
 }
 
 impl UseSliderThumbInputProps {
+    pub fn to_attrs(&self) -> UseSliderThumbInputAttrs {
+        self.clone().into_attrs()
+    }
+
     pub fn into_attrs(self) -> UseSliderThumbInputAttrs {
         (
             Attr(attr::Type, self.ty),
