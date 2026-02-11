@@ -71,6 +71,29 @@ pub fn DocLayout() -> impl IntoView {
             </DrawerSection>
         </DrawerSection>
 
+        // ── Overlays ──────────────────────────────────────────────
+        <DrawerSection level=1 header=move || view! {
+            <Icon icon=icondata::BsWindowStack margin=Margin::Right(Size::Em(1.0))></Icon> "Overlays"
+        }>
+            <DrawerSection level=3 header=move || "Popover">
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::components::Popover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Popover"</Link>
+                    <Link href=routes::doc::atoms::Popover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "Popover"</Link>
+                    <Link href=routes::doc::hooks::UsePopover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_popover"</Link>
+                </Stack>
+            </DrawerSection>
+            <DrawerSection level=3 header=move || "Modal">
+                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::components::Modal.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Modal"</Link>
+                    <Link href=routes::doc::hooks::UseModal.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_modal"</Link>
+                </Stack>
+            </DrawerSection>
+            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                <Link href=routes::doc::hooks::UseOverlay.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_overlay"</Link>
+                <Link href=routes::doc::hooks::UseTooltip.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_tooltip"</Link>
+            </Stack>
+        </DrawerSection>
+
         // ── Input ─────────────────────────────────────────────────
         <DrawerSection level=1 header=move || view! {
             <Icon icon=icondata::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
@@ -183,29 +206,6 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=routes::doc::components::AppBar.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "App Bar"</Link>
                 <Link href=routes::doc::components::Drawer.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Drawer"</Link>
                 <Link href=routes::doc::hooks::UseToolbar.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_toolbar"</Link>
-            </Stack>
-        </DrawerSection>
-
-        // ── Overlays ──────────────────────────────────────────────
-        <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsWindowStack margin=Margin::Right(Size::Em(1.0))></Icon> "Overlays"
-        }>
-            <DrawerSection level=3 header=move || "Popover">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Popover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Popover"</Link>
-                    <Link href=routes::doc::atoms::Popover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "Popover"</Link>
-                    <Link href=routes::doc::hooks::UsePopover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_popover"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Modal">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Modal.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Modal"</Link>
-                    <Link href=routes::doc::hooks::UseModal.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_modal"</Link>
-                </Stack>
-            </DrawerSection>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::hooks::UseOverlay.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_overlay"</Link>
-                <Link href=routes::doc::hooks::UseTooltip.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_tooltip"</Link>
             </Stack>
         </DrawerSection>
 
