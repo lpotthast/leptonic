@@ -64,15 +64,11 @@ pub struct UseBreadcrumbItemProps;
 impl UseBreadcrumbItemProps {
     /// Convert to spreadable attributes for Leptos views, cloning internally.
     #[must_use]
-    pub fn to_attrs(&self) -> UseBreadcrumbItemAttrs {
-        ()
-    }
+    pub fn to_attrs(&self) -> UseBreadcrumbItemAttrs {}
 
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
-    pub fn into_attrs(self) -> UseBreadcrumbItemAttrs {
-        ()
-    }
+    pub fn into_attrs(self) -> UseBreadcrumbItemAttrs {}
 }
 
 /// Attributes for the breadcrumb item container.
