@@ -35,7 +35,11 @@ pub fn ProgressBar(
     });
 
     view! {
-        <div class="leptonic-progress-bar" node_ref=el data-indeterminate=move || progress.get().is_none()>
+        <div
+            class="leptonic-progress-bar"
+            node_ref=el
+            data-indeterminate=move || progress.get().is_none()
+        >
             <div class="leptonic-progress-bar-background">
                 <div class="leptonic-progress-bar-fill" style=move || fill_style.get()>
                     <div class="leptonic-progress-bar-fill-overlay" />

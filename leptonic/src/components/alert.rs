@@ -69,13 +69,13 @@ pub fn Alert(
     #[prop(optional)] default_icon_slot: AlertIconSlot,
 ) -> impl IntoView {
     view! {
-        <div class="leptonic-alert" data-variant=variant
-            .to_str()>
+        <div class="leptonic-alert" data-variant=variant.to_str()>
             {match alert_prepend {
                 Some(slot) => {
                     view! {
-                        <div class="leptonic-alert-prepend" style=slot
-                            .style>{(slot.children)()}</div>
+                        <div class="leptonic-alert-prepend" style=slot.style>
+                            {(slot.children)()}
+                        </div>
                     }
                         .into_any()
                 }
@@ -99,8 +99,9 @@ pub fn Alert(
                 {match alert_title {
                     Some(slot) => {
                         view! {
-                            <div class="leptonic-alert-title" style=slot
-                                .style>{(slot.children)()}</div>
+                            <div class="leptonic-alert-title" style=slot.style>
+                                {(slot.children)()}
+                            </div>
                         }
                             .into_any()
                     }
@@ -108,9 +109,7 @@ pub fn Alert(
                 }}
                 {match alert_content {
                     Some(slot) => {
-                        view! {
-                            <div class="leptonic-alert-content">{(slot.children)()}</div>
-                        }
+                        view! { <div class="leptonic-alert-content">{(slot.children)()}</div> }
                             .into_any()
                     }
                     None => ().into_any(),
@@ -119,8 +118,9 @@ pub fn Alert(
             {match alert_append {
                 Some(slot) => {
                     view! {
-                        <div class="leptonic-alert-append" style=slot
-                            .style>{(slot.children)()}</div>
+                        <div class="leptonic-alert-append" style=slot.style>
+                            {(slot.children)()}
+                        </div>
                     }
                         .into_any()
                 }

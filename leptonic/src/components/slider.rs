@@ -66,14 +66,16 @@ fn SliderInner(
                 <For
                     each=move || 0..num_thumbs
                     key=move |thumb_idx| *thumb_idx
-                    children=move |thumb_idx| view! {
-                        <SliderThumb index=thumb_idx classes=Classes::from("thumb")>
-                            <SliderThumbTooltip
-                                popover=popover
-                                nostrip:value_display=value_display
-                                classes=Classes::from("tooltip")
-                            />
-                        </SliderThumb>
+                    children=move |thumb_idx| {
+                        view! {
+                            <SliderThumb index=thumb_idx classes=Classes::from("thumb")>
+                                <SliderThumbTooltip
+                                    popover=popover
+                                    nostrip:value_display=value_display
+                                    classes=Classes::from("tooltip")
+                                />
+                            </SliderThumb>
+                        }
                     }
                 />
             </SliderTrack>
@@ -86,15 +88,17 @@ fn SliderInner(
                 <For
                     each=move || marks.get()
                     key=move |mark| OrderedFloat::from(mark.percentage)
-                    children=move |mark| view! {
-                        <SliderMark mark=mark.clone() classes=Classes::from("mark")>
-                            {match mark.name {
-                                Some(name) => {
-                                    view! { <div class="title">{name}</div> }.into_any()
-                                }
-                                None => ().into_any(),
-                            }}
-                        </SliderMark>
+                    children=move |mark| {
+                        view! {
+                            <SliderMark mark=mark.clone() classes=Classes::from("mark")>
+                                {match mark.name {
+                                    Some(name) => {
+                                        view! { <div class="title">{name}</div> }.into_any()
+                                    }
+                                    None => ().into_any(),
+                                }}
+                            </SliderMark>
+                        }
                     }
                 />
             </SliderMarks>

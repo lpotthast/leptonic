@@ -34,9 +34,14 @@ pub fn QuicksearchTrigger(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <div class="leptonic-quicksearch-trigger" on:click=move |_| {
-            set_quicksearch.set(true);
-        }>{children()}</div>
+        <div
+            class="leptonic-quicksearch-trigger"
+            on:click=move |_| {
+                set_quicksearch.set(true);
+            }
+        >
+            {children()}
+        </div>
     }
 }
 
@@ -86,10 +91,15 @@ fn QuicksearchModal(
                             .into_iter()
                             .map(|option| {
                                 view! {
-                                    <div class="leptonic-quicksearch-result" on:click=move |_| {
-                                        option.on_select.run(());
-                                        on_cancel.run(());
-                                    }>{option.view.produce()}</div>
+                                    <div
+                                        class="leptonic-quicksearch-result"
+                                        on:click=move |_| {
+                                            option.on_select.run(());
+                                            on_cancel.run(());
+                                        }
+                                    >
+                                        {option.view.produce()}
+                                    </div>
                                 }
                             })
                             .collect_view()

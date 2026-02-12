@@ -148,10 +148,11 @@ fn CollapsibleHeaderInternal(collapsible_header: CollapsibleHeader) -> impl Into
     let ctx = use_collapsible_header();
     let ctx2 = use_collapsible_header();
     view! {
-        <div class="leptonic-collapsible-header-wrapper" on:click=move |_| ctx.collapsible_ctx.toggle()>
-            <div class="leptonic-collapsible-header">
-                {(collapsible_header.children)()}
-            </div>
+        <div
+            class="leptonic-collapsible-header-wrapper"
+            on:click=move |_| ctx.collapsible_ctx.toggle()
+        >
+            <div class="leptonic-collapsible-header">{(collapsible_header.children)()}</div>
 
             {move || {
                 if ctx2.collapsible_ctx.show.get() {
@@ -185,10 +186,7 @@ fn CollapsibleBodyInternal(collapsible_body: CollapsibleBody) -> impl IntoView {
     };
 
     view! {
-        <div
-            class=class
-            class:show=move || collapsible_ctx.show.get()
-        >
+        <div class=class class:show=move || collapsible_ctx.show.get()>
             {(collapsible_body.children)()}
         </div>
     }

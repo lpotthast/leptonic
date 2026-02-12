@@ -25,7 +25,11 @@ pub fn Stack(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <div class="leptonic-stack" data-orientation=orientation.as_str() style=("--gap", format!("{spacing}"))>
+        <div
+            class="leptonic-stack"
+            data-orientation=orientation.as_str()
+            style=("--gap", format!("{spacing}"))
+        >
             {children()}
         </div>
     }

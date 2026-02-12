@@ -232,7 +232,8 @@ where
             on:blur=move |_| set_focused.set(false)
             on:focus=move |_| set_focused.set(true)
         >
-            <div class="leptonic-select"
+            <div
+                class="leptonic-select"
                 id=id_string
                 data-variant="select"
                 aria-haspopup="listbox"
@@ -276,7 +277,8 @@ where
                                 let clone4 = option.clone();
                                 let clone5 = option.clone();
                                 view! {
-                                    <div class="leptonic-select-option"
+                                    <div
+                                        class="leptonic-select-option"
                                         class:preselected=move || {
                                             memoized_preselected
                                                 .with(|preselected| preselected.as_ref() == Some(&option))
@@ -470,7 +472,12 @@ where
             on:blur=move |_| set_focused.set(false)
             on:focus=move |_| set_focused.set(true)
         >
-            <div class="leptonic-select" id=id_string data-variant="optional-select" aria-haspopup="listbox">
+            <div
+                class="leptonic-select"
+                id=id_string
+                data-variant="optional-select"
+                aria-haspopup="listbox"
+            >
                 <div class="leptonic-select-selected" on:click=move |_| toggle_show()>
                     {move || {
                         selected
@@ -486,11 +493,14 @@ where
                     {if allow_deselect.get() {
                         Some(
                             view! {
-                                <div class="leptonic-select-deselect-trigger" on:click=move |e| {
-                                    e.prevent_default();
-                                    e.stop_propagation();
-                                    deselect();
-                                }>
+                                <div
+                                    class="leptonic-select-deselect-trigger"
+                                    on:click=move |e| {
+                                        e.prevent_default();
+                                        e.stop_propagation();
+                                        deselect();
+                                    }
+                                >
                                     <Icon icon=icondata::BsXCircleFill />
                                 </div>
                             },
@@ -534,7 +544,8 @@ where
                                 let clone4 = option.clone();
                                 let clone5 = option.clone();
                                 view! {
-                                    <div class="leptonic-select-option"
+                                    <div
+                                        class="leptonic-select-option"
                                         class:preselected=move || {
                                             memoized_preselected
                                                 .with(|preselected| preselected.as_ref() == Some(&option))
@@ -738,7 +749,12 @@ where
             on:blur=move |_| set_focused.set(false)
             on:focus=move |_| set_focused.set(true)
         >
-            <div class="leptonic-select" id=id_string data-variant="multiselect" aria-haspopup="listbox">
+            <div
+                class="leptonic-select"
+                id=id_string
+                data-variant="multiselect"
+                aria-haspopup="listbox"
+            >
                 <div class="leptonic-select-selected" on:click=move |_| toggle_show()>
                     // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
                     {move || {
@@ -802,7 +818,8 @@ where
                                 let clone4 = option.clone();
                                 let clone5 = option.clone();
                                 view! {
-                                    <div class="leptonic-select-option"
+                                    <div
+                                        class="leptonic-select-option"
                                         class:preselected=move || {
                                             memoized_preselected
                                                 .with(|preselected| preselected.as_ref() == Some(&option))

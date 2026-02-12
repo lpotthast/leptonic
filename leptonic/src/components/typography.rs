@@ -68,8 +68,9 @@ pub fn Code(
 
     view! {
         <code class="leptonic-code" data-inline=inline.map(|it| it.to_string())>
-            <span class="leptonic-code-text" data-inline=inline
-                .map(|it| it.to_string())>{code_text.get_value()}</span>
+            <span class="leptonic-code-text" data-inline=inline.map(|it| it.to_string())>
+                {code_text.get_value()}
+            </span>
             {copy_btn}
         </code>
     }

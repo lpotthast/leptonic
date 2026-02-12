@@ -45,9 +45,7 @@ pub fn Chip(
 
     // TODO: use use_press instead of on:click.
     view! {
-        <div class="leptonic-chip" data-color=move || {
-            color.get().as_str()
-        }>
+        <div class="leptonic-chip" data-color=move || { color.get().as_str() }>
             {children()}
             {match dismissible {
                 Some(callback) => {

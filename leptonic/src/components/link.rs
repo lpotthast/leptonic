@@ -72,13 +72,7 @@ where
     H: ToHref + Send + Sync + 'static,
 {
     view! {
-        <LinkAtom
-            href
-            exact
-            nostrip:on_press
-            classes=classes.add("leptonic-link")
-            styles=styles
-        >
+        <LinkAtom href exact nostrip:on_press classes=classes.add("leptonic-link") styles=styles>
             {children()}
         </LinkAtom>
     }

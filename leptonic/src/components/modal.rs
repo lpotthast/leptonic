@@ -98,9 +98,10 @@ pub fn ModalRoot(children: Children) -> impl IntoView {
     view! {
         {children()}
 
-        <div class="leptonic-modal-host" data-has-modals=move || {
-            if has_modals.get() { "true" } else { "false" }
-        }>
+        <div
+            class="leptonic-modal-host"
+            data-has-modals=move || { if has_modals.get() { "true" } else { "false" } }
+        >
             <div class="leptonic-modal-backdrop" {..props.into_attrs()} />
 
             <div class="leptonic-modals">
@@ -146,7 +147,13 @@ pub fn Modal(
     let modal_renderer = ViewFn::from(move || {
         let classes = classes.get_value();
         view! {
-            <div class={let c = classes; c.add("leptonic-modal")} id=id.get_value()>
+            <div
+                class={
+                    let c = classes;
+                    c.add("leptonic-modal")
+                }
+                id=id.get_value()
+            >
                 {children()}
             </div>
         }

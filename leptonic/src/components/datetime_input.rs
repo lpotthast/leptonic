@@ -97,8 +97,7 @@ pub fn DateTimeInput(
                 type="text"
                 prop:disabled=move || disabled.get()
                 prop:value=move || {
-                    get
-                        .get()
+                    get.get()
                         .map(|it| {
                             it.format(&Rfc3339).expect("Formatting to Rfc3339 to be non-fallible.")
                         })
@@ -108,7 +107,8 @@ pub fn DateTimeInput(
                 on:focusin=move |_| set_in_focus.set(true)
                 on:focusout=move |_| set_in_focus.set(false)
                 on:keydown=on_key_down
-            /> <div class="datetime-dropdown-menu-ref">
+            />
+            <div class="datetime-dropdown-menu-ref">
                 <Show when=move || open.get() fallback=|| ()>
                     <div class="datetime-dropdown-menu">
                         {match input_type {

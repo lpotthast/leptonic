@@ -13,14 +13,14 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
         <!DOCTYPE html>
         <html lang="en">
             <head>
-                <meta charset="utf-8"/>
-                <meta name="viewport" content="width=device-width, initial-scale=1"/>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1" />
                 <AutoReload options=options.clone() />
-                <HydrationScripts options/>
-                <MetaTags/>
+                <HydrationScripts options />
+                <MetaTags />
             </head>
             <body>
-                <App/>
+                <App />
             </body>
         </html>
     }
@@ -31,14 +31,14 @@ pub fn App() -> impl IntoView {
     provide_meta_context();
 
     view! {
-        <Stylesheet id="leptos" href=format!("/pkg/{LEPTOS_OUTPUT_NAME}.css")/>
-        <Title text="Leptonic Test App"/>
+        <Stylesheet id="leptos" href=format!("/pkg/{LEPTOS_OUTPUT_NAME}.css") />
+        <Title text="Leptonic Test App" />
 
         <Root default_theme=LeptonicTheme::default()>
             <Router>
                 <Routes fallback=|| view! { <p>"Not Found"</p> }>
-                    <Route path=path!("/") view=PageIndex/>
-                    <Route path=path!("/atoms/button") view=PageAtomButton/>
+                    <Route path=path!("/") view=PageIndex />
+                    <Route path=path!("/atoms/button") view=PageAtomButton />
                 </Routes>
             </Router>
         </Root>
@@ -52,7 +52,9 @@ fn PageIndex() -> impl IntoView {
             <h1>"Leptonic Test App"</h1>
             <p>"Available test pages:"</p>
             <ul>
-                <li><a href="/atoms/button">"Atoms: Button"</a></li>
+                <li>
+                    <a href="/atoms/button">"Atoms: Button"</a>
+                </li>
             </ul>
         </div>
     }

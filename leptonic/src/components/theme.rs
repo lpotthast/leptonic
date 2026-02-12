@@ -55,7 +55,11 @@ where
     provide_context(ThemeContext { theme, set_theme });
 
     view! {
-        <div class="leptonic-theme-provider" data-theme=move || theme.get().name() style="display: contents;">
+        <div
+            class="leptonic-theme-provider"
+            data-theme=move || theme.get().name()
+            style="display: contents;"
+        >
             {children()}
         </div>
     }

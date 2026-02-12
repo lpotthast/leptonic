@@ -100,7 +100,12 @@ pub fn Tab(
         .into_any(),
         Mount::WhenShown => view! {
             <Show when=is_active fallback=|| ()>
-                <div class="leptonic-tab" id=id.to_string() data-name=name.get_value() role="tabpanel">
+                <div
+                    class="leptonic-tab"
+                    id=id.to_string()
+                    data-name=name.get_value()
+                    role="tabpanel"
+                >
                     {children()}
                 </div>
             </Show>

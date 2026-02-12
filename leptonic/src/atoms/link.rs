@@ -48,7 +48,7 @@ pub fn AnchorLink(
 
     view! {
         <a {..props.into_attrs()} class=classes style=styles>
-            { children() }
+            {children()}
         </a>
     }
 }
@@ -167,12 +167,7 @@ where
     });
 
     view! {
-        <a
-            {..props.into_attrs()}
-            class=classes
-            style=styles
-            href=move || href.to_href()()
-        >
+        <a {..props.into_attrs()} class=classes style=styles href=move || href.to_href()()>
             {children()}
         </a>
     }

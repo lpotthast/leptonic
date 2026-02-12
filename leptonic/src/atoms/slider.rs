@@ -393,7 +393,7 @@ where
 
     view! {
         <div class=classes style=styles>
-            { children(computed.marks) }
+            {children(computed.marks)}
         </div>
     }
 }
@@ -414,11 +414,8 @@ pub fn SliderMark(
         .add((Left, format!("{}%", mark.percentage * 100.0)));
 
     view! {
-        <div
-            class=classes
-            style=styles
-        >
-            { children() }
+        <div class=classes style=styles>
+            {children()}
         </div>
     }
 }
