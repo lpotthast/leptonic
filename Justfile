@@ -89,12 +89,19 @@ sort:
 # Run `cargo fmt` for every crate.
 fmt:
   cargo fmt --all --manifest-path ./leptonic/Cargo.toml
+  cargo +nightly fmt --all --manifest-path ./leptonic/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./leptonic-theme/Cargo.toml
+  cargo +nightly fmt --all --manifest-path ./leptonic-theme/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./testing/test-app/Cargo.toml
+  cargo +nightly fmt --all --manifest-path ./testing/test-app/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./examples/book-ssr/Cargo.toml
+  cargo +nightly fmt --all --manifest-path ./examples/book-ssr/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./examples/leptonic-template-csr/Cargo.toml
+  cargo +nightly fmt --all --manifest-path ./examples/leptonic-template-csr/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
+  cargo +nightly fmt --all --manifest-path ./examples/leptonic-template-ssr/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
   cargo fmt --all --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
+  cargo +nightly fmt --all --manifest-path ./examples/leptonic-template-tauri/Cargo.toml -- --unstable-features --config imports_granularity=Crate,group_imports=StdExternalCrate
 
 leptosfmt:
   cargo install leptosfmt
