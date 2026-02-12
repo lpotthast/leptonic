@@ -72,18 +72,12 @@ pub struct UseHiddenSelectReturn {
 }
 
 /// Props from `use_hidden_select` for the container that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHiddenSelectContainerProps {
     pub aria_hidden: AriaHidden,
 }
 
 impl UseHiddenSelectContainerProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseHiddenSelectContainerAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseHiddenSelectContainerAttrs {
@@ -98,7 +92,7 @@ pub type UseHiddenSelectContainerAttrs = (Attr<attr::AriaHidden, AriaHidden>,);
 pub const HIDDEN_SELECT_CONTAINER_STYLE: &str = "position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;";
 
 /// Props from `use_hidden_select` for the input element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHiddenSelectInputProps {
     pub r#type: &'static str,
     pub name: Option<&'static str>,
@@ -109,12 +103,6 @@ pub struct UseHiddenSelectInputProps {
 }
 
 impl UseHiddenSelectInputProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseHiddenSelectInputAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseHiddenSelectInputAttrs {
@@ -140,7 +128,7 @@ pub type UseHiddenSelectInputAttrs = (
 );
 
 /// Props from `use_hidden_select` for the select element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHiddenSelectSelectProps {
     pub name: Option<&'static str>,
     pub disabled: Signal<bool>,
@@ -150,12 +138,6 @@ pub struct UseHiddenSelectSelectProps {
 }
 
 impl UseHiddenSelectSelectProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseHiddenSelectSelectAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseHiddenSelectSelectAttrs {

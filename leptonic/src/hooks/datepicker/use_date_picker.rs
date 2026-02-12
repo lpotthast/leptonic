@@ -78,9 +78,9 @@ impl Default for UseDatePickerInput {
 }
 
 /// The return value of the `use_date_picker` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDatePickerReturn {
-    /// Props for the date picker group container. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the date picker group container. Call `.into_attrs()` for view spreading.
     pub group_props: UseDatePickerGroupProps,
 
     /// Props for the label element.
@@ -89,7 +89,7 @@ pub struct UseDatePickerReturn {
     /// Props for the field container.
     pub field_props: UseDatePickerFieldProps,
 
-    /// Props for the calendar trigger button. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the calendar trigger button. Call `.into_attrs()` for view spreading.
     pub button_props: UseDatePickerButtonProps,
 
     /// Props for the calendar dialog/popover.
@@ -115,7 +115,7 @@ pub struct UseDatePickerReturn {
 }
 
 /// Props from `use_date_picker` for the group container.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDatePickerGroupProps {
     pub id: String,
     pub role: &'static str,
@@ -125,12 +125,6 @@ pub struct UseDatePickerGroupProps {
 }
 
 impl UseDatePickerGroupProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDatePickerGroupAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDatePickerGroupAttrs {
@@ -155,14 +149,14 @@ pub type UseDatePickerGroupAttrs = (
 
 /// Props for the label element.
 // TODO: Switch to attr defining tuple.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDatePickerLabelProps {
     /// The id of the label element.
     pub id: String,
 }
 
 /// Props for the field container.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDatePickerFieldProps {
     /// The id of the field element.
     pub id: String,
@@ -175,7 +169,7 @@ pub struct UseDatePickerFieldProps {
 }
 
 /// Props from `use_date_picker` for the calendar trigger button.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDatePickerButtonProps {
     pub id: String,
     pub aria_label: &'static str,
@@ -188,12 +182,6 @@ pub struct UseDatePickerButtonProps {
 }
 
 impl UseDatePickerButtonProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDatePickerButtonAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDatePickerButtonAttrs {
@@ -224,7 +212,7 @@ pub type UseDatePickerButtonAttrs = (
 
 /// Props for the calendar dialog/popover.
 // TODO: Switch to attr defining tuple.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDatePickerDialogProps {
     /// The id of the dialog element.
     pub id: String,
@@ -237,7 +225,7 @@ pub struct UseDatePickerDialogProps {
 }
 
 /// Props for the calendar component.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDatePickerCalendarProps {
     /// The id of the calendar element.
     pub id: String,
@@ -419,4 +407,3 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
         toggle,
     }
 }
-

@@ -48,9 +48,9 @@ where
 }
 
 /// The return value of the `use_radio` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseRadioReturn {
-    /// Props for the radio input element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the radio input element. Call `.into_attrs()` for view spreading.
     pub input_props: UseRadioInputProps,
 
     /// Whether this radio is currently selected.
@@ -67,7 +67,7 @@ pub struct UseRadioReturn {
 }
 
 /// Props from `use_radio` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseRadioInputProps {
     pub r#type: &'static str,
     pub name: Option<&'static str>,
@@ -84,12 +84,6 @@ pub struct UseRadioInputProps {
 }
 
 impl UseRadioInputProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseRadioInputAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseRadioInputAttrs {

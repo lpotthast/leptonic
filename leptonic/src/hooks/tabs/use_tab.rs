@@ -56,9 +56,8 @@ pub struct UseTabInput {
 }
 
 /// The return value of the `use_tab` hook.
-#[derive(Clone)]
 pub struct UseTabReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseTabProps,
 
     /// The ID of the tab.
@@ -94,12 +93,6 @@ pub struct UseTabProps {
 }
 
 impl UseTabProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTabAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTabAttrs {

@@ -72,9 +72,8 @@ impl Default for UseCheckboxInput {
 }
 
 /// The return value of the `use_checkbox` hook.
-#[derive(Clone)]
 pub struct UseCheckboxReturn {
-    /// Props for the checkbox input element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the checkbox input element. Call `.into_attrs()` for view spreading.
     pub input_props: UseCheckboxInputProps,
 
     /// Whether the checkbox is currently selected.
@@ -110,12 +109,6 @@ pub struct UseCheckboxInputProps {
 }
 
 impl UseCheckboxInputProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseCheckboxInputAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseCheckboxInputAttrs {

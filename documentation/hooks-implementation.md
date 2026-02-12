@@ -46,8 +46,10 @@ name):
 - UsePressProps
 - UsePressAttrs
 
-All types should derive `Debug` and `Clone`, `*Input` types should be `Copy`able to allow for easy `move`s into
-closures.
+`*Input` types should derive `Debug` and `Clone`. They may implement `Copy` but do not have to.
+`*Props` and `*Return` types should derive `Debug` but **not** `Clone`. Props are designed to bind a hook to exactly
+one DOM element; making them non-Clone enforces single-use at compile time. Only `into_attrs(self)` (consuming) is
+provided for conversion.
 
 (Use `Signal<T>` for reactive values (accepts constants via `.into()`, derived signals, or existing signals for `*Input`
 fields.)
@@ -303,12 +305,6 @@ pub struct UseFooProps {
 }
 
 impl UseFooProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    pub fn to_attrs(&self) -> UseFooAttrs {
-        // Cloning self is an equal performance cost to cloning all fields individually.
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     pub fn into_attrs(self) -> UseFooAttrs {
         (
@@ -349,29 +345,26 @@ pub fn use_foo(input: UseFooInput) -> UseFooReturn {
 }
 ```
 
-### Conversion Efficiency: `into_attrs` vs `to_attrs`
+### Props are Single-Use (non-Clone)
 
-Props types provide two conversion methods:
+Props types are intentionally **not Clone**. Only `into_attrs(self)` is provided, which consumes the Props.
+This enforces that each hook's props are spread onto exactly one DOM element — preventing bugs from:
 
-- **`into_attrs(self)`** - Takes ownership, no cloning. Prefer this when props are used once.
-- **`to_attrs(&self)`** - Borrows and clones. Use when you need to spread props to multiple elements.
+1. **Element capture conflicts** — `ElementCaptureAttr` writes to a single `CapturedElement`; cloning would overwrite.
+2. **Shared event handler state** — Both elements would share the same `Arc<dyn Fn>` handlers mutating the same state.
+3. **Duplicate ARIA IDs** — Both elements get identical IDs, violating HTML uniqueness requirements.
+
+When you need attrs inside a reactive closure (e.g., `<Show>`), convert to attrs **before** the closure
+and clone the attrs (which are Clone):
 
 ```rust
-#[component]
-fn Component() -> impl IntoView {
-    // Single use (common case) - prefer into_attrs
-    let press = use_press(input);
-    view! { <button {..press.props.into_attrs()}>"Click"</button> }
-}
+let press = use_press(input);
+let attrs = press.props.into_attrs();  // Convert once
 
-#[component]
-fn Component() -> impl IntoView {
-    // Multiple uses - use to_attrs for all but the last
-    let press = use_press(input);
-    view! {
-        <button {..press.props.to_attrs()}>"First"</button>
-        <button {..press.props.into_attrs()}>"Second (final use)"</button>
-    }
+view! {
+    <Show when=move || is_open.get()>
+        <button {..attrs.clone()}>"Inside Show"</button>
+    </Show>
 }
 ```
 

@@ -11,7 +11,7 @@ use leptos::attr::Attr;
 // - `isVirtualized` — no virtualization support.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
-// - Returns a props struct with `to_attrs()`/`into_attrs()` instead of React props.
+// - Returns a props struct with `into_attrs()` instead of React props.
 //
 // =============================================================================
 
@@ -28,12 +28,6 @@ pub struct UseGridRowGroupProps {
 }
 
 impl UseGridRowGroupProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseGridRowGroupAttrs {
-        Attr(attr::Role, self.role)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseGridRowGroupAttrs {

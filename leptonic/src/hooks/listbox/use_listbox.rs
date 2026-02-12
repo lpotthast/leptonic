@@ -130,12 +130,11 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseListBoxInput<K
 }
 
 /// The return value of the `use_listbox` hook.
-#[derive(Clone)]
 pub struct UseListBoxReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    /// Props for the listbox container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the listbox container element. Call `.into_attrs()` for view spreading.
     pub listbox_props: UseListBoxProps,
 
     /// The selection and navigation state.
@@ -146,7 +145,7 @@ where
 }
 
 /// Props from `use_listbox` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseListBoxProps {
     pub id: String,
     pub role: &'static str,
@@ -160,22 +159,6 @@ pub struct UseListBoxProps {
 }
 
 impl UseListBoxProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseListBoxAttrs {
-        (
-            Attr(attr::Id, self.id.clone()),
-            Attr(attr::Role, self.role),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::AriaLabel, self.aria_label),
-            Attr(attr::AriaLabelledby, self.aria_labelledby.clone()),
-            Attr(attr::AriaMultiselectable, self.aria_multiselectable),
-            Attr(attr::AriaOrientation, self.aria_orientation),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_keydown.to_on(ev::keydown),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseListBoxAttrs {

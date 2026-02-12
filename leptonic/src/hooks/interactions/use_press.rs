@@ -219,9 +219,9 @@ pub struct UsePressInput {
     pub long_press_accessibility_description: Option<Oco<'static, str>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UsePressReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UsePressProps,
     pub is_pressed: Signal<bool>,
 }
@@ -230,11 +230,6 @@ pub struct UsePressReturn {
 ///
 /// Use [`UsePressProps::into_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
 /// spreading syntax (`<div {..props.into_attrs()}>`) (taking ownership).
-///
-/// Use [`UsePressProps::to_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
-/// spreading syntax (`<div {..props.to_attrs()}>`) (without takin ownership, requiring internal
-/// cloning).
-///
 /// # Example
 ///
 /// ```ignore
@@ -248,7 +243,7 @@ pub struct UsePressReturn {
 /// let merged = press1.props.merge(press2.props);
 /// view! { <button {..merged.into_attrs()}>"Both handlers fire"</button> }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UsePressProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_click: EventHandler<MouseEvent>,
@@ -263,12 +258,6 @@ pub struct UsePressProps {
 }
 
 impl UsePressProps {
-    /// Convert to spreadable attributes for Leptos views.
-    #[must_use]
-    pub fn to_attrs(&self) -> UsePressAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views.
     #[must_use]
     pub fn into_attrs(self) -> UsePressAttrs {

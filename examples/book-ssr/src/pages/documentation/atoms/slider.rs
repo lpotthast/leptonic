@@ -90,8 +90,8 @@ pub fn PageAtomSlider() -> impl IntoView {
                                 <SliderTrackFill/>
                                 <SliderThumb/>
                             </SliderTrack>
-                            <SliderOutput let:props let:values>
-                                <output {..props.into_attrs()}>
+                            <SliderOutput let:attrs let:values>
+                                <output {..attrs}>
                                     { move || format!("{}%", values.get()[0] as i32) }
                                 </output>
                             </SliderOutput>
@@ -106,8 +106,8 @@ pub fn PageAtomSlider() -> impl IntoView {
                         <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
                         <SliderThumb styles=thumb_style("var(--brand-color)")/>
                     </SliderTrack>
-                    <SliderOutput let:props let:values>
-                        <output {..props.into_attrs()} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
+                    <SliderOutput let:attrs let:values>
+                        <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
                             { move || {
                                 let val = values.get().first().map(|it| *it as i32).unwrap_or(0);
                                 format!("{val}%")
@@ -131,8 +131,8 @@ pub fn PageAtomSlider() -> impl IntoView {
                         <SliderThumb aria_label="Minimum" styles=thumb_style("#4a90d9")/>
                         <SliderThumb aria_label="Maximum" styles=thumb_style("#4a90d9")/>
                     </SliderTrack>
-                    <SliderOutput let:props let:values>
-                        <output {..props.into_attrs()} style=Styles::from([(MinWidth, "80px"), (TextAlign, "right")])>
+                    <SliderOutput let:attrs let:values>
+                        <output {..attrs} style=Styles::from([(MinWidth, "80px"), (TextAlign, "right")])>
                             { move || {
                                 let vals = values.get();
                                 let v1 = vals.first().map(|it| *it as i32).unwrap_or(0);
@@ -183,8 +183,8 @@ pub fn PageAtomSlider() -> impl IntoView {
                         <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
                         <SliderThumb styles=thumb_style("var(--brand-color)")/>
                     </SliderTrack>
-                    <SliderOutput let:props let:values>
-                        <output {..props.into_attrs()} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
+                    <SliderOutput let:attrs let:values>
+                        <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
                             { move || {
                                 let val = values.get().first().map(|it| *it as i32).unwrap_or(0);
                                 format!("{val}%")
@@ -211,8 +211,8 @@ pub fn PageAtomSlider() -> impl IntoView {
                         <SliderTrackFill styles=[(BackgroundColor, "#9b59b6"), (BorderRadius, "4px")]/>
                         <SliderThumb styles=thumb_style("#9b59b6")/>
                     </SliderTrack>
-                    <SliderOutput let:props let:values>
-                        <output {..props.into_attrs()} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
+                    <SliderOutput let:attrs let:values>
+                        <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
                             { move || {
                                 let val = values.get().first().map(|it| *it as i32).unwrap_or(0);
                                 format!("{val}%")
@@ -233,8 +233,8 @@ pub fn PageAtomSlider() -> impl IntoView {
                         <SliderTrackFill styles=[(BackgroundColor, "#999"), (BorderRadius, "4px")]/>
                         <SliderThumb styles=thumb_style("#999")/>
                     </SliderTrack>
-                    <SliderOutput let:props let:values>
-                        <output {..props.into_attrs()} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
+                    <SliderOutput let:attrs let:values>
+                        <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
                             { move || {
                                 let val = values.get().first().map(|it| *it as i32).unwrap_or(0);
                                 format!("{val}%")
@@ -300,7 +300,7 @@ pub fn PageAtomSlider() -> impl IntoView {
             <p>"Renders the fill region. Supports 1-thumb (left fill) and 2-thumb (range fill) sliders."</p>
 
             <h3>"SliderOutput"</h3>
-            <p>"Render prop component. Provides "<code>"UseSliderOutputProps"</code>" and "<code>"Signal<Vec<f64>>"</code>" to its children."</p>
+            <p>"Render prop component. Provides "<code>"UseSliderOutputAttrs"</code>" and "<code>"Signal<Vec<f64>>"</code>" to its children."</p>
 
         </Article>
 

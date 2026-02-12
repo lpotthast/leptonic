@@ -78,7 +78,7 @@ impl Default for UseToolbarInput {
 }
 
 /// The return value of the `use_toolbar` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseToolbarReturn {
     /// Props for the toolbar element.
     pub toolbar_props: UseToolbarProps,
@@ -91,7 +91,7 @@ pub struct UseToolbarReturn {
 }
 
 /// Props from `use_toolbar` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseToolbarProps {
     pub id: String,
     pub role: &'static str,
@@ -102,12 +102,6 @@ pub struct UseToolbarProps {
 }
 
 impl UseToolbarProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseToolbarAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseToolbarAttrs {

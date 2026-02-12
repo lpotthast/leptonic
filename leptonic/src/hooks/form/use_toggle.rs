@@ -49,9 +49,9 @@ impl Default for UseToggleInput {
 }
 
 /// The return value of the `use_toggle` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseToggleReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseToggleProps,
 
     /// Whether the toggle is currently selected.
@@ -65,7 +65,7 @@ pub struct UseToggleReturn {
 }
 
 /// Props from `use_toggle` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseToggleProps {
     pub on_click: EventHandler<MouseEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -77,12 +77,6 @@ pub struct UseToggleProps {
 }
 
 impl UseToggleProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseToggleAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseToggleAttrs {

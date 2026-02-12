@@ -80,12 +80,11 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseMenuInput<K> {
 }
 
 /// The return value of the `use_menu` hook.
-#[derive(Clone)]
 pub struct UseMenuReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
 {
-    /// Props for the menu element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the menu element. Call `.into_attrs()` for view spreading.
     pub menu_props: UseMenuProps,
 
     /// The selectable list state.
@@ -96,7 +95,7 @@ where
 }
 
 /// Props from `use_menu` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMenuProps {
     pub role: &'static str,
     pub aria_label: Option<String>,
@@ -105,12 +104,6 @@ pub struct UseMenuProps {
 }
 
 impl UseMenuProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMenuAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMenuAttrs {

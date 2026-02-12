@@ -105,9 +105,9 @@ impl Default for UseRangeCalendarInput {
 }
 
 /// The return value of the `use_range_calendar` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseRangeCalendarReturn {
-    /// Props for the calendar container. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the calendar container. Call `.into_attrs()` for view spreading.
     pub calendar_props: UseRangeCalendarProps,
 
     /// The current focused/staging date.
@@ -148,7 +148,7 @@ pub struct UseRangeCalendarReturn {
 }
 
 /// Props from `use_range_calendar` for the calendar container.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseRangeCalendarProps {
     pub id: String,
     pub role: &'static str,
@@ -158,12 +158,6 @@ pub struct UseRangeCalendarProps {
 }
 
 impl UseRangeCalendarProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseRangeCalendarAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseRangeCalendarAttrs {
@@ -353,4 +347,3 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
         set_highlighted,
     }
 }
-

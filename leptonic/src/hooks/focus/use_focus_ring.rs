@@ -67,7 +67,7 @@ impl Default for UseFocusRingInput {
 }
 
 /// The return value of the `use_focus_ring` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusRingReturn {
     /// Whether the focus ring should be visible.
     pub is_focus_visible: Signal<bool>,
@@ -75,12 +75,12 @@ pub struct UseFocusRingReturn {
     /// Whether the element is currently focused (or has focus within when `within=true`).
     pub is_focused: Signal<bool>,
 
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseFocusRingProps,
 }
 
 /// Props from `use_focus_ring` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusRingProps {
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
@@ -90,12 +90,6 @@ pub struct UseFocusRingProps {
 }
 
 impl UseFocusRingProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFocusRingAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseFocusRingAttrs {

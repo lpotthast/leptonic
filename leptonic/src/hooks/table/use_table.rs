@@ -100,7 +100,7 @@ impl Default for UseTableInput {
 
 /// The return value of the `use_table` hook.
 pub struct UseTableReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub table_props: UseTableProps,
 
     /// The ID of the table.
@@ -132,7 +132,7 @@ pub struct UseTableReturn {
 }
 
 /// Props from `use_table` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTableProps {
     pub id: String,
     pub role: &'static str,
@@ -144,12 +144,6 @@ pub struct UseTableProps {
 }
 
 impl UseTableProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTableAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTableAttrs {

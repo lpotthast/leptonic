@@ -53,25 +53,19 @@ pub struct UseMoveInput {
     pub on_move_end: Callback<MoveEndEvent>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMoveReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseMoveProps,
 }
 
 /// Props from `use_move` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMoveProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
 }
 
 impl UseMoveProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMoveAttrs {
-        (self.on_pointerdown.to_on(ev::pointerdown),)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMoveAttrs {

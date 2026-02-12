@@ -114,9 +114,8 @@ impl Default for UseTextFieldInput {
 }
 
 /// The return value of the `use_text_field` hook.
-#[derive(Clone)]
 pub struct UseTextFieldReturn {
-    /// Props for the input element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the input element. Call `.into_attrs()` for view spreading.
     pub input_props: UseTextFieldInputProps,
 
     /// Props for the label element.
@@ -133,7 +132,7 @@ pub struct UseTextFieldReturn {
 }
 
 /// Props from `use_text_field` for the input element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTextFieldInputProps {
     pub id: String,
     pub r#type: &'static str,
@@ -161,12 +160,6 @@ pub struct UseTextFieldInputProps {
 }
 
 impl UseTextFieldInputProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTextFieldInputAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTextFieldInputAttrs {
@@ -226,7 +219,7 @@ pub type UseTextFieldInputAttrs = (
 );
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTextFieldLabelProps {
     /// The id of the label element.
     pub id: String,
@@ -236,12 +229,6 @@ pub struct UseTextFieldLabelProps {
 }
 
 impl UseTextFieldLabelProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTextFieldLabelAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTextFieldLabelAttrs {
@@ -253,19 +240,13 @@ impl UseTextFieldLabelProps {
 pub type UseTextFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
 
 /// Props for the description element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTextFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
 
 impl UseTextFieldDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTextFieldDescriptionAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTextFieldDescriptionAttrs {
@@ -277,7 +258,7 @@ impl UseTextFieldDescriptionProps {
 pub type UseTextFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the error message element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTextFieldErrorProps {
     /// The id of the error message element.
     pub id: String,
@@ -290,12 +271,6 @@ pub struct UseTextFieldErrorProps {
 }
 
 impl UseTextFieldErrorProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTextFieldErrorAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTextFieldErrorAttrs {

@@ -178,9 +178,8 @@ impl std::fmt::Debug for FocusHandle {
 }
 
 /// The return value of the `use_focusable` hook.
-#[derive(Clone)]
 pub struct UseFocusableReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseFocusableProps,
 
     /// Handle for programmatically focusing the element.
@@ -197,7 +196,7 @@ impl std::fmt::Debug for UseFocusableReturn {
 }
 
 /// Props from `use_focusable` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusableProps {
     pub tabindex: Signal<Option<i32>>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -208,19 +207,6 @@ pub struct UseFocusableProps {
 }
 
 impl UseFocusableProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFocusableAttrs {
-        (
-            Attr(attr::Tabindex, self.tabindex),
-            self.on_focus.to_on(ev::focus),
-            self.on_blur.to_on(ev::blur),
-            self.on_keydown.to_on(ev::keydown),
-            self.on_keyup.to_on(ev::keyup),
-            self.element_capture.clone(),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseFocusableAttrs {

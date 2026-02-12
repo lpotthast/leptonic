@@ -120,7 +120,7 @@ pub struct UseDroppableReturn {
 }
 
 /// Props from `use_droppable` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDroppableProps {
     pub id: String,
     pub role: &'static str,
@@ -132,12 +132,6 @@ pub struct UseDroppableProps {
 }
 
 impl UseDroppableProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDroppableAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDroppableAttrs {

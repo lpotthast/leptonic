@@ -61,7 +61,7 @@ impl Default for UseCalendarGridInput {
 
 /// The return value of the `use_calendar_grid` hook.
 pub struct UseCalendarGridReturn {
-    /// Props for the grid (table) element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the grid (table) element. Call `.into_attrs()` for view spreading.
     pub grid_props: UseCalendarGridProps,
 
     /// Props for the header row element.
@@ -75,7 +75,7 @@ pub struct UseCalendarGridReturn {
 }
 
 /// Props from `use_calendar_grid` for the grid element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCalendarGridProps {
     pub id: String,
     pub role: &'static str,
@@ -85,12 +85,6 @@ pub struct UseCalendarGridProps {
 }
 
 impl UseCalendarGridProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseCalendarGridAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseCalendarGridAttrs {
@@ -114,7 +108,7 @@ pub type UseCalendarGridAttrs = (
 );
 
 /// Props for the calendar grid header row.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCalendarGridHeaderProps {
     /// The role for the header row.
     pub role: &'static str,

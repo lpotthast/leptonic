@@ -49,19 +49,13 @@ pub struct UseDismissReturn {
 }
 
 /// Props from `use_dismiss` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDismissProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_blur: EventHandler<web_sys::FocusEvent>,
 }
 
 impl UseDismissProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDismissAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDismissAttrs {

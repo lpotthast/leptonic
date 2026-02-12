@@ -29,7 +29,7 @@ pub struct UseTabPanelInput {
 
 /// The return value of the `use_tab_panel` hook.
 pub struct UseTabPanelReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseTabPanelProps,
 
     /// The ID of the panel.
@@ -43,7 +43,7 @@ pub struct UseTabPanelReturn {
 }
 
 /// Props from `use_tab_panel` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTabPanelProps {
     pub id: String,
     pub role: &'static str,
@@ -53,12 +53,6 @@ pub struct UseTabPanelProps {
 }
 
 impl UseTabPanelProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTabPanelAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTabPanelAttrs {

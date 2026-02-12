@@ -92,7 +92,7 @@ where
 }
 
 /// The return value of the `use_popover` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UsePopoverReturn {
     /// Props for the popover element.
     pub popover_props: UsePopoverProps,
@@ -103,19 +103,13 @@ pub struct UsePopoverReturn {
 }
 
 /// Props from `use_popover` for the popover element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UsePopoverProps {
     pub position: Signal<(&'static str, String)>,
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
 impl UsePopoverProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UsePopoverAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UsePopoverAttrs {
@@ -124,18 +118,12 @@ impl UsePopoverProps {
 }
 
 /// Props from `use_popover` for the backdrop element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UsePopoverBackdropProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
 impl UsePopoverBackdropProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UsePopoverBackdropAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UsePopoverBackdropAttrs {

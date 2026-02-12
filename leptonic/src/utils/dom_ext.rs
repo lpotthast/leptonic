@@ -13,9 +13,7 @@ pub(crate) trait EventAccessors {
 
 impl<T: AsRef<web_sys::Event>> EventAccessors for T {
     fn expect_target(&self) -> web_sys::EventTarget {
-        self.as_ref()
-            .target()
-            .expect("called in event handler")
+        self.as_ref().target().expect("called in event handler")
     }
     fn expect_current_target(&self) -> web_sys::EventTarget {
         self.as_ref()

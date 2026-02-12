@@ -53,7 +53,7 @@ pub struct UseFieldInput {
 }
 
 /// The return value of the `use_field` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFieldReturn {
     /// Props for the label element.
     pub label_props: UseFieldLabelProps,
@@ -69,7 +69,7 @@ pub struct UseFieldReturn {
 }
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFieldLabelProps {
     /// The id of the label element.
     pub id: String,
@@ -79,11 +79,6 @@ pub struct UseFieldLabelProps {
 }
 
 impl UseFieldLabelProps {
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFieldLabelAttrs {
-        self.clone().into_attrs()
-    }
-
     #[must_use]
     pub fn into_attrs(self) -> UseFieldLabelAttrs {
         (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
@@ -95,7 +90,7 @@ impl UseFieldLabelProps {
 pub type UseFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
 
 /// Props for the field element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFieldProps {
     /// The id of the field element.
     pub id: String,
@@ -120,11 +115,6 @@ pub struct UseFieldProps {
 }
 
 impl UseFieldProps {
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFieldAttrs {
-        self.clone().into_attrs()
-    }
-
     #[must_use]
     pub fn into_attrs(self) -> UseFieldAttrs {
         (
@@ -152,18 +142,13 @@ pub type UseFieldAttrs = (
 );
 
 /// Props for the description element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
 
 impl UseFieldDescriptionProps {
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFieldDescriptionAttrs {
-        self.clone().into_attrs()
-    }
-
     #[must_use]
     pub fn into_attrs(self) -> UseFieldDescriptionAttrs {
         (Attr(attr::Id, self.id),)
@@ -175,7 +160,7 @@ impl UseFieldDescriptionProps {
 pub type UseFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the error message element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFieldErrorMessageProps {
     /// The id of the error message element.
     pub id: String,
@@ -188,11 +173,6 @@ pub struct UseFieldErrorMessageProps {
 }
 
 impl UseFieldErrorMessageProps {
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFieldErrorMessageAttrs {
-        self.clone().into_attrs()
-    }
-
     #[must_use]
     pub fn into_attrs(self) -> UseFieldErrorMessageAttrs {
         (

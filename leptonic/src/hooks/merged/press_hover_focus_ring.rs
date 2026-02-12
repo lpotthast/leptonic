@@ -38,7 +38,7 @@ use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 ///     </button>
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MergedPressHoverFocusRingProps {
     // From press
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -81,13 +81,6 @@ pub type MergedPressHoverFocusRingAttrs = (
 );
 
 impl MergedPressHoverFocusRingProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> MergedPressHoverFocusRingAttrs {
-        // Cloning self is an equal performance cost to cloning all fields individually.
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> MergedPressHoverFocusRingAttrs {

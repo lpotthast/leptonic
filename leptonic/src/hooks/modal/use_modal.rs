@@ -52,7 +52,7 @@ impl Default for UseModalInput {
 
 /// The return value of the `use_modal` hook.
 pub struct UseModalReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub modal_props: UseModalProps,
 
     /// The ID of the modal.
@@ -60,7 +60,7 @@ pub struct UseModalReturn {
 }
 
 /// Props from `use_modal` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseModalProps {
     pub id: String,
     pub role: &'static str,
@@ -70,12 +70,6 @@ pub struct UseModalProps {
 }
 
 impl UseModalProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseModalAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseModalAttrs {

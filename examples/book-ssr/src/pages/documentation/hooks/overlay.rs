@@ -50,7 +50,7 @@ pub fn PageUseOverlay() -> impl IntoView {
         writing_direction: WritingDirection::Ltr.into(),
         phantom_data: Default::default(),
     });
-    let overlay_pos_attrs = overlay_pos_props.to_attrs();
+    let overlay_pos_attrs = overlay_pos_props.into_attrs();
 
     let UseButtonReturn {
         props: btn_props,

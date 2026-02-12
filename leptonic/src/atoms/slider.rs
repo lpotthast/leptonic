@@ -32,9 +32,8 @@ pub enum SliderPopover {
 pub(crate) struct SliderCtx {
     pub(crate) state: UseSliderStateReturn,
 
-    pub(crate) _label_props: UseSliderLabelProps,
-    pub(crate) output_props: UseSliderOutputProps,
-    pub(crate) track_props: UseSliderTrackProps,
+    pub(crate) output_attrs: UseSliderOutputAttrs,
+    pub(crate) track_attrs: UseSliderTrackAttrs,
     pub(crate) track: CapturedElement,
 
     pub(crate) is_rtl: bool,
@@ -81,7 +80,7 @@ pub fn Slider(
         group_props,
         track_props,
         track_ref,
-        label_props,
+        label_props: _,
         output_props,
     } = use_slider(UseSliderInput {
         state,
@@ -92,9 +91,8 @@ pub fn Slider(
 
     let ctx = SliderCtx {
         state,
-        _label_props: label_props,
-        output_props,
-        track_props,
+        output_attrs: output_props.into_attrs(),
+        track_attrs: track_props.into_attrs(),
         track: track_ref,
         is_rtl,
         next_thumb_idx: Arc::new(AtomicUsize::new(0)),
@@ -112,11 +110,11 @@ pub fn Slider(
 #[component(transparent)]
 pub fn SliderOutput<C, V>(children: C) -> impl IntoView
 where
-    C: Fn(UseSliderOutputProps, Signal<Vec<f64>>) -> V + 'static,
+    C: Fn(UseSliderOutputAttrs, Signal<Vec<f64>>) -> V + 'static,
     V: IntoView + 'static,
 {
     let ctx = expect_context::<SliderCtx>();
-    children(ctx.output_props.clone(), ctx.state.values)
+    children(ctx.output_attrs.clone(), ctx.state.values)
 }
 
 #[component]
@@ -127,7 +125,7 @@ pub fn SliderTrack(
 ) -> impl IntoView {
     let ctx = expect_context::<SliderCtx>();
     view! {
-        <div {..ctx.track_props.into_attrs()} class=classes style=styles>
+        <div {..ctx.track_attrs.clone()} class=classes style=styles>
             {children()}
         </div>
     }

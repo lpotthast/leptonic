@@ -56,7 +56,7 @@ where
 
 /// The return value of the `use_menu_item` hook.
 pub struct UseMenuItemReturn {
-    /// Props for the menu item element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the menu item element. Call `.into_attrs()` for view spreading.
     pub item_props: UseMenuItemProps,
 
     /// Whether this item is currently focused.
@@ -73,7 +73,7 @@ pub struct UseMenuItemReturn {
 }
 
 /// Props from `use_menu_item` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMenuItemProps {
     pub role: &'static str,
     pub tabindex: Signal<i32>,
@@ -90,12 +90,6 @@ pub struct UseMenuItemProps {
 }
 
 impl UseMenuItemProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMenuItemAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMenuItemAttrs {

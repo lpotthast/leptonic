@@ -103,12 +103,12 @@ where
 
 #[derive(Debug)]
 pub struct UseOverlayPositionReturn {
-    /// Props for the overlay element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the overlay element. Call `.into_attrs()` for view spreading.
     pub props: UseOverlayPositionProps,
 }
 
 /// Props from `use_overlay_position` that can be converted to spreadable attributes.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseOverlayPositionProps {
     pub position: Signal<(&'static str, String)>,
     pub z_index: Signal<(&'static str, String)>,
@@ -117,17 +117,6 @@ pub struct UseOverlayPositionProps {
 }
 
 impl UseOverlayPositionProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseOverlayPositionAttrs {
-        (
-            style(self.position),
-            style(self.z_index),
-            style(self.top),
-            style(self.left),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseOverlayPositionAttrs {

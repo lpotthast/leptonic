@@ -85,17 +85,6 @@ pub struct UseSelectableItemProps {
 }
 
 impl UseSelectableItemProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSelectableItemAttrs {
-        (
-            self.on_click.to_on(ev::click),
-            self.on_dblclick.to_on(ev::dblclick),
-            self.on_focus.to_on(ev::focus),
-            self.on_mouseenter.to_on(ev::mouseenter),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSelectableItemAttrs {
@@ -110,7 +99,7 @@ impl UseSelectableItemProps {
 
 /// The return value of the `use_selectable_item` hook.
 pub struct UseSelectableItemReturn {
-    /// Props for the item element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the item element. Call `.into_attrs()` for view spreading.
     pub props: UseSelectableItemProps,
 
     /// Whether this item is currently selected.

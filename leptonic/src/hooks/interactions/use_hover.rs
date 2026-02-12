@@ -64,9 +64,9 @@ pub struct UseHoverInput {
     pub on_hover_change: Option<Callback<bool>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHoverReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseHoverProps,
 
     /// Whether the element is currently hovered.
@@ -77,26 +77,13 @@ pub struct UseHoverReturn {
 ///
 /// Use [`UseHoverProps::into_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
 /// spreading syntax (`<div {..props.into_attrs()}>`) (taking ownership).
-///
-/// Use [`UseHoverProps::to_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
-/// spreading syntax (`<div {..props.to_attrs()}>`) (without taking ownership, requiring internal
-/// cloning).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHoverProps {
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
 }
 
 impl UseHoverProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseHoverAttrs {
-        (
-            self.on_pointerenter.to_on(ev::pointerenter),
-            self.on_pointerleave.to_on(ev::pointerleave),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseHoverAttrs {

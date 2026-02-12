@@ -113,10 +113,10 @@ impl Default for UseMoveWithinInput {
 
 /// Return value from `use_move_within`.
 pub struct UseMoveWithinReturn {
-    /// Props for the container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the container element. Call `.into_attrs()` for view spreading.
     pub container_props: UseMoveWithinContainerProps,
 
-    /// Props for the movable element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the movable element. Call `.into_attrs()` for view spreading.
     pub movable_props: UseMoveWithinMovableProps,
 
     /// Normalized position (0.0 to 1.0).
@@ -133,22 +133,13 @@ pub struct UseMoveWithinReturn {
 }
 
 /// Props for the container element in `use_move_within`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMoveWithinContainerProps {
     pub element_capture: ElementCaptureAttr,
     pub on_pointerdown: EventHandler<PointerEvent>,
 }
 
 impl UseMoveWithinContainerProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMoveWithinContainerAttrs {
-        (
-            self.element_capture.clone(),
-            self.on_pointerdown.to_on(ev::pointerdown),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMoveWithinContainerAttrs {
@@ -160,22 +151,13 @@ impl UseMoveWithinContainerProps {
 }
 
 /// Props for the movable element in `use_move_within`.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMoveWithinMovableProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub element_capture: ElementCaptureAttr,
 }
 
 impl UseMoveWithinMovableProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMoveWithinMovableAttrs {
-        (
-            self.on_pointerdown.to_on(ev::pointerdown),
-            self.element_capture.clone(),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMoveWithinMovableAttrs {

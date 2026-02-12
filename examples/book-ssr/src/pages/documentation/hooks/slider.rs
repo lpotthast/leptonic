@@ -176,8 +176,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
                             <SliderThumb styles=thumb_style("var(--brand-color)")/>
                         </SliderTrack>
-                        <SliderOutput let:props let:values>
-                            <output {..props.into_attrs()} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
+                        <SliderOutput let:attrs let:values>
+                            <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
                                 { move || {
                                     let val = values.get().get(0).map(|it| *it as i32).unwrap_or(0);
                                     format!("{val}%")
@@ -229,8 +229,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             <SliderThumb aria_label="Minimum Price" styles=thumb_style("#4a90d9")/>
                             <SliderThumb aria_label="Maximum Price" styles=thumb_style("#4a90d9")/>
                         </SliderTrack>
-                        <SliderOutput let:props let:values>
-                            <output {..props.into_attrs()} style=Styles::from([(MinWidth, "80px"), (TextAlign, "right")])>
+                        <SliderOutput let:attrs let:values>
+                            <output {..attrs} style=Styles::from([(MinWidth, "80px"), (TextAlign, "right")])>
                                 { move || {
                                     let val1 = values.get().get(0).map(|it| *it as i32).unwrap_or(0);
                                     let val2 = values.get().get(1).map(|it| *it as i32).unwrap_or(0);
@@ -304,8 +304,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             <SliderTrackFill styles=[(BackgroundColor, "#9b59b6"), (BorderRadius, "4px")]/>
                             <SliderThumb styles=thumb_style("#9b59b6")/>
                         </SliderTrack>
-                        <SliderOutput let:props let:values>
-                            <output {..props.into_attrs()} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
+                        <SliderOutput let:attrs let:values>
+                            <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
                                 { move || {
                                     let val = values.get().get(0).map(|it| *it as i32).unwrap_or(0);
                                     format!("{val}%")
@@ -327,8 +327,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             <SliderThumb styles=thumb_style("#9b59b6")/>
                             <SliderThumb styles=thumb_style("#9b59b6")/>
                         </SliderTrack>
-                        <SliderOutput let:props let:values>
-                            <output {..props.into_attrs()} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
+                        <SliderOutput let:attrs let:values>
+                            <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
                                 { move || {
                                     let val1 = values.get().get(0).map(|it| *it as i32).unwrap_or(0);
                                     let val2 = values.get().get(1).map(|it| *it as i32).unwrap_or(0);
@@ -387,8 +387,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             <SliderTrackFill styles=[(BackgroundColor, "#999"), (BorderRadius, "4px")]/>
                             <SliderThumb styles=thumb_style("#999")/>
                         </SliderTrack>
-                        <SliderOutput let:props let:values>
-                            <output {..props.into_attrs()} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
+                        <SliderOutput let:attrs let:values>
+                            <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
                                 { move || {
                                     let val = values.get().get(0).map(|it| *it as i32).unwrap_or(0);
                                     format!("{val}%")
@@ -464,8 +464,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
                                 <SliderThumb styles=thumb_style("var(--brand-color)")/>
                             </SliderTrack>
-                            <SliderOutput let:props let:values>
-                                <output {..props.into_attrs()} style=Styles::from([(MinWidth, "30px"), (TextAlign, "right")])>
+                            <SliderOutput let:attrs let:values>
+                                <output {..attrs} style=Styles::from([(MinWidth, "30px"), (TextAlign, "right")])>
                                     { move || values.get().first().map(|it| *it as i32).unwrap_or(0).to_string() }
                                 </output>
                             </SliderOutput>
@@ -530,8 +530,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 <SliderTrackFill styles=[(BackgroundColor, "#4a90d9"), (BorderRadius, "4px")]/>
                                 <SliderThumb styles=thumb_style("#4a90d9")/>
                             </SliderTrack>
-                            <SliderOutput let:props let:values>
-                                <output {..props.into_attrs()} style=Styles::from([(MinWidth, "30px"), (TextAlign, "right")])>
+                            <SliderOutput let:attrs let:values>
+                                <output {..attrs} style=Styles::from([(MinWidth, "30px"), (TextAlign, "right")])>
                                     { move || values.get().first().map(|it| *it as i32).unwrap_or(0).to_string() }
                                 </output>
                             </SliderOutput>

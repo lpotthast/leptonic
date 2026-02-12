@@ -12,7 +12,7 @@ use web_sys::{FocusEvent, PointerEvent};
 /// - Hover event handlers: `on_pointerenter`, `on_pointerleave`
 /// - Focus ring event handlers: `on_focus`, `on_blur`
 /// - Focus ring data attribute: `data_focus_visible`
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MergedHoverFocusRingProps {
     // From hover.
     pub on_pointerenter: EventHandler<PointerEvent>,
@@ -39,13 +39,6 @@ pub type MergedHoverFocusRingAttrs = (
 );
 
 impl MergedHoverFocusRingProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> MergedHoverFocusRingAttrs {
-        // Cloning self is an equal performance cost to cloning all fields individually.
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> MergedHoverFocusRingAttrs {

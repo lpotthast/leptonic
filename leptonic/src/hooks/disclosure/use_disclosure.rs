@@ -45,7 +45,7 @@ impl Default for UseDisclosureInput {
 }
 
 /// The return value of the `use_disclosure` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDisclosureReturn {
     /// Props for the disclosure trigger button.
     pub trigger_props: UseDisclosureTriggerProps,
@@ -70,7 +70,7 @@ pub struct UseDisclosureReturn {
 }
 
 /// Props from `use_disclosure` for the trigger that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDisclosureTriggerProps {
     pub id: String,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
@@ -86,12 +86,6 @@ pub struct UseDisclosureTriggerProps {
 }
 
 impl UseDisclosureTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDisclosureTriggerAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDisclosureTriggerAttrs {
@@ -127,7 +121,7 @@ pub type UseDisclosureTriggerAttrs = (
 );
 
 /// Props from `use_disclosure` for the content panel that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDisclosureContentProps {
     pub id: String,
     pub role: &'static str,
@@ -136,12 +130,6 @@ pub struct UseDisclosureContentProps {
 }
 
 impl UseDisclosureContentProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDisclosureContentAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDisclosureContentAttrs {

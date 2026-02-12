@@ -30,18 +30,12 @@ pub struct UseDismissButtonReturn {
 }
 
 /// Props from `use_dismiss_button` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDismissButtonProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
 impl UseDismissButtonProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDismissButtonAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDismissButtonAttrs {

@@ -94,11 +94,13 @@ pub fn PopoverContent(
         phantom_data: PhantomData,
     });
 
+    let overlay_pos_attrs = overlay_pos_props.into_attrs();
+
     view! {
         <Portal>
             {
                 let overlay_attrs = ctx.overlay_attrs.clone();
-                let overlay_pos_attrs = overlay_pos_props.to_attrs();
+                let overlay_pos_attrs = overlay_pos_attrs.clone();
                 let children = children.clone();
                 let overlay_el = overlay_el;
                 view! {

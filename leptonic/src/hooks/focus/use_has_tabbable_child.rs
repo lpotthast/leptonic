@@ -39,28 +39,22 @@ impl Default for UseHasTabbableChildInput {
 }
 
 /// The return value of the `use_has_tabbable_child` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHasTabbableChildReturn {
     /// Whether the element has at least one tabbable child.
     pub has_tabbable_child: Signal<bool>,
 
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseHasTabbableChildProps,
 }
 
 /// Props from `use_has_tabbable_child` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseHasTabbableChildProps {
     pub element_capture: ElementCaptureAttr,
 }
 
 impl UseHasTabbableChildProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseHasTabbableChildAttrs {
-        (self.element_capture.clone(),)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseHasTabbableChildAttrs {

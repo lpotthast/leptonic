@@ -30,29 +30,20 @@ pub struct UseTooltipInput {
 }
 
 /// The return value of the `use_tooltip` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTooltipReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseTooltipProps,
 }
 
 /// Props from `use_tooltip` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTooltipProps {
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
 }
 
 impl UseTooltipProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTooltipAttrs {
-        (
-            self.on_pointerenter.to_on(ev::pointerenter),
-            self.on_pointerleave.to_on(ev::pointerleave),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTooltipAttrs {

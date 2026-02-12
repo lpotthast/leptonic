@@ -32,9 +32,9 @@ use crate::utils::MergeWith;
 ///     </button>
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MergedButtonMenuTriggerReturn {
-    /// Combined props from both hooks. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Combined props from both hooks. Call `.into_attrs()` for view spreading.
     pub trigger_props: MergedButtonMenuTriggerProps,
 
     /// Props to pass to the menu (from menu trigger hook).
@@ -58,7 +58,7 @@ pub struct MergedButtonMenuTriggerReturn {
 /// - Button's focus-visible data attribute
 /// - Chained event handlers: `on_keydown`, `on_click`, `on_pointerdown` (both run in sequence)
 /// - Button's distinct handlers: `on_pointerenter`, `on_pointerleave`, `on_focus`, `on_blur`
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MergedButtonMenuTriggerProps {
     /// Unique identifier for the trigger element (from menu trigger).
     pub id: String,
@@ -80,12 +80,6 @@ pub struct MergedButtonMenuTriggerProps {
 }
 
 impl MergedButtonMenuTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> MergedButtonMenuTriggerAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> MergedButtonMenuTriggerAttrs {

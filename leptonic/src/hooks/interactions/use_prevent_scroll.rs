@@ -18,21 +18,17 @@ pub struct UsePreventScrollInput {
     pub disabled: Signal<bool>,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct UsePreventScrollReturn {
-    /// Props for the element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the element. Call `.into_attrs()` for view spreading.
     pub props: UsePreventScrollProps,
 }
 
 /// Props from `use_prevent_scroll` that can be converted to spreadable attributes.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 pub struct UsePreventScrollProps;
 
 impl UsePreventScrollProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UsePreventScrollAttrs {}
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UsePreventScrollAttrs {}

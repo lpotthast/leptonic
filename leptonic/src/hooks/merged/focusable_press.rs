@@ -27,7 +27,7 @@ use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 ///     </button>
 /// }
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct MergedFocusablePressProps {
     pub tabindex: Signal<Option<i32>>,
     pub aria_describedby: Option<AriaDescribedby>,
@@ -65,13 +65,6 @@ pub type MergedFocusablePressAttrs = (
 );
 
 impl MergedFocusablePressProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> MergedFocusablePressAttrs {
-        // Cloning self is an equal performance cost to cloning all fields individually.
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> MergedFocusablePressAttrs {

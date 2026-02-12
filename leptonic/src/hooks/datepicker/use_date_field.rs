@@ -81,9 +81,9 @@ impl Default for UseDateFieldInput {
 }
 
 /// The return value of the `use_date_field` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateFieldReturn {
-    /// Props for the field container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the field container element. Call `.into_attrs()` for view spreading.
     pub field_props: UseDateFieldProps,
 
     /// Props for the label element.
@@ -124,7 +124,7 @@ pub struct UseDateFieldReturn {
 }
 
 /// Props from `use_date_field` for the field container element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateFieldProps {
     pub id: String,
     pub role: &'static str,
@@ -136,12 +136,6 @@ pub struct UseDateFieldProps {
 }
 
 impl UseDateFieldProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDateFieldAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDateFieldAttrs {
@@ -169,21 +163,21 @@ pub type UseDateFieldAttrs = (
 );
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateFieldLabelProps {
     /// The id of the label element.
     pub id: String,
 }
 
 /// Props for the description element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
 
 /// Props for the error message element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateFieldErrorProps {
     /// The id of the error message element.
     pub id: String,

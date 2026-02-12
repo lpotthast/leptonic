@@ -80,7 +80,7 @@ pub struct UseSliderThumbInput {
 }
 
 /// The return value of the `use_slider_thumb` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSliderThumbReturn {
     /// Props for the thumb element.
     pub thumb_props: UseSliderThumbProps,
@@ -114,8 +114,8 @@ pub struct UseSliderThumbReturn {
 }
 
 /// Intermediate props struct for the slider thumb element.
-/// Call `into_attrs()` or `to_attrs()` to convert to spreadable attributes.
-#[derive(Debug, Clone)]
+/// Call `into_attrs()` to convert to spreadable attributes.
+#[derive(Debug)]
 pub struct UseSliderThumbProps {
     id: String,
     role: &'static str,
@@ -145,11 +145,6 @@ pub struct UseSliderThumbProps {
 }
 
 impl UseSliderThumbProps {
-    /// Converts these props into spreadable attributes by cloning.
-    pub fn to_attrs(&self) -> UseSliderThumbAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Converts these props into spreadable attributes, consuming self.
     pub fn into_attrs(self) -> UseSliderThumbAttrs {
         (
@@ -211,7 +206,7 @@ pub type UseSliderThumbAttrs = (
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
 );
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSliderThumbInputProps {
     ty: &'static str,
     name: Option<&'static str>,
@@ -221,10 +216,6 @@ pub struct UseSliderThumbInputProps {
 }
 
 impl UseSliderThumbInputProps {
-    pub fn to_attrs(&self) -> UseSliderThumbInputAttrs {
-        self.clone().into_attrs()
-    }
-
     pub fn into_attrs(self) -> UseSliderThumbInputAttrs {
         (
             Attr(attr::Type, self.ty),

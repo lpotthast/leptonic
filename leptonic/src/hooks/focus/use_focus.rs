@@ -26,9 +26,9 @@ pub struct UseFocusInput {
     pub on_focus_change: Option<Callback<bool>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseFocusProps,
 }
 
@@ -36,23 +36,13 @@ pub struct UseFocusReturn {
 ///
 /// Use [`UseFocusProps::into_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
 /// spreading syntax (`<div {..props.into_attrs()}>`) (taking ownership).
-///
-/// Use [`UseFocusProps::to_attrs()`] to convert to an attributes-tuple spreadable using Leptos's
-/// spreading syntax (`<div {..props.to_attrs()}>`) (without taking ownership, requiring internal
-/// cloning).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusProps {
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
 }
 
 impl UseFocusProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFocusAttrs {
-        (self.on_focus.to_on(ev::focus), self.on_blur.to_on(ev::blur))
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseFocusAttrs {

@@ -76,7 +76,6 @@ impl From<Orientation> for AriaOrientation {
 }
 
 /// The return value of the `use_checkbox_group` hook.
-#[derive(Clone)]
 pub struct UseCheckboxGroupReturn<T>
 where
     T: Hash + Eq + Clone + Send + Sync + 'static,
@@ -92,7 +91,7 @@ where
 }
 
 /// Props from `use_checkbox_group` for the checkbox group container.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCheckboxGroupProps {
     /// The role attribute.
     pub role: &'static str,
@@ -117,12 +116,6 @@ pub struct UseCheckboxGroupProps {
 }
 
 impl UseCheckboxGroupProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseCheckboxGroupAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseCheckboxGroupAttrs {
@@ -151,19 +144,13 @@ pub type UseCheckboxGroupAttrs = (
 );
 
 /// Props for the group label.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCheckboxGroupLabelProps {
     /// The id of the label element.
     pub id: String,
 }
 
 impl UseCheckboxGroupLabelProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseCheckboxGroupLabelAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseCheckboxGroupLabelAttrs {

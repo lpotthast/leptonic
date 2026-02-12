@@ -52,7 +52,7 @@ pub fn PageUseFocusRing() -> impl IntoView {
             <p>"Try both clicking and tabbing to the button below. The focus ring only appears when using keyboard navigation. The " <code>"data-focus-visible"</code> " attribute is automatically added when the focus ring should be visible, and CSS handles the styling:"</p>
 
             <button
-                {..focus_ring.props.to_attrs()}
+                {..focus_ring.props.into_attrs()}
                 tabindex="0"
                 style="padding: 1em 2em; font-size: 1em; border-radius: 8px; cursor: pointer; border: 2px solid #ccc; background: white; transition: all 0.2s;"
             >
@@ -88,7 +88,7 @@ pub fn PageUseFocusRing() -> impl IntoView {
             </Code>
 
             <div
-                {..focus_ring_within.props.to_attrs()}
+                {..focus_ring_within.props.into_attrs()}
                 style="padding: 1em; border-radius: 8px; border: 2px solid #ccc; display: flex; gap: 0.5em; align-items: center; transition: all 0.2s;"
             >
                 <input

@@ -63,10 +63,10 @@ pub struct UseCalendarCellInput {
 
 /// The return value of the `use_calendar_cell` hook.
 pub struct UseCalendarCellReturn {
-    /// Props for the cell element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the cell element. Call `.into_attrs()` for view spreading.
     pub cell_props: UseCalendarCellProps,
 
-    /// Props for the button inside the cell. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the button inside the cell. Call `.into_attrs()` for view spreading.
     pub button_props: UseCalendarCellButtonProps,
 
     /// Whether the cell is disabled.
@@ -92,7 +92,7 @@ pub struct UseCalendarCellReturn {
 }
 
 /// Props from `use_calendar_cell` for the cell element (td).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCalendarCellProps {
     pub role: &'static str,
     pub aria_disabled: Option<AriaDisabled>,
@@ -100,12 +100,6 @@ pub struct UseCalendarCellProps {
 }
 
 impl UseCalendarCellProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseCalendarCellAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseCalendarCellAttrs {
@@ -125,7 +119,7 @@ pub type UseCalendarCellAttrs = (
 );
 
 /// Props from `use_calendar_cell` for the button inside the cell.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseCalendarCellButtonProps {
     pub role: &'static str,
     pub tabindex: Signal<&'static str>,
@@ -141,12 +135,6 @@ pub struct UseCalendarCellButtonProps {
 }
 
 impl UseCalendarCellButtonProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseCalendarCellButtonAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseCalendarCellButtonAttrs {

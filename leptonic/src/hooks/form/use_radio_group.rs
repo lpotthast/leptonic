@@ -72,7 +72,6 @@ impl<T: Clone + Send + Sync + 'static> Default for UseRadioGroupInput<T> {
 }
 
 /// The return value of the `use_radio_group` hook.
-#[derive(Clone)]
 pub struct UseRadioGroupReturn<T>
 where
     T: Clone + Send + Sync + 'static,
@@ -88,7 +87,7 @@ where
 }
 
 /// Props for the radio group container.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseRadioGroupProps {
     /// The role attribute.
     pub role: &'static str,
@@ -114,11 +113,6 @@ pub struct UseRadioGroupProps {
 
 impl UseRadioGroupProps {
     #[must_use]
-    pub fn to_attrs(&self) -> UseRadioGroupAttrs {
-        self.clone().into_attrs()
-    }
-
-    #[must_use]
     pub fn into_attrs(self) -> UseRadioGroupAttrs {
         (
             Attr(attr::Role, self.role),
@@ -143,18 +137,13 @@ pub type UseRadioGroupAttrs = (
 );
 
 /// Props for the group label.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseRadioGroupLabelProps {
     /// The id of the label element.
     pub id: String,
 }
 
 impl UseRadioGroupLabelProps {
-    #[must_use]
-    pub fn to_attrs(&self) -> UseRadioGroupLabelAttrs {
-        self.clone().into_attrs()
-    }
-
     #[must_use]
     pub fn into_attrs(self) -> UseRadioGroupLabelAttrs {
         (Attr(attr::Id, self.id),)

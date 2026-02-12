@@ -87,7 +87,6 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseSelectableList
 }
 
 /// The return value of the `use_selectable_list` hook.
-#[derive(Clone)]
 pub struct UseSelectableListReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
@@ -95,7 +94,7 @@ where
     /// The collection state with selection and focus management.
     pub collection: UseSelectableCollectionReturn<K>,
 
-    /// Props for the list container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the list container element. Call `.into_attrs()` for view spreading.
     pub list_props: UseSelectableListProps,
 
     /// The keyboard event handler callback. Can be called directly to delegate keyboard handling.
@@ -103,18 +102,12 @@ where
 }
 
 /// Props from `use_selectable_list` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSelectableListProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
 impl UseSelectableListProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSelectableListAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSelectableListAttrs {

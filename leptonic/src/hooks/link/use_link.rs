@@ -78,9 +78,9 @@ pub enum LinkElementType {
 }
 
 /// The return value of the `use_link` hook.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct UseLinkReturn {
-    /// Props for the link element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the link element. Call `.into_attrs()` for view spreading.
     pub props: UseLinkProps,
 
     /// Whether the link is disabled.
@@ -97,7 +97,7 @@ pub struct UseLinkReturn {
 }
 
 /// Props from `use_link` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseLinkProps {
     pub href: Option<String>,
     pub target: Option<LinkTarget>,
@@ -109,12 +109,6 @@ pub struct UseLinkProps {
 }
 
 impl UseLinkProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseLinkAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseLinkAttrs {

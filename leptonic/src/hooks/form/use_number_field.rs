@@ -127,7 +127,6 @@ impl Default for UseNumberFieldInput {
 }
 
 /// The return value of the `use_number_field` hook.
-#[derive(Clone)]
 pub struct UseNumberFieldReturn {
     /// Props for the input element.
     pub input_props: UseNumberFieldInputProps,
@@ -161,8 +160,8 @@ pub struct UseNumberFieldReturn {
 }
 
 /// Props from `use_number_field` for the input element.
-/// Call `.to_attrs()` or `.into_attrs()` for view spreading.
-#[derive(Debug, Clone)]
+/// Call `.into_attrs()` for view spreading.
+#[derive(Debug)]
 pub struct UseNumberFieldInputProps {
     pub id: String,
     pub r#type: &'static str,
@@ -191,12 +190,6 @@ pub struct UseNumberFieldInputProps {
 }
 
 impl UseNumberFieldInputProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseNumberFieldInputAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseNumberFieldInputAttrs {
@@ -259,8 +252,8 @@ pub type UseNumberFieldInputAttrs = (
 );
 
 /// Props from `use_number_field` for the increment/decrement button elements.
-/// Call `.to_attrs()` or `.into_attrs()` for view spreading.
-#[derive(Debug, Clone)]
+/// Call `.into_attrs()` for view spreading.
+#[derive(Debug)]
 pub struct UseNumberFieldButtonProps {
     pub r#type: &'static str,
     pub aria_label: &'static str,
@@ -270,12 +263,6 @@ pub struct UseNumberFieldButtonProps {
 }
 
 impl UseNumberFieldButtonProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseNumberFieldButtonAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseNumberFieldButtonAttrs {
@@ -300,7 +287,7 @@ pub type UseNumberFieldButtonAttrs = (
 );
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseNumberFieldLabelProps {
     /// The id of the label element.
     pub id: String,
@@ -310,12 +297,6 @@ pub struct UseNumberFieldLabelProps {
 }
 
 impl UseNumberFieldLabelProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseNumberFieldLabelAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseNumberFieldLabelAttrs {
@@ -328,19 +309,13 @@ impl UseNumberFieldLabelProps {
 pub type UseNumberFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
 
 /// Props for the description element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseNumberFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
 
 impl UseNumberFieldDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseNumberFieldDescriptionAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseNumberFieldDescriptionAttrs {
@@ -353,7 +328,7 @@ impl UseNumberFieldDescriptionProps {
 pub type UseNumberFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the error message element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseNumberFieldErrorProps {
     /// The id of the error message element.
     pub id: String,
@@ -366,12 +341,6 @@ pub struct UseNumberFieldErrorProps {
 }
 
 impl UseNumberFieldErrorProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseNumberFieldErrorAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseNumberFieldErrorAttrs {

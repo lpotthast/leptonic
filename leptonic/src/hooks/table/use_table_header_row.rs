@@ -18,24 +18,18 @@ pub struct UseTableHeaderRowInput {
 
 /// Return value for the table header row.
 pub struct UseTableHeaderRowReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub row_props: UseTableHeaderRowProps,
 }
 
 /// Props from `use_table_header_row` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTableHeaderRowProps {
     pub role: &'static str,
     pub aria_rowindex: &'static str,
 }
 
 impl UseTableHeaderRowProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTableHeaderRowAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTableHeaderRowAttrs {

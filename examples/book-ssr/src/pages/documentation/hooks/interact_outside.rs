@@ -21,6 +21,8 @@ pub fn PageUseInteractOutside() -> impl IntoView {
         })),
     });
 
+    let interact_outside_attrs = interact_outside.props.into_attrs();
+
     view! {
         <Article>
             <h1 id="use_interact_outside" class="anchor">
@@ -62,7 +64,7 @@ pub fn PageUseInteractOutside() -> impl IntoView {
 
             <Show when=move || is_open.get()>
                 <div
-                    {..interact_outside.props.to_attrs()}
+                    {..interact_outside_attrs.clone()}
                     style="
                         border: 3px solid var(--brand-color);
                         padding: 1.5em;

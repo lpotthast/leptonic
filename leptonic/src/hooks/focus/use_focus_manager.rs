@@ -310,12 +310,11 @@ fn is_element_visible(element: &web_sys::HtmlElement) -> bool {
 pub struct UseFocusManagerInput {}
 
 /// The return value of the `use_focus_manager` hook.
-#[derive(Clone)]
 pub struct UseFocusManagerReturn {
     /// The focus manager instance.
     pub focus_manager: FocusManager,
 
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseFocusManagerProps,
 }
 
@@ -329,18 +328,12 @@ impl std::fmt::Debug for UseFocusManagerReturn {
 }
 
 /// Props from `use_focus_manager` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusManagerProps {
     pub element_capture: ElementCaptureAttr,
 }
 
 impl UseFocusManagerProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFocusManagerAttrs {
-        (self.element_capture.clone(),)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseFocusManagerAttrs {

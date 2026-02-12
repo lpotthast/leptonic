@@ -48,9 +48,9 @@ pub struct UseTabListInput {
 }
 
 /// The return value of the `use_tab_list` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTabListReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseTabListProps,
 
     /// The ID of the tab list.
@@ -58,7 +58,7 @@ pub struct UseTabListReturn {
 }
 
 /// Props from `use_tab_list` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTabListProps {
     pub id: String,
     pub role: &'static str,
@@ -69,12 +69,6 @@ pub struct UseTabListProps {
 }
 
 impl UseTabListProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTabListAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTabListAttrs {

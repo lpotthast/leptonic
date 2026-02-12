@@ -33,26 +33,20 @@ pub struct UseTableCheckboxCellInput {
 
 /// Return value for a checkbox cell.
 pub struct UseTableCheckboxCellReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub cell_props: UseTableCheckboxCellProps,
 
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub checkbox_props: UseTableCheckboxProps,
 }
 
 /// Props from `use_table_checkbox_cell` for the cell element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTableCheckboxCellProps {
     pub role: &'static str,
 }
 
 impl UseTableCheckboxCellProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTableCheckboxCellAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTableCheckboxCellAttrs {
@@ -61,7 +55,7 @@ impl UseTableCheckboxCellProps {
 }
 
 /// Props from `use_table_checkbox_cell` for the checkbox input element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTableCheckboxProps {
     pub r#type: &'static str,
     pub checked: Signal<bool>,
@@ -71,12 +65,6 @@ pub struct UseTableCheckboxProps {
 }
 
 impl UseTableCheckboxProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTableCheckboxAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTableCheckboxAttrs {

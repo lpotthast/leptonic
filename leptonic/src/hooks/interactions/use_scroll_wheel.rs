@@ -35,25 +35,19 @@ pub struct UseScrollWheelInput {
 }
 
 /// Return value from the `use_scroll_wheel` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseScrollWheelReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseScrollWheelProps,
 }
 
 /// Props from `use_scroll_wheel` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseScrollWheelProps {
     pub on_wheel: EventHandler<WheelEvent>,
 }
 
 impl UseScrollWheelProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseScrollWheelAttrs {
-        (self.on_wheel.to_on(ev::wheel),)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseScrollWheelAttrs {

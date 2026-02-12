@@ -337,10 +337,10 @@ fn BasicModalDemo() -> impl IntoView {
         prevent_scroll: true,
     });
 
-    // Store in StoredValue so it can be copied into nested closures
-    let modal_props = StoredValue::new(modal_props);
-    let content_props = StoredValue::new(content_props.into_attrs());
-    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
+    // Convert Props to Attrs before storing in StoredValue (Props is non-Clone, Attrs is Clone)
+    let modal_attrs = StoredValue::new(modal_props.into_attrs());
+    let content_attrs = StoredValue::new(content_props.into_attrs());
+    let backdrop_attrs = StoredValue::new(backdrop_props.into_attrs());
 
     view! {
         <button
@@ -353,15 +353,15 @@ fn BasicModalDemo() -> impl IntoView {
         <Show when=move || is_open.get()>
             // Backdrop with backdrop_props for click handling
             <div
-                {..backdrop_props.get_value()}
+                {..backdrop_attrs.get_value()}
                 style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;"
             >
                 // FocusScope traps focus within the modal and restores it on close
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     // Modal - spread both modal_props and content_props
                     <div
-                        {..modal_props.get_value().into_attrs()}
-                        {..content_props.get_value()}
+                        {..modal_attrs.get_value()}
+                        {..content_attrs.get_value()}
                         aria-labelledby="basic-modal-title"
                         aria-describedby="basic-modal-description"
                         style="background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
@@ -439,12 +439,12 @@ fn AlertDialogDemo() -> impl IntoView {
         prevent_scroll: true,
     });
 
-    let modal_props = StoredValue::new(modal_props);
-    let dialog_props = StoredValue::new(dialog_props);
-    let content_props = StoredValue::new(content_props.into_attrs());
-    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
-    let title_props = StoredValue::new(title_props);
-    let description_props = StoredValue::new(description_props);
+    let title_id = StoredValue::new(title_props.id.clone());
+    let description_id = StoredValue::new(description_props.id.clone());
+    let modal_attrs = StoredValue::new(modal_props.into_attrs());
+    let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
+    let content_attrs = StoredValue::new(content_props.into_attrs());
+    let backdrop_attrs = StoredValue::new(backdrop_props.into_attrs());
 
     view! {
         <button
@@ -456,20 +456,20 @@ fn AlertDialogDemo() -> impl IntoView {
 
         <Show when=move || is_open.get()>
             <div
-                {..backdrop_props.get_value()}
+                {..backdrop_attrs.get_value()}
                 style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;"
             >
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     <div
-                        {..modal_props.get_value().into_attrs()}
-                        {..dialog_props.get_value().into_attrs()}
-                        {..content_props.get_value()}
+                        {..modal_attrs.get_value()}
+                        {..dialog_attrs.get_value()}
+                        {..content_attrs.get_value()}
                         style="background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
                     >
-                        <h2 id={title_props.get_value().id} style="margin: 0 0 0.5em 0; color: #dc3545;">
+                        <h2 id=title_id.get_value() style="margin: 0 0 0.5em 0; color: #dc3545;">
                             "Delete Item"
                         </h2>
-                        <p id={description_props.get_value().id} style="margin: 0 0 1.5em 0; color: #666;">
+                        <p id=description_id.get_value() style="margin: 0 0 1.5em 0; color: #666;">
                             "This action cannot be undone. Are you sure you want to delete this item?"
                         </p>
                         <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
@@ -524,9 +524,9 @@ fn NonDismissableModalDemo() -> impl IntoView {
         prevent_scroll: true,
     });
 
-    let modal_props = StoredValue::new(modal_props);
-    let content_props = StoredValue::new(content_props.into_attrs());
-    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
+    let modal_attrs = StoredValue::new(modal_props.into_attrs());
+    let content_attrs = StoredValue::new(content_props.into_attrs());
+    let backdrop_attrs = StoredValue::new(backdrop_props.into_attrs());
 
     view! {
         <button
@@ -538,13 +538,13 @@ fn NonDismissableModalDemo() -> impl IntoView {
 
         <Show when=move || is_open.get()>
             <div
-                {..backdrop_props.get_value()}
+                {..backdrop_attrs.get_value()}
                 style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;"
             >
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     <div
-                        {..modal_props.get_value().into_attrs()}
-                        {..content_props.get_value()}
+                        {..modal_attrs.get_value()}
+                        {..content_attrs.get_value()}
                         aria-labelledby="non-dismissable-title"
                         aria-describedby="non-dismissable-description"
                         style="background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
@@ -626,12 +626,12 @@ fn ConfirmationDialogDemo() -> impl IntoView {
         prevent_scroll: true,
     });
 
-    let modal_props = StoredValue::new(modal_props);
-    let dialog_props = StoredValue::new(dialog_props);
-    let content_props = StoredValue::new(content_props.into_attrs());
-    let backdrop_props = StoredValue::new(backdrop_props.into_attrs());
-    let title_props = StoredValue::new(title_props);
-    let description_props = StoredValue::new(description_props);
+    let title_id = StoredValue::new(title_props.id.clone());
+    let description_id = StoredValue::new(description_props.id.clone());
+    let modal_attrs = StoredValue::new(modal_props.into_attrs());
+    let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
+    let content_attrs = StoredValue::new(content_props.into_attrs());
+    let backdrop_attrs = StoredValue::new(backdrop_props.into_attrs());
 
     view! {
         <div style="display: flex; gap: 1em; align-items: center;">
@@ -656,20 +656,20 @@ fn ConfirmationDialogDemo() -> impl IntoView {
 
         <Show when=move || is_open.get()>
             <div
-                {..backdrop_props.get_value()}
+                {..backdrop_attrs.get_value()}
                 style="position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; display: flex; align-items: center; justify-content: center;"
             >
                 <FocusScope contain=true restore_focus=true auto_focus=true>
                     <div
-                        {..modal_props.get_value().into_attrs()}
-                        {..dialog_props.get_value().into_attrs()}
-                        {..content_props.get_value()}
+                        {..modal_attrs.get_value()}
+                        {..dialog_attrs.get_value()}
+                        {..content_attrs.get_value()}
                         style="background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);"
                     >
-                        <h2 id={title_props.get_value().id} style="margin: 0 0 0.5em 0; color: #333;">
+                        <h2 id=title_id.get_value() style="margin: 0 0 0.5em 0; color: #333;">
                             "Confirm Action"
                         </h2>
-                        <p id={description_props.get_value().id} style="margin: 0 0 1.5em 0; color: #666;">
+                        <p id=description_id.get_value() style="margin: 0 0 1.5em 0; color: #666;">
                             "Do you want to proceed with this action? "
                             "Click Confirm to accept or Cancel to decline."
                         </p>

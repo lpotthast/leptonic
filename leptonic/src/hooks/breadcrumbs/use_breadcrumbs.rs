@@ -44,19 +44,13 @@ pub struct UseBreadcrumbsReturn {
 }
 
 /// Props from `use_breadcrumbs` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseBreadcrumbsProps {
     pub id: String,
     pub aria_label: Option<String>,
 }
 
 impl UseBreadcrumbsProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseBreadcrumbsAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseBreadcrumbsAttrs {

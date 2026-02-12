@@ -65,12 +65,11 @@ impl Default for UseSwitchInput {
 }
 
 /// The return value of the `use_switch` hook.
-#[derive(Clone)]
 pub struct UseSwitchReturn {
-    /// Props for the switch element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the switch element. Call `.into_attrs()` for view spreading.
     pub switch_props: UseSwitchProps,
 
-    /// Props for a hidden input for form submission. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for a hidden input for form submission. Call `.into_attrs()` for view spreading.
     pub input_props: UseSwitchInputProps,
 
     /// Whether the switch is currently selected.
@@ -84,7 +83,7 @@ pub struct UseSwitchReturn {
 }
 
 /// Props from `use_switch` for the switch element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSwitchProps {
     pub role: &'static str,
     pub aria_checked: Signal<AriaChecked>,
@@ -102,12 +101,6 @@ pub struct UseSwitchProps {
 }
 
 impl UseSwitchProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSwitchAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSwitchAttrs {
@@ -147,7 +140,7 @@ pub type UseSwitchAttrs = (
 );
 
 /// Props from `use_switch` for the hidden input element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSwitchInputProps {
     pub r#type: &'static str,
     pub name: Option<&'static str>,
@@ -158,12 +151,6 @@ pub struct UseSwitchInputProps {
 }
 
 impl UseSwitchInputProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSwitchInputAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSwitchInputAttrs {

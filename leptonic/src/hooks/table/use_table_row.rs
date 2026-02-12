@@ -56,7 +56,7 @@ pub struct UseTableRowInput {
 
 /// The return value of the `use_table_row` hook.
 pub struct UseTableRowReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub row_props: UseTableRowProps,
 
     /// The row key.
@@ -73,7 +73,7 @@ pub struct UseTableRowReturn {
 }
 
 /// Props from `use_table_row` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTableRowProps {
     pub role: &'static str,
     pub aria_rowindex: String,
@@ -91,12 +91,6 @@ pub struct UseTableRowProps {
 }
 
 impl UseTableRowProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTableRowAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTableRowAttrs {
@@ -296,4 +290,3 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
         is_focus_visible,
     }
 }
-

@@ -41,25 +41,19 @@ pub struct UseInteractOutsideInput {
     pub on_interact_outside: Option<Callback<PointerEvent>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseInteractOutsideReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseInteractOutsideProps,
 }
 
 /// Props from `use_interact_outside` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseInteractOutsideProps {
     pub element_capture: ElementCaptureAttr,
 }
 
 impl UseInteractOutsideProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseInteractOutsideAttrs {
-        (self.element_capture.clone(),)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseInteractOutsideAttrs {

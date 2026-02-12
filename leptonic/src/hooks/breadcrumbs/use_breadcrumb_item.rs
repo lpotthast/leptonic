@@ -58,14 +58,10 @@ pub struct UseBreadcrumbItemReturn {
 /// Props from `use_breadcrumb_item` for the item container element.
 ///
 /// Currently empty — CSS class should be applied directly in the component.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseBreadcrumbItemProps;
 
 impl UseBreadcrumbItemProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseBreadcrumbItemAttrs {}
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseBreadcrumbItemAttrs {}
@@ -75,7 +71,7 @@ impl UseBreadcrumbItemProps {
 pub type UseBreadcrumbItemAttrs = ();
 
 /// Props from `use_breadcrumb_item` for the link element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseBreadcrumbLinkProps {
     pub href: Option<String>,
     pub aria_current: Option<AriaCurrent>,
@@ -86,12 +82,6 @@ pub struct UseBreadcrumbLinkProps {
 }
 
 impl UseBreadcrumbLinkProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseBreadcrumbLinkAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseBreadcrumbLinkAttrs {

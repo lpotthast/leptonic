@@ -33,7 +33,7 @@ pub enum LabelElementType {
 }
 
 /// The return value of the `use_label` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseLabelReturn {
     /// Props for the label element. Spread onto the label using `<label {..label_props}>`.
     pub label_props: UseLabelProps,
@@ -42,33 +42,25 @@ pub struct UseLabelReturn {
     pub field_props: UseLabelFieldProps,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseLabelProps {
     id: String,
     for_elem: Option<String>,
 }
 
 impl UseLabelProps {
-    pub fn to_attrs(&self) -> UseLabelAttrs {
-        self.clone().into_attrs()
-    }
-
     pub fn into_attrs(self) -> UseLabelAttrs {
         (Attr(attr::Id, self.id), Attr(attr::For, self.for_elem))
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseLabelFieldProps {
     id: String,
     aria_labelledby: Option<String>,
 }
 
 impl UseLabelFieldProps {
-    pub fn to_attrs(&self) -> UseLabelFieldAttrs {
-        self.clone().into_attrs()
-    }
-
     pub fn into_attrs(self) -> UseLabelFieldAttrs {
         (
             Attr(attr::Id, self.id),

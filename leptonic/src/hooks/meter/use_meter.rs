@@ -88,7 +88,7 @@ pub struct UseMeterReturn {
 }
 
 /// Props from `use_meter` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMeterProps {
     pub id: String,
     pub role: &'static str,
@@ -100,12 +100,6 @@ pub struct UseMeterProps {
 }
 
 impl UseMeterProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMeterAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMeterAttrs {
@@ -133,7 +127,7 @@ pub type UseMeterAttrs = (
 );
 
 /// Props for the meter label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMeterLabelProps {
     /// The ID of the label.
     pub id: String,

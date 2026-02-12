@@ -70,19 +70,13 @@ pub struct UseSeparatorReturn {
 }
 
 /// Props from `use_separator` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSeparatorProps {
     pub role: Option<&'static str>,
     pub aria_orientation: Option<AriaOrientation>,
 }
 
 impl UseSeparatorProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSeparatorAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSeparatorAttrs {

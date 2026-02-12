@@ -551,8 +551,8 @@ pub fn PageUsePress() -> impl IntoView {
                         <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
                         <SliderThumb styles=thumb_style()/>
                     </SliderTrack>
-                    <SliderOutput let:props let:values>
-                        <output {..props.into_attrs()} style=Styles::from([(MinWidth, "60px"), (TextAlign, "right")])>
+                    <SliderOutput let:attrs let:values>
+                        <output {..attrs} style=Styles::from([(MinWidth, "60px"), (TextAlign, "right")])>
                             { move || format!("{}ms", values.get()[0] as u64) }
                         </output>
                     </SliderOutput>

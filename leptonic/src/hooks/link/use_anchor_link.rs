@@ -78,7 +78,7 @@ pub struct UseAnchorLinkInput {
 
 #[derive(Debug)]
 pub struct UseAnchorLinkReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseAnchorLinkProps,
 
     pub is_pressed: Signal<bool>,
@@ -91,7 +91,7 @@ pub struct UseAnchorLinkReturn {
 }
 
 /// Props from `use_anchor_link` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseAnchorLinkProps {
     pub href: Oco<'static, str>,
     pub role: Option<&'static str>,
@@ -101,12 +101,6 @@ pub struct UseAnchorLinkProps {
 }
 
 impl UseAnchorLinkProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseAnchorLinkAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseAnchorLinkAttrs {

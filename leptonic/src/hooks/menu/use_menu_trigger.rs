@@ -55,9 +55,9 @@ pub struct UseMenuTriggerInput {
 }
 
 /// The return value of the `use_menu_trigger` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMenuTriggerReturn {
-    /// Props for the menu trigger element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the menu trigger element. Call `.into_attrs()` for view spreading.
     pub props: UseMenuTriggerProps,
 
     /// Props to pass to the menu.
@@ -83,7 +83,7 @@ pub struct UseMenuTriggerMenuProps {
 /// - `id`: Unique identifier for the trigger element
 /// - Menu ARIA: `aria-haspopup`, `aria-expanded`, `aria-controls`
 /// - Event handlers: `on_keydown`, `on_click`, `on_pointerdown`
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMenuTriggerProps {
     /// Unique identifier for the trigger element.
     pub id: String,
@@ -102,12 +102,6 @@ pub struct UseMenuTriggerProps {
 }
 
 impl UseMenuTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMenuTriggerAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMenuTriggerAttrs {

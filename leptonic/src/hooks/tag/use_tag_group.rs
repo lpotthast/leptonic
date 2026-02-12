@@ -71,7 +71,7 @@ impl Default for UseTagGroupInput {
 }
 
 /// The return value of the `use_tag_group` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTagGroupReturn {
     /// Props for the tag group container element.
     pub group_props: UseTagGroupProps,
@@ -90,7 +90,7 @@ pub struct UseTagGroupReturn {
 }
 
 /// Props from `use_tag_group` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTagGroupProps {
     pub id: String,
     pub role: &'static str,
@@ -101,12 +101,6 @@ pub struct UseTagGroupProps {
 }
 
 impl UseTagGroupProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTagGroupAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTagGroupAttrs {
@@ -132,7 +126,7 @@ pub type UseTagGroupAttrs = (
 );
 
 /// Props for the tag group label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTagGroupLabelProps {
     /// The ID of the label.
     pub id: String,

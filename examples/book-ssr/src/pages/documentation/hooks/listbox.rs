@@ -147,7 +147,7 @@ pub fn PageUseListbox() -> impl IntoView {
             </ul>
 
             <div
-                {..listbox.listbox_props.to_attrs()}
+                {..listbox.listbox_props.into_attrs()}
                 style="
                 border: 2px solid var(--brand-color);
                 border-radius: 8px;

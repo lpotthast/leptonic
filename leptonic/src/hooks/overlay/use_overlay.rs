@@ -19,7 +19,7 @@ pub struct UseOverlayInput {
 
 #[derive(Debug)]
 pub struct UseOverlayReturn {
-    /// Props for the overlay element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the overlay element. Call `.into_attrs()` for view spreading.
     pub props: UseOverlayProps,
 
     pub id: Oco<'static, str>,
@@ -30,18 +30,12 @@ pub struct UseOverlayReturn {
 }
 
 /// Props from `use_overlay` that can be converted to spreadable attributes.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseOverlayProps {
     pub id: String,
 }
 
 impl UseOverlayProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseOverlayAttrs {
-        (Attr(attr::Id, self.id.clone()),)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseOverlayAttrs {

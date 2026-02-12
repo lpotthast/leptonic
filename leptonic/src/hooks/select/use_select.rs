@@ -96,7 +96,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseSelectInput<K>
 }
 
 /// The return value of the `use_select` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSelectReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
@@ -142,7 +142,7 @@ where
 }
 
 /// Props from `use_select` for the trigger element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSelectTriggerProps {
     pub id: String,
     pub role: &'static str,
@@ -159,12 +159,6 @@ pub struct UseSelectTriggerProps {
 }
 
 impl UseSelectTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSelectTriggerAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSelectTriggerAttrs {
@@ -202,14 +196,14 @@ pub type UseSelectTriggerAttrs = (
 );
 
 /// Props for the value display element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSelectValueProps {
     /// The id of the value element.
     pub id: String,
 }
 
 /// Props for the listbox element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSelectListBoxProps {
     /// The id of the listbox.
     pub id: String,
@@ -225,7 +219,7 @@ pub struct UseSelectListBoxProps {
 }
 
 /// Props for the hidden select element (for form submission).
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSelectHiddenProps {
     /// The name attribute.
     pub name: Option<&'static str>,

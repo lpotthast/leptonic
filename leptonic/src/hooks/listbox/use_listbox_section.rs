@@ -22,7 +22,7 @@ pub struct UseListBoxSectionInput {
 }
 
 /// The return value of the `use_listbox_section` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseListBoxSectionReturn {
     /// Props for the section group element.
     pub group_props: UseListBoxSectionGroupProps,
@@ -35,7 +35,7 @@ pub struct UseListBoxSectionReturn {
 }
 
 /// Props for the section group element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseListBoxSectionGroupProps {
     /// The role attribute.
     pub role: &'static str,
@@ -45,12 +45,6 @@ pub struct UseListBoxSectionGroupProps {
 }
 
 impl UseListBoxSectionGroupProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseListBoxSectionGroupAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseListBoxSectionGroupAttrs {
@@ -68,7 +62,7 @@ pub type UseListBoxSectionGroupAttrs = (
 );
 
 /// Props for the section heading element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseListBoxSectionHeadingProps {
     /// The id of the heading element.
     pub id: String,
@@ -81,12 +75,6 @@ pub struct UseListBoxSectionHeadingProps {
 }
 
 impl UseListBoxSectionHeadingProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseListBoxSectionHeadingAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseListBoxSectionHeadingAttrs {
@@ -106,19 +94,13 @@ pub type UseListBoxSectionHeadingAttrs = (
 );
 
 /// Props for section items container.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseListBoxSectionItemsProps {
     /// The role attribute.
     pub role: &'static str,
 }
 
 impl UseListBoxSectionItemsProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseListBoxSectionItemsAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseListBoxSectionItemsAttrs {

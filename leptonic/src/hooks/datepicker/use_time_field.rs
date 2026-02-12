@@ -128,9 +128,9 @@ impl Default for UseTimeFieldInput {
 }
 
 /// The return value of the `use_time_field` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTimeFieldReturn {
-    /// Props for the field container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the field container element. Call `.into_attrs()` for view spreading.
     pub field_props: UseTimeFieldProps,
 
     /// Props for the label element.
@@ -168,7 +168,7 @@ pub struct UseTimeFieldReturn {
 }
 
 /// Props from `use_time_field` for the field container element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTimeFieldProps {
     pub id: String,
     pub role: &'static str,
@@ -180,12 +180,6 @@ pub struct UseTimeFieldProps {
 }
 
 impl UseTimeFieldProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTimeFieldAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTimeFieldAttrs {
@@ -213,21 +207,21 @@ pub type UseTimeFieldAttrs = (
 );
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTimeFieldLabelProps {
     /// The id of the label element.
     pub id: String,
 }
 
 /// Props for the description element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTimeFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
 
 /// Props for the error message element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTimeFieldErrorProps {
     /// The id of the error message element.
     pub id: String,
@@ -549,4 +543,3 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
         decrement,
     }
 }
-

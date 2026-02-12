@@ -178,7 +178,7 @@ pub struct UseDraggableReturn {
 }
 
 /// Props from `use_draggable` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDraggableProps {
     pub id: String,
     pub draggable: Signal<&'static str>,
@@ -190,12 +190,6 @@ pub struct UseDraggableProps {
 }
 
 impl UseDraggableProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDraggableAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDraggableAttrs {

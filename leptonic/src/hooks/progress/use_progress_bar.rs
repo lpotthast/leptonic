@@ -71,7 +71,7 @@ pub struct UseProgressBarReturn {
 }
 
 /// Props from `use_progress_bar` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseProgressBarProps {
     pub id: String,
     pub role: &'static str,
@@ -83,12 +83,6 @@ pub struct UseProgressBarProps {
 }
 
 impl UseProgressBarProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseProgressBarAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseProgressBarAttrs {
@@ -116,7 +110,7 @@ pub type UseProgressBarAttrs = (
 );
 
 /// Props for the progress bar label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseProgressBarLabelProps {
     /// The ID of the label.
     pub id: String,

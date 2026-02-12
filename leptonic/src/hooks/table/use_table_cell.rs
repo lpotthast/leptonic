@@ -60,7 +60,7 @@ impl Default for UseTableCellInput {
 
 /// The return value of the `use_table_cell` hook.
 pub struct UseTableCellReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub cell_props: UseTableCellProps,
 
     /// Whether the cell is focused.
@@ -71,7 +71,7 @@ pub struct UseTableCellReturn {
 }
 
 /// Props from `use_table_cell` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTableCellProps {
     pub role: &'static str,
     pub aria_colindex: String,
@@ -86,12 +86,6 @@ pub struct UseTableCellProps {
 }
 
 impl UseTableCellProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTableCellAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTableCellAttrs {
@@ -225,4 +219,3 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         is_focus_visible,
     }
 }
-

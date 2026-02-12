@@ -69,7 +69,7 @@ pub struct UseTreeItemInput {
 }
 
 /// The return value of the `use_tree_item` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTreeItemReturn {
     /// Props for the tree item element.
     pub item_props: UseTreeItemProps,
@@ -89,7 +89,7 @@ pub struct UseTreeItemReturn {
 
 /// Props from `use_tree_item` for the item element that can be extracted and merged programmatically.
 /// Note: aria-level, aria-setsize, aria-posinset should be set via custom attributes.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTreeItemProps {
     pub role: &'static str,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
@@ -102,12 +102,6 @@ pub struct UseTreeItemProps {
 }
 
 impl UseTreeItemProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTreeItemAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTreeItemAttrs {
@@ -138,18 +132,12 @@ pub type UseTreeItemAttrs = (
 );
 
 /// Props from `use_tree_item` for the content element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTreeItemContentProps {
     pub role: &'static str,
 }
 
 impl UseTreeItemContentProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTreeItemContentAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTreeItemContentAttrs {

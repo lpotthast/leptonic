@@ -115,29 +115,20 @@ pub struct UseKeyboardInput {
 }
 
 /// The return value of the `use_keyboard` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseKeyboardReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseKeyboardProps,
 }
 
 /// Props from `use_keyboard` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseKeyboardProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,
 }
 
 impl UseKeyboardProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseKeyboardAttrs {
-        (
-            self.on_keydown.to_on(ev::keydown),
-            self.on_keyup.to_on(ev::keyup),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseKeyboardAttrs {

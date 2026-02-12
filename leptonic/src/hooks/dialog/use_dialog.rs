@@ -90,7 +90,7 @@ pub enum DialogRole {
 pub struct UseDialogReturn {
     /// Props for the dialog container element.
     ///
-    /// Call `.to_attrs()` or `.into_attrs()` to get spreadable attributes.
+    /// Call `.into_attrs()` to get spreadable attributes.
     /// The element is automatically captured for focus-on-mount behavior
     /// via an included [`ElementCaptureAttr`].
     pub dialog_props: UseDialogProps,
@@ -107,8 +107,8 @@ pub struct UseDialogReturn {
 
 /// Props from `use_dialog` that can be extracted and merged programmatically.
 ///
-/// Call `.to_attrs()` or `.into_attrs()` to produce spreadable [`UseDialogAttrs`].
-#[derive(Debug, Clone)]
+/// Call `.into_attrs()` to produce spreadable [`UseDialogAttrs`].
+#[derive(Debug)]
 pub struct UseDialogProps {
     pub id: String,
     pub role: &'static str,
@@ -120,20 +120,6 @@ pub struct UseDialogProps {
 }
 
 impl UseDialogProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDialogAttrs {
-        (
-            Attr(attr::Id, self.id.clone()),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaLabelledby, self.aria_labelledby.clone()),
-            Attr(attr::AriaDescribedby, self.aria_describedby.clone()),
-            Attr(attr::Tabindex, self.tabindex),
-            self.on_blur.to_on(ev::blur),
-            self.element_capture.clone(),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDialogAttrs {
@@ -163,19 +149,13 @@ pub type UseDialogAttrs = (
 );
 
 /// Props for the dialog title element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDialogTitleProps {
     /// The id of the title element.
     pub id: String,
 }
 
 impl UseDialogTitleProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDialogTitleAttrs {
-        (Attr(attr::Id, self.id.clone()),)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDialogTitleAttrs {
@@ -189,19 +169,13 @@ impl UseDialogTitleProps {
 pub type UseDialogTitleAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the dialog description element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDialogDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
 
 impl UseDialogDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDialogDescriptionAttrs {
-        (Attr(attr::Id, self.id.clone()),)
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDialogDescriptionAttrs {

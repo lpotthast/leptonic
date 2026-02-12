@@ -41,9 +41,9 @@ pub struct UseFocusWithinInput {
 }
 
 /// The return value of the `use_focus_within` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusWithinReturn {
-    /// Props for programmatic merging. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
     pub props: UseFocusWithinProps,
 
     /// Whether focus is currently within the element.
@@ -51,22 +51,13 @@ pub struct UseFocusWithinReturn {
 }
 
 /// Props from `use_focus_within` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseFocusWithinProps {
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
 impl UseFocusWithinProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseFocusWithinAttrs {
-        (
-            self.on_focusin.to_on(ev::focusin),
-            self.on_focusout.to_on(ev::focusout),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseFocusWithinAttrs {
@@ -214,12 +205,8 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
 
                             // Check if the new focus target is outside our element
                             let focus_target = focus_e.expect_target();
-                            if let Some(current_node) =
-                                current_target.dyn_ref::<web_sys::Node>()
-                            {
-                                if let Some(target_node) =
-                                    focus_target.dyn_ref::<web_sys::Node>()
-                                {
+                            if let Some(current_node) = current_target.dyn_ref::<web_sys::Node>() {
+                                if let Some(target_node) = focus_target.dyn_ref::<web_sys::Node>() {
                                     if !current_node.contains(Some(target_node)) {
                                         // Focus moved outside - trigger blur
                                         trigger_blur_within(focus_e);

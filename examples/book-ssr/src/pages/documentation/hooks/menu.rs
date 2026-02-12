@@ -159,8 +159,8 @@ pub fn PageUseMenuHook() -> impl IntoView {
     let selected_keys = menu.list.collection.selection_state.selected_keys;
     let set_focused_key = menu.list.collection.set_focused_key;
 
-    // Clone menu props for use in the Show component (needs Fn, not FnOnce)
-    let menu_props = menu.menu_props;
+    // Convert menu props to attrs before the Show closure (Props is non-Clone, Attrs is Clone)
+    let menu_attrs = menu.menu_props.into_attrs();
 
     view! {
         <Article>
@@ -204,11 +204,11 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <Show when=move || state.is_open.get()>
                     {
                         let items = items.clone();
-                        let menu_props = menu_props.clone();
+                        let menu_attrs = menu_attrs.clone();
                         view! {
                             <FocusScope restore_focus=true>
                                 <ul
-                                    {..menu_props.into_attrs()}
+                                    {..menu_attrs.clone()}
                                     style="position: absolute; top: 100%; left: 0; margin: 4px 0 0 0; padding: 0.25em 0; min-width: 180px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100;"
                                 >
                                     {items

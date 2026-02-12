@@ -63,7 +63,6 @@ where
 // Note: No Default implementation for UseOptionInput because `state` must be provided
 
 /// The return value of the `use_option` hook.
-#[derive(Clone)]
 pub struct UseOptionReturn {
     /// Props for the option element.
     pub option_props: UseOptionProps,
@@ -91,7 +90,7 @@ pub struct UseOptionReturn {
 }
 
 /// Props from `use_option` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseOptionProps {
     pub id: String,
     pub role: &'static str,
@@ -112,12 +111,6 @@ pub struct UseOptionProps {
 }
 
 impl UseOptionProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseOptionAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseOptionAttrs {
@@ -163,19 +156,13 @@ pub type UseOptionAttrs = (
 );
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseOptionLabelProps {
     /// The id of the label element.
     pub id: String,
 }
 
 impl UseOptionLabelProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseOptionLabelAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseOptionLabelAttrs {
@@ -187,19 +174,13 @@ impl UseOptionLabelProps {
 pub type UseOptionLabelAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the description element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseOptionDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
 
 impl UseOptionDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseOptionDescriptionAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseOptionDescriptionAttrs {

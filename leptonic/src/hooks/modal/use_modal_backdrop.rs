@@ -48,10 +48,10 @@ impl Default for UseModalBackdropInput {
 
 /// The return value of the `use_modal_backdrop` hook.
 pub struct UseModalBackdropReturn {
-    /// Props for the backdrop element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the backdrop element. Call `.into_attrs()` for view spreading.
     pub backdrop_props: UseModalBackdropProps,
 
-    /// Props for the modal content element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the modal content element. Call `.into_attrs()` for view spreading.
     pub content_props: UseModalBackdropContentProps,
 
     /// The ID of the backdrop element.
@@ -59,19 +59,13 @@ pub struct UseModalBackdropReturn {
 }
 
 /// Props from `use_modal_backdrop` for the backdrop element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseModalBackdropProps {
     pub id: String,
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
 impl UseModalBackdropProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseModalBackdropAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseModalBackdropAttrs {
@@ -86,18 +80,12 @@ pub type UseModalBackdropAttrs = (
 );
 
 /// Props from `use_modal_backdrop` for the modal content container.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseModalBackdropContentProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
 impl UseModalBackdropContentProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseModalBackdropContentAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseModalBackdropContentAttrs {

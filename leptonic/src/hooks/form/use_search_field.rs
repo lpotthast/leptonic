@@ -99,18 +99,17 @@ impl Default for UseSearchFieldInput {
 }
 
 /// The return value of the `use_search_field` hook.
-#[derive(Clone)]
 pub struct UseSearchFieldReturn {
-    /// Props for the input element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the input element. Call `.into_attrs()` for view spreading.
     pub input_props: UseSearchFieldInputProps,
 
-    /// Props for the clear button element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the clear button element. Call `.into_attrs()` for view spreading.
     pub clear_button_props: UseSearchFieldClearButtonProps,
 
-    /// Props for the label element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the label element. Call `.into_attrs()` for view spreading.
     pub label_props: UseSearchFieldLabelProps,
 
-    /// Props for the description element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the description element. Call `.into_attrs()` for view spreading.
     pub description_props: UseSearchFieldDescriptionProps,
 
     /// Whether there is a value to clear.
@@ -121,7 +120,7 @@ pub struct UseSearchFieldReturn {
 }
 
 /// Props from `use_search_field` for the input element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSearchFieldInputProps {
     pub id: String,
     pub r#type: &'static str,
@@ -147,12 +146,6 @@ pub struct UseSearchFieldInputProps {
 }
 
 impl UseSearchFieldInputProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSearchFieldInputAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSearchFieldInputAttrs {
@@ -208,7 +201,7 @@ pub type UseSearchFieldInputAttrs = (
 );
 
 /// Props from `use_search_field` for the clear button element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSearchFieldClearButtonProps {
     pub r#type: &'static str,
     pub aria_label: &'static str,
@@ -218,12 +211,6 @@ pub struct UseSearchFieldClearButtonProps {
 }
 
 impl UseSearchFieldClearButtonProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSearchFieldClearButtonAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSearchFieldClearButtonAttrs {
@@ -247,7 +234,7 @@ pub type UseSearchFieldClearButtonAttrs = (
 );
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSearchFieldLabelProps {
     /// The id of the label element.
     pub id: String,
@@ -257,12 +244,6 @@ pub struct UseSearchFieldLabelProps {
 }
 
 impl UseSearchFieldLabelProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSearchFieldLabelAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSearchFieldLabelAttrs {
@@ -274,19 +255,13 @@ impl UseSearchFieldLabelProps {
 pub type UseSearchFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
 
 /// Props for the description element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSearchFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
 }
 
 impl UseSearchFieldDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseSearchFieldDescriptionAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseSearchFieldDescriptionAttrs {

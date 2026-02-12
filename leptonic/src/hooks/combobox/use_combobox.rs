@@ -137,7 +137,6 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseComboBoxInput<
 }
 
 /// The return value of the `use_combobox` hook.
-#[derive(Clone)]
 pub struct UseComboBoxReturn<K>
 where
     K: Hash + Eq + Clone + Send + Sync + 'static,
@@ -192,7 +191,7 @@ where
 }
 
 /// Props from `use_combobox` for the input element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseComboBoxInputProps {
     pub id: String,
     pub r#type: &'static str,
@@ -216,12 +215,6 @@ pub struct UseComboBoxInputProps {
 }
 
 impl UseComboBoxInputProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseComboBoxInputAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseComboBoxInputAttrs {
@@ -250,7 +243,7 @@ impl UseComboBoxInputProps {
 }
 
 /// Props from `use_combobox` for the button element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseComboBoxButtonProps {
     pub id: String,
     pub r#type: &'static str,
@@ -263,12 +256,6 @@ pub struct UseComboBoxButtonProps {
 }
 
 impl UseComboBoxButtonProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseComboBoxButtonAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseComboBoxButtonAttrs {
@@ -321,7 +308,7 @@ pub type UseComboBoxButtonAttrs = (
 );
 
 /// Props for the listbox element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseComboBoxListBoxProps {
     /// The id of the listbox.
     pub id: String,

@@ -206,9 +206,9 @@ pub struct UseDateSegmentInput {
 }
 
 /// The return value of the `use_date_segment` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateSegmentReturn {
-    /// Props for the segment element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the segment element. Call `.into_attrs()` for view spreading.
     pub segment_props: UseDateSegmentProps,
 
     /// The segment data.
@@ -216,7 +216,7 @@ pub struct UseDateSegmentReturn {
 }
 
 /// Props from `use_date_segment` for the segment element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseDateSegmentProps {
     pub role: &'static str,
     pub tabindex: Signal<&'static str>,
@@ -231,12 +231,6 @@ pub struct UseDateSegmentProps {
 }
 
 impl UseDateSegmentProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseDateSegmentAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseDateSegmentAttrs {

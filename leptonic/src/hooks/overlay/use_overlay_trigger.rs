@@ -31,12 +31,12 @@ pub struct UseOverlayTriggerInput {
 
 #[derive(Debug)]
 pub struct UseOverlayTriggerReturn {
-    /// Props for the trigger. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the trigger. Call `.into_attrs()` for view spreading.
     pub props: UseOverlayTriggerProps,
 }
 
 /// Props from `use_overlay_trigger` that can be converted to spreadable attributes.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseOverlayTriggerProps {
     pub aria_haspopup: AriaHasPopup,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
@@ -44,16 +44,6 @@ pub struct UseOverlayTriggerProps {
 }
 
 impl UseOverlayTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseOverlayTriggerAttrs {
-        (
-            Attr(attr::AriaHaspopup, self.aria_haspopup),
-            Attr(attr::AriaExpanded, self.aria_expanded),
-            Attr(attr::AriaControls, self.aria_controls),
-        )
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseOverlayTriggerAttrs {

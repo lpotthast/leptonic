@@ -107,6 +107,8 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                         phantom_data: PhantomData,
                     });
 
+                    let position_attrs = position.props.into_attrs();
+
                     view! {
                         <button node_ref=trigger_ref {..tooltip.trigger_props.into_attrs()}>
                             "Hover me"
@@ -114,7 +116,7 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                         <Portal>
                             <Show when=move || tooltip.is_open.get()>
                                 <div
-                                    {..position.props.to_attrs()}
+                                    {..position_attrs.clone()}
                                     node_ref=tooltip_ref
                                     id=tooltip.tooltip_props.id.clone()
                                     role=tooltip.tooltip_props.role
@@ -220,7 +222,7 @@ fn TooltipDemo() -> impl IntoView {
 
     let is_open = tooltip.is_open;
     let tooltip_id = tooltip.tooltip_props.id.clone();
-    let position_attrs = position.props.to_attrs();
+    let position_attrs = position.props.into_attrs();
 
     view! {
         <div style="margin: 3em 0; display: flex; justify-content: center;">
@@ -311,7 +313,7 @@ fn PositionedTooltip(
 
     let is_open = tooltip.is_open;
     let tooltip_id = tooltip.tooltip_props.id.clone();
-    let position_attrs = position.props.to_attrs();
+    let position_attrs = position.props.into_attrs();
 
     view! {
         <div style="display: flex; justify-content: center;">

@@ -83,7 +83,7 @@ pub struct UseSliderInput {
 }
 
 /// The return value of the `use_slider` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSliderReturn {
     /// Props for the slider group/container element.
     pub group_props: UseSliderGroupProps,
@@ -103,7 +103,7 @@ pub struct UseSliderReturn {
     pub track_ref: CapturedElement,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSliderGroupProps {
     role: &'static str,
     id: String,
@@ -113,10 +113,6 @@ pub struct UseSliderGroupProps {
 }
 
 impl UseSliderGroupProps {
-    pub fn to_attrs(&self) -> UseSliderGroupAttrs {
-        self.clone().into_attrs()
-    }
-
     pub fn into_attrs(self) -> UseSliderGroupAttrs {
         (
             Attr(attr::Role, self.role),
@@ -137,7 +133,7 @@ pub type UseSliderGroupAttrs = (
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
 );
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSliderTrackProps {
     role: &'static str,
     style_touch_action: &'static str,
@@ -146,10 +142,6 @@ pub struct UseSliderTrackProps {
 }
 
 impl UseSliderTrackProps {
-    pub fn to_attrs(&self) -> UseSliderTrackAttrs {
-        self.clone().into_attrs()
-    }
-
     pub fn into_attrs(self) -> UseSliderTrackAttrs {
         (
             Attr(attr::Role, self.role),
@@ -169,14 +161,14 @@ pub type UseSliderTrackAttrs = (
 );
 
 /// Props for the label element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSliderLabelProps {
     /// The id of the label element.
     pub id: String,
 }
 
 /// Props for the output/value display element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseSliderOutputProps {
     /// The id of the output element.
     pub id: String,
@@ -190,10 +182,6 @@ pub struct UseSliderOutputProps {
 }
 
 impl UseSliderOutputProps {
-    pub fn to_attrs(&self) -> UseSliderOutputAttrs {
-        self.clone().into_attrs()
-    }
-
     pub fn into_attrs(self) -> UseSliderOutputAttrs {
         (
             Attr(attr::Id, self.id),

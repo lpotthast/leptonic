@@ -48,7 +48,7 @@ pub struct UseTagInput {
 }
 
 /// The return value of the `use_tag` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTagReturn {
     /// Props for the tag row element.
     pub row_props: UseTagRowProps,
@@ -67,7 +67,7 @@ pub struct UseTagReturn {
 }
 
 /// Props from `use_tag` for the row element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTagRowProps {
     pub role: &'static str,
     pub aria_selected: Signal<Option<AriaSelected>>,
@@ -79,12 +79,6 @@ pub struct UseTagRowProps {
 }
 
 impl UseTagRowProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTagRowAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTagRowAttrs {
@@ -112,18 +106,12 @@ pub type UseTagRowAttrs = (
 );
 
 /// Props from `use_tag` for the cell element that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTagCellProps {
     pub role: &'static str,
 }
 
 impl UseTagCellProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTagCellAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTagCellAttrs {
@@ -135,7 +123,7 @@ impl UseTagCellProps {
 pub type UseTagCellAttrs = (Attr<attr::Role, &'static str>,);
 
 /// Props from `use_tag` for the remove button that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTagRemoveButtonProps {
     pub aria_label: &'static str,
     pub tabindex: &'static str,
@@ -143,12 +131,6 @@ pub struct UseTagRemoveButtonProps {
 }
 
 impl UseTagRemoveButtonProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTagRemoveButtonAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTagRemoveButtonAttrs {

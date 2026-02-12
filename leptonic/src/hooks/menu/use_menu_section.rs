@@ -23,7 +23,7 @@ pub struct UseMenuSectionInput {
 }
 
 /// The return value of the `use_menu_section` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMenuSectionReturn {
     /// Props for the wrapper list item.
     pub item_props: UseMenuSectionItemProps,
@@ -43,12 +43,6 @@ pub struct UseMenuSectionItemProps {
 }
 
 impl UseMenuSectionItemProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMenuSectionItemAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMenuSectionItemAttrs {
@@ -60,7 +54,7 @@ impl UseMenuSectionItemProps {
 pub type UseMenuSectionItemAttrs = (Attr<attr::Role, &'static str>,);
 
 /// Props for the menu section heading element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMenuSectionHeadingProps {
     /// The id of the heading element, for aria-labelledby.
     pub id: Option<String>,
@@ -70,12 +64,6 @@ pub struct UseMenuSectionHeadingProps {
 }
 
 impl UseMenuSectionHeadingProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMenuSectionHeadingAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMenuSectionHeadingAttrs {
@@ -90,7 +78,7 @@ pub type UseMenuSectionHeadingAttrs = (
 );
 
 /// Props for the menu section group element.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseMenuSectionGroupProps {
     /// The role attribute.
     pub role: &'static str,
@@ -103,12 +91,6 @@ pub struct UseMenuSectionGroupProps {
 }
 
 impl UseMenuSectionGroupProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseMenuSectionGroupAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseMenuSectionGroupAttrs {

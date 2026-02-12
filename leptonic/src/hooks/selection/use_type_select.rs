@@ -55,9 +55,9 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseTypeSelectInpu
 }
 
 /// The return value of the `use_type_select` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTypeSelectReturn {
-    /// Props for the container element. Call `.to_attrs()` or `.into_attrs()` for view spreading.
+    /// Props for the container element. Call `.into_attrs()` for view spreading.
     pub type_select_props: UseTypeSelectProps,
 
     /// The current search string.
@@ -71,18 +71,12 @@ pub struct UseTypeSelectReturn {
 }
 
 /// Props from `use_type_select` that can be extracted and merged programmatically.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct UseTypeSelectProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
 impl UseTypeSelectProps {
-    /// Convert to spreadable attributes for Leptos views, cloning internally.
-    #[must_use]
-    pub fn to_attrs(&self) -> UseTypeSelectAttrs {
-        self.clone().into_attrs()
-    }
-
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     pub fn into_attrs(self) -> UseTypeSelectAttrs {
