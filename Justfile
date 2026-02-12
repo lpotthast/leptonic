@@ -107,6 +107,7 @@ leptosfmt:
   cargo install leptosfmt
   leptosfmt ./leptonic/*
   leptosfmt ./examples/book/*
+  leptosfmt ./testing/test-app/*
 
 # Run `cargo update` for every crate, updating the dependencies of all crates to the latest non-breaking version. Rewrites Cargo.lock files.
 update:
