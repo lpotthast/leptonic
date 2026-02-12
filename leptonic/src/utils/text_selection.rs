@@ -1,12 +1,13 @@
-use std::cell::{Cell, RefCell};
-use std::time::Duration;
+use std::{
+    cell::{Cell, RefCell},
+    time::Duration,
+};
 
 use leptos::prelude::set_timeout;
 use leptos_use::use_window;
 use wasm_bindgen::JsCast;
 
-use super::platform::device;
-use super::run_after_transition::run_after_transition;
+use super::{platform::device, run_after_transition::run_after_transition};
 
 /// State machine for iOS text selection management.
 /// On iOS, we modify `document.documentElement.style.webkitUserSelect` at the document level

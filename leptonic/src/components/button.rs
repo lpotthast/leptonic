@@ -3,12 +3,13 @@ use std::fmt::{Display, Formatter};
 use leptos::prelude::*;
 use leptos_router::components::ToHref;
 
-use crate::hooks::LinkTarget;
-use crate::utils::classes::Classes;
 use crate::{
     atoms,
-    hooks::{HoverEndEvent, HoverStartEvent, PressEvent},
-    utils::aria::{AriaExpanded, AriaHasPopup},
+    hooks::{HoverEndEvent, HoverStartEvent, LinkTarget, PressEvent},
+    utils::{
+        aria::{AriaExpanded, AriaHasPopup},
+        classes::Classes,
+    },
 };
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]

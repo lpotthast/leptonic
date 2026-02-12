@@ -40,24 +40,30 @@
 //! We use basic string formatting with configurable decimal places.
 //! This avoids `wasm_bindgen` complexity for internationalization.
 
-use crate::hooks::slider::{SliderOrientation, UseSliderStateReturn};
-use crate::hooks::{
-    interactions::use_move::MoveAxis, use_move, MoveEndEvent, MoveEvent, MoveStartEvent,
-    UseMoveInput,
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+    tachys::html::style::{style, Style},
 };
-use crate::utils::aria::{AriaDisabled, AriaLive};
-use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
-use crate::hooks::IntoAttrs;
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use leptos::tachys::html::style::{style, Style};
 use leptos_use::use_event_listener;
 use uuid::Uuid;
 use web_sys::PointerEvent;
+
+use crate::{
+    hooks::{
+        interactions::use_move::MoveAxis,
+        slider::{SliderOrientation, UseSliderStateReturn},
+        use_move, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
+    },
+    utils::{
+        aria::{AriaDisabled, AriaLive},
+        element_capture::{CapturedElement, ElementCaptureAttr},
+        EventAccessors, EventHandler, EventTargetExt,
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

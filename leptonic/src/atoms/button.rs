@@ -1,12 +1,12 @@
-use leptos::prelude::*;
-use leptos::tachys::html::class::class;
+use leptos::{prelude::*, tachys::html::class::class};
 use leptos_router::components::{AProps, ToHref, A};
 
-use crate::hooks::LinkTarget;
-use crate::utils::classes::Classes;
 use crate::{
-    hooks::*,
-    utils::aria::{AriaExpanded, AriaHasPopup},
+    hooks::{LinkTarget, *},
+    utils::{
+        aria::{AriaExpanded, AriaHasPopup},
+        classes::Classes,
+    },
 };
 
 #[component]

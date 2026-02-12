@@ -1,3 +1,5 @@
+use leptos::prelude::*;
+
 use crate::{
     components::{
         button::{Button, ButtonColor, ButtonWrapper},
@@ -7,7 +9,6 @@ use crate::{
     prelude::{GlobalKeyboardEvent, ViewProducer},
     utils::callback::ViewCallback,
 };
-use leptos::prelude::*;
 
 #[component]
 pub fn Quicksearch(

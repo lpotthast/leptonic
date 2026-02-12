@@ -1,14 +1,17 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 use web_sys::DragEvent;
 
-use crate::utils::aria::AriaGrabbed;
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::{aria::AriaGrabbed, EventHandler},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrag.ts
 

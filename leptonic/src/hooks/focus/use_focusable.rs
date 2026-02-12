@@ -1,18 +1,24 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::{FocusEvent, KeyboardEvent};
 
-use crate::hooks::focus::use_focus::{use_focus, UseFocusInput};
-use crate::hooks::interactions::use_keyboard::{
-    use_keyboard, KeyboardEventWrapper, UseKeyboardInput,
+use crate::{
+    hooks::{
+        focus::use_focus::{use_focus, UseFocusInput},
+        interactions::use_keyboard::{use_keyboard, KeyboardEventWrapper, UseKeyboardInput},
+        IntoAttrs,
+    },
+    utils::{
+        element_capture::{CapturedElement, ElementCaptureAttr},
+        focus::focus_safely,
+        EventHandler,
+    },
 };
-use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::utils::focus::focus_safely;
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusable.tsx
 

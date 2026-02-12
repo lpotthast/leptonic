@@ -1,12 +1,9 @@
 use indoc::indoc;
-
-use leptonic::components::prelude::*;
-use leptonic::utils::time::GuideMode;
+use leptonic::{components::prelude::*, utils::time::GuideMode};
 use leptos::prelude::*;
 use time::OffsetDateTime;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageDateTime() -> impl IntoView {

@@ -1,10 +1,11 @@
-use anyhow::{Context, Result};
-use cargo_toml::{Manifest, Value};
-use lazy_static::lazy_static;
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
 };
+
+use anyhow::{Context, Result};
+use cargo_toml::{Manifest, Value};
+use lazy_static::lazy_static;
 
 lazy_static! {
     static ref ENABLE_LOGGING: bool = {

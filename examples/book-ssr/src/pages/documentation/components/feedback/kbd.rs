@@ -1,9 +1,10 @@
-use crate::pages::documentation::{article::Article, toc::Toc};
-use indoc::indoc;
-use leptonic::components::prelude::*;
-use leptonic::utils::key::Key;
-use leptos::prelude::*;
 use std::borrow::Cow;
+
+use indoc::indoc;
+use leptonic::{components::prelude::*, utils::key::Key};
+use leptos::prelude::*;
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageKbd() -> impl IntoView {

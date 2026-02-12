@@ -7,10 +7,8 @@
 use std::cell::{Cell, RefCell};
 
 // Loosely based on https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/utils/src/runAfterTransition.ts
-
 use wasm_bindgen::closure::Closure;
-use wasm_bindgen::prelude::*;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{prelude::*, JsCast};
 
 use super::EventTargetExt;
 

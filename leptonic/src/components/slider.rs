@@ -1,22 +1,19 @@
 use leptos::prelude::*;
 use ordered_float::OrderedFloat;
 
+// Re-export the popover enum from atoms.
+pub use crate::atoms::slider::SliderPopover;
+// Re-export mark types from hooks for backward compatibility.
+pub use crate::hooks::{SliderMark, SliderMarkValue, SliderMarks};
 use crate::{
     atoms::slider::{
         Slider as SliderAtom, SliderMark, SliderMarks, SliderThumb, SliderThumbTooltip,
         SliderTrack, SliderTrackFill,
     },
     hooks::SliderValues,
-    utils::classes::Classes,
-    utils::styles::Styles,
+    utils::{classes::Classes, styles::Styles},
     Out,
 };
-
-// Re-export mark types from hooks for backward compatibility.
-pub use crate::hooks::{SliderMark, SliderMarkValue, SliderMarks};
-
-// Re-export the popover enum from atoms.
-pub use crate::atoms::slider::SliderPopover;
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SliderVariant {

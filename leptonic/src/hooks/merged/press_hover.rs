@@ -1,14 +1,16 @@
-use crate::hooks::{UseHoverProps, UsePressProps};
-use crate::utils::aria::AriaDescribedby;
-use crate::utils::style::TouchActionStyle;
-use crate::utils::{EventHandler, MergeWith};
-use crate::hooks::IntoAttrs;
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::tachys::html::style::Style;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    tachys::html::style::Style,
+};
 use web_sys::{DragEvent, KeyboardEvent, MouseEvent, PointerEvent};
+
+use crate::{
+    hooks::{IntoAttrs, UseHoverProps, UsePressProps},
+    utils::{aria::AriaDescribedby, style::TouchActionStyle, EventHandler, MergeWith},
+};
 
 /// Combined props from `use_press` and `use_hover` hooks.
 ///

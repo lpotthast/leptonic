@@ -1,14 +1,13 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::prelude::*;
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash};
+
+use leptos::{attr, attr::Attr, prelude::*};
 use uuid::Uuid;
 
-use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired};
-use crate::hooks::IntoAttrs;
-
 use super::use_field::ValidationState;
+use crate::{
+    hooks::IntoAttrs,
+    utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckboxGroup.ts
 

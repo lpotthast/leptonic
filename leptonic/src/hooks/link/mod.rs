@@ -1,11 +1,11 @@
 mod use_anchor_link;
 mod use_link;
 
-pub use use_anchor_link::*;
-pub use use_link::*;
+use std::fmt;
 
 use leptos::oco::Oco;
-use std::fmt;
+pub use use_anchor_link::*;
+pub use use_link::*;
 
 #[cfg(debug_assertions)]
 pub(crate) fn debug_validate_element_type(element_type: LinkElementType, el: &web_sys::Element) {

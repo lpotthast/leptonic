@@ -1,15 +1,16 @@
-use leptos::ev;
-use leptos::prelude::*;
-use leptos_use::{use_document, use_event_listener, use_window};
 use std::rc::Rc;
+
+use leptos::{ev, prelude::*};
+use leptos_use::{use_document, use_event_listener, use_window};
 use wasm_bindgen::{prelude::Closure, JsCast};
 use web_sys::{Event, KeyboardEvent, MouseEvent, PointerEvent};
 
-use crate::contexts::WasmClosure;
 use crate::{
     components::{
-        modal::ModalRoot, popover::PopoverRoot, prelude::ToastRoot, theme::Theme,
-        theme::ThemeProvider,
+        modal::ModalRoot,
+        popover::PopoverRoot,
+        prelude::ToastRoot,
+        theme::{Theme, ThemeProvider},
     },
     contexts::{
         global_click_event::GlobalClickEvent,
@@ -21,6 +22,7 @@ use crate::{
         },
         global_resize_event::GlobalResizeEvent,
         global_scroll_event::GlobalScrollEvent,
+        WasmClosure,
     },
     signal_ls,
 };

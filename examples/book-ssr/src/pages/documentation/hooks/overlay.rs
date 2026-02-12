@@ -1,15 +1,15 @@
 use indoc::indoc;
+use leptonic::{
+    components::prelude::*,
+    hooks::*,
+    utils::{
+        aria::{AriaExpanded, AriaHasPopup},
+        locale::WritingDirection,
+    },
+};
+use leptos::{html, portal::Portal, prelude::*};
 
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
-use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};
-use leptonic::utils::locale::WritingDirection;
-use leptos::html;
-use leptos::portal::Portal;
-use leptos::prelude::*;
-
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageUseOverlay() -> impl IntoView {

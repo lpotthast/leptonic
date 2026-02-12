@@ -1,12 +1,18 @@
-use leptos::attr::custom::{custom_attribute, CustomAttr};
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr::custom::{custom_attribute, CustomAttr},
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
-use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
+        IntoAttrs,
+    },
+    utils::EventHandler,
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toggle/src/useToggle.ts
 

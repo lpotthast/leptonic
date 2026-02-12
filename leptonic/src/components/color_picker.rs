@@ -1,3 +1,6 @@
+use indoc::formatdoc;
+use leptos::{html, prelude::*};
+
 use crate::{
     components::{
         field::{Field, FieldLabel},
@@ -9,9 +12,6 @@ use crate::{
     utils::color::{HSV, RGB8},
     RelativeMousePosition, TrackedElementClientBoundingRect,
 };
-use indoc::formatdoc;
-use leptos::html;
-use leptos::prelude::*;
 
 #[component]
 pub fn ColorPreview(#[prop(into)] rgb: Signal<RGB8>) -> impl IntoView {

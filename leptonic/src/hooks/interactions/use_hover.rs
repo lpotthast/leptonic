@@ -1,15 +1,20 @@
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use std::sync::atomic::{AtomicBool, Ordering};
+
+use leptos::{
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use leptos_use::{use_event_listener, use_event_listener_with_options, UseEventListenerOptions};
 use send_wrapper::SendWrapper;
-use std::sync::atomic::{AtomicBool, Ordering};
 use web_sys::PointerEvent;
 
-use crate::hooks::IntoAttrs;
-use crate::utils::{
-    node_contains, pointer_type::PointerType, ContainsTarget, EventAccessors, EventHandler,
-    EventTargetExt,
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        node_contains, pointer_type::PointerType, ContainsTarget, EventAccessors, EventHandler,
+        EventTargetExt,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useHover.ts

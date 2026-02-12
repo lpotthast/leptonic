@@ -1,16 +1,22 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use super::use_calendar_state::create_weeks;
-use crate::utils::aria::AriaDisabled;
-use crate::utils::time::{start_of_next_month, start_of_previous_month, Day, Week};
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        aria::AriaDisabled,
+        time::{start_of_next_month, start_of_previous_month, Day, Week},
+        EventHandler,
+    },
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useRangeCalendar.ts
 

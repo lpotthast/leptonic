@@ -1,5 +1,4 @@
-use leptos::html;
-use leptos::prelude::*;
+use leptos::{html, prelude::*};
 use leptos_use::{use_element_size, UseElementSizeReturn};
 
 use crate::Size;

@@ -132,8 +132,7 @@ impl EventTargetExt for web_sys::EventTarget {
     where
         E: FromWasmAbi + 'static,
     {
-        use wasm_bindgen::closure::Closure;
-        use wasm_bindgen::JsCast;
+        use wasm_bindgen::{closure::Closure, JsCast};
 
         let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
         let closure = Closure::once(boxed);

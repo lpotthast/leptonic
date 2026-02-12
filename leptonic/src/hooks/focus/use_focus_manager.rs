@@ -1,9 +1,12 @@
-use send_wrapper::SendWrapper;
 use std::sync::Arc;
+
+use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 
-use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::element_capture::{CapturedElement, ElementCaptureAttr},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/FocusScope.tsx
 //

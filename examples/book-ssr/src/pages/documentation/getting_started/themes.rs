@@ -1,9 +1,11 @@
-use crate::pages::documentation::{article::Article, toc::Toc};
-use crate::routes;
 use indoc::indoc;
-use leptonic::components::prelude::*;
-use leptonic::hooks::LinkTarget;
+use leptonic::{components::prelude::*, hooks::LinkTarget};
 use leptos::prelude::*;
+
+use crate::{
+    pages::documentation::{article::Article, toc::Toc},
+    routes,
+};
 
 #[component]
 pub fn PageThemes() -> impl IntoView {

@@ -1,6 +1,6 @@
-use leptos::attr;
-use leptos::attr::Attr;
+use leptos::{attr, attr::Attr};
 use uuid::Uuid;
+
 use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuSection.ts

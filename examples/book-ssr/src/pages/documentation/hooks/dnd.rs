@@ -1,12 +1,12 @@
 use indoc::indoc;
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
+use leptonic::{components::prelude::*, hooks::*};
 use leptos::prelude::*;
-use ringbuf::traits::{Consumer, Observer, RingBuffer};
-use ringbuf::HeapRb;
+use ringbuf::{
+    traits::{Consumer, Observer, RingBuffer},
+    HeapRb,
+};
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageUseDnd() -> impl IntoView {

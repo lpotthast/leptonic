@@ -1,20 +1,33 @@
-use leptos::attr;
-use leptos::attr::custom::{custom_attribute, CustomAttr};
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
 use std::hash::Hash;
+
+use leptos::{
+    attr,
+    attr::{
+        custom::{custom_attribute, CustomAttr},
+        Attr,
+    },
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 use web_sys::FocusEvent;
 
-use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
-use crate::hooks::focus::use_focusable::{use_focusable, UseFocusableInput};
-use crate::hooks::selection::use_selection_state::{Selection, UseSelectionStateReturn};
-use crate::utils::aria::{AriaDisabled, AriaSelected};
-use crate::utils::element_capture::ElementCaptureAttr;
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        focus::{
+            use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
+            use_focusable::{use_focusable, UseFocusableInput},
+        },
+        selection::use_selection_state::{Selection, UseSelectionStateReturn},
+        IntoAttrs,
+    },
+    utils::{
+        aria::{AriaDisabled, AriaSelected},
+        element_capture::ElementCaptureAttr,
+        EventHandler,
+    },
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useOption.ts
 

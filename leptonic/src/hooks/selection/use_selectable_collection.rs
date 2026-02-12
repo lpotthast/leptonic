@@ -1,6 +1,6 @@
+use std::{collections::HashSet, hash::Hash};
+
 use leptos::prelude::*;
-use std::collections::HashSet;
-use std::hash::Hash;
 
 use super::use_selection_state::{
     use_selection_state, Selection, SelectionBehavior, SelectionMode, UseSelectionStateInput,

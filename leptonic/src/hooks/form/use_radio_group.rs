@@ -1,12 +1,11 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::prelude::*;
+use leptos::{attr, attr::Attr, prelude::*};
 use uuid::Uuid;
 
-use super::use_checkbox_group::Orientation;
-use super::use_field::ValidationState;
-use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired};
-use crate::hooks::IntoAttrs;
+use super::{use_checkbox_group::Orientation, use_field::ValidationState};
+use crate::{
+    hooks::IntoAttrs,
+    utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadioGroup.ts
 

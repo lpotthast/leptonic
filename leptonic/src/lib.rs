@@ -14,10 +14,10 @@
 
 use std::fmt::Display;
 
-use crate::utils::EventTargetExt;
 use leptos::prelude::*;
-use leptos_use::core::IntoElementMaybeSignal;
-use leptos_use::{use_window, UseElementBoundingReturn};
+use leptos_use::{core::IntoElementMaybeSignal, use_window, UseElementBoundingReturn};
+
+use crate::utils::EventTargetExt;
 
 pub mod atoms;
 pub mod components;
@@ -29,31 +29,28 @@ pub mod utils;
 pub use crate::utils::scroll_behavior::ScrollBehavior;
 
 pub mod prelude {
+    // Reexport
+    pub use icondata;
     #[cfg(feature = "tiptap")]
     pub use leptos_tiptap::*;
 
-    // Reexport
-    pub use icondata;
-
-    pub use super::utils::aria::AriaExpanded;
-    pub use super::utils::aria::AriaHasPopup;
-    pub use super::utils::callback::ViewCallback;
-    pub use super::utils::callback::ViewProducer;
-    pub use super::FontWeight;
-    pub use super::Height;
-    pub use super::Margin;
-    pub use super::Mount;
-    pub use super::OptionDeref;
-    pub use super::Out;
-    pub use super::Size;
-    pub use super::Width;
+    pub use super::{
+        utils::{
+            aria::{AriaExpanded, AriaHasPopup},
+            callback::{ViewCallback, ViewProducer},
+        },
+        FontWeight, Height, Margin, Mount, OptionDeref, Out, Size, Width,
+    };
     //pub use crate::atoms::prelude::*;
     //pub use crate::components::prelude::*;
     //pub use crate::hooks::prelude::*;
     pub use crate::hooks::IntoAttrs;
-    pub use crate::contexts::global_click_event::GlobalClickEvent;
-    pub use crate::contexts::global_keyboard_event::GlobalKeyboardEvent;
-    pub use crate::signal_ls;
+    pub use crate::{
+        contexts::{
+            global_click_event::GlobalClickEvent, global_keyboard_event::GlobalKeyboardEvent,
+        },
+        signal_ls,
+    };
 }
 
 #[derive(Debug, Clone, Copy)]

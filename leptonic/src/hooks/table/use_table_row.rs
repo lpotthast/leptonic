@@ -1,15 +1,23 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use super::use_table::TableSelectionMode;
-use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
-use crate::utils::aria::{AriaDisabled, AriaSelected};
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
+        IntoAttrs,
+    },
+    utils::{
+        aria::{AriaDisabled, AriaSelected},
+        EventHandler,
+    },
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableRow.ts
 

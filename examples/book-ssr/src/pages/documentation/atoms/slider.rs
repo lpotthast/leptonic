@@ -1,15 +1,15 @@
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
-
-use leptonic::atoms::slider::{
-    Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
+use leptonic::{
+    atoms::slider::{
+        Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
+    },
+    components::prelude::*,
+    hooks::{SliderOrientation, SliderValues},
+    utils::styles::{Style::*, Styles},
 };
-use leptonic::components::prelude::*;
-use leptonic::hooks::{SliderOrientation, SliderValues};
-use leptonic::utils::styles::Style::*;
-use leptonic::utils::styles::Styles;
 use leptos::prelude::*;
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 fn track_style(orientation: SliderOrientation) -> Styles {
     Styles::from([

@@ -1,15 +1,21 @@
-use crate::hooks::*;
-use crate::utils::classes::Classes;
-use crate::utils::styles::{
-    Style::{Bottom, Height, Left, Position, Top, Transform, Width},
-    Styles,
+use std::{
+    borrow::Cow,
+    sync::{atomic::AtomicUsize, Arc},
 };
-use crate::utils::CapturedElement;
-use leptos::context::Provider;
-use leptos::prelude::*;
-use std::borrow::Cow;
-use std::sync::atomic::AtomicUsize;
-use std::sync::Arc;
+
+use leptos::{context::Provider, prelude::*};
+
+use crate::{
+    hooks::*,
+    utils::{
+        classes::Classes,
+        styles::{
+            Style::{Bottom, Height, Left, Position, Top, Transform, Width},
+            Styles,
+        },
+        CapturedElement,
+    },
+};
 
 /// Controls when the slider thumb tooltip is displayed.
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]

@@ -1,5 +1,6 @@
-use crate::pages::BaseActions;
 use thirtyfour::WebDriver;
+
+use crate::pages::BaseActions;
 
 pub struct ButtonPage<'d> {
     pub driver: &'d WebDriver,

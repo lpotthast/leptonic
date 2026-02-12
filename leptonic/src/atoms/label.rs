@@ -1,7 +1,9 @@
-use crate::hooks::*;
-use crate::utils::classes::Classes;
-use crate::utils::styles::Styles;
 use leptos::prelude::*;
+
+use crate::{
+    hooks::*,
+    utils::{classes::Classes, styles::Styles},
+};
 
 #[component]
 pub fn Label(

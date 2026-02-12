@@ -1,17 +1,23 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash};
+
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 
-use crate::utils::aria::{AriaExpanded, AriaRequired};
-use crate::utils::{EventAccessors, EventHandler};
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        aria::{AriaExpanded, AriaRequired},
+        EventAccessors, EventHandler,
+    },
+};
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/combobox/src/useComboBox.ts
 
 // =============================================================================

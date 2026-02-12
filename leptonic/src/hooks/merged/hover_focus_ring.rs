@@ -1,11 +1,15 @@
-use crate::hooks::{UseFocusRingProps, UseHoverProps};
-use crate::utils::{EventHandler, MergeWith};
-use crate::hooks::IntoAttrs;
-use leptos::attr::custom::{custom_attribute, CustomAttr};
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr::custom::{custom_attribute, CustomAttr},
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::{FocusEvent, PointerEvent};
+
+use crate::{
+    hooks::{IntoAttrs, UseFocusRingProps, UseHoverProps},
+    utils::{EventHandler, MergeWith},
+};
 
 /// Combined props from `use_hover` and `use_focus_ring` hooks (without press).
 ///

@@ -1,9 +1,10 @@
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::EventHandler};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useDismissButton.ts
 

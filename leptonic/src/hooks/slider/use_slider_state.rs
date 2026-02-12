@@ -1,9 +1,12 @@
-use crate::hooks::slider::ThumbIdx;
-use crate::utils::aria::AriaOrientation;
-use crate::utils::math::{
-    calculate_page_size, decimal_precision, percentage_in_range, snap_value_to_step,
-};
 use leptos::prelude::*;
+
+use crate::{
+    hooks::slider::ThumbIdx,
+    utils::{
+        aria::AriaOrientation,
+        math::{calculate_page_size, decimal_precision, percentage_in_range, snap_value_to_step},
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

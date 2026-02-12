@@ -1,12 +1,16 @@
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use leptos_use::use_event_listener;
 use wasm_bindgen::JsCast;
 use web_sys::FocusEvent;
 
-use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::{EventAccessors, EventHandler, EventTargetExt},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusWithin.ts
 

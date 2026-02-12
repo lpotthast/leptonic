@@ -1,23 +1,27 @@
-use crate::utils::EventHandler;
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::oco::Oco;
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    oco::Oco,
+    prelude::*,
+};
 use uuid::Uuid;
 use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 
-use crate::hooks::interactions::use_press::{use_press, LongPressEvent, PressEvent, UsePressInput};
-use crate::hooks::overlay::use_overlay_trigger::{use_overlay_trigger, UseOverlayTriggerInput};
-use crate::hooks::selection::use_selectable_collection::FocusStrategy;
-use crate::prelude::AriaHasPopup;
-use crate::utils::aria::AriaExpanded;
-use crate::utils::focus::focus_event_target;
-use crate::utils::pointer_type::PointerType;
-use crate::hooks::IntoAttrs;
-
 use super::use_menu_trigger_state::UseMenuTriggerStateReturn;
+use crate::{
+    hooks::{
+        interactions::use_press::{use_press, LongPressEvent, PressEvent, UsePressInput},
+        overlay::use_overlay_trigger::{use_overlay_trigger, UseOverlayTriggerInput},
+        selection::use_selectable_collection::FocusStrategy,
+        IntoAttrs,
+    },
+    prelude::AriaHasPopup,
+    utils::{
+        aria::AriaExpanded, focus::focus_event_target, pointer_type::PointerType, EventHandler,
+    },
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuTrigger.ts
 

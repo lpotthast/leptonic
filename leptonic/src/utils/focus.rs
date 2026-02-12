@@ -4,6 +4,7 @@
 //! and for safely focusing elements during screen reader interactions.
 
 use std::fmt::Debug;
+
 use wasm_bindgen::JsCast;
 
 pub fn focus_event_target(target: &web_sys::EventTarget, prevent_scroll: bool) {

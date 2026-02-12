@@ -1,9 +1,6 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::prelude::*;
+use leptos::{attr, attr::Attr, prelude::*};
 
-use crate::utils::aria::AriaHidden;
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::aria::AriaHidden};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/select/src/useHiddenSelect.ts
 

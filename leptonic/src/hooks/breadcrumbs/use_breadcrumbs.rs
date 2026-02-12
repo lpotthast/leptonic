@@ -1,7 +1,6 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::prelude::*;
+use leptos::{attr, attr::Attr, prelude::*};
 use uuid::Uuid;
+
 use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/breadcrumbs/src/useBreadcrumbs.ts

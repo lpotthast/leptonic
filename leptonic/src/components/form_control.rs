@@ -1,6 +1,6 @@
-use leptos::context::Provider;
-use leptos::prelude::*;
 use std::fmt::Debug;
+
+use leptos::{context::Provider, prelude::*};
 
 pub trait FormInput: Debug + Send + Sync {
     fn on_label_press(&self);

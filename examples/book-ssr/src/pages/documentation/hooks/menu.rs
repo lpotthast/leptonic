@@ -1,15 +1,16 @@
 use std::collections::HashSet;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
-use leptonic::atoms::focus_scope::FocusScope;
-
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
-use leptonic::prelude::{AriaExpanded, AriaHasPopup};
-use leptonic::utils::MergeWith;
+use leptonic::{
+    atoms::focus_scope::FocusScope,
+    components::prelude::*,
+    hooks::*,
+    prelude::{AriaExpanded, AriaHasPopup},
+    utils::MergeWith,
+};
 use leptos::prelude::*;
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 /// A single menu item component that uses the `use_menu_item` hook.
 #[component]

@@ -1,11 +1,17 @@
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::PointerEvent;
 
-use crate::hooks::interactions::use_hover::{use_hover, UseHoverInput};
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        interactions::use_hover::{use_hover, UseHoverInput},
+        IntoAttrs,
+    },
+    utils::EventHandler,
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/tooltip/src/useTooltip.ts
 

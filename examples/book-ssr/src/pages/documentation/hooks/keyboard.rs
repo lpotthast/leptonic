@@ -1,13 +1,12 @@
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
-use leptonic::atoms::focus_ring::FocusRing;
-
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
+use leptonic::{atoms::focus_ring::FocusRing, components::prelude::*, hooks::*};
 use leptos::prelude::*;
-use ringbuf::traits::{Consumer, Observer, RingBuffer};
-use ringbuf::HeapRb;
+use ringbuf::{
+    traits::{Consumer, Observer, RingBuffer},
+    HeapRb,
+};
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageUseKeyboard() -> impl IntoView {

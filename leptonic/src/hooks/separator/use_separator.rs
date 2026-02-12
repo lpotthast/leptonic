@@ -1,8 +1,6 @@
-use leptos::attr;
-use leptos::attr::Attr;
+use leptos::{attr, attr::Attr};
 
-use crate::utils::aria::AriaOrientation;
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::aria::AriaOrientation};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/separator/src/useSeparator.ts
 

@@ -1,12 +1,15 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 
-use crate::utils::aria::AriaDisabled;
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::{aria::AriaDisabled, EventHandler},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

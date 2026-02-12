@@ -1,13 +1,19 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
-use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaSelected};
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        aria::{AriaDisabled, AriaExpanded, AriaSelected},
+        EventHandler,
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

@@ -1,11 +1,13 @@
-use crate::utils::aria::AriaDescribedby;
-use leptos::oco::Oco;
-use leptos::prelude::*;
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    sync::atomic::{AtomicU64, Ordering},
+};
+
+use leptos::{oco::Oco, prelude::*};
 use leptos_use::use_document;
-use std::cell::RefCell;
-use std::collections::HashMap;
-use std::sync::atomic::AtomicU64;
-use std::sync::atomic::Ordering;
+
+use crate::utils::aria::AriaDescribedby;
 
 // TODO: Should this really be in utils? Move to hooks?
 

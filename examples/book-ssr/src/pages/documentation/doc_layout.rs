@@ -2,9 +2,10 @@ use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
 use leptos_router::components::Outlet;
 
-use crate::app::AppLayoutContext;
-use crate::app::APP_BAR_HEIGHT;
-use crate::routes;
+use crate::{
+    app::{AppLayoutContext, APP_BAR_HEIGHT},
+    routes,
+};
 
 #[component]
 #[allow(clippy::too_many_lines)]

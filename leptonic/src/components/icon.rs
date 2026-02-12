@@ -1,7 +1,6 @@
+use leptos::{prelude::*, svg, text_prop::TextProp};
+
 use crate::Margin;
-use leptos::prelude::*;
-use leptos::svg;
-use leptos::text_prop::TextProp;
 
 /// The Icon component.
 #[component]

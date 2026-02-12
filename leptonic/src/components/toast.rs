@@ -1,5 +1,6 @@
-use leptos::prelude::*;
 use std::fmt::Debug;
+
+use leptos::prelude::*;
 use uuid::Uuid;
 
 use crate::components::icon::Icon;

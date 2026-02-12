@@ -1,23 +1,21 @@
+#[cfg(not(feature = "ssr"))]
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    OnceLock, RwLock,
+};
+
+use atomic_enum::atomic_enum;
+#[cfg(not(feature = "ssr"))]
+use leptos::ev;
 use leptos::prelude::*;
+#[cfg(not(feature = "ssr"))]
+use web_sys::{KeyboardEvent, PointerEvent};
 
 #[cfg(not(feature = "ssr"))]
 use crate::{
     utils::{EventListenerOptions, ListenExt},
     Out,
 };
-
-#[cfg(not(feature = "ssr"))]
-use leptos::ev;
-
-use atomic_enum::atomic_enum;
-
-#[cfg(not(feature = "ssr"))]
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    OnceLock, RwLock,
-};
-#[cfg(not(feature = "ssr"))]
-use web_sys::{KeyboardEvent, PointerEvent};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/interactions/src/useFocusVisible.ts
 

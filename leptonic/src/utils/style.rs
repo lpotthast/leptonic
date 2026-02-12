@@ -1,6 +1,8 @@
-use crate::utils::styles::StyleProperty;
-use leptos::tachys::html::style::{style, IntoStyleValue};
 use std::borrow::Cow;
+
+use leptos::tachys::html::style::{style, IntoStyleValue};
+
+use crate::utils::styles::StyleProperty;
 
 /// CSS property names represented as an enum.
 ///

@@ -1,12 +1,10 @@
-pub use crate::hooks::LinkRel;
-use crate::hooks::*;
-use crate::utils::classes::Classes;
-use crate::utils::styles::Styles;
 use leptos::prelude::*;
 use leptos_router::components::{ToHref, A};
 
+pub use crate::hooks::LinkRel;
 use crate::{
-    hooks::{use_anchor_link, Href, UseAnchorLinkInput, UseAnchorLinkReturn},
+    hooks::{use_anchor_link, Href, UseAnchorLinkInput, UseAnchorLinkReturn, *},
+    utils::{classes::Classes, styles::Styles},
     ScrollBehavior,
 };
 

@@ -1,13 +1,9 @@
 use std::marker::PhantomData;
 
-use leptos::context::Provider;
-use leptos::html;
-use leptos::portal::Portal;
-use leptos::prelude::*;
+use leptos::{context::Provider, html, portal::Portal, prelude::*};
 
-use crate::hooks::UseOverlayAttrs;
 use crate::{
-    hooks::*,
+    hooks::{UseOverlayAttrs, *},
     utils::{aria::AriaHasPopup, locale::WritingDirection},
 };
 

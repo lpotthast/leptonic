@@ -1,13 +1,14 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::EventHandler};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tooltip/src/useTooltipTrigger.ts
 

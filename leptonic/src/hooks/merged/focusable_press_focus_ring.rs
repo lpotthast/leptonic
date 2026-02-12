@@ -1,16 +1,22 @@
-use crate::hooks::{MergedFocusablePressProps, UseFocusRingProps};
-use crate::utils::aria::AriaDescribedby;
-use crate::utils::style::TouchActionStyle;
-use crate::utils::{ElementCaptureAttr, EventHandler, MergeWith};
-use crate::hooks::IntoAttrs;
-use leptos::attr;
-use leptos::attr::custom::{custom_attribute, CustomAttr};
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use leptos::tachys::html::style::Style;
+use leptos::{
+    attr,
+    attr::{
+        custom::{custom_attribute, CustomAttr},
+        Attr,
+    },
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+    tachys::html::style::Style,
+};
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
+
+use crate::{
+    hooks::{IntoAttrs, MergedFocusablePressProps, UseFocusRingProps},
+    utils::{
+        aria::AriaDescribedby, style::TouchActionStyle, ElementCaptureAttr, EventHandler, MergeWith,
+    },
+};
 
 /// Combined props from `use_focusable`, `use_press` and `use_focus_ring` hooks.
 ///

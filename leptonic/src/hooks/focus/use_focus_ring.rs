@@ -1,17 +1,22 @@
-use leptos::attr::custom::{custom_attribute, CustomAttr};
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr::custom::{custom_attribute, CustomAttr},
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::FocusEvent;
 
-use crate::hooks::focus::use_focus::{use_focus, UseFocusInput};
-use crate::hooks::focus::use_focus_visible::{use_focus_visible, UseFocusVisibleInput};
-use crate::hooks::focus::use_focus_within::{
-    use_focus_within, FocusWithinEvent, UseFocusWithinInput,
+use crate::{
+    hooks::{
+        focus::{
+            use_focus::{use_focus, UseFocusInput},
+            use_focus_visible::{use_focus_visible, UseFocusVisibleInput},
+            use_focus_within::{use_focus_within, FocusWithinEvent, UseFocusWithinInput},
+        },
+        IntoAttrs, UseFocusVisibleReturn,
+    },
+    utils::EventHandler,
 };
-use crate::hooks::UseFocusVisibleReturn;
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/useFocusRing.ts
 

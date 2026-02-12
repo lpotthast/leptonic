@@ -1,19 +1,22 @@
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
-use indoc::indoc;
-use leptonic::atoms::label::Label as LabelAtom;
+use std::borrow::Cow;
 
-use leptonic::atoms::slider::{
-    Slider as SliderAtom, SliderMark, SliderMarks as SliderMarksAtom, SliderOutput, SliderThumb,
-    SliderTrack, SliderTrackFill,
+use indoc::indoc;
+use leptonic::{
+    atoms::{
+        label::Label as LabelAtom,
+        slider::{
+            Slider as SliderAtom, SliderMark, SliderMarks as SliderMarksAtom, SliderOutput,
+            SliderThumb, SliderTrack, SliderTrackFill,
+        },
+    },
+    components::prelude::*,
+    hooks::*,
+    utils::styles::{Style::*, Styles},
 };
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
-use leptonic::utils::styles::Style::*;
-use leptonic::utils::styles::Styles;
 use leptos::prelude::*;
 use ordered_float::OrderedFloat;
-use std::borrow::Cow;
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn SliderContainer(children: Children) -> impl IntoView {

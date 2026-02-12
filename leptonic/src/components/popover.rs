@@ -1,7 +1,7 @@
-use leptos::html;
-use leptos::prelude::*;
-use leptos_use::{use_element_bounding, use_element_hover};
 use std::sync::Arc;
+
+use leptos::{html, prelude::*};
+use leptos_use::{use_element_bounding, use_element_hover};
 use uuid::Uuid;
 
 use crate::{Size, UseElementBoundingReturnReadOnly};

@@ -1,5 +1,4 @@
-use leptos::html::Div;
-use leptos::prelude::*;
+use leptos::{html::Div, prelude::*};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum CollapseAxis {

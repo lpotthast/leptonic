@@ -1,8 +1,10 @@
-use crate::utils::focus::focus_element;
-use crate::utils::platform::{browser, device};
-use crate::utils::Modifiers;
-use wasm_bindgen::JsCast;
-use wasm_bindgen::JsValue;
+use wasm_bindgen::{JsCast, JsValue};
+
+use crate::utils::{
+    focus::focus_element,
+    platform::{browser, device},
+    Modifiers,
+};
 
 /// Programmatically open a link element by dispatching a synthetic click event.
 ///

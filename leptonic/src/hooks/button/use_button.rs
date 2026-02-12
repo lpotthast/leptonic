@@ -1,19 +1,17 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::prelude::*;
+use leptos::{attr, attr::Attr, prelude::*};
 
-use crate::hooks::{
-    focus::use_focus_ring::{use_focus_ring, UseFocusRingInput},
-    interactions::{
-        use_hover::{use_hover, UseHoverInput},
-        use_press::{use_press, UsePressInput},
+use crate::{
+    hooks::{
+        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput},
+        interactions::{
+            use_hover::{use_hover, UseHoverInput},
+            use_press::{use_press, UsePressInput},
+        },
+        IntoAttrs, MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps,
+        UseFocusRingReturn, UseHoverReturn, UsePressReturn,
     },
-    MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps, UseFocusRingReturn,
-    UseHoverReturn, UsePressReturn,
+    utils::{aria::*, MergeWith},
 };
-use crate::utils::aria::*;
-use crate::utils::MergeWith;
-use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

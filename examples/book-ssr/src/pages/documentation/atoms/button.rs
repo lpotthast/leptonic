@@ -1,12 +1,9 @@
 use indoc::indoc;
-
-use leptonic::atoms::prelude as atoms;
-use leptonic::components::prelude::*;
+use leptonic::{atoms::prelude as atoms, components::prelude::*};
 use leptos::prelude::*;
 use leptos_use::use_window;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageAtomButton() -> impl IntoView {

@@ -1,5 +1,7 @@
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
 
 pub mod aria;
 pub mod callback;
@@ -32,23 +34,19 @@ pub mod time;
 pub mod use_description;
 pub(crate) mod virtual_click;
 
-pub use element_capture::{CapturedElement, ElementCaptureAttr};
-pub use event_handler::EventHandler;
-pub use merge::{MergeWith, MergeWithExt};
-
 // Re-exports from dom_ext
 pub use dom_ext::{get_owner_document, get_owner_window, ContainsTarget};
 pub(crate) use dom_ext::{node_contains, ElementExt, EventAccessors, EventTargetExt};
-
+pub use element_capture::{CapturedElement, ElementCaptureAttr};
+pub use event_handler::EventHandler;
 // Re-exports from event_listeners
 pub use event_listeners::EventListenerOptions;
 pub(crate) use event_listeners::ListenExt;
-
-// Re-exports from modifiers
-pub use modifiers::{EventModifiers, Modifiers};
-
 // Re-exports from interaction_rect
 pub use interaction_rect::{is_over, InteractionRect, RectPrecise};
+pub use merge::{MergeWith, MergeWithExt};
+// Re-exports from modifiers
+pub use modifiers::{EventModifiers, Modifiers};
 
 pub(crate) fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 'static>)
 {

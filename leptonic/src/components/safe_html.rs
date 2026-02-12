@@ -1,6 +1,4 @@
-use leptos::html;
-use leptos::html::InnerHtmlValue;
-use leptos::prelude::*;
+use leptos::{html, html::InnerHtmlValue, prelude::*};
 
 #[component]
 pub fn SafeHtml<H: InnerHtmlValue>(#[prop(into)] html: H) -> impl IntoView {

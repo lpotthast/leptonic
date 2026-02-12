@@ -1,17 +1,23 @@
-use leptos::attr;
-use leptos::attr::custom::{custom_attribute, CustomAttr};
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::{
+        custom::{custom_attribute, CustomAttr},
+        Attr,
+    },
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::{Event, FocusEvent};
 
-use super::use_field::ValidationState;
-use super::use_radio_group::UseRadioGroupState;
-use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
-use crate::utils::aria::AriaInvalid;
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use super::{use_field::ValidationState, use_radio_group::UseRadioGroupState};
+use crate::{
+    hooks::{
+        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
+        IntoAttrs,
+    },
+    utils::{aria::AriaInvalid, EventHandler},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadio.ts
 

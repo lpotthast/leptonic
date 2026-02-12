@@ -1,6 +1,9 @@
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Mutex},
+};
+
 use leptos::prelude::*;
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
 use uuid::Uuid;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/live-announcer/src/LiveAnnouncer.tsx

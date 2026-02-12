@@ -1,11 +1,8 @@
 use indoc::indoc;
-use leptonic::atoms::focus_ring::FocusRing;
-
-use leptonic::components::prelude::*;
+use leptonic::{atoms::focus_ring::FocusRing, components::prelude::*};
 use leptos::prelude::*;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageAtomFocusRing() -> impl IntoView {

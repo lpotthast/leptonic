@@ -1,7 +1,10 @@
-use crate::hooks::slider::use_slider_state::UseSliderStateReturn;
-use crate::utils::math::percentage_in_range;
-use leptos::prelude::*;
 use std::borrow::Cow;
+
+use leptos::prelude::*;
+
+use crate::{
+    hooks::slider::use_slider_state::UseSliderStateReturn, utils::math::percentage_in_range,
+};
 
 // Note: This hooks is not available in react-aria.
 
@@ -231,13 +234,16 @@ pub fn use_slider_marks(input: UseSliderMarksInput) -> UseSliderMarksReturn {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::hooks::slider::use_slider_state::{
-        use_slider_state, SliderValues, UseSliderStateInput, UseSliderStateReturn,
-    };
-    use crate::hooks::SliderOrientation;
     use assertr::prelude::*;
     use reactive_graph::owner::Owner;
+
+    use super::*;
+    use crate::hooks::{
+        slider::use_slider_state::{
+            use_slider_state, SliderValues, UseSliderStateInput, UseSliderStateReturn,
+        },
+        SliderOrientation,
+    };
 
     /// Helper: create slider state within the current reactive owner.
     fn make_state(

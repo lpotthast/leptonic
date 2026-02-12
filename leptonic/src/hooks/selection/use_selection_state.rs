@@ -1,6 +1,6 @@
+use std::{collections::HashSet, hash::Hash};
+
 use leptos::prelude::*;
-use std::collections::HashSet;
-use std::hash::Hash;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/selection/src/useMultipleSelectionState.ts
 

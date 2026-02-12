@@ -31,23 +31,26 @@
 use std::marker::PhantomData;
 
 use educe::Educe;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use leptos::tachys::html::style::{style, Style};
-use leptos_use::core::IntoElementMaybeSignal;
-use leptos_use::use_event_listener;
+use leptos::{
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+    tachys::html::style::{style, Style},
+};
+use leptos_use::{core::IntoElementMaybeSignal, use_event_listener};
 use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
-
-use crate::utils::{EventAccessors, EventHandler};
 
 use super::use_overlay_position::{
     use_overlay_position, PlacementX, PlacementY, UseOverlayPositionInput,
 };
-use crate::hooks::interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput};
-use crate::utils::locale::WritingDirection;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput},
+        IntoAttrs,
+    },
+    utils::{locale::WritingDirection, EventAccessors, EventHandler},
+};
 
 /// Input parameters for the `use_popover` hook.
 #[derive(Clone, Copy, Educe)]

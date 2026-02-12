@@ -1,7 +1,5 @@
-use leptos::ev::EventDescriptor;
-use leptos::typed_builder::TypedBuilder;
-use wasm_bindgen::closure::Closure;
-use wasm_bindgen::convert::FromWasmAbi;
+use leptos::{ev::EventDescriptor, typed_builder::TypedBuilder};
+use wasm_bindgen::{closure::Closure, convert::FromWasmAbi};
 
 #[derive(Debug, Clone, Copy, TypedBuilder)]
 pub struct EventListenerOptions {
@@ -60,8 +58,7 @@ impl<T: AsRef<web_sys::EventTarget>> ListenExt for T {
     where
         E: FromWasmAbi + 'static,
     {
-        use wasm_bindgen::closure::Closure;
-        use wasm_bindgen::JsCast;
+        use wasm_bindgen::{closure::Closure, JsCast};
 
         let target: &web_sys::EventTarget = self.as_ref();
 

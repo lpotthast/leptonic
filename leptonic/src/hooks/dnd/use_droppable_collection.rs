@@ -1,11 +1,10 @@
 use leptos::prelude::*;
 
+use super::use_drag_and_drop::DropTarget;
 use crate::hooks::{
     use_droppable, DragItem, DropEffect, DropEnterEvent, DropEvent, DropExitEvent,
     DropOperationEvent, UseDroppableInput, UseDroppableReturn,
 };
-
-use super::use_drag_and_drop::DropTarget;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

@@ -1,10 +1,10 @@
-use leptonic::atoms::button::Button;
-use leptonic::components::root::Root;
-use leptonic::components::theme::LeptonicTheme;
+use leptonic::{
+    atoms::button::Button,
+    components::{root::Root, theme::LeptonicTheme},
+};
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, MetaTags, Stylesheet, Title};
-use leptos_router::components::*;
-use leptos_router::path;
+use leptos_router::{components::*, path};
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
 

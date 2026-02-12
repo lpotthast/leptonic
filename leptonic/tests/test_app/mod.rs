@@ -1,8 +1,9 @@
-use std::env;
-use std::time::Duration;
+use std::{env, time::Duration};
+
 use tokio::process::Command;
-use tokio_process_tools::broadcast::BroadcastOutputStream;
-use tokio_process_tools::{Inspector, LineParsingOptions, Next, Process, TerminateOnDrop};
+use tokio_process_tools::{
+    broadcast::BroadcastOutputStream, Inspector, LineParsingOptions, Next, Process, TerminateOnDrop,
+};
 
 pub struct Frontend {
     #[expect(unused)]

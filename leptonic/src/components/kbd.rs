@@ -2,8 +2,7 @@ use std::borrow::Cow;
 
 use leptos::prelude::*;
 
-use crate::utils::key::Key;
-use crate::Language;
+use crate::{utils::key::Key, Language};
 
 #[component]
 pub fn KbdKey(key: Key) -> impl IntoView {

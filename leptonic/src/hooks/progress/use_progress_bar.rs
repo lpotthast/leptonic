@@ -1,9 +1,7 @@
-use crate::utils::math::percentage_in_range;
-use crate::hooks::IntoAttrs;
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::prelude::*;
+use leptos::{attr, attr::Attr, prelude::*};
 use uuid::Uuid;
+
+use crate::{hooks::IntoAttrs, utils::math::percentage_in_range};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/progress/src/useProgressBar.ts
 

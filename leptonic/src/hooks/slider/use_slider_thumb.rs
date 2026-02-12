@@ -1,30 +1,36 @@
-use crate::hooks::interactions::use_hover::{use_hover, UseHoverInput, UseHoverReturn};
-use crate::hooks::interactions::use_move::{
-    use_move, MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
-};
-use crate::hooks::slider::use_slider_state::UseSliderStateReturn;
-use crate::hooks::slider::SliderOrientation;
-use crate::hooks::{
-    use_focus_ring, UseFocusRingInput, UseFocusRingReturn, UseMoveProps, UseMoveReturn,
-    ValidationState,
-};
-use crate::utils::aria::{AriaDisabled, AriaHidden, AriaInvalid, AriaOrientation, AriaRequired};
-use crate::utils::focus::focus_element;
-use crate::utils::math::percentage_in_range;
-use crate::utils::CapturedElement;
-use crate::utils::EventAccessors;
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
-use leptos::attr;
-use leptos::attr::custom::{custom_attribute, CustomAttr};
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
 use std::borrow::Cow;
+
+use leptos::{
+    attr,
+    attr::{
+        custom::{custom_attribute, CustomAttr},
+        Attr,
+    },
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
+
+use crate::{
+    hooks::{
+        interactions::{
+            use_hover::{use_hover, UseHoverInput, UseHoverReturn},
+            use_move::{use_move, MoveAxis, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput},
+        },
+        slider::{use_slider_state::UseSliderStateReturn, SliderOrientation},
+        use_focus_ring, IntoAttrs, UseFocusRingInput, UseFocusRingReturn, UseMoveProps,
+        UseMoveReturn, ValidationState,
+    },
+    utils::{
+        aria::{AriaDisabled, AriaHidden, AriaInvalid, AriaOrientation, AriaRequired},
+        focus::focus_element,
+        math::percentage_in_range,
+        CapturedElement, EventAccessors, EventHandler,
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

@@ -1,5 +1,5 @@
-use leptos::attr;
-use leptos::attr::Attr;
+use leptos::{attr, attr::Attr};
+
 use crate::hooks::IntoAttrs;
 
 // =============================================================================

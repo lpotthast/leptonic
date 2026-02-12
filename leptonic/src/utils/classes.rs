@@ -1,13 +1,15 @@
-use leptos::prelude::{Get, Signal};
-use leptos::tachys::html::class::IntoClass;
-use leptos::tachys::renderer::dom::Element;
-use leptos::tachys::renderer::Rndr;
-use leptos::typed_builder::TypedBuilder;
-use reactive_graph::effect::RenderEffect;
-use reactive_graph::signal::ReadSignal;
+use std::{backtrace::Backtrace, borrow::Cow};
+
+use leptos::{
+    prelude::{Get, Signal},
+    tachys::{
+        html::class::IntoClass,
+        renderer::{dom::Element, Rndr},
+    },
+    typed_builder::TypedBuilder,
+};
+use reactive_graph::{effect::RenderEffect, signal::ReadSignal};
 use smallvec::SmallVec;
-use std::backtrace::Backtrace;
-use std::borrow::Cow;
 
 /// Fast FNV-1a hash for quick string comparison.
 /// Used to avoid full string comparison when checking if classes changed.
@@ -462,8 +464,9 @@ impl<const N: usize> From<[(String, Signal<bool>); N]> for Classes {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use assertr::prelude::*;
+
+    use super::*;
 
     #[test]
     fn test_single_class() {

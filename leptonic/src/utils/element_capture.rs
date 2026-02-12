@@ -40,12 +40,13 @@
 //! Effects have already run once. `CapturedElement` handles this case by notifying a
 //! `Trigger`, causing dependent Effects to re-run.
 
-use leptos::prelude::*;
-use leptos::tachys::html::attribute::{Attribute, NamedAttributeKey, NextAttribute};
+use std::{future::Future, ops::Deref, sync::Arc};
+
+use leptos::{
+    prelude::*,
+    tachys::html::attribute::{Attribute, NamedAttributeKey, NextAttribute},
+};
 use send_wrapper::SendWrapper;
-use std::future::Future;
-use std::ops::Deref;
-use std::sync::Arc;
 use web_sys::DomRect;
 
 /// A reactive element reference populated by an [`ElementCaptureAttr`].

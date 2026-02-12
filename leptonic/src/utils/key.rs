@@ -1,8 +1,8 @@
-use crate::Language;
-use std::borrow::Cow;
-use std::convert::Infallible;
-use std::str::FromStr;
+use std::{borrow::Cow, convert::Infallible, str::FromStr};
+
 use strum::{EnumIter, IntoEnumIterator};
+
+use crate::Language;
 
 /// A keyboard key.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, EnumIter)]

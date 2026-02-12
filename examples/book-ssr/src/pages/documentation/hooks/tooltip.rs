@@ -1,15 +1,10 @@
 use std::marker::PhantomData;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
+use leptonic::{components::prelude::*, hooks::*, utils::locale::WritingDirection};
+use leptos::{html, portal::Portal, prelude::*};
 
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
-use leptonic::utils::locale::WritingDirection;
-use leptos::html;
-use leptos::portal::Portal;
-use leptos::prelude::*;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageUseTooltipHook() -> impl IntoView {

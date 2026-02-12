@@ -1,15 +1,26 @@
-use leptos::attr::custom::{custom_attribute, CustomAttr};
-use leptos::attr::Attr;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use leptos::{attr, ev};
+use leptos::{
+    attr,
+    attr::{
+        custom::{custom_attribute, CustomAttr},
+        Attr,
+    },
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::{Event, FocusEvent};
 
 use super::use_field::ValidationState;
-use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
-use crate::utils::aria::{AriaInvalid, AriaRequired};
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
+        IntoAttrs,
+    },
+    utils::{
+        aria::{AriaInvalid, AriaRequired},
+        EventHandler,
+    },
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckbox.ts
 

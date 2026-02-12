@@ -1,34 +1,41 @@
-use crate::utils::aria::AriaDescribedby;
-use crate::utils::focus::focus_element;
-use crate::utils::open_link::open_link;
-use crate::utils::platform::device;
-use crate::utils::style::TouchActionStyle;
-use crate::utils::use_description::use_description;
-use crate::hooks::IntoAttrs;
-use crate::utils::{
-    is_over, node_contains,
-    pointer_type::PointerType,
-    use_continue_propagation,
-    virtual_click::{is_virtual_click, is_virtual_pointer_event},
-    ContainsTarget, ElementExt, EventAccessors, EventHandler, EventModifiers, EventTargetExt,
-    Modifiers,
+use std::{
+    sync::{atomic::Ordering, Arc},
+    time::Duration,
 };
+
 use educe::Educe;
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use leptos::tachys::html::style::Style;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+    tachys::html::style::Style,
+};
 use leptos_use::use_event_listener;
 use send_wrapper::SendWrapper;
-use std::sync::atomic::Ordering;
-use std::sync::Arc;
-use std::time::Duration;
 use wasm_bindgen::JsCast;
 use web_sys::{
     DragEvent, EventTarget, HtmlElement, HtmlInputElement, HtmlTextAreaElement, KeyboardEvent,
     MouseEvent, PointerEvent,
+};
+
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        aria::AriaDescribedby,
+        focus::focus_element,
+        is_over, node_contains,
+        open_link::open_link,
+        platform::device,
+        pointer_type::PointerType,
+        style::TouchActionStyle,
+        use_continue_propagation,
+        use_description::use_description,
+        virtual_click::{is_virtual_click, is_virtual_pointer_event},
+        ContainsTarget, ElementExt, EventAccessors, EventHandler, EventModifiers, EventTargetExt,
+        Modifiers,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts

@@ -1,16 +1,15 @@
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
-use indoc::indoc;
-
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
-use leptonic::hooks::{PlacementX, PlacementY};
-use leptonic::prelude::Size;
-use leptonic::utils::locale::WritingDirection;
-use leptos::html;
-use leptos::portal::Portal;
-use leptos::prelude::*;
 use std::marker::PhantomData;
+
+use indoc::indoc;
+use leptonic::{
+    components::prelude::*,
+    hooks::{PlacementX, PlacementY, *},
+    prelude::Size,
+    utils::locale::WritingDirection,
+};
+use leptos::{html, portal::Portal, prelude::*};
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageUsePopoverHook() -> impl IntoView {

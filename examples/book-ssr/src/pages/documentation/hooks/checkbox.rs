@@ -1,12 +1,10 @@
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
-use indoc::indoc;
-
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
-use leptonic::prelude::Size;
-use leptos::prelude::*;
 use std::collections::HashSet;
+
+use indoc::indoc;
+use leptonic::{components::prelude::*, hooks::*, prelude::Size};
+use leptos::prelude::*;
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageUseCheckboxHook() -> impl IntoView {

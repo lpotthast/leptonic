@@ -1,99 +1,67 @@
-use crate::pages::documentation::atoms::anchor_link::PageAtomAnchorLink;
-use crate::pages::documentation::atoms::button::PageAtomButton;
-use crate::pages::documentation::atoms::focus_ring::PageAtomFocusRing;
-use crate::pages::documentation::atoms::focus_scope::PageAtomFocusScope;
-use crate::pages::documentation::atoms::grid::PageAtomGrid;
-use crate::pages::documentation::atoms::link::PageAtomLink;
-use crate::pages::documentation::atoms::popover::PageAtomPopover;
-use crate::pages::documentation::atoms::slider::PageAtomSlider;
-use crate::pages::documentation::components::feedback::alert::PageAlert;
-use crate::pages::documentation::components::feedback::chip::PageChip;
-use crate::pages::documentation::components::feedback::kbd::PageKbd;
-use crate::pages::documentation::components::feedback::modal::PageModal;
-use crate::pages::documentation::components::feedback::popover::PagePopover;
-use crate::pages::documentation::components::feedback::progress::PageProgress;
-use crate::pages::documentation::components::feedback::toast::PageToast;
-use crate::pages::documentation::components::general::callback::PageCallback;
-use crate::pages::documentation::components::general::icon::PageIcon;
-use crate::pages::documentation::components::general::typography::PageTypography;
-use crate::pages::documentation::components::input::button::PageButton;
-use crate::pages::documentation::components::input::checkbox::PageCheckbox;
-use crate::pages::documentation::components::input::color_picker::PageColorPicker;
-use crate::pages::documentation::components::input::date_time::PageDateTime;
-use crate::pages::documentation::components::input::input_field::PageInput;
-use crate::pages::documentation::components::input::radio::PageRadio;
-use crate::pages::documentation::components::input::select::PageSelect;
-use crate::pages::documentation::components::input::slider::PageSlider;
-use crate::pages::documentation::components::input::tiptap_editor::PageTiptapEditor;
-use crate::pages::documentation::components::input::toggle::PageToggle;
-use crate::pages::documentation::components::layout::app_bar::PageAppBar;
-use crate::pages::documentation::components::layout::collapsible::PageCollapsible;
-use crate::pages::documentation::components::layout::drawer::PageDrawer;
-use crate::pages::documentation::components::layout::grid::PageGrid;
-use crate::pages::documentation::components::layout::separator::PageSeparator;
-use crate::pages::documentation::components::layout::skeleton::PageSkeleton;
-use crate::pages::documentation::components::layout::stack::PageStack;
-use crate::pages::documentation::components::layout::tab::PageTab;
-use crate::pages::documentation::components::layout::table::PageTable;
-use crate::pages::documentation::doc_layout::DocLayout;
-use crate::pages::documentation::getting_started::changelog::PageChangelog;
-use crate::pages::documentation::getting_started::installation::PageInstallation;
-use crate::pages::documentation::getting_started::overview::PageOverview;
-use crate::pages::documentation::getting_started::themes::PageThemes;
-use crate::pages::documentation::hooks::anchor_link::PageUseAnchorLink;
-use crate::pages::documentation::hooks::breadcrumbs::PageUseBreadcrumbs;
-use crate::pages::documentation::hooks::button::PageUseButton;
-use crate::pages::documentation::hooks::checkbox::PageUseCheckboxHook;
-use crate::pages::documentation::hooks::combobox::PageUseCombobox;
-use crate::pages::documentation::hooks::disclosure::PageUseDisclosure;
-use crate::pages::documentation::hooks::dnd::PageUseDnd;
-use crate::pages::documentation::hooks::focus::PageUseFocus;
-use crate::pages::documentation::hooks::focus_manager::PageUseFocusManager;
-use crate::pages::documentation::hooks::focus_ring::PageUseFocusRing;
-use crate::pages::documentation::hooks::focus_within::PageUseFocusWithin;
-use crate::pages::documentation::hooks::focusable::PageUseFocusable;
-use crate::pages::documentation::hooks::grid::PageUseGrid;
-use crate::pages::documentation::hooks::has_tabbable_child::PageUseHasTabbableChild;
-use crate::pages::documentation::hooks::hover::PageUseHover;
-use crate::pages::documentation::hooks::interact_outside::PageUseInteractOutside;
-use crate::pages::documentation::hooks::keyboard::PageUseKeyboard;
-use crate::pages::documentation::hooks::label::PageUseLabel;
-use crate::pages::documentation::hooks::link::PageUseLink;
-use crate::pages::documentation::hooks::listbox::PageUseListbox;
-use crate::pages::documentation::hooks::menu::PageUseMenuHook;
-use crate::pages::documentation::hooks::meter::PageUseMeter;
-use crate::pages::documentation::hooks::modal::PageUseModalHook;
-use crate::pages::documentation::hooks::move_within::PageUseMoveWithin;
-use crate::pages::documentation::hooks::overlay::PageUseOverlay;
-use crate::pages::documentation::hooks::popover::PageUsePopoverHook;
-use crate::pages::documentation::hooks::press::PageUsePress;
-use crate::pages::documentation::hooks::prevent_scroll::PageUsePreventScroll;
-use crate::pages::documentation::hooks::progress::PageUseProgressBar;
-use crate::pages::documentation::hooks::r#move::PageUseMove;
-use crate::pages::documentation::hooks::radio::PageUseRadioHook;
-use crate::pages::documentation::hooks::scroll_wheel::PageUseScrollWheel;
-use crate::pages::documentation::hooks::select::PageUseSelectHook;
-use crate::pages::documentation::hooks::selection::PageUseSelection;
-use crate::pages::documentation::hooks::separator::PageUseSeparatorHook;
-use crate::pages::documentation::hooks::slider::PageUseSliderHook;
-use crate::pages::documentation::hooks::switch::PageUseSwitchHook;
-use crate::pages::documentation::hooks::table::PageUseTableHook;
-use crate::pages::documentation::hooks::tabs::PageUseTabsHook;
-use crate::pages::documentation::hooks::tag::PageUseTag;
-use crate::pages::documentation::hooks::text_field::PageUseTextField;
-use crate::pages::documentation::hooks::toolbar::PageUseToolbar;
-use crate::pages::documentation::hooks::tooltip::PageUseTooltipHook;
-use crate::pages::documentation::hooks::tree::PageUseTree;
-use crate::pages::{editor::ThemeEditor, err404::PageErr404, welcome::PageWelcome};
-use crate::routes;
-use leptonic::hooks::LinkTarget;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{components::prelude::*, hooks::LinkTarget, prelude::*};
 use leptos::prelude::*;
 use leptos_meta::{provide_meta_context, Link as MetaLink, Meta, MetaTags, Stylesheet, Title};
-use leptos_router::components::*;
-use leptos_router::hooks::use_location;
-use leptos_router::path;
+use leptos_router::{components::*, hooks::use_location, path};
 use leptos_use::use_media_query;
+
+use crate::{
+    pages::{
+        documentation::{
+            atoms::{
+                anchor_link::PageAtomAnchorLink, button::PageAtomButton,
+                focus_ring::PageAtomFocusRing, focus_scope::PageAtomFocusScope, grid::PageAtomGrid,
+                link::PageAtomLink, popover::PageAtomPopover, slider::PageAtomSlider,
+            },
+            components::{
+                feedback::{
+                    alert::PageAlert, chip::PageChip, kbd::PageKbd, modal::PageModal,
+                    popover::PagePopover, progress::PageProgress, toast::PageToast,
+                },
+                general::{callback::PageCallback, icon::PageIcon, typography::PageTypography},
+                input::{
+                    button::PageButton, checkbox::PageCheckbox, color_picker::PageColorPicker,
+                    date_time::PageDateTime, input_field::PageInput, radio::PageRadio,
+                    select::PageSelect, slider::PageSlider, tiptap_editor::PageTiptapEditor,
+                    toggle::PageToggle,
+                },
+                layout::{
+                    app_bar::PageAppBar, collapsible::PageCollapsible, drawer::PageDrawer,
+                    grid::PageGrid, separator::PageSeparator, skeleton::PageSkeleton,
+                    stack::PageStack, tab::PageTab, table::PageTable,
+                },
+            },
+            doc_layout::DocLayout,
+            getting_started::{
+                changelog::PageChangelog, installation::PageInstallation, overview::PageOverview,
+                themes::PageThemes,
+            },
+            hooks::{
+                anchor_link::PageUseAnchorLink, breadcrumbs::PageUseBreadcrumbs,
+                button::PageUseButton, checkbox::PageUseCheckboxHook, combobox::PageUseCombobox,
+                disclosure::PageUseDisclosure, dnd::PageUseDnd, focus::PageUseFocus,
+                focus_manager::PageUseFocusManager, focus_ring::PageUseFocusRing,
+                focus_within::PageUseFocusWithin, focusable::PageUseFocusable, grid::PageUseGrid,
+                has_tabbable_child::PageUseHasTabbableChild, hover::PageUseHover,
+                interact_outside::PageUseInteractOutside, keyboard::PageUseKeyboard,
+                label::PageUseLabel, link::PageUseLink, listbox::PageUseListbox,
+                menu::PageUseMenuHook, meter::PageUseMeter, modal::PageUseModalHook,
+                move_within::PageUseMoveWithin, overlay::PageUseOverlay,
+                popover::PageUsePopoverHook, press::PageUsePress,
+                prevent_scroll::PageUsePreventScroll, progress::PageUseProgressBar,
+                r#move::PageUseMove, radio::PageUseRadioHook, scroll_wheel::PageUseScrollWheel,
+                select::PageUseSelectHook, selection::PageUseSelection,
+                separator::PageUseSeparatorHook, slider::PageUseSliderHook,
+                switch::PageUseSwitchHook, table::PageUseTableHook, tabs::PageUseTabsHook,
+                tag::PageUseTag, text_field::PageUseTextField, toolbar::PageUseToolbar,
+                tooltip::PageUseTooltipHook, tree::PageUseTree,
+            },
+        },
+        editor::ThemeEditor,
+        err404::PageErr404,
+        welcome::PageWelcome,
+    },
+    routes,
+};
 
 pub const LEPTOS_OUTPUT_NAME: &str = env!("LEPTOS_OUTPUT_NAME");
 

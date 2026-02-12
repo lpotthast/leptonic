@@ -1,17 +1,18 @@
-pub use crate::utils::style::Style;
-pub use crate::utils::style::Style::*;
-use leptos::attr::IntoAttributeValue;
-use leptos::prelude::{Get, Signal};
-use leptos::tachys::html::style::IntoStyle;
-use leptos::tachys::renderer::dom::Element;
-use leptos::tachys::renderer::Rndr;
-use leptos::typed_builder::TypedBuilder;
-use reactive_graph::effect::RenderEffect;
-use reactive_graph::signal::ReadSignal;
+use std::{backtrace::Backtrace, borrow::Cow, sync::Arc};
+
+use leptos::{
+    attr::IntoAttributeValue,
+    prelude::{Get, Signal},
+    tachys::{
+        html::style::IntoStyle,
+        renderer::{dom::Element, Rndr},
+    },
+    typed_builder::TypedBuilder,
+};
+use reactive_graph::{effect::RenderEffect, signal::ReadSignal};
 use smallvec::SmallVec;
-use std::backtrace::Backtrace;
-use std::borrow::Cow;
-use std::sync::Arc;
+
+pub use crate::utils::style::{Style, Style::*};
 
 /// Fast FNV-1a hash for quick string comparison.
 /// Used to avoid full string comparison when checking if styles changed.
@@ -819,8 +820,9 @@ impl<const N: usize> From<[(Style, Option<String>); N]> for Styles {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use assertr::prelude::*;
+
+    use super::*;
 
     #[test]
     fn test_static_tuple() {

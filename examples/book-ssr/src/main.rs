@@ -5,7 +5,6 @@ async fn main() {
     use book_ssr::app::*;
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list, LeptosRoutes};
-
     use tracing_subscriber::{
         prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, Layer,
     };

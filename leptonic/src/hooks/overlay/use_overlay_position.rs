@@ -1,14 +1,13 @@
 use std::marker::PhantomData;
 
 use educe::Educe;
-use leptos::prelude::*;
-use leptos::tachys::html::style::style;
-use leptos::tachys::html::style::Style;
-use leptos_use::core::IntoElementMaybeSignal;
-use leptos_use::{use_document, use_element_bounding};
+use leptos::{
+    prelude::*,
+    tachys::html::style::{style, Style},
+};
+use leptos_use::{core::IntoElementMaybeSignal, use_document, use_element_bounding};
 
-use crate::utils::locale::WritingDirection;
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::locale::WritingDirection};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

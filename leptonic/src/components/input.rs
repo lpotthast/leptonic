@@ -1,7 +1,6 @@
-use leptos::html;
-use leptos::html::ElementType;
-use leptos::prelude::*;
 use std::ops::Deref;
+
+use leptos::{html, html::ElementType, prelude::*};
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlElement, HtmlInputElement};
 

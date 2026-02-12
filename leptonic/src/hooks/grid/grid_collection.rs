@@ -1,5 +1,4 @@
-use std::collections::HashMap;
-use std::hash::Hash;
+use std::{collections::HashMap, hash::Hash};
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-types/grid/src/index.d.ts
 // Specifically the `GridCollection<T>` interface.
@@ -147,8 +146,9 @@ impl<K: Hash + Eq + Clone> Default for GridCollection<K> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use assertr::prelude::*;
+
+    use super::*;
 
     fn make_collection() -> GridCollection<String> {
         GridCollection::new(vec![

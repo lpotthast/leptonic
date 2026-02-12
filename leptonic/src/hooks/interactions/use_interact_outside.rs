@@ -1,10 +1,13 @@
-use crate::utils::{CapturedElement, ElementCaptureAttr, EventAccessors};
-use crate::hooks::IntoAttrs;
 use leptos::prelude::*;
 use leptos_use::{use_event_listener_with_options, UseEventListenerOptions};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::PointerEvent;
+
+use crate::{
+    hooks::IntoAttrs,
+    utils::{CapturedElement, ElementCaptureAttr, EventAccessors},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useInteractOutside.ts
 

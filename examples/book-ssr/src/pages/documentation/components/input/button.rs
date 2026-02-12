@@ -1,11 +1,8 @@
 use indoc::indoc;
-
-use leptonic::components::prelude::*;
-use leptonic::prelude::*;
+use leptonic::{components::prelude::*, prelude::*};
 use leptos::prelude::*;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 #[allow(clippy::too_many_lines)]

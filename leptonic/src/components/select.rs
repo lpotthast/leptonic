@@ -1,6 +1,6 @@
-use leptos::html;
-use leptos::prelude::*;
 use std::fmt::Debug;
+
+use leptos::{html, prelude::*};
 use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
 
 use crate::{

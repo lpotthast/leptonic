@@ -3,16 +3,19 @@
 //! This module provides types for creating accessible menu buttons by combining
 //! button semantics with menu trigger behavior.
 
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::prelude::*;
+use leptos::{attr, attr::Attr, prelude::*};
 
-use crate::hooks::button::UseButtonProps;
-use crate::hooks::menu::use_menu_trigger::{UseMenuTriggerMenuProps, UseMenuTriggerProps};
-use crate::hooks::{MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps};
-use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHasPopup};
-use crate::utils::MergeWith;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        button::UseButtonProps,
+        menu::use_menu_trigger::{UseMenuTriggerMenuProps, UseMenuTriggerProps},
+        IntoAttrs, MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps,
+    },
+    utils::{
+        aria::{AriaDisabled, AriaExpanded, AriaHasPopup},
+        MergeWith,
+    },
+};
 
 /// Return type from merging `UseButtonProps` with `UseMenuTriggerProps`.
 ///

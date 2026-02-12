@@ -1,13 +1,19 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 
-use crate::hooks::interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput};
-use crate::utils::{EventAccessors, EventHandler};
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput},
+        IntoAttrs,
+    },
+    utils::{EventAccessors, EventHandler},
+};
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModalOverlay.ts
 // React Aria calls this "useModalOverlay" with "underlay" props. We use "backdrop" terminology for clarity.

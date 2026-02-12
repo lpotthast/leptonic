@@ -1,9 +1,8 @@
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
-
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageUseSelectHook() -> impl IntoView {

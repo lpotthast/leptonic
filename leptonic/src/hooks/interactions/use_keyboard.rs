@@ -1,12 +1,16 @@
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+};
+
+use leptos::{
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::KeyboardEvent;
 
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::EventHandler};
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useKeyboard.ts
 
 // =============================================================================

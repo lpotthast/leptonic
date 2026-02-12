@@ -1,11 +1,9 @@
-use std::fmt::Debug;
-use std::sync::Arc;
+use std::{fmt::Debug, sync::Arc};
 
 use leptos::prelude::*;
 use uuid::Uuid;
 
-use crate::components::tabs::use_tabs;
-use crate::{Mount, Out};
+use crate::{components::tabs::use_tabs, Mount, Out};
 
 #[derive(Clone)]
 pub struct TabData {

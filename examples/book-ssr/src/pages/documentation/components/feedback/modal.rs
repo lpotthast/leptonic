@@ -1,10 +1,8 @@
 use indoc::indoc;
-
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
-use leptonic::components::prelude::*;
-use leptonic::utils::key::Key;
+use leptonic::{components::prelude::*, utils::key::Key};
 use leptos::prelude::*;
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageModal() -> impl IntoView {

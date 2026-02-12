@@ -1,8 +1,9 @@
-use crate::hooks::*;
-use crate::utils::classes::Classes;
-use crate::utils::styles::Styles;
-use leptos::context::Provider;
-use leptos::prelude::*;
+use leptos::{context::Provider, prelude::*};
+
+use crate::{
+    hooks::*,
+    utils::{classes::Classes, styles::Styles},
+};
 
 // TODO: add documentation page
 #[component]

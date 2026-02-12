@@ -1,20 +1,13 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use std::collections::HashSet;
-use std::hash::Hash;
-use web_sys::KeyboardEvent;
+use std::{collections::HashSet, hash::Hash};
 
-use crate::hooks::selection::use_selectable_list::{
-    use_selectable_list, UseSelectableListInput, UseSelectableListReturn,
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
 };
-use crate::hooks::selection::use_selection_state::{Selection, SelectionBehavior, SelectionMode};
-use crate::hooks::selection::use_type_select::{
-    use_type_select, UseTypeSelectInput, UseTypeSelectReturn,
-};
-use crate::utils::EventHandler;
+use web_sys::KeyboardEvent;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenu.ts
 
@@ -25,9 +18,20 @@ use crate::utils::EventHandler;
 // No intentional deviations from the react-aria implementation.
 //
 // =============================================================================
-
 use crate::hooks::selection::use_selectable_collection::FocusStrategy;
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::{
+        selection::{
+            use_selectable_list::{
+                use_selectable_list, UseSelectableListInput, UseSelectableListReturn,
+            },
+            use_selection_state::{Selection, SelectionBehavior, SelectionMode},
+            use_type_select::{use_type_select, UseTypeSelectInput, UseTypeSelectReturn},
+        },
+        IntoAttrs,
+    },
+    utils::EventHandler,
+};
 
 /// Input parameters for the `use_menu` hook.
 #[derive(Clone)]

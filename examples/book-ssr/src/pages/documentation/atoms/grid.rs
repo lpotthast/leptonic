@@ -1,27 +1,33 @@
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use std::collections::HashSet;
+
 use indoc::indoc;
 use itertools::Itertools;
-use leptonic::atoms::focus_ring::FocusRing;
-use leptonic::atoms::grid::{
-    Grid as GridAtom, GridCell as GridCellAtom, GridRow as GridRowAtom,
-    GridRowGroup as GridRowGroupAtom,
+use leptonic::{
+    atoms::{
+        focus_ring::FocusRing,
+        grid::{
+            Grid as GridAtom, GridCell as GridCellAtom, GridRow as GridRowAtom,
+            GridRowGroup as GridRowGroupAtom,
+        },
+        grid_list::{GridList, GridListItem},
+    },
+    components::prelude::*,
+    hooks::{
+        EscapeKeyBehavior, GridCollection, GridFocusMode, GridRow as GridRowData, Selection,
+        SelectionBehavior, SelectionMode,
+    },
+    utils::styles::{
+        Style::{
+            AlignItems, Background, Border, BorderBottom, BorderRadius, Cursor, Display,
+            FlexDirection, FontFamily, FontSize, Gap, Height, MarginTop, MaxWidth, Outline,
+            OutlineOffset, Overflow, Padding, UserSelect, Width,
+        },
+        Styles,
+    },
 };
-use leptonic::atoms::grid_list::{GridList, GridListItem};
-
-use leptonic::components::prelude::*;
-use leptonic::hooks::{
-    EscapeKeyBehavior, GridCollection, GridFocusMode, GridRow as GridRowData, Selection,
-    SelectionBehavior, SelectionMode,
-};
-use leptonic::utils::styles::Style::{
-    AlignItems, Background, Border, BorderBottom, BorderRadius, Cursor, Display, FlexDirection,
-    FontFamily, FontSize, Gap, Height, MarginTop, MaxWidth, Outline, OutlineOffset, Overflow,
-    Padding, UserSelect, Width,
-};
-use leptonic::utils::styles::Styles;
 use leptos::prelude::*;
-use std::collections::HashSet;
+
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 fn cell_style(color: &str) -> Styles {
     Styles::builder()

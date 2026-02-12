@@ -1,11 +1,8 @@
 use indoc::indoc;
-
-use leptonic::components::prelude::*;
-use leptonic::utils::color::HSV;
+use leptonic::{components::prelude::*, utils::color::HSV};
 use leptos::prelude::*;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageColorPicker() -> impl IntoView {

@@ -1,18 +1,20 @@
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash};
+
+use leptos::{
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use web_sys::KeyboardEvent;
 
-use crate::utils::EventHandler;
-use crate::hooks::IntoAttrs;
-
-use super::use_selectable_collection::{
-    use_selectable_collection, FocusStrategy, UseSelectableCollectionInput,
-    UseSelectableCollectionReturn,
+use super::{
+    use_selectable_collection::{
+        use_selectable_collection, FocusStrategy, UseSelectableCollectionInput,
+        UseSelectableCollectionReturn,
+    },
+    use_selection_state::{Selection, SelectionBehavior, SelectionMode},
 };
-use super::use_selection_state::{Selection, SelectionBehavior, SelectionMode};
+use crate::{hooks::IntoAttrs, utils::EventHandler};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableList.ts
 

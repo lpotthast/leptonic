@@ -1,6 +1,9 @@
-use leptos::callback::Callable;
-use leptos::prelude::{AnyView, Callback, IntoAny};
 use std::fmt::{Debug, Formatter};
+
+use leptos::{
+    callback::Callable,
+    prelude::{AnyView, Callback, IntoAny},
+};
 
 /// A callback which returns a `leptos::View` without requiring any input.
 /// Use `ViewProducer` when you would otherwise write `Callback<(), leptos::View>`.

@@ -1,23 +1,20 @@
-use crate::hooks::{
-    use_focus_ring, use_focusable, use_press, FocusHandle, MergedFocusablePressFocusRingAttrs,
-    MergedFocusablePressFocusRingProps, PressEvent, UseFocusRingInput, UseFocusRingReturn,
-    UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn,
-};
-use crate::utils::aria::*;
-use crate::utils::scroll_behavior::ScrollBehavior;
-use crate::utils::{ElementCaptureAttr, MergeWith};
-use crate::hooks::IntoAttrs;
 use educe::Educe;
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::oco::Oco;
-use leptos::prelude::*;
+use leptos::{attr, attr::Attr, oco::Oco, prelude::*};
 use leptos_use::{use_document, use_window};
 use reactive_graph::callback::{Callable, Callback};
 use wasm_bindgen::JsValue;
 use web_sys::ScrollIntoViewOptions;
 
 use super::LinkElementType;
+use crate::{
+    hooks::{
+        use_focus_ring, use_focusable, use_press, FocusHandle, IntoAttrs,
+        MergedFocusablePressFocusRingAttrs, MergedFocusablePressFocusRingProps, PressEvent,
+        UseFocusRingInput, UseFocusRingReturn, UseFocusableInput, UseFocusableReturn,
+        UsePressInput, UsePressReturn,
+    },
+    utils::{aria::*, scroll_behavior::ScrollBehavior, ElementCaptureAttr, MergeWith},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

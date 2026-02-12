@@ -3,16 +3,22 @@
 //! This hook provides the ability to drag an element within the bounds of a container,
 //! with support for axis constraints, RTL layouts, and different constraint modes.
 
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
+use leptos::{
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use leptos_use::use_event_listener;
 use web_sys::PointerEvent;
 
 use super::use_move::MoveAxis;
-use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        element_capture::{CapturedElement, ElementCaptureAttr},
+        EventAccessors, EventHandler, EventTargetExt,
+    },
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

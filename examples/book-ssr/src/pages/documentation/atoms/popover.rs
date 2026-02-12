@@ -1,14 +1,17 @@
 use indoc::indoc;
-use leptonic::atoms::button::Button;
-use leptonic::atoms::hoverable::Hoverable;
-use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger};
-use leptonic::components::prelude::*;
-use leptonic::hooks::{PlacementX, PlacementY};
-use leptonic::utils::locale::WritingDirection;
+use leptonic::{
+    atoms::{
+        button::Button,
+        hoverable::Hoverable,
+        popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger},
+    },
+    components::prelude::*,
+    hooks::{PlacementX, PlacementY},
+    utils::locale::WritingDirection,
+};
 use leptos::prelude::*;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageAtomPopover() -> impl IntoView {

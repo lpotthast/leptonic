@@ -170,8 +170,9 @@ pub fn use_locale_or_default() -> Locale {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use assertr::prelude::*;
+
+    use super::*;
 
     #[test]
     fn test_locale_default() {

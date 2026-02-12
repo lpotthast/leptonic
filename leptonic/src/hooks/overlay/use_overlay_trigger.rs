@@ -1,10 +1,12 @@
-use leptos::attr;
-use leptos::attr::{Attr, IntoAttributeValue};
-use leptos::oco::Oco;
-use leptos::prelude::*;
+use leptos::{
+    attr,
+    attr::{Attr, IntoAttributeValue},
+    oco::Oco,
+    prelude::*,
+};
 
-use crate::hooks::IntoAttrs;
 use crate::{
+    hooks::IntoAttrs,
     prelude::{AriaExpanded, AriaHasPopup},
     utils::aria::AriaControls,
 };

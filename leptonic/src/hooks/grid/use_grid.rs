@@ -1,25 +1,36 @@
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash};
 
-use leptos::attr::Attr;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use leptos::{attr, ev};
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
-use crate::hooks::selection::keyboard_delegate::KeyboardDelegate;
-use crate::hooks::selection::use_selection_state::{
-    use_selection_state, Selection, SelectionBehavior, SelectionMode, UseSelectionStateInput,
-    UseSelectionStateReturn,
+use super::{
+    grid_collection::GridCollection,
+    grid_keyboard_delegate::{GridFocusMode, GridKeyboardDelegate},
 };
-use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
-use crate::utils::{EventAccessors, EventHandler};
-use crate::hooks::IntoAttrs;
-
-use super::grid_collection::GridCollection;
-use super::grid_keyboard_delegate::{GridFocusMode, GridKeyboardDelegate};
+use crate::{
+    hooks::{
+        selection::{
+            keyboard_delegate::KeyboardDelegate,
+            use_selection_state::{
+                use_selection_state, Selection, SelectionBehavior, SelectionMode,
+                UseSelectionStateInput, UseSelectionStateReturn,
+            },
+        },
+        IntoAttrs,
+    },
+    utils::{
+        aria::{AriaDisabled, AriaMultiselectable},
+        EventAccessors, EventHandler,
+    },
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGrid.ts
 

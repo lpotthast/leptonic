@@ -17,12 +17,10 @@
 //!    `Signal<T>` (via `ReactiveFunction`), so this works automatically once the inner type
 //!    implements `AttributeValue`.
 
-use itertools::Itertools;
-use leptos::attr::AttributeKey;
-use leptos::prelude::*;
 use std::str::FromStr;
 
-use leptos::tachys::html::attribute::AttributeValue;
+use itertools::Itertools;
+use leptos::{attr::AttributeKey, prelude::*, tachys::html::attribute::AttributeValue};
 use smallvec::SmallVec;
 // ----------------------------------------------------------------------------------
 // Macros

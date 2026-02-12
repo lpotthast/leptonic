@@ -1,8 +1,9 @@
 use std::sync::atomic::{AtomicIsize, Ordering::SeqCst};
 
-use crate::hooks::IntoAttrs;
 use leptos::prelude::*;
 use leptos_use::use_window;
+
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS

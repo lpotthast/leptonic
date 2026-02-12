@@ -1,14 +1,13 @@
 use indoc::indoc;
-
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
-use leptonic::utils::aria::{AriaExpanded, AriaHasPopup};
-use leptos::html;
-use leptos::prelude::*;
+use leptonic::{
+    components::prelude::*,
+    hooks::*,
+    utils::aria::{AriaExpanded, AriaHasPopup},
+};
+use leptos::{html, prelude::*};
 use leptos_use::use_window;
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageUseButton() -> impl IntoView {

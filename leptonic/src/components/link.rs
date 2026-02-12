@@ -1,11 +1,13 @@
-use crate::atoms::link::{AnchorLink as AnchorLinkAtom, Link as LinkAtom, LinkExt as LinkExtAtom};
-pub use crate::hooks::LinkRel;
-use crate::hooks::{LinkTarget, PressEvent};
-use crate::utils::classes::Classes;
-use crate::utils::styles::Styles;
-use crate::ScrollBehavior;
 use leptos::prelude::*;
 use leptos_router::components::ToHref;
+
+pub use crate::hooks::LinkRel;
+use crate::{
+    atoms::link::{AnchorLink as AnchorLinkAtom, Link as LinkAtom, LinkExt as LinkExtAtom},
+    hooks::{LinkTarget, PressEvent},
+    utils::{classes::Classes, styles::Styles},
+    ScrollBehavior,
+};
 
 #[component]
 pub fn AnchorLink(

@@ -1,8 +1,9 @@
-use crate::pages::button::ButtonPage;
-use crate::ui_tests::UiTest;
-use assertr::prelude::*;
 use std::time::Duration;
+
+use assertr::prelude::*;
 use thirtyfour::{TimeoutConfiguration, WebDriver};
+
+use crate::{pages::button::ButtonPage, ui_tests::UiTest};
 
 pub struct ButtonTests {}
 

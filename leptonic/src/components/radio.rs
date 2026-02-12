@@ -1,5 +1,4 @@
-use leptos::context::Provider;
-use leptos::prelude::*;
+use leptos::{context::Provider, prelude::*};
 
 use crate::{
     components::form_control::{FormControlContext, FormInput},

@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash};
 
 use leptos::prelude::*;
 
@@ -249,9 +248,10 @@ where
 
 #[cfg(test)]
 mod tests {
+    use assertr::prelude::*;
+
     use super::*;
     use crate::hooks::grid::grid_collection::GridRow;
-    use assertr::prelude::*;
 
     fn make_delegate(focus_mode: GridFocusMode) -> GridKeyboardDelegate<String> {
         let collection = GridCollection::new(vec![

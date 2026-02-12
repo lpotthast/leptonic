@@ -1,6 +1,9 @@
-use leptos::attr::Attribute;
-use leptos::ev::{on, EventDescriptor, On, SharedEventCallback};
 use std::sync::Arc;
+
+use leptos::{
+    attr::Attribute,
+    ev::{on, EventDescriptor, On, SharedEventCallback},
+};
 use wasm_bindgen::JsValue;
 
 /// Internal storage for event handlers - optimized for the common single-handler case.

@@ -1,13 +1,12 @@
-use leptonic::components::prelude::*;
-use leptonic::hooks::*;
-use leptos::html;
-use leptos::prelude::*;
+use leptonic::{components::prelude::*, hooks::*};
+use leptos::{html, prelude::*};
 use leptos_use::use_element_bounding;
-use ringbuf::traits::{Consumer, Observer, RingBuffer};
-use ringbuf::HeapRb;
+use ringbuf::{
+    traits::{Consumer, Observer, RingBuffer},
+    HeapRb,
+};
 
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
+use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[derive(Clone)]
 pub enum Event {

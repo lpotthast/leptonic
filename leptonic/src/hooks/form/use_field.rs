@@ -1,9 +1,10 @@
-use leptos::attr;
-use leptos::attr::Attr;
+use leptos::{attr, attr::Attr};
 use uuid::Uuid;
 
-use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, AriaRequired};
-use crate::hooks::IntoAttrs;
+use crate::{
+    hooks::IntoAttrs,
+    utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, AriaRequired},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useField.ts
 

@@ -1,6 +1,7 @@
-use crate::app::AppLayoutContext;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
+
+use crate::app::AppLayoutContext;
 
 pub enum Toc {
     Leaf {

@@ -1,13 +1,13 @@
 use leptos::prelude::*;
 use uuid::Uuid;
 
-use crate::utils::classes::Classes;
 use crate::{
     hooks::{
         use_press, use_prevent_scroll, IntoAttrs, UsePressInput, UsePressReturn,
         UsePreventScrollInput,
     },
     prelude::GlobalKeyboardEvent,
+    utils::classes::Classes,
 };
 
 #[derive(Clone)]

@@ -1,21 +1,30 @@
-use leptos::attr;
-use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
-use leptos::prelude::*;
-use std::collections::HashSet;
-use std::hash::Hash;
+use std::{collections::HashSet, hash::Hash};
+
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
-use crate::utils::aria::{AriaDisabled, AriaMultiselectable, AriaOrientation};
-use crate::utils::EventHandler;
-
-use crate::hooks::IntoAttrs;
-use crate::hooks::selection::{
-    use_selectable_collection::FocusStrategy,
-    use_selectable_list::{use_selectable_list, UseSelectableListInput, UseSelectableListReturn},
-    use_selection_state::{Selection, SelectionBehavior, SelectionMode},
+use crate::{
+    hooks::{
+        selection::{
+            use_selectable_collection::FocusStrategy,
+            use_selectable_list::{
+                use_selectable_list, UseSelectableListInput, UseSelectableListReturn,
+            },
+            use_selection_state::{Selection, SelectionBehavior, SelectionMode},
+        },
+        IntoAttrs,
+    },
+    utils::{
+        aria::{AriaDisabled, AriaMultiselectable, AriaOrientation},
+        EventHandler,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useListBox.ts

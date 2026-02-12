@@ -1,5 +1,4 @@
-use leptos::context::Provider;
-use leptos::prelude::*;
+use leptos::{context::Provider, prelude::*};
 use uuid::Uuid;
 
 use crate::{components::tab::TabData, Mount};

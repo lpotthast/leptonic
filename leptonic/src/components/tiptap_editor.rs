@@ -1,12 +1,12 @@
 use leptos::prelude::*;
 use leptos_tiptap::*;
 
-use crate::utils::classes::Classes;
 use crate::{
     components::{
         button::{Button, ButtonSize},
         icon::Icon,
     },
+    utils::classes::Classes,
     Out,
 };
 

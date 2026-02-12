@@ -1,5 +1,5 @@
-use leptos::attr;
-use leptos::attr::Attr;
+use leptos::{attr, attr::Attr};
+
 use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridRowGroup.ts

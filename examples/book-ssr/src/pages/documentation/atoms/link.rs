@@ -1,12 +1,11 @@
-use crate::pages::documentation::article::Article;
-use crate::pages::documentation::toc::Toc;
-use crate::routes;
 use indoc::{formatdoc, indoc};
-
-use leptonic::components::prelude::*;
-use leptonic::hooks::LinkTarget;
-use leptonic::prelude::*;
+use leptonic::{components::prelude::*, hooks::LinkTarget, prelude::*};
 use leptos::prelude::*;
+
+use crate::{
+    pages::documentation::{article::Article, toc::Toc},
+    routes,
+};
 
 #[component]
 pub fn PageAtomLink() -> impl IntoView {
