@@ -51,17 +51,33 @@ msrv:
     cargo msrv --min "2021" --path leptonic
     cargo msrv --min "2021" --path leptonic-theme
 
-# Serve the Book example
+# Serve the Book example (https://127.0.0.1:4100)
 serve:
   cd ./examples/book-ssr && cargo leptos serve
 
-# Serve the Book example
+# Serve the Book example in release mode
 serve-release:
   cd ./examples/book-ssr && cargo leptos serve --release
 
 # Serve the test app (for manual inspection)
 serve-test-app:
   cd ./testing/test-app && cargo leptos serve
+
+# Serve the CSR template (http://127.0.0.1:4001)
+serve-template-csr:
+  cd ./examples/leptonic-template-csr && trunk serve
+
+# Serve the SSR template (http://127.0.0.1:3000)
+serve-template-ssr:
+  cd ./examples/leptonic-template-ssr && cargo leptos serve
+
+# Serve the SSR Nightly template (http://127.0.0.1:3000)
+serve-template-ssr-nightly:
+  cd ./examples/leptonic-template-ssr-nightly && cargo +nightly leptos serve
+
+# Serve the Tauri template (http://127.0.0.1:1420)
+serve-template-tauri:
+  cd ./examples/leptonic-template-tauri && cargo tauri dev
 
 # Run browser tests (headless by default)
 browser-test:
