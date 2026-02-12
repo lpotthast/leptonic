@@ -1,0 +1,150 @@
+.leptonic-slider {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  user-select: none;
+  width: 100%;
+  margin: var(--slider-margin); // This can cover basic mark texts. A more advanced solution might be required which increase the slider height when marks with text are rendered...
+  touch-action: none;
+  cursor: pointer;
+
+  .track {
+    position: relative;
+    display: inline-flex;
+    width: calc(100% - var(--slider-thumb-size));
+    height: var(--slider-track-height);
+    background-color: var(--slider-track-background-color);
+    background-image: var(--slider-track-background-image);
+    transition: 0s;
+
+    &:focus {
+      box-shadow: 0 0 0.1em var(--brand-color);
+    }
+  }
+
+  .fill {
+    position: absolute;
+    left: 0;
+    height: var(--slider-fill-height);
+    border-radius: var(--slider-fill-height);
+    background-color: var(--slider-fill-background-color);
+    background-image: var(--slider-fill-background-image);
+    top: calc(((var(--slider-fill-height) - var(--slider-track-height)) * -0.5));
+  }
+
+  .thumb {
+    &:before {
+      --slider-thumb-halo-displacement: calc((var(--slider-thumb-halo-size) / 2.0 - (var(--slider-thumb-size) - 2.0 * var(--slider-thumb-border-width)) / 2.0) * -1.0);
+      content: "";
+      display: block;
+      position: absolute;
+      width: var(--slider-thumb-halo-size);
+      height: var(--slider-thumb-halo-size);
+      border-radius: var(--slider-thumb-halo-size);
+      top: var(--slider-thumb-halo-displacement);
+      left: var(--slider-thumb-halo-displacement);
+      background-color: var(--slider-thumb-halo-background-color);
+      opacity: 0;
+      transition: all var(--slider-thumb-transition-speed);
+    }
+
+    &:hover,
+    &:active,
+    &:focus,
+    &[data-dragging] {
+      &:before {
+        opacity: var(--slider-thumb-halo-opacity);
+      }
+    }
+
+    &[data-dragging] {
+      &:before {
+        --slider-thumb-halo-displacement: calc((var(--slider-thumb-halo-size-while-dragged) / 2.0 - (var(--slider-thumb-size) - 2.0 * var(--slider-thumb-border-width)) / 2.0) * -1.0);
+        width: var(--slider-thumb-halo-size-while-dragged);
+        height: var(--slider-thumb-halo-size-while-dragged);
+        border-radius: var(--slider-thumb-halo-size-while-dragged);
+        top: var(--slider-thumb-halo-displacement);
+        left: var(--slider-thumb-halo-displacement);
+      }
+    }
+
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    height: var(--slider-thumb-size);
+    width: var(--slider-thumb-size);
+    border-width: var(--slider-thumb-border-width);
+    border-style: var(--slider-thumb-border-style);
+    border-color: var(--slider-thumb-border-color);
+    background-color: var(--slider-thumb-background-color);
+    box-shadow: var(--slider-thumb-box-shadow);
+    transition: 0s;
+    // The knob position is determined by setting the "left" attribute programmatically with a percentage value.
+
+    .tooltip {
+      display: none;
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 0.5em;
+      padding: 0.2em 0.5em;
+      background-color: var(--slider-thumb-tooltip-background-color);
+      color: var(--slider-thumb-tooltip-color);
+      border-radius: var(--slider-thumb-tooltip-border-radius);
+      font-size: var(--slider-thumb-tooltip-font-size);
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 2;
+
+      &[data-visible] {
+        display: block;
+      }
+    }
+  }
+
+  &[data-variant="round"] {
+    .track {
+      border-radius: calc(var(--slider-track-height) * 0.5);
+    }
+
+    .thumb {
+      border-radius: calc(var(--slider-thumb-size) * 0.5);
+    }
+  }
+
+  .marks {
+    display: block;
+    position: absolute;
+    width: calc(100% - var(--slider-thumb-size));
+
+    .mark {
+      display: block;
+      position: absolute;
+      top: calc(var(--slider-mark-size) * -1);
+      border: var(--slider-mark-size) solid var(--slider-mark-color);
+      border-radius: var(--slider-mark-size);
+      margin-left: calc(var(--slider-mark-size) * -1);
+      height: 0;
+      width: 0;
+
+      .title {
+        color: var(--slider-mark-title-color);
+        width: fit-content;
+        transform: translateX(-50%);
+        margin-top: calc(var(--slider-thumb-size) * 0.75);;
+      }
+
+      &.in-range {
+        border-color: var(--slider-mark-color-in-range);
+
+        .title {
+          color: var(--slider-mark-title-color-in-range);
+        }
+      }
+    }
+  }
+}

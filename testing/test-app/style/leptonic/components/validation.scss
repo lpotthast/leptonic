@@ -1,0 +1,89 @@
+/*
+  UNUSED
+
+  $leptonic-validation-error-color: tomato;
+  $leptonic-validation-error-color-cb-correction: #a6611a;
+  $leptonic-validation-success-color: #26b527;
+  $leptonic-validation-success-color-cb-correction: #018571;
+
+  .leptonic-validation-error,
+  .select2.select2-container.select2-container--default.leptonic-validation-error {
+    border-color: $leptonic-validation-error-color;
+    color: $leptonic-validation-error-color;
+
+    &:focus {
+      border-color: $leptonic-validation-error-color;
+      color: $leptonic-validation-error-color;
+    }
+  }
+
+  .leptonic-validation-success,
+  .select2.select2-container.select2-container--default.leptonic-validation-success {
+    border-color: $leptonic-validation-success-color;
+    color: $leptonic-validation-success-color;
+
+    &:focus {
+      border-color: $leptonic-validation-success-color;
+      color: $leptonic-validation-success-color;
+    }
+  }
+
+  .leptonic-validation-msg-output {
+    position: relative;
+    width: 100%;
+    background-color: $leptonic-validation-error-color;
+    margin-top: -0.7em;
+    padding-top: 1em;
+    padding-bottom: .5em;
+    border-bottom-left-radius: 0.5rem;
+    border-bottom-right-radius: 0.5rem;
+    z-index: 1;
+
+    &:empty {
+      display: none;
+    }
+
+    ul {
+      margin: 0;
+    }
+  }
+
+  .leptonic-signature-pad-canvas.leptonic-validation-error {
+    box-shadow: 0 0 5px $leptonic-validation-error-color inset;
+  }
+
+
+  &.color-blindness-corrections {
+
+    .leptonic-validation-error,
+    .select2.select2-container.select2-container--default.leptonic-validation-error {
+      border-color: $leptonic-validation-error-color-cb-correction;
+      color: $leptonic-validation-error-color-cb-correction;
+
+      &:focus {
+        border-color: $leptonic-validation-error-color-cb-correction;
+        color: $leptonic-validation-error-color-cb-correction;
+      }
+    }
+
+    .leptonic-validation-success,
+    .select2.select2-container.select2-container--default.leptonic-validation-success {
+      border-color: $leptonic-validation-success-color-cb-correction;
+      color: $leptonic-validation-success-color-cb-correction;
+
+      &:focus {
+        border-color: $leptonic-validation-success-color-cb-correction;
+        color: $leptonic-validation-success-color-cb-correction;
+      }
+    }
+
+    .leptonic-validation-msg-output {
+      background-color: $leptonic-validation-error-color-cb-correction;
+      color: white;
+    }
+
+    .leptonic-signature-pad-canvas.leptonic-validation-error {
+      box-shadow: 0 0 5px $leptonic-validation-error-color-cb-correction inset;
+    }
+  }
+  */

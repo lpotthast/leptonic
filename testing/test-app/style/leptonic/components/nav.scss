@@ -1,0 +1,60 @@
+// TODO: Remove or repurpose this
+@mixin produce($config) {
+  $leptonic-nav-tab-item-link-padding: 1em;
+  $leptonic-nav-tab-item-link-padding-ratio: 0.5;
+
+  .leptonic-nav {
+    display: flex;
+    margin-top: 0;
+    margin-bottom: .75em;
+
+    &.leptonic-nav-top-margin {
+      margin-top: .75em;
+    }
+
+    // TABS
+    &.leptonic-nav-tabs {
+      justify-content: flex-start;
+      align-items: flex-start;
+      flex-direction: row;
+      flex-flow: wrap;
+
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      border-bottom: 1px solid lightgrey;
+
+      .leptonic-nav-item {
+        padding: 0;
+
+        .leptonic-nav-link {
+          display: block;
+          padding: ($leptonic-nav-tab-item-link-padding * $leptonic-nav-tab-item-link-padding-ratio)
+                   $leptonic-nav-tab-item-link-padding;
+          border: 0;
+          border-radius: 0;
+          text-decoration: none;
+          background-color: #c2c2c2;
+          color: black;
+
+          &:hover, &:focus, &.leptonic-nav-link-active, &.leptonic-nav-link-active:hover, &.leptonic-nav-link-active:focus {
+            background-color: rgb(50, 50, 50);
+            color: white;
+          }
+        }
+      }
+    }
+  }
+
+  .leptonic-tab-content {
+    > .leptonic-tab-pane {
+      display: none;
+      margin-top: 1em;
+
+      &.leptonic-tab-pane-active {
+        display: block;
+      }
+    }
+  }
+
+}

@@ -1,0 +1,34 @@
+.leptonic-popover-host {
+    position: fixed;
+}
+
+.leptonic-has-popover {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.leptonic-popover {
+    display: none;
+    justify-content: center;
+    align-items: flex-start;
+    align-self: flex-start;
+
+    position: absolute;
+    z-index: 999;
+    width: fit-content;
+    top: 0;
+    left: 0;
+
+    padding: 0.3em 0.5em;
+    border-radius: 0.25em;
+
+    padding: var(--popover-padding);
+    border-radius: var(--popover-border-radius);
+    color: var(--popover-color);
+    background-color: var(--popover-background-color);
+
+    &[data-active="true"] {
+        display: flex;
+    }
+}

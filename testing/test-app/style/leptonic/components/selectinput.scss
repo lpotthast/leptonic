@@ -1,0 +1,82 @@
+@use "sass:map";
+@use "input" as input;
+
+// TODO: not used anymore. must be migrated to select.scss !!!
+
+@mixin produce($config) {
+
+  $input: map.get($config, "component", "input");
+  $select: map.get($config, "component", "select");
+
+  // previously ::ng-deep
+  .leptonic-select {
+
+    .leptonic-select-selected {
+
+      @include input.input-field($input);
+
+      color: map.get($select, "selected-color");
+      background-color: map.get($select, "selected-background-color");
+
+      .leptonic-select-placeholder {
+        color: map.get($select, "selected-placeholder-color");
+      }
+
+      .multiselect-label-wrapper {
+        .multiselect-choice-label {
+          color: map.get($select, "selected-badge-color");
+          background-color: map.get($select, "selected-badge-background-color");
+        }
+      }
+    }
+
+  // previously ::ng-deep
+    .leptonic-select-dropdown {
+
+      background-color: map.get($select, "dropdown-background-color");
+      box-shadow: map.get($select, "dropdown-shadow");
+
+      .leptonic-select-search {
+        @include input.input-field($input);
+
+        color: map.get($select, "search-color");
+        background-color: map.get($select, "search-background-color");
+      }
+
+      // previously ::ng-deep
+      .leptonic-select-menu {
+
+        .no-choices {
+          color: map.get($select, "no-items-color");
+          background-color: map.get($select, "no-items-background-color");
+          padding: map.get($select, "item-padding");
+        }
+
+        .leptonic-select-item {
+
+          color: map.get($select, "item-color");
+          background-color: map.get($select, "item-background-color");
+          padding: map.get($select, "item-padding");
+
+          &.pre-selected {
+            background-color: darken(
+                    map.get($config, "color", "primary-light"),
+                    map.get($config, "color-shift", "darker-3")
+            );
+            color: black;
+          }
+
+          &:hover {
+            background-color: map.get($select, "item-hover-background-color");
+          }
+
+          &.selected {
+            color: map.get($select, "item-selected-background-color");
+          }
+        }
+      }
+    }
+
+  }
+
+}
