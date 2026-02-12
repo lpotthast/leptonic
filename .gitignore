@@ -1,10 +1,11 @@
 # IDE's
-/.idea
+.idea
 
 # Rust
-/target
+target
 
 # OS
 .DS_Store
 
+# Other
 TODO.md
