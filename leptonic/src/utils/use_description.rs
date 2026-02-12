@@ -30,13 +30,13 @@ thread_local! {
 }
 
 /// Returns true when the entry was removed.
-fn decrement(description: Oco<'static, str>) -> bool {
+fn decrement(description: &Oco<'static, str>) -> bool {
     DESCRIPTION_NODES.with(|nodes| {
         let mut map = nodes.borrow_mut();
-        if let Some(entry) = map.get_mut(&description) {
+        if let Some(entry) = map.get_mut(description) {
             entry.ref_count -= 1;
             if entry.ref_count == 0 {
-                map.remove(&description);
+                map.remove(description);
                 return true;
             }
         }
@@ -85,9 +85,9 @@ pub fn use_description(description: Oco<'static, str>) -> AriaDescribedby {
 
     let cleanup_id = id.clone();
     on_cleanup(move || {
-        let should_remove = decrement(description.clone());
+        let should_remove = decrement(&description);
         if should_remove {
-            remove_dom_node(cleanup_id);
+            remove_dom_node(&cleanup_id);
         }
     });
 
@@ -110,9 +110,9 @@ fn create_dom_node(id: Oco<'static, str>, description: Oco<'static, str>) {
     });
 }
 
-fn remove_dom_node(id: Oco<'static, str>) {
+fn remove_dom_node(id: &Oco<'static, str>) {
     if let Some(document) = use_document().as_ref() {
-        if let Some(el) = document.get_element_by_id(&id) {
+        if let Some(el) = document.get_element_by_id(id) {
             el.remove();
         }
     }

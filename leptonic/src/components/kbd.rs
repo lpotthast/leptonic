@@ -5,6 +5,7 @@ use leptos::prelude::*;
 use crate::{utils::key::Key, Language};
 
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn KbdKey(key: Key) -> impl IntoView {
     let display = key.display(Language::En).to_owned();
     view! { <kbd class="leptonic-kbd-key">{display}</kbd> }

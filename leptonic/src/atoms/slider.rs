@@ -400,6 +400,7 @@ where
 
 /// NOTE: Ignores the `mark`s `name`. It must be rendered manually as children.
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn SliderMark(
     #[prop(into)] mark: ComputedSliderMark,
     #[prop(into, optional)] classes: Classes,

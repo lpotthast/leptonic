@@ -745,6 +745,6 @@ impl TouchActionStyle {
     pub fn with_value<V: IntoStyleValue>(
         value: V,
     ) -> leptos::tachys::html::style::Style<(Self, V)> {
-        style((Self, value.into()))
+        style((Self, value))
     }
 }

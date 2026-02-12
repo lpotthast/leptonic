@@ -154,7 +154,7 @@ impl AriaDescribedby {
         Self {
             ids: {
                 let mut vec = SmallVec::with_capacity(capacity);
-                vec.extend(ids.map(|id| id.into()));
+                vec.extend(ids.map(Into::into));
                 vec
             },
         }

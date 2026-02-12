@@ -40,7 +40,7 @@
 //! Effects have already run once. `CapturedElement` handles this case by notifying a
 //! `Trigger`, causing dependent Effects to re-run.
 
-use std::{future::Future, ops::Deref, sync::Arc};
+use std::{future::Future, sync::Arc};
 
 use leptos::{
     prelude::*,
@@ -102,7 +102,7 @@ impl CapturedElement {
     /// Use this inside event handlers where tracking is not needed.
     pub fn with_untracked<U>(&self, accessor: impl Fn(Option<&web_sys::Element>) -> U) -> U {
         self.storage
-            .with_value(move |e| accessor(e.as_ref().map(|it| it.deref())))
+            .with_value(move |e| accessor(e.as_deref()))
     }
 
     /// Create the [`ElementCaptureAttr`] to spread onto the target element.

@@ -151,11 +151,9 @@ pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropRetur
     // Handle click on backdrop
     let handle_backdrop_click = move |e: web_sys::MouseEvent| {
         // Only close if clicking directly on the backdrop, not its children
-        if should_close_on_interact_outside {
-            if e.expect_target() == e.expect_current_target() {
-                if let Some(on_close) = on_close {
-                    on_close.run(());
-                }
+        if should_close_on_interact_outside && e.expect_target() == e.expect_current_target() {
+            if let Some(on_close) = on_close {
+                on_close.run(());
             }
         }
     };

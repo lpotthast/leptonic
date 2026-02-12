@@ -196,7 +196,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
     });
 
     UseFocusRingReturn {
-        is_focus_visible: focus_visible.into(),
+        is_focus_visible: focus_visible,
         is_focused: focused.into(),
         props: UseFocusRingProps {
             on_focus: handle_focus,

@@ -2,6 +2,7 @@ use leptos_use::use_window;
 use web_sys::Navigator;
 
 /// Tests for device types.
+#[allow(clippy::used_underscore_items)]
 pub mod device {
     use crate::utils::platform::{navigator, platform, user_agent};
 
@@ -50,7 +51,7 @@ pub mod device {
 
     fn _is_ipad(platform: &str, user_agent: &str, max_touch_points: i32) -> bool {
         // iPadOS 13+ identifies as Mac but has touch support.
-        (platform.contains("iPad") || (_is_mac(&platform) && max_touch_points > 2))
+        (platform.contains("iPad") || (_is_mac(platform) && max_touch_points > 2))
             && !user_agent.contains("CriOS")
     }
 
@@ -64,6 +65,7 @@ pub mod device {
 }
 
 /// Tests for browser types.
+#[allow(clippy::used_underscore_items)]
 pub mod browser {
     use crate::utils::platform::user_agent;
 
@@ -104,5 +106,5 @@ fn user_agent() -> Option<String> {
 }
 
 fn navigator() -> Option<Navigator> {
-    use_window().as_ref().map(|w| w.navigator())
+    use_window().as_ref().map(web_sys::Window::navigator)
 }

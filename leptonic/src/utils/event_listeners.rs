@@ -1,22 +1,13 @@
 use leptos::{ev::EventDescriptor, typed_builder::TypedBuilder};
 use wasm_bindgen::{closure::Closure, convert::FromWasmAbi};
 
-#[derive(Debug, Clone, Copy, TypedBuilder)]
+#[derive(Debug, Clone, Copy, Default, TypedBuilder)]
 pub struct EventListenerOptions {
     #[allow(unused)] // May only be used in non-SSR context.
     once: bool,
 
     #[allow(unused)] // May only be used in non-SSR context.
     capture: bool,
-}
-
-impl Default for EventListenerOptions {
-    fn default() -> Self {
-        Self {
-            once: false,
-            capture: false,
-        }
-    }
 }
 
 impl EventListenerOptions {

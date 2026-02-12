@@ -512,10 +512,9 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
             return;
         }
 
-        if let Some(input_el) = e
+        if let Ok(input_el) = e
             .expect_target()
             .dyn_into::<web_sys::HtmlInputElement>()
-            .ok()
         {
             let text_value = input_el.value();
 

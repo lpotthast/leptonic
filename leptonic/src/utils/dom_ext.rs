@@ -22,26 +22,10 @@ impl<T: AsRef<web_sys::Event>> EventAccessors for T {
     }
 }
 
-pub(crate) enum DomContainer {
-    Node(web_sys::Node),
-    Window(web_sys::Window),
-}
-
-impl DomContainer {
-    #[allow(clippy::needless_pass_by_value)]
-    pub(crate) fn contains(&self, node: web_sys::Node) -> bool {
-        match self {
-            DomContainer::Node(node) => node.contains(Some(node)),
-            DomContainer::Window(window) => node
-                .owner_document()
-                .and_then(move |d| d.default_view().map(move |w| w == *window))
-                .unwrap_or_default(),
-        }
-    }
-}
-
 pub(crate) trait ElementExt {
+    #[expect(unused)]
     fn is_link(&self) -> bool;
+    #[expect(unused)]
     fn has_link_role(&self) -> bool;
     fn is_anchor_link(&self) -> bool;
     fn disable_text_selection(&self);
@@ -80,7 +64,6 @@ pub(crate) trait EventTargetExt {
     #[allow(unused)]
     fn as_html_element(&self) -> Option<web_sys::HtmlElement>;
     fn as_node(&self) -> Option<web_sys::Node>;
-    fn as_container(&self) -> Option<DomContainer>;
     fn get_owner_document(&self) -> web_sys::Document;
     /// Adds a one-time event listener for the given event name.
     fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
@@ -109,17 +92,6 @@ impl EventTargetExt for web_sys::EventTarget {
     fn as_node(&self) -> Option<web_sys::Node> {
         use wasm_bindgen::JsCast;
         self.clone().dyn_into::<web_sys::Node>().ok()
-    }
-
-    fn as_container(&self) -> Option<DomContainer> {
-        use wasm_bindgen::JsCast;
-        if let Ok(node) = self.clone().dyn_into::<web_sys::Node>() {
-            return Some(DomContainer::Node(node));
-        }
-        if let Ok(window) = self.clone().dyn_into::<web_sys::Window>() {
-            return Some(DomContainer::Window(window));
-        }
-        None
     }
 
     fn get_owner_document(&self) -> web_sys::Document {
@@ -165,8 +137,8 @@ pub(crate) fn node_contains(
     node: Option<&web_sys::Node>,
     other_node: Option<&web_sys::Node>,
 ) -> Option<bool> {
-    let node = node.or_else(|| None)?;
-    let other_node = other_node.or_else(|| None)?;
+    let node = node?;
+    let other_node = other_node?;
     let contained = node.contains(Some(other_node));
     Some(contained)
 }

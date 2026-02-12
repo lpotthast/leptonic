@@ -374,7 +374,7 @@ impl PressState {
     }
 
     fn is_pointer_over_target(&self, e: &PointerEvent) -> bool {
-        is_over(e, &self.current_target.as_element().expect("element"))
+        is_over(e, self.current_target.as_element().expect("element"))
     }
 }
 
@@ -430,23 +430,20 @@ impl EventRef<'_> {
                 self.current_target()
                     .to_element()
                     .map(|el| el.get_bounding_client_rect())
-                    .map(|rect| (Some(client_x - rect.left()), Some(client_y - rect.top())))
-                    .unwrap_or((None, None))
+                    .map_or((None, None), |rect| (Some(client_x - rect.left()), Some(client_y - rect.top())))
             }
             EventRef::Mouse(e) => {
                 let (client_x, client_y) = (f64::from(e.client_x()), f64::from(e.client_y()));
                 self.current_target()
                     .to_element()
                     .map(|el| el.get_bounding_client_rect())
-                    .map(|rect| (Some(client_x - rect.left()), Some(client_y - rect.top())))
-                    .unwrap_or((None, None))
+                    .map_or((None, None), |rect| (Some(client_x - rect.left()), Some(client_y - rect.top())))
             }
             EventRef::Keyboard(_) => self
                 .current_target()
                 .to_element()
                 .map(|el| el.get_bounding_client_rect())
-                .map(|rect| (Some(rect.width() / 2.0), Some(rect.height() / 2.0)))
-                .unwrap_or((None, None)),
+                .map_or((None, None), |rect| (Some(rect.width() / 2.0), Some(rect.height() / 2.0))),
         }
     }
 }
@@ -558,7 +555,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             current_target: e.current_target(),
             is_over_target: match e {
                 EventRef::Pointer(e) => {
-                    is_over(e, &e.expect_current_target().as_element().expect("element"))
+                    is_over(e, e.expect_current_target().as_element().expect("element"))
                 }
                 EventRef::Keyboard(_) | EventRef::Mouse(_) => false,
             },
@@ -702,7 +699,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 ) {
                     if let Some(el) = current_target.as_element() {
                         if el.is_anchor_link() {
-                            open_link(&el, e.modifiers(), true);
+                            open_link(el, e.modifiers(), true);
                         }
                     }
                 }
@@ -1096,7 +1093,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                                     let _ = el.dispatch_event(&cancel_event);
 
                                     // Focus the element without scrolling.
-                                    focus_element(&el, true);
+                                    focus_element(el, true);
                                 }
 
                                 // Mark long press as triggered so on_press is suppressed.

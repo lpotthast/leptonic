@@ -143,7 +143,7 @@ impl FocusHandle {
     /// Focuses the element safely, deferring during screen reader interactions.
     ///
     /// Uses [`focus_safely`] which avoids page scrolling and defers focus during
-    /// virtual (screen reader) modality to prevent VoiceOver scroll issues.
+    /// virtual (screen reader) modality to prevent `VoiceOver` scroll issues.
     /// If the element hasn't been captured yet (e.g., during SSR), this is a no-op.
     pub fn focus(&self) {
         if let Some(el) = self.element.get_untracked() {

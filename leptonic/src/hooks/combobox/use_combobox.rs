@@ -523,10 +523,9 @@ where
             return;
         }
 
-        if let Some(input_el) = e
+        if let Ok(input_el) = e
             .expect_target()
             .dyn_into::<web_sys::HtmlInputElement>()
-            .ok()
         {
             let new_value = input_el.value();
             set_internal_input_value.set(new_value.clone());

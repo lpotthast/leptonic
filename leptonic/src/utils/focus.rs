@@ -31,7 +31,7 @@ pub fn focus_html_element(html_element: &web_sys::HtmlElement, prevent_scroll: b
 /// and screen reader issues with CSS transitions.
 ///
 /// When the user is interacting via a virtual cursor (screen reader), focus is
-/// deferred until after any CSS transitions complete. This avoids VoiceOver on iOS
+/// deferred until after any CSS transitions complete. This avoids `VoiceOver` on iOS
 /// scrolling the page when the focused element is transitioning from off-screen.
 ///
 /// In all other modalities, the element is focused immediately without scrolling.
