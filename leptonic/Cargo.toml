@@ -78,10 +78,9 @@ time = { version = "0.3.41", features = [
 ] }
 tracing = "0.1.44"
 uuid = { version = "1.20.0", features = ["v4", "v7", "js", "serde"] }
-wasm-bindgen = "0.2.105"
-wasm-bindgen-futures = "0.4.55"
-# TODO: What of all below is really required?
-web-sys = { version = "0.3.82", features = [
+wasm-bindgen = "0.2.108"
+wasm-bindgen-futures = "0.4.58"
+web-sys = { version = "0.3.85", features = [
     "DomRect",
     "Event",
     "EventTarget",
@@ -98,14 +97,14 @@ web-sys = { version = "0.3.82", features = [
 itertools = "0.14.0"
 
 [build-dependencies]
-anyhow = "1.0.100"
-cargo_toml = "0.22.1"
+anyhow = "1.0.101"
+cargo_toml = "0.22.3"
 lazy_static = "1.5.0"
 leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
 leptos-tiptap-build = { version = "0.2.8", optional = true }
 
 [dev-dependencies]
-anyhow = "1.0.100"
+anyhow = "1.0.101"
 assertr = "0.4.2"
 async-trait = "0.1"
 chrome-for-testing-manager = { version = "0.6.0", features = ["thirtyfour"] }
@@ -114,8 +113,8 @@ tokio = { version = "1.49.0", features = ["rt", "rt-multi-thread", "macros"] }
 tokio-process-tools = "0.7.2"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["fmt", "registry", "ansi"] }
-wasm-bindgen = "0.2.105"
-web-sys = "0.3.82"
+wasm-bindgen = "0.2.108"
+web-sys = "0.3.85"
 
 [lints]
 workspace = true

@@ -157,20 +157,20 @@ pub fn SliderTrackFill(
                 .add((Position, "absolute"))
                 .add((Left, "0"))
                 .add((Top, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some("0".into()),
+                    SliderOrientation::Horizontal => Some(Cow::Borrowed("0")),
                     SliderOrientation::Vertical => None,
                 }))
                 .add((Bottom, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => None,
-                    SliderOrientation::Vertical => Some("0".into()),
+                    SliderOrientation::Vertical => Some(Cow::Borrowed("0")),
                 }))
                 .add((Height, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some("100%".into()),
-                    SliderOrientation::Vertical => Some(format!("{}%", percentage.get())),
+                    SliderOrientation::Horizontal => Some(Cow::Borrowed("100%")),
+                    SliderOrientation::Vertical => Some(Cow::Owned(format!("{}%", percentage.get()))),
                 }))
                 .add((Width, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some(format!("{}%", percentage.get())),
-                    SliderOrientation::Vertical => Some("100%".into()),
+                    SliderOrientation::Horizontal => Some(Cow::Owned(format!("{}%", percentage.get()))),
+                    SliderOrientation::Vertical => Some(Cow::Borrowed("100%")),
                 }));
             view! { <div class=classes style=styles /> }.into_any()
         }
@@ -189,24 +189,24 @@ pub fn SliderTrackFill(
             let styles = styles
                 .add((Position, "absolute"))
                 .add((Top, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some("0".into()),
+                    SliderOrientation::Horizontal => Some(Cow::Borrowed("0")),
                     SliderOrientation::Vertical => None,
                 }))
                 .add((Bottom, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => None,
-                    SliderOrientation::Vertical => Some(format!("{}%", first_percentage.get())),
+                    SliderOrientation::Vertical => Some(Cow::Owned(format!("{}%", first_percentage.get()))),
                 }))
                 .add((Left, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some(format!("{}%", first_percentage.get())),
-                    SliderOrientation::Vertical => Some("0".into()),
+                    SliderOrientation::Horizontal => Some(Cow::Owned(format!("{}%", first_percentage.get()))),
+                    SliderOrientation::Vertical => Some(Cow::Borrowed("0")),
                 }))
                 .add((Height, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some("100%".into()),
-                    SliderOrientation::Vertical => Some(format!("{}%", difference.get())),
+                    SliderOrientation::Horizontal => Some(Cow::Borrowed("100%")),
+                    SliderOrientation::Vertical => Some(Cow::Owned(format!("{}%", difference.get()))),
                 }))
                 .add((Width, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some(format!("{}%", difference.get())),
-                    SliderOrientation::Vertical => Some("100%".into()),
+                    SliderOrientation::Horizontal => Some(Cow::Owned(format!("{}%", difference.get()))),
+                    SliderOrientation::Vertical => Some(Cow::Borrowed("100%")),
                 }));
             view! { <div class=classes style=styles /> }.into_any()
         }
@@ -292,20 +292,20 @@ pub fn SliderThumb(
     let styles = styles
         .add((Position, "absolute"))
         .add((Top, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => Some("50%".into()),
+            SliderOrientation::Horizontal => Some(Cow::Borrowed("50%")),
             SliderOrientation::Vertical => None,
         }))
         .add((Left, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => Some(format!("{}%", percentage.get())),
-            SliderOrientation::Vertical => Some("50%".into()),
+            SliderOrientation::Horizontal => Some(Cow::Owned(format!("{}%", percentage.get()))),
+            SliderOrientation::Vertical => Some(Cow::Borrowed("50%")),
         }))
         .add((Bottom, move || match ctx.state.orientation.get() {
             SliderOrientation::Horizontal => None,
-            SliderOrientation::Vertical => Some(format!("{}%", percentage.get())),
+            SliderOrientation::Vertical => Some(Cow::Owned(format!("{}%", percentage.get()))),
         }))
         .add((Transform, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => Some("translate(-50%, -50%)".into()),
-            SliderOrientation::Vertical => Some("translate(-50%, 50%)".into()),
+            SliderOrientation::Horizontal => Some(Cow::Borrowed("translate(-50%, -50%)")),
+            SliderOrientation::Vertical => Some(Cow::Borrowed("translate(-50%, 50%)")),
         }));
 
     let thumb_ctx = SliderThumbCtx {

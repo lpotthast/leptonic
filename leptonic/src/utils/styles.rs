@@ -542,6 +542,7 @@ impl From<(Style, String)> for StyleEntry {
 }
 
 // Style enum reactive: (Style, Signal<Option<StyleValue>>)
+#[cfg(not(feature = "nightly"))]
 impl From<(Style, Signal<Option<StyleValue>>)> for StyleEntry {
     fn from((property, value): (Style, Signal<Option<StyleValue>>)) -> Self {
         StyleEntry::reactive(property.as_str(), value)
@@ -549,6 +550,7 @@ impl From<(Style, Signal<Option<StyleValue>>)> for StyleEntry {
 }
 
 // Style enum reactive with String value: (Style, Signal<Option<String>>)
+#[cfg(not(feature = "nightly"))]
 impl From<(Style, Signal<Option<String>>)> for StyleEntry {
     fn from((property, value): (Style, Signal<Option<String>>)) -> Self {
         Self {
@@ -580,15 +582,16 @@ impl From<(Style, Option<String>)> for StyleEntry {
     }
 }
 
-// Style enum with closure: (Style, impl Fn() -> Option<String>)
-impl<F> From<(Style, F)> for StyleEntry
+// Style enum with closure: (Style, impl Fn() -> Option<V>) where V: Into<StyleValue>
+impl<F, V> From<(Style, F)> for StyleEntry
 where
-    F: Fn() -> Option<String> + Send + Sync + 'static,
+    V: Into<StyleValue>,
+    F: Fn() -> Option<V> + Send + Sync + 'static,
 {
     fn from((property, value_fn): (Style, F)) -> Self {
         Self {
             property: Cow::Borrowed(property.as_str()),
-            value: Signal::derive(move || value_fn().map(Cow::Owned)),
+            value: Signal::derive(move || value_fn().map(Into::into)),
         }
     }
 }
@@ -698,12 +701,14 @@ impl From<(Style, String)> for Styles {
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl From<(Style, Signal<Option<StyleValue>>)> for Styles {
     fn from(entry: (Style, Signal<Option<StyleValue>>)) -> Self {
         Styles::builder().with(entry).build()
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl From<(Style, Signal<Option<String>>)> for Styles {
     fn from(entry: (Style, Signal<Option<String>>)) -> Self {
         Styles::builder().with(entry).build()
@@ -722,9 +727,10 @@ impl From<(Style, Option<String>)> for Styles {
     }
 }
 
-impl<F> From<(Style, F)> for Styles
+impl<F, V> From<(Style, F)> for Styles
 where
-    F: Fn() -> Option<String> + Send + Sync + 'static,
+    V: Into<StyleValue>,
+    F: Fn() -> Option<V> + Send + Sync + 'static,
 {
     fn from(entry: (Style, F)) -> Self {
         Styles::builder().with(entry).build()
