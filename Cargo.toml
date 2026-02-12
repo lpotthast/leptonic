@@ -1,7 +1,7 @@
 [workspace]
 resolver = "2"
 members = ["leptonic", "leptonic-theme"]
-exclude = ["examples"]
+exclude = ["examples", "testing"]
 
 [workspace.package]
 version = "0.5.0"

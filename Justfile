@@ -59,6 +59,18 @@ serve:
 serve-release:
   cd ./examples/book-ssr && cargo leptos serve --release
 
+# Serve the test app (for manual inspection)
+serve-test-app:
+  cd ./testing/test-app && cargo leptos serve
+
+# Run browser tests (headless by default)
+browser-test:
+  cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
+
+# Run browser tests with visible browser (for debugging)
+browser-test-visible:
+  BROWSER_TEST_VISIBLE=1 cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture
+
 # Check which process is occupying the given port.
 # This can help you find out which process to kill if some process has gone rogue.
 check-port port:
@@ -68,6 +80,7 @@ check-port port:
 sort:
   cargo sort ./leptonic -w -g
   cargo sort ./leptonic-theme -w -g
+  cargo sort ./testing/test-app -w -g
   cargo sort ./examples/book-ssr -w -g
   cargo sort ./examples/leptonic-template-csr -w -g
   cargo sort ./examples/leptonic-template-ssr -w -g
@@ -77,6 +90,7 @@ sort:
 fmt:
   cargo fmt --all --manifest-path ./leptonic/Cargo.toml
   cargo fmt --all --manifest-path ./leptonic-theme/Cargo.toml
+  cargo fmt --all --manifest-path ./testing/test-app/Cargo.toml
   cargo fmt --all --manifest-path ./examples/book-ssr/Cargo.toml
   cargo fmt --all --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   cargo fmt --all --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
@@ -91,6 +105,7 @@ leptosfmt:
 update:
   cargo update --manifest-path ./leptonic/Cargo.toml
   cargo update --manifest-path ./leptonic-theme/Cargo.toml
+  cargo update --manifest-path ./testing/test-app/Cargo.toml
   cargo update --manifest-path ./examples/book-ssr/Cargo.toml
   cargo update --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   cargo update --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
@@ -109,6 +124,7 @@ test:
 upgrades: # "-" prefixes allow for non-zero status codes!
   -cargo upgrades --manifest-path ./leptonic/Cargo.toml
   -cargo upgrades --manifest-path ./leptonic-theme/Cargo.toml
+  -cargo upgrades --manifest-path ./testing/test-app/Cargo.toml
   -cargo upgrades --manifest-path ./examples/book-ssr/Cargo.toml
   -cargo upgrades --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   -cargo upgrades --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
@@ -118,6 +134,7 @@ upgrades: # "-" prefixes allow for non-zero status codes!
 upgrade: # "-" prefixes allow for non-zero status codes!
   -cargo upgrade --manifest-path ./leptonic/Cargo.toml
   -cargo upgrade --manifest-path ./leptonic-theme/Cargo.toml
+  -cargo upgrade --manifest-path ./testing/test-app/Cargo.toml
   -cargo upgrade --manifest-path ./examples/book-ssr/Cargo.toml
   -cargo upgrade --manifest-path ./examples/leptonic-template-csr/Cargo.toml
   -cargo upgrade --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
@@ -127,6 +144,7 @@ upgrade: # "-" prefixes allow for non-zero status codes!
 clippy: # "-" prefixes allow for non-zero status codes!
   -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
   -cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
+  -cargo clippy --tests --manifest-path ./testing/test-app/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
   -cargo clippy --tests --manifest-path ./examples/book-ssr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
   -cargo clippy --tests --manifest-path ./examples/leptonic-template-csr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
   -cargo clippy --tests --manifest-path ./examples/leptonic-template-ssr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic

@@ -105,7 +105,15 @@ leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
 leptos-tiptap-build = { version = "0.2.8", optional = true }
 
 [dev-dependencies]
+anyhow = "1.0.100"
 assertr = "0.4.2"
+async-trait = "0.1"
+chrome-for-testing-manager = { version = "0.6.0", features = ["thirtyfour"] }
+thirtyfour = { version = "0.36.1", features = ["component", "reqwest", "rustls-tls"] }
+tokio = { version = "1.49.0", features = ["rt", "rt-multi-thread", "macros"] }
+tokio-process-tools = "0.7.2"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["fmt", "registry", "ansi"] }
 wasm-bindgen = "0.2.105"
 web-sys = "0.3.82"
 
