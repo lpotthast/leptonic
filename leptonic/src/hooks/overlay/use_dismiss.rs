@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use web_sys::KeyboardEvent;
 
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useDismissButton.ts
 
@@ -55,10 +56,10 @@ pub struct UseDismissProps {
     pub on_blur: EventHandler<web_sys::FocusEvent>,
 }
 
-impl UseDismissProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDismissAttrs {
+impl IntoAttrs for UseDismissProps {
+    type Attrs = UseDismissAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_keydown.into_on(ev::keydown),
             self.on_blur.into_on(ev::blur),

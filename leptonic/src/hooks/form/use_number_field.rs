@@ -11,6 +11,7 @@ use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaInvalid, AriaLive, AriaRequired};
 use crate::utils::{EventAccessors, EventHandler};
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/numberfield/src/useNumberField.ts
 
@@ -189,10 +190,10 @@ pub struct UseNumberFieldInputProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-impl UseNumberFieldInputProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseNumberFieldInputAttrs {
+impl IntoAttrs for UseNumberFieldInputProps {
+    type Attrs = UseNumberFieldInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Type, self.r#type),
@@ -262,10 +263,10 @@ pub struct UseNumberFieldButtonProps {
     pub on_click: EventHandler<MouseEvent>,
 }
 
-impl UseNumberFieldButtonProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseNumberFieldButtonAttrs {
+impl IntoAttrs for UseNumberFieldButtonProps {
+    type Attrs = UseNumberFieldButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Type, self.r#type),
             Attr(attr::AriaLabel, self.aria_label),
@@ -296,10 +297,10 @@ pub struct UseNumberFieldLabelProps {
     pub html_for: String,
 }
 
-impl UseNumberFieldLabelProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseNumberFieldLabelAttrs {
+impl IntoAttrs for UseNumberFieldLabelProps {
+    type Attrs = UseNumberFieldLabelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
     }
 }
@@ -315,10 +316,10 @@ pub struct UseNumberFieldDescriptionProps {
     pub id: String,
 }
 
-impl UseNumberFieldDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseNumberFieldDescriptionAttrs {
+impl IntoAttrs for UseNumberFieldDescriptionProps {
+    type Attrs = UseNumberFieldDescriptionAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }
@@ -340,10 +341,10 @@ pub struct UseNumberFieldErrorProps {
     pub aria_live: AriaLive,
 }
 
-impl UseNumberFieldErrorProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseNumberFieldErrorAttrs {
+impl IntoAttrs for UseNumberFieldErrorProps {
+    type Attrs = UseNumberFieldErrorAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

@@ -1,5 +1,6 @@
 use leptos::attr;
 use leptos::attr::Attr;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -29,10 +30,10 @@ pub struct UseTableHeaderRowProps {
     pub aria_rowindex: &'static str,
 }
 
-impl UseTableHeaderRowProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableHeaderRowAttrs {
+impl IntoAttrs for UseTableHeaderRowProps {
+    type Attrs = UseTableHeaderRowAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaRowindex, self.aria_rowindex),

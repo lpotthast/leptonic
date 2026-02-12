@@ -3,6 +3,7 @@ use leptos::attr::Attr;
 use uuid::Uuid;
 
 use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, AriaRequired};
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useField.ts
 
@@ -78,9 +79,10 @@ pub struct UseFieldLabelProps {
     pub html_for: String,
 }
 
-impl UseFieldLabelProps {
-    #[must_use]
-    pub fn into_attrs(self) -> UseFieldLabelAttrs {
+impl IntoAttrs for UseFieldLabelProps {
+    type Attrs = UseFieldLabelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
     }
 }
@@ -114,9 +116,10 @@ pub struct UseFieldProps {
     pub aria_readonly: Option<AriaReadonly>,
 }
 
-impl UseFieldProps {
-    #[must_use]
-    pub fn into_attrs(self) -> UseFieldAttrs {
+impl IntoAttrs for UseFieldProps {
+    type Attrs = UseFieldAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
@@ -148,9 +151,10 @@ pub struct UseFieldDescriptionProps {
     pub id: String,
 }
 
-impl UseFieldDescriptionProps {
-    #[must_use]
-    pub fn into_attrs(self) -> UseFieldDescriptionAttrs {
+impl IntoAttrs for UseFieldDescriptionProps {
+    type Attrs = UseFieldDescriptionAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }
@@ -172,9 +176,10 @@ pub struct UseFieldErrorMessageProps {
     pub aria_live: AriaLive,
 }
 
-impl UseFieldErrorMessageProps {
-    #[must_use]
-    pub fn into_attrs(self) -> UseFieldErrorMessageAttrs {
+impl IntoAttrs for UseFieldErrorMessageProps {
+    type Attrs = UseFieldErrorMessageAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

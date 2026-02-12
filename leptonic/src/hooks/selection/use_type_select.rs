@@ -5,6 +5,7 @@ use std::hash::Hash;
 use web_sys::KeyboardEvent;
 
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useTypeSelect.ts
 
@@ -76,10 +77,10 @@ pub struct UseTypeSelectProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseTypeSelectProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTypeSelectAttrs {
+impl IntoAttrs for UseTypeSelectProps {
+    type Attrs = UseTypeSelectAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.on_keydown.into_on(ev::keydown),)
     }
 }

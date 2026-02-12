@@ -1,5 +1,6 @@
 use leptos::attr;
 use leptos::attr::Attr;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -25,10 +26,10 @@ pub struct UseTableBodyProps {
     pub role: &'static str,
 }
 
-impl UseTableBodyProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableBodyAttrs {
+impl IntoAttrs for UseTableBodyProps {
+    type Attrs = UseTableBodyAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Role, self.role),)
     }
 }

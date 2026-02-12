@@ -10,6 +10,7 @@ use super::use_calendar_state::create_weeks;
 use crate::utils::aria::AriaDisabled;
 use crate::utils::time::{start_of_next_month, start_of_previous_month, Day, Week};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useRangeCalendar.ts
 
@@ -157,10 +158,10 @@ pub struct UseRangeCalendarProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseRangeCalendarProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseRangeCalendarAttrs {
+impl IntoAttrs for UseRangeCalendarProps {
+    type Attrs = UseRangeCalendarAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

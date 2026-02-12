@@ -8,6 +8,7 @@ use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaModal};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDatePicker.ts
 
 // =============================================================================
@@ -124,10 +125,10 @@ pub struct UseDatePickerGroupProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
 }
 
-impl UseDatePickerGroupProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDatePickerGroupAttrs {
+impl IntoAttrs for UseDatePickerGroupProps {
+    type Attrs = UseDatePickerGroupAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
@@ -181,10 +182,10 @@ pub struct UseDatePickerButtonProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseDatePickerButtonProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDatePickerButtonAttrs {
+impl IntoAttrs for UseDatePickerButtonProps {
+    type Attrs = UseDatePickerButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::AriaLabel, self.aria_label),

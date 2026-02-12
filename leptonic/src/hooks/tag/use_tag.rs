@@ -7,6 +7,7 @@ use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -78,10 +79,10 @@ pub struct UseTagRowProps {
     pub on_focus: EventHandler<web_sys::FocusEvent>,
 }
 
-impl UseTagRowProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTagRowAttrs {
+impl IntoAttrs for UseTagRowProps {
+    type Attrs = UseTagRowAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaSelected, self.aria_selected),
@@ -111,10 +112,10 @@ pub struct UseTagCellProps {
     pub role: &'static str,
 }
 
-impl UseTagCellProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTagCellAttrs {
+impl IntoAttrs for UseTagCellProps {
+    type Attrs = UseTagCellAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Role, self.role),)
     }
 }
@@ -130,10 +131,10 @@ pub struct UseTagRemoveButtonProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
-impl UseTagRemoveButtonProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTagRemoveButtonAttrs {
+impl IntoAttrs for UseTagRemoveButtonProps {
+    type Attrs = UseTagRemoveButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::Tabindex, self.tabindex),

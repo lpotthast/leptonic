@@ -6,6 +6,7 @@ use send_wrapper::SendWrapper;
 use std::sync::atomic::{AtomicBool, Ordering};
 use web_sys::PointerEvent;
 
+use crate::hooks::IntoAttrs;
 use crate::utils::{
     node_contains, pointer_type::PointerType, ContainsTarget, EventAccessors, EventHandler,
     EventTargetExt,
@@ -83,10 +84,10 @@ pub struct UseHoverProps {
     pub on_pointerleave: EventHandler<PointerEvent>,
 }
 
-impl UseHoverProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseHoverAttrs {
+impl IntoAttrs for UseHoverProps {
+    type Attrs = UseHoverAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),

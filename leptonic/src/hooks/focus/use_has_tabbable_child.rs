@@ -2,6 +2,7 @@ use leptos::prelude::*;
 use wasm_bindgen::JsCast;
 
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/useHasTabbableChild.ts
 //
@@ -54,10 +55,10 @@ pub struct UseHasTabbableChildProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseHasTabbableChildProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseHasTabbableChildAttrs {
+impl IntoAttrs for UseHasTabbableChildProps {
+    type Attrs = UseHasTabbableChildAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.element_capture,)
     }
 }

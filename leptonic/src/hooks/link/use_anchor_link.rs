@@ -6,6 +6,7 @@ use crate::hooks::{
 use crate::utils::aria::*;
 use crate::utils::scroll_behavior::ScrollBehavior;
 use crate::utils::{ElementCaptureAttr, MergeWith};
+use crate::hooks::IntoAttrs;
 use educe::Educe;
 use leptos::attr;
 use leptos::attr::Attr;
@@ -100,10 +101,10 @@ pub struct UseAnchorLinkProps {
     pub merged: MergedFocusablePressFocusRingProps,
 }
 
-impl UseAnchorLinkProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseAnchorLinkAttrs {
+impl IntoAttrs for UseAnchorLinkProps {
+    type Attrs = UseAnchorLinkAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             (
                 Attr(attr::Href, self.href),

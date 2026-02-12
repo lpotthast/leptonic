@@ -12,6 +12,7 @@ use web_sys::PointerEvent;
 use super::use_move::MoveAxis;
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -139,10 +140,10 @@ pub struct UseMoveWithinContainerProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
 }
 
-impl UseMoveWithinContainerProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMoveWithinContainerAttrs {
+impl IntoAttrs for UseMoveWithinContainerProps {
+    type Attrs = UseMoveWithinContainerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.element_capture,
             self.on_pointerdown.into_on(ev::pointerdown),
@@ -157,10 +158,10 @@ pub struct UseMoveWithinMovableProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseMoveWithinMovableProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMoveWithinMovableAttrs {
+impl IntoAttrs for UseMoveWithinMovableProps {
+    type Attrs = UseMoveWithinMovableAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_pointerdown.into_on(ev::pointerdown),
             self.element_capture,

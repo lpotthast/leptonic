@@ -15,6 +15,7 @@ use crate::hooks::selection::use_selection_state::{
 };
 use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
 use crate::utils::{EventAccessors, EventHandler};
+use crate::hooks::IntoAttrs;
 
 use super::use_grid::EscapeKeyBehavior;
 
@@ -180,10 +181,10 @@ pub struct UseGridListProps {
     pub on_mousedown: EventHandler<MouseEvent>,
 }
 
-impl UseGridListProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseGridListAttrs {
+impl IntoAttrs for UseGridListProps {
+    type Attrs = UseGridListAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

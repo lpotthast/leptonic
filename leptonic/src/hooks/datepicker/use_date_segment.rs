@@ -7,6 +7,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::utils::aria::{AriaDisabled, AriaReadonly};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDateSegment.ts
 
@@ -230,10 +231,10 @@ pub struct UseDateSegmentProps {
     pub on_focus: EventHandler<FocusEvent>,
 }
 
-impl UseDateSegmentProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDateSegmentAttrs {
+impl IntoAttrs for UseDateSegmentProps {
+    type Attrs = UseDateSegmentAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::Tabindex, self.tabindex),

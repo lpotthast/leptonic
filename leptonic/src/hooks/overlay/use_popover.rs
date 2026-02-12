@@ -47,6 +47,7 @@ use super::use_overlay_position::{
 };
 use crate::hooks::interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput};
 use crate::utils::locale::WritingDirection;
+use crate::hooks::IntoAttrs;
 
 /// Input parameters for the `use_popover` hook.
 #[derive(Clone, Copy, Educe)]
@@ -109,10 +110,10 @@ pub struct UsePopoverProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UsePopoverProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UsePopoverAttrs {
+impl IntoAttrs for UsePopoverProps {
+    type Attrs = UsePopoverAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (style(self.position), self.on_keydown.into_on(ev::keydown))
     }
 }
@@ -123,10 +124,10 @@ pub struct UsePopoverBackdropProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
-impl UsePopoverBackdropProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UsePopoverBackdropAttrs {
+impl IntoAttrs for UsePopoverBackdropProps {
+    type Attrs = UsePopoverBackdropAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.on_click.into_on(ev::click),)
     }
 }

@@ -9,6 +9,7 @@ use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaInvalid, AriaRequired};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckbox.ts
 
@@ -108,10 +109,10 @@ pub struct UseCheckboxInputProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-impl UseCheckboxInputProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseCheckboxInputAttrs {
+impl IntoAttrs for UseCheckboxInputProps {
+    type Attrs = UseCheckboxInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Type, self.r#type),
             Attr(attr::Name, self.name),

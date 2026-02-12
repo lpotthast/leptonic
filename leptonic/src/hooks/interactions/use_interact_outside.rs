@@ -1,4 +1,5 @@
 use crate::utils::{CapturedElement, ElementCaptureAttr, EventAccessors};
+use crate::hooks::IntoAttrs;
 use leptos::prelude::*;
 use leptos_use::{use_event_listener_with_options, UseEventListenerOptions};
 use send_wrapper::SendWrapper;
@@ -53,10 +54,10 @@ pub struct UseInteractOutsideProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseInteractOutsideProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseInteractOutsideAttrs {
+impl IntoAttrs for UseInteractOutsideProps {
+    type Attrs = UseInteractOutsideAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.element_capture,)
     }
 }

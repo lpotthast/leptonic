@@ -8,6 +8,7 @@ use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tree/src/useTree.ts
 
@@ -109,10 +110,10 @@ pub struct UseTreeProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseTreeProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTreeAttrs {
+impl IntoAttrs for UseTreeProps {
+    type Attrs = UseTreeAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

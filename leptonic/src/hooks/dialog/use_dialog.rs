@@ -8,6 +8,7 @@ use web_sys::FocusEvent;
 
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dialog/src/useDialog.ts
 
@@ -119,10 +120,10 @@ pub struct UseDialogProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseDialogProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDialogAttrs {
+impl IntoAttrs for UseDialogProps {
+    type Attrs = UseDialogAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
@@ -155,10 +156,10 @@ pub struct UseDialogTitleProps {
     pub id: String,
 }
 
-impl UseDialogTitleProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDialogTitleAttrs {
+impl IntoAttrs for UseDialogTitleProps {
+    type Attrs = UseDialogTitleAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }
@@ -175,10 +176,10 @@ pub struct UseDialogDescriptionProps {
     pub id: String,
 }
 
-impl UseDialogDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDialogDescriptionAttrs {
+impl IntoAttrs for UseDialogDescriptionProps {
+    type Attrs = UseDialogDescriptionAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }

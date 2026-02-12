@@ -6,6 +6,7 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toggle/src/useToggle.ts
 
@@ -76,10 +77,10 @@ pub struct UseToggleProps {
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
-impl UseToggleProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseToggleAttrs {
+impl IntoAttrs for UseToggleProps {
+    type Attrs = UseToggleAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_click.into_on(ev::click),
             self.on_keydown.into_on(ev::keydown),

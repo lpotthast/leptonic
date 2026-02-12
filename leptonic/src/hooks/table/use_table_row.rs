@@ -9,6 +9,7 @@ use super::use_table::TableSelectionMode;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableRow.ts
 
@@ -90,10 +91,10 @@ pub struct UseTableRowProps {
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
-impl UseTableRowProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableRowAttrs {
+impl IntoAttrs for UseTableRowProps {
+    type Attrs = UseTableRowAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaRowindex, self.aria_rowindex),

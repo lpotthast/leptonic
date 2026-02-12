@@ -2,6 +2,7 @@ use crate::hooks::{MergedFocusablePressProps, UseFocusRingProps};
 use crate::utils::aria::AriaDescribedby;
 use crate::utils::style::TouchActionStyle;
 use crate::utils::{ElementCaptureAttr, EventHandler, MergeWith};
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::attr::Attr;
@@ -71,10 +72,10 @@ pub type MergedFocusablePressFocusRingAttrs = (
     Style<(TouchActionStyle, &'static str)>,
 );
 
-impl MergedFocusablePressFocusRingProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> MergedFocusablePressFocusRingAttrs {
+impl IntoAttrs for MergedFocusablePressFocusRingProps {
+    type Attrs = MergedFocusablePressFocusRingAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Tabindex, self.tabindex),
             Attr(attr::AriaDescribedby, self.aria_describedby),

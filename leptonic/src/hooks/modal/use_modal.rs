@@ -8,6 +8,7 @@ use web_sys::KeyboardEvent;
 
 use crate::utils::aria::AriaModal;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModal.ts
 
@@ -69,10 +70,10 @@ pub struct UseModalProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseModalProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseModalAttrs {
+impl IntoAttrs for UseModalProps {
+    type Attrs = UseModalAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

@@ -1,5 +1,6 @@
 use leptos::attr;
 use leptos::attr::Attr;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableRowGroup.ts
 
@@ -30,10 +31,10 @@ pub struct UseTableHeaderProps {
     pub role: &'static str,
 }
 
-impl UseTableHeaderProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableHeaderAttrs {
+impl IntoAttrs for UseTableHeaderProps {
+    type Attrs = UseTableHeaderAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Role, self.role),)
     }
 }

@@ -3,6 +3,7 @@ use leptos::attr::Attr;
 use leptos::prelude::*;
 
 use crate::utils::aria::AriaHidden;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabPanel.ts
 
@@ -52,10 +53,10 @@ pub struct UseTabPanelProps {
     pub aria_hidden: Signal<Option<AriaHidden>>,
 }
 
-impl UseTabPanelProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTabPanelAttrs {
+impl IntoAttrs for UseTabPanelProps {
+    type Attrs = UseTabPanelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

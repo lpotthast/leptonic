@@ -11,6 +11,7 @@ use super::use_radio_group::UseRadioGroupState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaInvalid;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadio.ts
 
@@ -83,10 +84,10 @@ pub struct UseRadioInputProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-impl UseRadioInputProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseRadioInputAttrs {
+impl IntoAttrs for UseRadioInputProps {
+    type Attrs = UseRadioInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Type, self.r#type),
             Attr(attr::Name, self.name),

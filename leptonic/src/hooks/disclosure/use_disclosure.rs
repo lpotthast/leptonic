@@ -10,6 +10,7 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHidden};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/disclosure/src/useDisclosure.ts
 
@@ -85,10 +86,10 @@ pub struct UseDisclosureTriggerProps {
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
-impl UseDisclosureTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDisclosureTriggerAttrs {
+impl IntoAttrs for UseDisclosureTriggerProps {
+    type Attrs = UseDisclosureTriggerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::AriaExpanded, self.aria_expanded),
@@ -129,10 +130,10 @@ pub struct UseDisclosureContentProps {
     pub aria_hidden: Signal<Option<AriaHidden>>,
 }
 
-impl UseDisclosureContentProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDisclosureContentAttrs {
+impl IntoAttrs for UseDisclosureContentProps {
+    type Attrs = UseDisclosureContentAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

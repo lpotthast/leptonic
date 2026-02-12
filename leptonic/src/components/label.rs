@@ -2,7 +2,7 @@ use leptos::prelude::*;
 
 use crate::{
     components::form_control::FormControlContext,
-    hooks::{use_press, UsePressInput, UsePressReturn},
+    hooks::{use_press, IntoAttrs, UsePressInput, UsePressReturn},
 };
 
 /// Interactive label usable in forms. Automatically registers with the parent `FormControl` to control a sibling input.

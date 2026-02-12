@@ -8,6 +8,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaDisabled;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableCell.ts
 
@@ -85,10 +86,10 @@ pub struct UseTableCellProps {
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
-impl UseTableCellProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableCellAttrs {
+impl IntoAttrs for UseTableCellProps {
+    type Attrs = UseTableCellAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaColindex, self.aria_colindex),

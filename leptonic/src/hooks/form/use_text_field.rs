@@ -2,6 +2,7 @@ use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaInvalid, AriaLive, AriaRequired};
 use crate::utils::{EventAccessors, EventHandler};
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::attr::Attr;
@@ -159,10 +160,10 @@ pub struct UseTextFieldInputProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-impl UseTextFieldInputProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTextFieldInputAttrs {
+impl IntoAttrs for UseTextFieldInputProps {
+    type Attrs = UseTextFieldInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Type, self.r#type),
@@ -228,10 +229,10 @@ pub struct UseTextFieldLabelProps {
     pub html_for: String,
 }
 
-impl UseTextFieldLabelProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTextFieldLabelAttrs {
+impl IntoAttrs for UseTextFieldLabelProps {
+    type Attrs = UseTextFieldLabelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
     }
 }
@@ -246,10 +247,10 @@ pub struct UseTextFieldDescriptionProps {
     pub id: String,
 }
 
-impl UseTextFieldDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTextFieldDescriptionAttrs {
+impl IntoAttrs for UseTextFieldDescriptionProps {
+    type Attrs = UseTextFieldDescriptionAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }
@@ -270,10 +271,10 @@ pub struct UseTextFieldErrorProps {
     pub aria_live: AriaLive,
 }
 
-impl UseTextFieldErrorProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTextFieldErrorAttrs {
+impl IntoAttrs for UseTextFieldErrorProps {
+    type Attrs = UseTextFieldErrorAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

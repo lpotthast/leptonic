@@ -10,6 +10,7 @@ use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaChecked, AriaDisabled, AriaHidden, AriaInvalid};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/switch/src/useSwitch.ts
 
@@ -100,10 +101,10 @@ pub struct UseSwitchProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-impl UseSwitchProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSwitchAttrs {
+impl IntoAttrs for UseSwitchProps {
+    type Attrs = UseSwitchAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaChecked, self.aria_checked),
@@ -150,10 +151,10 @@ pub struct UseSwitchInputProps {
     pub aria_hidden: AriaHidden,
 }
 
-impl UseSwitchInputProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSwitchInputAttrs {
+impl IntoAttrs for UseSwitchInputProps {
+    type Attrs = UseSwitchInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Type, self.r#type),
             Attr(attr::Name, self.name),

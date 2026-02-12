@@ -14,6 +14,7 @@ use crate::hooks::selection::use_selection_state::{Selection, UseSelectionStateR
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::ElementCaptureAttr;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useOption.ts
 
@@ -110,10 +111,10 @@ pub struct UseOptionProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseOptionProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseOptionAttrs {
+impl IntoAttrs for UseOptionProps {
+    type Attrs = UseOptionAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
@@ -162,10 +163,10 @@ pub struct UseOptionLabelProps {
     pub id: String,
 }
 
-impl UseOptionLabelProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseOptionLabelAttrs {
+impl IntoAttrs for UseOptionLabelProps {
+    type Attrs = UseOptionLabelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }
@@ -180,10 +181,10 @@ pub struct UseOptionDescriptionProps {
     pub id: String,
 }
 
-impl UseOptionDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseOptionDescriptionAttrs {
+impl IntoAttrs for UseOptionDescriptionProps {
+    type Attrs = UseOptionDescriptionAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }

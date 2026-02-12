@@ -14,6 +14,7 @@ use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_element;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 use super::use_grid::UseGridState;
 
@@ -84,10 +85,10 @@ pub struct UseGridRowProps {
     pub on_mouseenter: EventHandler<MouseEvent>,
 }
 
-impl UseGridRowProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseGridRowAttrs {
+impl IntoAttrs for UseGridRowProps {
+    type Attrs = UseGridRowAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::Tabindex, self.tabindex),

@@ -6,6 +6,7 @@ use std::hash::Hash;
 use web_sys::KeyboardEvent;
 
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 use super::use_selectable_collection::{
     use_selectable_collection, FocusStrategy, UseSelectableCollectionInput,
@@ -107,10 +108,10 @@ pub struct UseSelectableListProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseSelectableListProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSelectableListAttrs {
+impl IntoAttrs for UseSelectableListProps {
+    type Attrs = UseSelectableListAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.on_keydown.into_on(ev::keydown),)
     }
 }

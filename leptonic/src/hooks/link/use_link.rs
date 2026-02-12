@@ -6,6 +6,7 @@ use crate::hooks::{
 };
 use crate::utils::aria::{AriaCurrent, AriaDisabled};
 use crate::utils::{ElementCaptureAttr, MergeWith};
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::oco::Oco;
@@ -108,10 +109,10 @@ pub struct UseLinkProps {
     pub merged: MergedFocusablePressFocusRingProps,
 }
 
-impl UseLinkProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseLinkAttrs {
+impl IntoAttrs for UseLinkProps {
+    type Attrs = UseLinkAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             (
                 Attr(attr::Href, self.href),

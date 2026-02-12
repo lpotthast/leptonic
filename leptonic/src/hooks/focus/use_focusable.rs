@@ -12,6 +12,7 @@ use crate::hooks::interactions::use_keyboard::{
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_safely;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusable.tsx
 
@@ -206,10 +207,10 @@ pub struct UseFocusableProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseFocusableProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseFocusableAttrs {
+impl IntoAttrs for UseFocusableProps {
+    type Attrs = UseFocusableAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Tabindex, self.tabindex),
             self.on_focus.into_on(ev::focus),

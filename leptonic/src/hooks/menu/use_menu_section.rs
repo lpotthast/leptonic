@@ -1,6 +1,7 @@
 use leptos::attr;
 use leptos::attr::Attr;
 use uuid::Uuid;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuSection.ts
 
@@ -42,10 +43,10 @@ pub struct UseMenuSectionItemProps {
     pub role: &'static str,
 }
 
-impl UseMenuSectionItemProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMenuSectionItemAttrs {
+impl IntoAttrs for UseMenuSectionItemProps {
+    type Attrs = UseMenuSectionItemAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Role, self.role),)
     }
 }
@@ -63,10 +64,10 @@ pub struct UseMenuSectionHeadingProps {
     pub role: Option<&'static str>,
 }
 
-impl UseMenuSectionHeadingProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMenuSectionHeadingAttrs {
+impl IntoAttrs for UseMenuSectionHeadingProps {
+    type Attrs = UseMenuSectionHeadingAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id), Attr(attr::Role, self.role))
     }
 }
@@ -90,10 +91,10 @@ pub struct UseMenuSectionGroupProps {
     pub aria_labelledby: Option<String>,
 }
 
-impl UseMenuSectionGroupProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMenuSectionGroupAttrs {
+impl IntoAttrs for UseMenuSectionGroupProps {
+    type Attrs = UseMenuSectionGroupAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaLabel, self.aria_label),

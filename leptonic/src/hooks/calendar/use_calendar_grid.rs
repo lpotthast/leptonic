@@ -9,6 +9,7 @@ use web_sys::KeyboardEvent;
 use crate::utils::aria::{AriaDisabled, AriaReadonly};
 use crate::utils::time::Week;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useCalendarGrid.ts
 
@@ -84,10 +85,10 @@ pub struct UseCalendarGridProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseCalendarGridProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseCalendarGridAttrs {
+impl IntoAttrs for UseCalendarGridProps {
+    type Attrs = UseCalendarGridAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

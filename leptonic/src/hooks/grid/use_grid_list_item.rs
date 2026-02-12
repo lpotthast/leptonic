@@ -14,6 +14,7 @@ use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_element;
 use crate::utils::{EventAccessors, EventHandler};
+use crate::hooks::IntoAttrs;
 
 use super::use_grid_list::UseGridListState;
 
@@ -81,10 +82,10 @@ pub struct UseGridListItemRowProps {
     pub on_mouseenter: EventHandler<MouseEvent>,
 }
 
-impl UseGridListItemRowProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseGridListItemRowAttrs {
+impl IntoAttrs for UseGridListItemRowProps {
+    type Attrs = UseGridListItemRowAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::Tabindex, self.tabindex),
@@ -126,10 +127,10 @@ pub struct UseGridListItemGridCellProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseGridListItemGridCellProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseGridListItemGridCellAttrs {
+impl IntoAttrs for UseGridListItemGridCellProps {
+    type Attrs = UseGridListItemGridCellAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaColindex, self.aria_colindex),

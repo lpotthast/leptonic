@@ -102,3 +102,17 @@ pub use tag::*;
 pub use toolbar::*;
 pub use tooltip::*;
 pub use tree::*;
+
+/// Trait for converting hook `*Props` types into spreadable attribute tuples.
+///
+/// All `*Props` types returned by hooks implement this trait. Call `.into_attrs()`
+/// to convert props into an attribute tuple that can be spread onto elements
+/// using Leptos's spreading syntax (`<div {..props.into_attrs()}/>`).
+pub trait IntoAttrs {
+    /// The concrete attributes tuple type produced by this conversion.
+    type Attrs;
+
+    /// Convert to spreadable attributes for Leptos views, consuming self.
+    #[must_use]
+    fn into_attrs(self) -> Self::Attrs;
+}

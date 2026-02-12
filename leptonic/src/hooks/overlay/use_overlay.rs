@@ -2,6 +2,7 @@ use leptos::attr;
 use leptos::attr::Attr;
 use leptos::oco::Oco;
 use leptos::prelude::*;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -35,10 +36,10 @@ pub struct UseOverlayProps {
     pub id: String,
 }
 
-impl UseOverlayProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseOverlayAttrs {
+impl IntoAttrs for UseOverlayProps {
+    type Attrs = UseOverlayAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }

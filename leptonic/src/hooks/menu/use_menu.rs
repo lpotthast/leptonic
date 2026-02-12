@@ -27,6 +27,7 @@ use crate::utils::EventHandler;
 // =============================================================================
 
 use crate::hooks::selection::use_selectable_collection::FocusStrategy;
+use crate::hooks::IntoAttrs;
 
 /// Input parameters for the `use_menu` hook.
 #[derive(Clone)]
@@ -103,10 +104,10 @@ pub struct UseMenuProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseMenuProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMenuAttrs {
+impl IntoAttrs for UseMenuProps {
+    type Attrs = UseMenuAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaLabel, self.aria_label),

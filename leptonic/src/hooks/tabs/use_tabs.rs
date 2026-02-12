@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use uuid::Uuid;
 
 use crate::utils::aria::AriaOrientation;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
 
@@ -106,10 +107,10 @@ pub struct UseTabsProps {
     pub id: String,
 }
 
-impl UseTabsProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTabsAttrs {
+impl IntoAttrs for UseTabsProps {
+    type Attrs = UseTabsAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }

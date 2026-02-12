@@ -3,7 +3,7 @@ use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
 
 use leptonic::components::prelude::*;
-use leptonic::hooks::{use_combobox, MenuTriggerAction, UseComboBoxInput};
+use leptonic::hooks::*;
 use leptos::prelude::*;
 
 #[component]

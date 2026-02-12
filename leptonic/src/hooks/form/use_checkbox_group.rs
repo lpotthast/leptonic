@@ -6,6 +6,7 @@ use std::hash::Hash;
 use uuid::Uuid;
 
 use crate::utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired};
+use crate::hooks::IntoAttrs;
 
 use super::use_field::ValidationState;
 
@@ -115,10 +116,10 @@ pub struct UseCheckboxGroupProps {
     pub aria_orientation: AriaOrientation,
 }
 
-impl UseCheckboxGroupProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseCheckboxGroupAttrs {
+impl IntoAttrs for UseCheckboxGroupProps {
+    type Attrs = UseCheckboxGroupAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
@@ -150,10 +151,10 @@ pub struct UseCheckboxGroupLabelProps {
     pub id: String,
 }
 
-impl UseCheckboxGroupLabelProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseCheckboxGroupLabelAttrs {
+impl IntoAttrs for UseCheckboxGroupLabelProps {
+    type Attrs = UseCheckboxGroupLabelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }

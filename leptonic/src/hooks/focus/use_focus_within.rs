@@ -6,6 +6,7 @@ use wasm_bindgen::JsCast;
 use web_sys::FocusEvent;
 
 use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusWithin.ts
 
@@ -57,10 +58,10 @@ pub struct UseFocusWithinProps {
     pub on_focusout: EventHandler<FocusEvent>,
 }
 
-impl UseFocusWithinProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseFocusWithinAttrs {
+impl IntoAttrs for UseFocusWithinProps {
+    type Attrs = UseFocusWithinAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),

@@ -1,5 +1,6 @@
 use leptos::attr;
 use leptos::attr::Attr;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridRowGroup.ts
 
@@ -27,10 +28,10 @@ pub struct UseGridRowGroupProps {
     pub role: &'static str,
 }
 
-impl UseGridRowGroupProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseGridRowGroupAttrs {
+impl IntoAttrs for UseGridRowGroupProps {
+    type Attrs = UseGridRowGroupAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         Attr(attr::Role, self.role)
     }
 }

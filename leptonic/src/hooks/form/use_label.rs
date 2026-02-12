@@ -1,6 +1,7 @@
 use leptos::attr;
 use leptos::attr::Attr;
 use uuid::Uuid;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useLabel.ts
 
@@ -48,8 +49,10 @@ pub struct UseLabelProps {
     for_elem: Option<String>,
 }
 
-impl UseLabelProps {
-    pub fn into_attrs(self) -> UseLabelAttrs {
+impl IntoAttrs for UseLabelProps {
+    type Attrs = UseLabelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id), Attr(attr::For, self.for_elem))
     }
 }
@@ -60,8 +63,10 @@ pub struct UseLabelFieldProps {
     aria_labelledby: Option<String>,
 }
 
-impl UseLabelFieldProps {
-    pub fn into_attrs(self) -> UseLabelFieldAttrs {
+impl IntoAttrs for UseLabelFieldProps {
+    type Attrs = UseLabelFieldAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::AriaLabelledby, self.aria_labelledby),

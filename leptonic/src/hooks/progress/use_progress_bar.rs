@@ -1,4 +1,5 @@
 use crate::utils::math::percentage_in_range;
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::prelude::*;
@@ -82,10 +83,10 @@ pub struct UseProgressBarProps {
     pub aria_labelledby: Option<String>,
 }
 
-impl UseProgressBarProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseProgressBarAttrs {
+impl IntoAttrs for UseProgressBarProps {
+    type Attrs = UseProgressBarAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

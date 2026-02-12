@@ -5,6 +5,7 @@ use web_sys::PointerEvent;
 
 use crate::hooks::interactions::use_hover::{use_hover, UseHoverInput};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/tooltip/src/useTooltip.ts
 
@@ -43,10 +44,10 @@ pub struct UseTooltipProps {
     pub on_pointerleave: EventHandler<PointerEvent>,
 }
 
-impl UseTooltipProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTooltipAttrs {
+impl IntoAttrs for UseTooltipProps {
+    type Attrs = UseTooltipAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),

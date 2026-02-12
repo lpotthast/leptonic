@@ -12,6 +12,7 @@ use crate::hooks::menu::use_menu_trigger::{UseMenuTriggerMenuProps, UseMenuTrigg
 use crate::hooks::{MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps};
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHasPopup};
 use crate::utils::MergeWith;
+use crate::hooks::IntoAttrs;
 
 /// Return type from merging `UseButtonProps` with `UseMenuTriggerProps`.
 ///
@@ -79,10 +80,10 @@ pub struct MergedButtonMenuTriggerProps {
     pub other: MergedPressHoverFocusRingProps,
 }
 
-impl MergedButtonMenuTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> MergedButtonMenuTriggerAttrs {
+impl IntoAttrs for MergedButtonMenuTriggerProps {
+    type Attrs = MergedButtonMenuTriggerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             (
                 Attr(attr::Id, self.id),

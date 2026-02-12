@@ -15,6 +15,7 @@ use crate::prelude::AriaHasPopup;
 use crate::utils::aria::AriaExpanded;
 use crate::utils::focus::focus_event_target;
 use crate::utils::pointer_type::PointerType;
+use crate::hooks::IntoAttrs;
 
 use super::use_menu_trigger_state::UseMenuTriggerStateReturn;
 
@@ -101,10 +102,10 @@ pub struct UseMenuTriggerProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
 }
 
-impl UseMenuTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMenuTriggerAttrs {
+impl IntoAttrs for UseMenuTriggerProps {
+    type Attrs = UseMenuTriggerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::AriaHaspopup, self.aria_haspopup),

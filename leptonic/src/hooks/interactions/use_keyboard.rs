@@ -6,6 +6,7 @@ use std::sync::Arc;
 use web_sys::KeyboardEvent;
 
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useKeyboard.ts
 
 // =============================================================================
@@ -128,10 +129,10 @@ pub struct UseKeyboardProps {
     pub on_keyup: EventHandler<KeyboardEvent>,
 }
 
-impl UseKeyboardProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseKeyboardAttrs {
+impl IntoAttrs for UseKeyboardProps {
+    type Attrs = UseKeyboardAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_keydown.into_on(ev::keydown),
             self.on_keyup.into_on(ev::keyup),

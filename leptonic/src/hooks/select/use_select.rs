@@ -10,6 +10,7 @@ use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaRequired};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/select/src/useSelect.ts
 
@@ -158,10 +159,10 @@ pub struct UseSelectTriggerProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseSelectTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSelectTriggerAttrs {
+impl IntoAttrs for UseSelectTriggerProps {
+    type Attrs = UseSelectTriggerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

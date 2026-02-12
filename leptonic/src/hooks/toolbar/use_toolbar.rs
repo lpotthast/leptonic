@@ -8,6 +8,7 @@ use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaOrientation};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toolbar/src/useToolbar.ts
 
@@ -101,10 +102,10 @@ pub struct UseToolbarProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseToolbarProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseToolbarAttrs {
+impl IntoAttrs for UseToolbarProps {
+    type Attrs = UseToolbarAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

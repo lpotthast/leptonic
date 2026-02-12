@@ -4,6 +4,7 @@ use leptos::prelude::*;
 use web_sys::WheelEvent;
 
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useScrollWheel.ts
 
@@ -47,10 +48,10 @@ pub struct UseScrollWheelProps {
     pub on_wheel: EventHandler<WheelEvent>,
 }
 
-impl UseScrollWheelProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseScrollWheelAttrs {
+impl IntoAttrs for UseScrollWheelProps {
+    type Attrs = UseScrollWheelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.on_wheel.into_on(ev::wheel),)
     }
 }

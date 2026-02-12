@@ -8,6 +8,7 @@ use web_sys::KeyboardEvent;
 
 use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTable.ts
 
@@ -143,10 +144,10 @@ pub struct UseTableProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseTableProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableAttrs {
+impl IntoAttrs for UseTableProps {
+    type Attrs = UseTableAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

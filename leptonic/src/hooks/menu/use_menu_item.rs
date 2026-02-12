@@ -12,6 +12,7 @@ use crate::hooks::focus::use_focusable::{use_focusable, UseFocusableInput};
 use crate::hooks::selection::use_selection_state::Selection;
 use crate::utils::element_capture::ElementCaptureAttr;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenuItem.ts
 
@@ -89,10 +90,10 @@ pub struct UseMenuItemProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseMenuItemProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMenuItemAttrs {
+impl IntoAttrs for UseMenuItemProps {
+    type Attrs = UseMenuItemAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::Tabindex, self.tabindex),

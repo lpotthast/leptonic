@@ -11,6 +11,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaExpanded, AriaRequired};
 use crate::utils::{EventAccessors, EventHandler};
+use crate::hooks::IntoAttrs;
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/combobox/src/useComboBox.ts
 
 // =============================================================================
@@ -214,10 +215,10 @@ pub struct UseComboBoxInputProps {
     pub on_blur: EventHandler<FocusEvent>,
 }
 
-impl UseComboBoxInputProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseComboBoxInputAttrs {
+impl IntoAttrs for UseComboBoxInputProps {
+    type Attrs = UseComboBoxInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Type, self.r#type),
@@ -255,10 +256,10 @@ pub struct UseComboBoxButtonProps {
     pub on_click: EventHandler<MouseEvent>,
 }
 
-impl UseComboBoxButtonProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseComboBoxButtonAttrs {
+impl IntoAttrs for UseComboBoxButtonProps {
+    type Attrs = UseComboBoxButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Type, self.r#type),

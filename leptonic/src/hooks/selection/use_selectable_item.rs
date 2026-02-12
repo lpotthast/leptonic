@@ -6,6 +6,7 @@ use web_sys::{FocusEvent, MouseEvent};
 
 use super::use_selection_state::{Selection, SelectionBehavior, SelectionMode};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableItem.ts
 
@@ -84,10 +85,10 @@ pub struct UseSelectableItemProps {
     pub on_mouseenter: EventHandler<MouseEvent>,
 }
 
-impl UseSelectableItemProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSelectableItemAttrs {
+impl IntoAttrs for UseSelectableItemProps {
+    type Attrs = UseSelectableItemAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_click.into_on(ev::click),
             self.on_dblclick.into_on(ev::dblclick),

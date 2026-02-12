@@ -12,6 +12,7 @@ use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaInvalid;
 use crate::utils::{EventAccessors, EventHandler};
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/searchfield/src/useSearchField.ts
 
@@ -145,10 +146,10 @@ pub struct UseSearchFieldInputProps {
     pub on_focusout: EventHandler<web_sys::FocusEvent>,
 }
 
-impl UseSearchFieldInputProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSearchFieldInputAttrs {
+impl IntoAttrs for UseSearchFieldInputProps {
+    type Attrs = UseSearchFieldInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Type, self.r#type),
@@ -210,10 +211,10 @@ pub struct UseSearchFieldClearButtonProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
-impl UseSearchFieldClearButtonProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSearchFieldClearButtonAttrs {
+impl IntoAttrs for UseSearchFieldClearButtonProps {
+    type Attrs = UseSearchFieldClearButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Type, self.r#type),
             Attr(attr::AriaLabel, self.aria_label),
@@ -243,10 +244,10 @@ pub struct UseSearchFieldLabelProps {
     pub html_for: String,
 }
 
-impl UseSearchFieldLabelProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSearchFieldLabelAttrs {
+impl IntoAttrs for UseSearchFieldLabelProps {
+    type Attrs = UseSearchFieldLabelAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id), Attr(attr::For, self.html_for))
     }
 }
@@ -261,10 +262,10 @@ pub struct UseSearchFieldDescriptionProps {
     pub id: String,
 }
 
-impl UseSearchFieldDescriptionProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSearchFieldDescriptionAttrs {
+impl IntoAttrs for UseSearchFieldDescriptionProps {
+    type Attrs = UseSearchFieldDescriptionAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id),)
     }
 }

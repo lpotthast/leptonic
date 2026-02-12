@@ -3,7 +3,7 @@ use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
 
 use leptonic::components::prelude::*;
-use leptonic::hooks::{use_interact_outside, UseInteractOutsideInput};
+use leptonic::hooks::*;
 use leptos::prelude::*;
 
 #[component]

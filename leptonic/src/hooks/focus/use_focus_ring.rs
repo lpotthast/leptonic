@@ -11,6 +11,7 @@ use crate::hooks::focus::use_focus_within::{
 };
 use crate::hooks::UseFocusVisibleReturn;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/useFocusRing.ts
 
@@ -89,10 +90,10 @@ pub struct UseFocusRingProps {
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
-impl UseFocusRingProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseFocusRingAttrs {
+impl IntoAttrs for UseFocusRingProps {
+    type Attrs = UseFocusRingAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),

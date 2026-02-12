@@ -8,6 +8,7 @@ use web_sys::KeyboardEvent;
 use super::use_tabs::TabsOrientation;
 use crate::utils::aria::{AriaDisabled, AriaOrientation};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
 
@@ -68,10 +69,10 @@ pub struct UseTabListProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseTabListProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTabListAttrs {
+impl IntoAttrs for UseTabListProps {
+    type Attrs = UseTabListAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

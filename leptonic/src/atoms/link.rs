@@ -1,7 +1,5 @@
 pub use crate::hooks::LinkRel;
-use crate::hooks::{
-    use_link, LinkElementType, LinkTarget, PressEvent, UseLinkInput, UseLinkReturn,
-};
+use crate::hooks::*;
 use crate::utils::classes::Classes;
 use crate::utils::styles::Styles;
 use leptos::prelude::*;

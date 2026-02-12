@@ -3,6 +3,7 @@ use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
 
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useDismissButton.ts
 
@@ -35,10 +36,10 @@ pub struct UseDismissButtonProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
-impl UseDismissButtonProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDismissButtonAttrs {
+impl IntoAttrs for UseDismissButtonProps {
+    type Attrs = UseDismissButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.on_click.into_on(ev::click),)
     }
 }

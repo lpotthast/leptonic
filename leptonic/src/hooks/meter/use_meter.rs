@@ -1,4 +1,5 @@
 use crate::utils::math::percentage_in_range;
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::prelude::*;
@@ -99,10 +100,10 @@ pub struct UseMeterProps {
     pub aria_labelledby: Option<String>,
 }
 
-impl UseMeterProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMeterAttrs {
+impl IntoAttrs for UseMeterProps {
+    type Attrs = UseMeterAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

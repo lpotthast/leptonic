@@ -1,6 +1,6 @@
 use leptos::prelude::*;
 
-use crate::hooks::{use_press, PressEvent, UsePressInput, UsePressReturn};
+use crate::hooks::{use_press, IntoAttrs, PressEvent, UsePressInput, UsePressReturn};
 
 #[component]
 pub fn TableContainer(children: Children) -> impl IntoView {

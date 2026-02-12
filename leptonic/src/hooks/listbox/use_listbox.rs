@@ -11,6 +11,7 @@ use web_sys::KeyboardEvent;
 use crate::utils::aria::{AriaDisabled, AriaMultiselectable, AriaOrientation};
 use crate::utils::EventHandler;
 
+use crate::hooks::IntoAttrs;
 use crate::hooks::selection::{
     use_selectable_collection::FocusStrategy,
     use_selectable_list::{use_selectable_list, UseSelectableListInput, UseSelectableListReturn},
@@ -158,10 +159,10 @@ pub struct UseListBoxProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseListBoxProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseListBoxAttrs {
+impl IntoAttrs for UseListBoxProps {
+    type Attrs = UseListBoxAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

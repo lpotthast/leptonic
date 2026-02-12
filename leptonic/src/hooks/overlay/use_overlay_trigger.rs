@@ -3,6 +3,7 @@ use leptos::attr::{Attr, IntoAttributeValue};
 use leptos::oco::Oco;
 use leptos::prelude::*;
 
+use crate::hooks::IntoAttrs;
 use crate::{
     prelude::{AriaExpanded, AriaHasPopup},
     utils::aria::AriaControls,
@@ -43,10 +44,10 @@ pub struct UseOverlayTriggerProps {
     pub aria_controls: Signal<Option<String>>,
 }
 
-impl UseOverlayTriggerProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseOverlayTriggerAttrs {
+impl IntoAttrs for UseOverlayTriggerProps {
+    type Attrs = UseOverlayTriggerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::AriaHaspopup, self.aria_haspopup),
             Attr(attr::AriaExpanded, self.aria_expanded),

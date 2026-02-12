@@ -14,6 +14,7 @@ use crate::utils::math::percentage_in_range;
 use crate::utils::CapturedElement;
 use crate::utils::EventAccessors;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::attr::Attr;
@@ -144,9 +145,10 @@ pub struct UseSliderThumbProps {
     on_pointerleave: EventHandler<PointerEvent>,
 }
 
-impl UseSliderThumbProps {
-    /// Converts these props into spreadable attributes, consuming self.
-    pub fn into_attrs(self) -> UseSliderThumbAttrs {
+impl IntoAttrs for UseSliderThumbProps {
+    type Attrs = UseSliderThumbAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
@@ -215,8 +217,10 @@ pub struct UseSliderThumbInputProps {
     aria_hidden: AriaHidden,
 }
 
-impl UseSliderThumbInputProps {
-    pub fn into_attrs(self) -> UseSliderThumbInputAttrs {
+impl IntoAttrs for UseSliderThumbInputProps {
+    type Attrs = UseSliderThumbInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Type, self.ty),
             Attr(attr::Name, self.name),

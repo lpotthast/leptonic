@@ -48,6 +48,7 @@ use crate::hooks::{
 use crate::utils::aria::{AriaDisabled, AriaLive};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::ev;
@@ -112,8 +113,10 @@ pub struct UseSliderGroupProps {
     aria_disabled: Signal<Option<AriaDisabled>>,
 }
 
-impl UseSliderGroupProps {
-    pub fn into_attrs(self) -> UseSliderGroupAttrs {
+impl IntoAttrs for UseSliderGroupProps {
+    type Attrs = UseSliderGroupAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::Id, self.id),
@@ -141,8 +144,10 @@ pub struct UseSliderTrackProps {
     element_capture: ElementCaptureAttr,
 }
 
-impl UseSliderTrackProps {
-    pub fn into_attrs(self) -> UseSliderTrackAttrs {
+impl IntoAttrs for UseSliderTrackProps {
+    type Attrs = UseSliderTrackAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             style(("touch-action", self.style_touch_action)),
@@ -181,8 +186,10 @@ pub struct UseSliderOutputProps {
     pub aria_live: AriaLive,
 }
 
-impl UseSliderOutputProps {
-    pub fn into_attrs(self) -> UseSliderOutputAttrs {
+impl IntoAttrs for UseSliderOutputProps {
+    type Attrs = UseSliderOutputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::For, self.html_for),

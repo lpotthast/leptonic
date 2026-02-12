@@ -10,6 +10,7 @@ use super::use_date_segment::{DateSegment, DateSegmentType};
 use crate::utils::aria::{AriaDisabled, AriaRequired};
 use crate::utils::time::whole_days_in;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDateField.ts
 
@@ -135,10 +136,10 @@ pub struct UseDateFieldProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseDateFieldProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDateFieldAttrs {
+impl IntoAttrs for UseDateFieldProps {
+    type Attrs = UseDateFieldAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

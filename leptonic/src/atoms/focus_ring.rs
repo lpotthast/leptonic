@@ -1,7 +1,7 @@
 use leptos::prelude::*;
 use web_sys::FocusEvent;
 
-use crate::hooks::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
+use crate::hooks::*;
 
 /// Context for accessing focus ring state from child components.
 #[derive(Clone, Copy)]

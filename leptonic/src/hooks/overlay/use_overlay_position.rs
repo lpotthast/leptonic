@@ -8,6 +8,7 @@ use leptos_use::core::IntoElementMaybeSignal;
 use leptos_use::{use_document, use_element_bounding};
 
 use crate::utils::locale::WritingDirection;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -116,10 +117,10 @@ pub struct UseOverlayPositionProps {
     pub left: Signal<(&'static str, String)>,
 }
 
-impl UseOverlayPositionProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseOverlayPositionAttrs {
+impl IntoAttrs for UseOverlayPositionProps {
+    type Attrs = UseOverlayPositionAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             style(self.position),
             style(self.z_index),

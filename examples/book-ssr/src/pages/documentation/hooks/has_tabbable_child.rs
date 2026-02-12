@@ -3,9 +3,7 @@ use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
 
 use leptonic::components::prelude::*;
-use leptonic::hooks::{
-    use_has_tabbable_child, UseHasTabbableChildInput, UseHasTabbableChildReturn,
-};
+use leptonic::hooks::*;
 use leptonic::prelude::Size;
 use leptos::prelude::*;
 

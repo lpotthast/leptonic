@@ -6,6 +6,7 @@ use leptos::prelude::*;
 
 use crate::utils::aria::AriaDisabled;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -46,10 +47,10 @@ pub struct UseTableCheckboxCellProps {
     pub role: &'static str,
 }
 
-impl UseTableCheckboxCellProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableCheckboxCellAttrs {
+impl IntoAttrs for UseTableCheckboxCellProps {
+    type Attrs = UseTableCheckboxCellAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Role, self.role),)
     }
 }
@@ -64,10 +65,10 @@ pub struct UseTableCheckboxProps {
     pub on_change: EventHandler<web_sys::Event>,
 }
 
-impl UseTableCheckboxProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableCheckboxAttrs {
+impl IntoAttrs for UseTableCheckboxProps {
+    type Attrs = UseTableCheckboxAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Type, self.r#type),
             Attr(attr::Checked, self.checked),

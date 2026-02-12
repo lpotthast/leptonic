@@ -7,6 +7,7 @@ use web_sys::{KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaCurrent, AriaDisabled};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -61,10 +62,10 @@ pub struct UseBreadcrumbItemReturn {
 #[derive(Debug)]
 pub struct UseBreadcrumbItemProps;
 
-impl UseBreadcrumbItemProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseBreadcrumbItemAttrs {}
+impl IntoAttrs for UseBreadcrumbItemProps {
+    type Attrs = UseBreadcrumbItemAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {}
 }
 
 /// Attributes for the breadcrumb item container.
@@ -81,10 +82,10 @@ pub struct UseBreadcrumbLinkProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
-impl UseBreadcrumbLinkProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseBreadcrumbLinkAttrs {
+impl IntoAttrs for UseBreadcrumbLinkProps {
+    type Attrs = UseBreadcrumbLinkAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Href, self.href),
             Attr(attr::AriaCurrent, self.aria_current),

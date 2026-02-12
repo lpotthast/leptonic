@@ -3,6 +3,7 @@ use leptos::attr::Attr;
 use leptos::prelude::*;
 
 use crate::utils::aria::AriaHidden;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/select/src/useHiddenSelect.ts
 
@@ -77,10 +78,10 @@ pub struct UseHiddenSelectContainerProps {
     pub aria_hidden: AriaHidden,
 }
 
-impl UseHiddenSelectContainerProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseHiddenSelectContainerAttrs {
+impl IntoAttrs for UseHiddenSelectContainerProps {
+    type Attrs = UseHiddenSelectContainerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::AriaHidden, self.aria_hidden),)
     }
 }
@@ -102,10 +103,10 @@ pub struct UseHiddenSelectInputProps {
     pub tabindex: &'static str,
 }
 
-impl UseHiddenSelectInputProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseHiddenSelectInputAttrs {
+impl IntoAttrs for UseHiddenSelectInputProps {
+    type Attrs = UseHiddenSelectInputAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Type, self.r#type),
             Attr(attr::Name, self.name),
@@ -137,10 +138,10 @@ pub struct UseHiddenSelectSelectProps {
     pub aria_labelledby: Option<String>,
 }
 
-impl UseHiddenSelectSelectProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseHiddenSelectSelectAttrs {
+impl IntoAttrs for UseHiddenSelectSelectProps {
+    type Attrs = UseHiddenSelectSelectAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Name, self.name),
             Attr(attr::Disabled, self.disabled),

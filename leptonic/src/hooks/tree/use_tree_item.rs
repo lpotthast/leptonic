@@ -7,6 +7,7 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaSelected};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -101,10 +102,10 @@ pub struct UseTreeItemProps {
     pub on_focus: EventHandler<FocusEvent>,
 }
 
-impl UseTreeItemProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTreeItemAttrs {
+impl IntoAttrs for UseTreeItemProps {
+    type Attrs = UseTreeItemAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaExpanded, self.aria_expanded),
@@ -137,10 +138,10 @@ pub struct UseTreeItemContentProps {
     pub role: &'static str,
 }
 
-impl UseTreeItemContentProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTreeItemContentAttrs {
+impl IntoAttrs for UseTreeItemContentProps {
+    type Attrs = UseTreeItemContentAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Role, self.role),)
     }
 }

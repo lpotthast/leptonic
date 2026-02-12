@@ -2,6 +2,7 @@ use crate::hooks::{UseHoverProps, UsePressProps};
 use crate::utils::aria::AriaDescribedby;
 use crate::utils::style::TouchActionStyle;
 use crate::utils::{EventHandler, MergeWith};
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::ev;
@@ -66,10 +67,10 @@ pub type MergedPressHoverAttrs = (
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
 );
 
-impl MergedPressHoverProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> MergedPressHoverAttrs {
+impl IntoAttrs for MergedPressHoverProps {
+    type Attrs = MergedPressHoverAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),

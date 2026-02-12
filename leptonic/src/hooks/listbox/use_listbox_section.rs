@@ -3,6 +3,7 @@ use leptos::attr::Attr;
 use uuid::Uuid;
 
 use crate::utils::aria::AriaHidden;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useListBoxSection.ts
 
@@ -44,10 +45,10 @@ pub struct UseListBoxSectionGroupProps {
     pub aria_labelledby: Option<String>,
 }
 
-impl UseListBoxSectionGroupProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseListBoxSectionGroupAttrs {
+impl IntoAttrs for UseListBoxSectionGroupProps {
+    type Attrs = UseListBoxSectionGroupAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
@@ -74,10 +75,10 @@ pub struct UseListBoxSectionHeadingProps {
     pub aria_hidden: AriaHidden,
 }
 
-impl UseListBoxSectionHeadingProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseListBoxSectionHeadingAttrs {
+impl IntoAttrs for UseListBoxSectionHeadingProps {
+    type Attrs = UseListBoxSectionHeadingAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
@@ -100,10 +101,10 @@ pub struct UseListBoxSectionItemsProps {
     pub role: &'static str,
 }
 
-impl UseListBoxSectionItemsProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseListBoxSectionItemsAttrs {
+impl IntoAttrs for UseListBoxSectionItemsProps {
+    type Attrs = UseListBoxSectionItemsAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Role, self.role),)
     }
 }

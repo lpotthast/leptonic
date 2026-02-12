@@ -50,6 +50,7 @@ pub mod prelude {
     //pub use crate::atoms::prelude::*;
     //pub use crate::components::prelude::*;
     //pub use crate::hooks::prelude::*;
+    pub use crate::hooks::IntoAttrs;
     pub use crate::contexts::global_click_event::GlobalClickEvent;
     pub use crate::contexts::global_keyboard_event::GlobalKeyboardEvent;
     pub use crate::signal_ls;

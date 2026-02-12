@@ -10,6 +10,7 @@ use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, Use
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::time::Day;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useCalendarCell.ts
 
@@ -99,10 +100,10 @@ pub struct UseCalendarCellProps {
     pub aria_selected: Signal<Option<AriaSelected>>,
 }
 
-impl UseCalendarCellProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseCalendarCellAttrs {
+impl IntoAttrs for UseCalendarCellProps {
+    type Attrs = UseCalendarCellAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaDisabled, self.aria_disabled),
@@ -134,10 +135,10 @@ pub struct UseCalendarCellButtonProps {
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
-impl UseCalendarCellButtonProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseCalendarCellButtonAttrs {
+impl IntoAttrs for UseCalendarCellButtonProps {
+    type Attrs = UseCalendarCellButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::Tabindex, self.tabindex),

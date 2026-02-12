@@ -2,6 +2,7 @@ use leptos::attr;
 use leptos::attr::Attr;
 
 use crate::utils::aria::AriaOrientation;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/separator/src/useSeparator.ts
 
@@ -76,10 +77,10 @@ pub struct UseSeparatorProps {
     pub aria_orientation: Option<AriaOrientation>,
 }
 
-impl UseSeparatorProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseSeparatorAttrs {
+impl IntoAttrs for UseSeparatorProps {
+    type Attrs = UseSeparatorAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaOrientation, self.aria_orientation),

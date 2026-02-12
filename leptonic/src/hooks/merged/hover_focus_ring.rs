@@ -1,5 +1,6 @@
 use crate::hooks::{UseFocusRingProps, UseHoverProps};
 use crate::utils::{EventHandler, MergeWith};
+use crate::hooks::IntoAttrs;
 use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
@@ -38,10 +39,10 @@ pub type MergedHoverFocusRingAttrs = (
     CustomAttr<&'static str, leptos::prelude::Signal<Option<&'static str>>>,
 );
 
-impl MergedHoverFocusRingProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> MergedHoverFocusRingAttrs {
+impl IntoAttrs for MergedHoverFocusRingProps {
+    type Attrs = MergedHoverFocusRingAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),

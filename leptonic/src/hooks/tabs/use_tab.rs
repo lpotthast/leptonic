@@ -12,6 +12,7 @@ use crate::hooks::focus::use_focusable::{use_focusable, UseFocusableInput};
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::ElementCaptureAttr;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTab.ts
 
@@ -92,10 +93,10 @@ pub struct UseTabProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseTabProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTabAttrs {
+impl IntoAttrs for UseTabProps {
+    type Attrs = UseTabAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

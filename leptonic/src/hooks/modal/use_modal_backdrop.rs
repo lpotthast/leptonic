@@ -7,6 +7,7 @@ use uuid::Uuid;
 
 use crate::hooks::interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput};
 use crate::utils::{EventAccessors, EventHandler};
+use crate::hooks::IntoAttrs;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModalOverlay.ts
 // React Aria calls this "useModalOverlay" with "underlay" props. We use "backdrop" terminology for clarity.
@@ -65,10 +66,10 @@ pub struct UseModalBackdropProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
-impl UseModalBackdropProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseModalBackdropAttrs {
+impl IntoAttrs for UseModalBackdropProps {
+    type Attrs = UseModalBackdropAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (Attr(attr::Id, self.id), self.on_click.into_on(ev::click))
     }
 }
@@ -85,10 +86,10 @@ pub struct UseModalBackdropContentProps {
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
 
-impl UseModalBackdropContentProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseModalBackdropContentAttrs {
+impl IntoAttrs for UseModalBackdropContentProps {
+    type Attrs = UseModalBackdropContentAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.on_click.into_on(ev::click),)
     }
 }

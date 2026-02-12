@@ -8,6 +8,7 @@ use web_sys::DragEvent;
 
 use crate::utils::aria::AriaGrabbed;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrag.ts
 
@@ -189,10 +190,10 @@ pub struct UseDraggableProps {
     pub on_dragend: EventHandler<DragEvent>,
 }
 
-impl UseDraggableProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDraggableAttrs {
+impl IntoAttrs for UseDraggableProps {
+    type Attrs = UseDraggableAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Draggable, self.draggable),

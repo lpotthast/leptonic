@@ -3,6 +3,7 @@ use std::sync::Arc;
 use wasm_bindgen::JsCast;
 
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/FocusScope.tsx
 //
@@ -333,10 +334,10 @@ pub struct UseFocusManagerProps {
     pub element_capture: ElementCaptureAttr,
 }
 
-impl UseFocusManagerProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseFocusManagerAttrs {
+impl IntoAttrs for UseFocusManagerProps {
+    type Attrs = UseFocusManagerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.element_capture,)
     }
 }

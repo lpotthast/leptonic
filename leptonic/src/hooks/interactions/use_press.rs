@@ -4,6 +4,7 @@ use crate::utils::open_link::open_link;
 use crate::utils::platform::device;
 use crate::utils::style::TouchActionStyle;
 use crate::utils::use_description::use_description;
+use crate::hooks::IntoAttrs;
 use crate::utils::{
     is_over, node_contains,
     pointer_type::PointerType,
@@ -257,10 +258,10 @@ pub struct UsePressProps {
     pub aria_describedby: Option<AriaDescribedby>,
 }
 
-impl UsePressProps {
-    /// Convert to spreadable attributes for Leptos views.
-    #[must_use]
-    pub fn into_attrs(self) -> UsePressAttrs {
+impl IntoAttrs for UsePressProps {
+    type Attrs = UsePressAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             self.on_keydown.into_on(ev::keydown),
             self.on_click.into_on(ev::click),

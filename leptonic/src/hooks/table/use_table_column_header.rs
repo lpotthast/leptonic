@@ -9,6 +9,7 @@ use super::use_table::SortDirection;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaDisabled;
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableColumnHeader.ts
 
@@ -80,10 +81,10 @@ pub struct UseTableColumnHeaderProps {
     pub data_focus_visible: Signal<Option<&'static str>>,
 }
 
-impl UseTableColumnHeaderProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseTableColumnHeaderAttrs {
+impl IntoAttrs for UseTableColumnHeaderProps {
+    type Attrs = UseTableColumnHeaderAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
             Attr(attr::AriaColindex, self.aria_colindex),

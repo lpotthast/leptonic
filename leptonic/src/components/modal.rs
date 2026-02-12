@@ -3,7 +3,10 @@ use uuid::Uuid;
 
 use crate::utils::classes::Classes;
 use crate::{
-    hooks::{use_press, use_prevent_scroll, UsePressInput, UsePressReturn, UsePreventScrollInput},
+    hooks::{
+        use_press, use_prevent_scroll, IntoAttrs, UsePressInput, UsePressReturn,
+        UsePreventScrollInput,
+    },
     prelude::GlobalKeyboardEvent,
 };
 

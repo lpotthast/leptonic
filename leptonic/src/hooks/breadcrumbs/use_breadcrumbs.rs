@@ -2,6 +2,7 @@ use leptos::attr;
 use leptos::attr::Attr;
 use leptos::prelude::*;
 use uuid::Uuid;
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/breadcrumbs/src/useBreadcrumbs.ts
 
@@ -50,10 +51,10 @@ pub struct UseBreadcrumbsProps {
     pub aria_label: Option<String>,
 }
 
-impl UseBreadcrumbsProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseBreadcrumbsAttrs {
+impl IntoAttrs for UseBreadcrumbsProps {
+    type Attrs = UseBreadcrumbsAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::AriaLabel, self.aria_label),

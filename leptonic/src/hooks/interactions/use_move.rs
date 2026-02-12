@@ -5,6 +5,7 @@ use leptos_use::use_event_listener;
 use web_sys::PointerEvent;
 
 use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
+use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useMove.ts
 
@@ -65,10 +66,10 @@ pub struct UseMoveProps {
     pub on_pointerdown: EventHandler<PointerEvent>,
 }
 
-impl UseMoveProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseMoveAttrs {
+impl IntoAttrs for UseMoveProps {
+    type Attrs = UseMoveAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (self.on_pointerdown.into_on(ev::pointerdown),)
     }
 }

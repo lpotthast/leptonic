@@ -1,5 +1,6 @@
 use crate::hooks::{DragItem, DropEffect};
 use crate::utils::EventHandler;
+use crate::hooks::IntoAttrs;
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::ev;
@@ -131,10 +132,10 @@ pub struct UseDroppableProps {
     pub on_drop: EventHandler<DragEvent>,
 }
 
-impl UseDroppableProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseDroppableAttrs {
+impl IntoAttrs for UseDroppableProps {
+    type Attrs = UseDroppableAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),

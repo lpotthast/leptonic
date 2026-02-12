@@ -1,5 +1,6 @@
 use std::sync::atomic::{AtomicIsize, Ordering::SeqCst};
 
+use crate::hooks::IntoAttrs;
 use leptos::prelude::*;
 use leptos_use::use_window;
 
@@ -28,10 +29,10 @@ pub struct UsePreventScrollReturn {
 #[derive(Debug)]
 pub struct UsePreventScrollProps;
 
-impl UsePreventScrollProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UsePreventScrollAttrs {}
+impl IntoAttrs for UsePreventScrollProps {
+    type Attrs = UsePreventScrollAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {}
 }
 
 /// These attributes must be spread onto the target element: `<foo {..attrs} />`

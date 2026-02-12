@@ -13,6 +13,7 @@ use crate::hooks::{
 };
 use crate::utils::aria::*;
 use crate::utils::MergeWith;
+use crate::hooks::IntoAttrs;
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -54,10 +55,10 @@ pub struct UseButtonProps {
     pub other: MergedPressHoverFocusRingProps,
 }
 
-impl UseButtonProps {
-    /// Convert to spreadable attributes for Leptos views, consuming self.
-    #[must_use]
-    pub fn into_attrs(self) -> UseButtonAttrs {
+impl IntoAttrs for UseButtonProps {
+    type Attrs = UseButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
         (
             (
                 Attr(attr::Role, self.role),
