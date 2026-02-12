@@ -12,6 +12,7 @@ use crate::utils::aria::{AriaDisabled, AriaHidden, AriaInvalid, AriaOrientation,
 use crate::utils::focus::focus_element;
 use crate::utils::math::percentage_in_range;
 use crate::utils::CapturedElement;
+use crate::utils::EventAccessors;
 use crate::utils::EventHandler;
 use leptos::attr;
 use leptos::attr::custom::{custom_attribute, CustomAttr};
@@ -425,10 +426,8 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     // Focus the thumb element explicitly. use_move calls prevent_default()
     // on pointerdown which suppresses the browser's default focus behavior.
     let handle_pointerdown = EventHandler::new(move |e: PointerEvent| {
-        if let Some(target) = e.current_target() {
-            if let Some(el) = target.dyn_ref::<web_sys::Element>() {
-                focus_element(el, true);
-            }
+        if let Some(el) = e.expect_current_target().dyn_ref::<web_sys::Element>() {
+            focus_element(el, true);
         }
     })
     .chain(on_pointerdown);

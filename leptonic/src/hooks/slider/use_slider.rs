@@ -47,7 +47,7 @@ use crate::hooks::{
 };
 use crate::utils::aria::{AriaDisabled, AriaLive};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::utils::{EventHandler, EventTargetExt};
+use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::ev;
@@ -366,7 +366,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             // These always fire (even without pointer movement), ensuring dragging state
             // is cleared for click-without-drag interactions.
             let pointer_id = e.pointer_id();
-            let doc = e.current_target().unwrap().get_owner_document();
+            let doc = e.expect_current_target().get_owner_document();
 
             let cleanup_up =
                 use_event_listener(doc.clone(), ev::pointerup, move |e: PointerEvent| {

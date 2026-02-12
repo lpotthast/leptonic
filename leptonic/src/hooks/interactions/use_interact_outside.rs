@@ -1,4 +1,4 @@
-use crate::utils::{CapturedElement, ElementCaptureAttr};
+use crate::utils::{CapturedElement, ElementCaptureAttr, EventAccessors};
 use leptos::prelude::*;
 use leptos_use::{use_event_listener_with_options, UseEventListenerOptions};
 use send_wrapper::SendWrapper;
@@ -192,28 +192,27 @@ fn is_valid_event(
     }
 
     // Check if target is still in the document
-    if let Some(target) = event.target() {
-        if let Some(target_node) = target.dyn_ref::<web_sys::Node>() {
-            let owner_document = target_node.owner_document();
-            if let Some(doc) = owner_document {
-                if let Some(doc_element) = doc.document_element() {
-                    if !doc_element.contains(Some(target_node)) {
-                        return false;
-                    }
+    let target = event.expect_target();
+    if let Some(target_node) = target.dyn_ref::<web_sys::Node>() {
+        let owner_document = target_node.owner_document();
+        if let Some(doc) = owner_document {
+            if let Some(doc_element) = doc.document_element() {
+                if !doc_element.contains(Some(target_node)) {
+                    return false;
                 }
             }
         }
+    }
 
-        // Check if target is within a top layer element (e.g. toasts)
-        if let Some(target_el) = target.dyn_ref::<web_sys::Element>() {
-            if target_el
-                .closest("[data-react-aria-top-layer]")
-                .ok()
-                .flatten()
-                .is_some()
-            {
-                return false;
-            }
+    // Check if target is within a top layer element (e.g. toasts)
+    if let Some(target_el) = target.dyn_ref::<web_sys::Element>() {
+        if target_el
+            .closest("[data-react-aria-top-layer]")
+            .ok()
+            .flatten()
+            .is_some()
+        {
+            return false;
         }
     }
 

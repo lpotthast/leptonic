@@ -4,7 +4,7 @@ use leptos::prelude::*;
 use leptos_use::use_event_listener;
 use web_sys::PointerEvent;
 
-use crate::utils::{EventHandler, EventTargetExt};
+use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useMove.ts
 
@@ -214,7 +214,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             e.prevent_default();
 
             // Get the document to attach global listeners
-            let doc = e.current_target().unwrap().get_owner_document();
+            let doc = e.expect_current_target().get_owner_document();
 
             // Attach global event listeners for the duration of the drag
             // Clone handlers before passing to use_event_listener to avoid consuming them

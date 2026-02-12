@@ -5,7 +5,7 @@ use leptos_use::use_event_listener;
 use wasm_bindgen::JsCast;
 use web_sys::FocusEvent;
 
-use crate::utils::{EventHandler, EventTargetExt};
+use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusWithin.ts
 
@@ -161,31 +161,27 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
             }
 
             // Ignore events bubbling through portals - check if target is contained in current_target
-            let current_target = e.current_target();
-            let target = e.target();
+            let current_target = e.expect_current_target();
+            let target = e.expect_target();
 
-            if let (Some(current_target), Some(target)) = (current_target.as_ref(), target.as_ref())
-            {
-                if let (Some(current_el), Some(target_node)) = (
-                    current_target.dyn_ref::<web_sys::Node>(),
-                    target.dyn_ref::<web_sys::Node>(),
-                ) {
-                    if !current_el.contains(Some(target_node)) {
-                        return;
-                    }
+            if let (Some(current_el), Some(target_node)) = (
+                current_target.dyn_ref::<web_sys::Node>(),
+                target.dyn_ref::<web_sys::Node>(),
+            ) {
+                if !current_el.contains(Some(target_node)) {
+                    return;
                 }
             }
 
             // Check if focus is actually on the target
             // Use owner document from current_target to correctly handle iframes/shadow DOM
             let document = current_target
-                .as_ref()
-                .and_then(|t| t.dyn_ref::<web_sys::Node>())
+                .dyn_ref::<web_sys::Node>()
                 .and_then(web_sys::Node::owner_document);
             let active_element = document
                 .as_ref()
                 .and_then(web_sys::Document::active_element);
-            let target_element = target.and_then(|t| t.as_element());
+            let target_element = target.to_element();
 
             if active_element != target_element {
                 return;
@@ -206,36 +202,33 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
                 // Set up focus listener on the element's owner document to detect focus moving outside
                 // This handles cases where elements are removed from DOM (which don't fire blur)
                 // Using owner document correctly handles iframes and shadow DOM
-                if let Some(current_target) = e.current_target() {
-                    let document = current_target
-                        .dyn_ref::<web_sys::Node>()
-                        .and_then(web_sys::Node::owner_document);
-                    if let Some(document) = document {
-                        let cleanup =
-                            use_event_listener(document, ev::focus, move |focus_e: FocusEvent| {
-                                if !is_focus_within.get_untracked() {
-                                    return;
-                                }
+                let document = current_target
+                    .dyn_ref::<web_sys::Node>()
+                    .and_then(web_sys::Node::owner_document);
+                if let Some(document) = document {
+                    let cleanup =
+                        use_event_listener(document, ev::focus, move |focus_e: FocusEvent| {
+                            if !is_focus_within.get_untracked() {
+                                return;
+                            }
 
-                                // Check if the new focus target is outside our element
-                                if let Some(focus_target) = focus_e.target() {
-                                    if let Some(current_node) =
-                                        current_target.dyn_ref::<web_sys::Node>()
-                                    {
-                                        if let Some(target_node) =
-                                            focus_target.dyn_ref::<web_sys::Node>()
-                                        {
-                                            if !current_node.contains(Some(target_node)) {
-                                                // Focus moved outside - trigger blur
-                                                trigger_blur_within(focus_e);
-                                            }
-                                        }
+                            // Check if the new focus target is outside our element
+                            let focus_target = focus_e.expect_target();
+                            if let Some(current_node) =
+                                current_target.dyn_ref::<web_sys::Node>()
+                            {
+                                if let Some(target_node) =
+                                    focus_target.dyn_ref::<web_sys::Node>()
+                                {
+                                    if !current_node.contains(Some(target_node)) {
+                                        // Focus moved outside - trigger blur
+                                        trigger_blur_within(focus_e);
                                     }
                                 }
-                            });
+                            }
+                        });
 
-                        global_listener_cleanup.set_value(Some(Box::new(cleanup)));
-                    }
+                    global_listener_cleanup.set_value(Some(Box::new(cleanup)));
                 }
             }
         }
@@ -248,30 +241,26 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
         }
 
         // Ignore events bubbling through portals
-        let current_target = e.current_target();
-        let target = e.target();
+        let current_target = e.expect_current_target();
+        let target = e.expect_target();
 
-        if let (Some(current_target), Some(target)) = (current_target.as_ref(), target.as_ref()) {
-            if let (Some(current_el), Some(target_node)) = (
-                current_target.dyn_ref::<web_sys::Node>(),
-                target.dyn_ref::<web_sys::Node>(),
-            ) {
-                if !current_el.contains(Some(target_node)) {
-                    return;
-                }
+        if let (Some(current_el), Some(target_node)) = (
+            current_target.dyn_ref::<web_sys::Node>(),
+            target.dyn_ref::<web_sys::Node>(),
+        ) {
+            if !current_el.contains(Some(target_node)) {
+                return;
             }
         }
 
         // Check if focus is moving to another element within the same tree
         // If relatedTarget (where focus is going) is within current_target, don't trigger blur
         if let Some(related_target) = e.related_target() {
-            if let Some(current_target) = current_target {
-                if let Some(current_node) = current_target.dyn_ref::<web_sys::Node>() {
-                    if let Some(related_node) = related_target.dyn_ref::<web_sys::Node>() {
-                        if current_node.contains(Some(related_node)) {
-                            // Focus is moving within the tree, don't trigger blur
-                            return;
-                        }
+            if let Some(current_node) = current_target.dyn_ref::<web_sys::Node>() {
+                if let Some(related_node) = related_target.dyn_ref::<web_sys::Node>() {
+                    if current_node.contains(Some(related_node)) {
+                        // Focus is moving within the tree, don't trigger blur
+                        return;
                     }
                 }
             }

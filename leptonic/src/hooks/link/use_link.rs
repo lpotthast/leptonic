@@ -206,9 +206,11 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         disabled: is_disabled,
         force_prevent_default: false,
         // Without setting this, Leptos' client-side navigation would not take place.
-        allow_propagation: true,
+        force_propagation: true,
         allow_text_selection_on_press: false,
         should_cancel_on_pointer_exit: false,
+        prevent_focus_on_press: false,
+        force_is_pressed: None,
         on_press: Callback::new(move |e: PressEvent| {
             if let Some(on_press) = on_press {
                 on_press.run(e);

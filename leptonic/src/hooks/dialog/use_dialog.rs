@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::ev;
@@ -9,7 +7,6 @@ use uuid::Uuid;
 use web_sys::FocusEvent;
 
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::utils::focus::focus_safely;
 use crate::utils::EventHandler;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dialog/src/useDialog.ts
@@ -301,6 +298,8 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     Effect::new(move |_| {
         #[cfg(not(feature = "ssr"))]
         if let Some(el) = element.get() {
+            use crate::utils::focus::focus_safely;
+
             let el: &web_sys::Element = &el;
 
             // Check if the dialog already contains the active element.
@@ -342,7 +341,7 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
                             is_refocusing.set_value(false);
                         }
                     },
-                    Duration::from_millis(500),
+                    std::time::Duration::from_millis(500),
                 );
             }
         }

@@ -16,9 +16,11 @@ pub fn Label(children: Children, #[prop(into, optional)] disabled: Signal<bool>)
     } = use_press(UsePressInput {
         disabled,
         force_prevent_default: false,
-        allow_propagation: false,
+        force_propagation: false,
         allow_text_selection_on_press: false,
         should_cancel_on_pointer_exit: false,
+        prevent_focus_on_press: false,
+        force_is_pressed: None,
         on_press: Callback::new(move |_| {
             if let Some(fc_ctx) = &fc_ctx {
                 fc_ctx.input.with_untracked(move |input| {

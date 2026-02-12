@@ -6,7 +6,7 @@ use leptos::prelude::*;
 use uuid::Uuid;
 
 use crate::hooks::interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput};
-use crate::utils::EventHandler;
+use crate::utils::{EventAccessors, EventHandler};
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModalOverlay.ts
 // React Aria calls this "useModalOverlay" with "underlay" props. We use "backdrop" terminology for clarity.
@@ -157,11 +157,9 @@ pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropRetur
     let handle_backdrop_click = move |e: web_sys::MouseEvent| {
         // Only close if clicking directly on the backdrop, not its children
         if should_close_on_interact_outside {
-            if let (Some(target), Some(current_target)) = (e.target(), e.current_target()) {
-                if target == current_target {
-                    if let Some(on_close) = on_close {
-                        on_close.run(());
-                    }
+            if e.expect_target() == e.expect_current_target() {
+                if let Some(on_close) = on_close {
+                    on_close.run(());
                 }
             }
         }

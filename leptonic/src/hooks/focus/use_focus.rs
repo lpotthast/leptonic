@@ -4,7 +4,7 @@ use leptos::prelude::*;
 use leptos_use::use_document;
 use web_sys::FocusEvent;
 
-use crate::utils::{EventHandler, EventTargetExt};
+use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocus.ts
 
@@ -81,8 +81,8 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     let handle_focus = move |e: FocusEvent| {
         // Double check that document.activeElement actually matches e.target in case a previously chained
         // focus handler already moved focus somewhere else.
-        if e.target() == e.current_target()
-            && use_document().active_element() == e.target().and_then(|t| t.as_element())
+        if e.expect_target() == e.expect_current_target()
+            && use_document().active_element() == e.expect_target().to_element()
             && !disabled.get_untracked()
         {
             if let Some(on_focus) = on_focus {
@@ -101,7 +101,7 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
         // lead to removal from said element from the DOM.
         let is_disabled = disabled.try_get_untracked().unwrap_or(true);
 
-        if e.target() == e.current_target() && !is_disabled {
+        if e.expect_target() == e.expect_current_target() && !is_disabled {
             if let Some(on_blur) = on_blur {
                 on_blur.run(e);
             }

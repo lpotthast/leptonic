@@ -17,12 +17,13 @@
 //!    `Signal<T>` (via `ReactiveFunction`), so this works automatically once the inner type
 //!    implements `AttributeValue`.
 
+use itertools::Itertools;
 use leptos::attr::AttributeKey;
 use leptos::prelude::*;
 use std::str::FromStr;
 
 use leptos::tachys::html::attribute::AttributeValue;
-
+use smallvec::SmallVec;
 // ----------------------------------------------------------------------------------
 // Macros
 // ----------------------------------------------------------------------------------
@@ -124,6 +125,105 @@ macro_rules! define_aria_bool {
 
         impl_attribute_value_via_str!($name);
     };
+}
+
+// ----------------------------------------------------------------------------------
+// AriaDescribedby
+// ----------------------------------------------------------------------------------
+
+/// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby>
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct AriaDescribedby {
+    ids: SmallVec<[Oco<'static, str>; 1]>,
+}
+
+impl AriaDescribedby {
+    pub fn none() -> Self {
+        Self {
+            ids: SmallVec::new(),
+        }
+    }
+
+    pub fn element_with_id(id: impl Into<Oco<'static, str>>) -> Self {
+        Self {
+            ids: SmallVec::from_buf([id.into()]),
+        }
+    }
+
+    pub fn elements_with_ids<ID: Into<Oco<'static, str>>>(ids: impl Iterator<Item = ID>) -> Self {
+        let (_, remaining) = ids.size_hint();
+        let capacity = remaining.unwrap_or(0);
+        Self {
+            ids: {
+                let mut vec = SmallVec::with_capacity(capacity);
+                vec.extend(ids.map(|id| id.into()));
+                vec
+            },
+        }
+    }
+
+    // TODO: This could be made more efficient.
+    fn into_oco(self) -> Oco<'static, str> {
+        match self.ids.len() {
+            1 => self.ids.into_iter().next().unwrap(),
+            _ => self.ids.into_iter().join(" ").into(),
+        }
+    }
+}
+
+impl AttributeValue for AriaDescribedby {
+    type State = (leptos::tachys::renderer::types::Element, Oco<'static, str>);
+    type AsyncOutput = Self;
+    type Cloneable = Self;
+    type CloneableOwned = Self;
+
+    fn html_len(&self) -> usize {
+        let id_lengths: usize = self.ids.iter().map(|id| id.len()).sum();
+        let num_spaces = if self.ids.is_empty() {
+            0
+        } else {
+            self.ids.len() - 1
+        };
+        id_lengths + num_spaces
+    }
+
+    fn to_html(self, key: &str, buf: &mut String) {
+        <Oco<'static, str> as AttributeValue>::to_html(self.into_oco(), key, buf);
+    }
+
+    fn to_template(key: &str, buf: &mut String) {
+        <Oco<'static, str> as AttributeValue>::to_template(key, buf);
+    }
+
+    fn hydrate<const FROM_SERVER: bool>(
+        self,
+        key: &str,
+        el: &leptos::tachys::renderer::types::Element,
+    ) -> Self::State {
+        <Oco<'static, str> as AttributeValue>::hydrate::<FROM_SERVER>(self.into_oco(), key, el)
+    }
+
+    fn build(self, el: &leptos::tachys::renderer::types::Element, key: &str) -> Self::State {
+        <Oco<'static, str> as AttributeValue>::build(self.into_oco(), el, key)
+    }
+
+    fn rebuild(self, key: &str, state: &mut Self::State) {
+        <Oco<'static, str> as AttributeValue>::rebuild(self.into_oco(), key, state);
+    }
+
+    fn into_cloneable(self) -> Self::Cloneable {
+        self
+    }
+
+    fn into_cloneable_owned(self) -> Self::CloneableOwned {
+        self
+    }
+
+    fn dry_resolve(&mut self) {}
+
+    async fn resolve(self) -> Self::AsyncOutput {
+        self
+    }
 }
 
 // ----------------------------------------------------------------------------------

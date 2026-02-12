@@ -1,24 +1,26 @@
-use leptos::ev::EventDescriptor;
-use leptos::prelude::document;
-use leptos::typed_builder::TypedBuilder;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-use wasm_bindgen::closure::Closure;
-use wasm_bindgen::convert::FromWasmAbi;
 
 pub mod aria;
 pub mod callback;
 pub mod classes;
 pub mod color;
+pub(crate) mod dom_ext;
 pub mod element_capture;
 pub mod event_handler;
+pub(crate) mod event_listeners;
 pub mod focus;
 pub mod formatters;
 pub mod i18n;
+pub(crate) mod interaction_rect;
+pub mod key;
 pub mod live_announcer;
 pub mod locale;
 pub mod math;
 pub mod merge;
+pub(crate) mod modifiers;
+pub(crate) mod open_link;
+pub mod platform;
 pub mod pointer_type;
 pub(crate) mod run_after_transition;
 pub mod scroll_behavior;
@@ -27,372 +29,26 @@ pub mod style;
 pub mod styles;
 pub(crate) mod text_selection;
 pub mod time;
+pub mod use_description;
 pub(crate) mod virtual_click;
 
 pub use element_capture::{CapturedElement, ElementCaptureAttr};
 pub use event_handler::EventHandler;
 pub use merge::{MergeWith, MergeWithExt};
 
-pub(crate) enum DomContainer {
-    Node(web_sys::Node),
-    Window(web_sys::Window),
-}
+// Re-exports from dom_ext
+pub use dom_ext::{get_owner_document, get_owner_window, ContainsTarget};
+pub(crate) use dom_ext::{node_contains, ElementExt, EventAccessors, EventTargetExt};
 
-impl DomContainer {
-    #[allow(clippy::needless_pass_by_value)]
-    pub(crate) fn contains(&self, node: web_sys::Node) -> bool {
-        match self {
-            DomContainer::Node(node) => node.contains(Some(node)),
-            DomContainer::Window(window) => node
-                .owner_document()
-                .and_then(move |d| d.default_view().map(move |w| w == *window))
-                .unwrap_or_default(),
-        }
-    }
-}
+// Re-exports from event_listeners
+pub use event_listeners::EventListenerOptions;
+pub(crate) use event_listeners::ListenExt;
 
-#[derive(Debug, Clone, Copy, TypedBuilder)]
-pub struct EventListenerOptions {
-    #[allow(unused)] // May only be used in non-SSR context.
-    once: bool,
+// Re-exports from modifiers
+pub use modifiers::{EventModifiers, Modifiers};
 
-    #[allow(unused)] // May only be used in non-SSR context.
-    capture: bool,
-}
-
-impl Default for EventListenerOptions {
-    fn default() -> Self {
-        Self {
-            once: false,
-            capture: false,
-        }
-    }
-}
-
-impl EventListenerOptions {
-    pub fn capturing() -> Self {
-        EventListenerOptions {
-            capture: true,
-            ..EventListenerOptions::default()
-        }
-    }
-    pub fn once() -> Self {
-        EventListenerOptions {
-            once: true,
-            ..EventListenerOptions::default()
-        }
-    }
-}
-
-pub(crate) trait ElementExt {
-    fn is_link(&self) -> bool;
-    fn has_link_role(&self) -> bool;
-    fn is_anchor_link(&self) -> bool;
-    fn disable_text_selection(&self);
-    fn restore_text_selection(&self);
-}
-
-impl ElementExt for web_sys::Element {
-    /// True for any element having `role="link"` or being of type `<a href=[...]>`..
-    fn is_link(&self) -> bool {
-        self.has_link_role() || self.is_anchor_link()
-    }
-
-    /// True for any element having `role="link"`.
-    fn has_link_role(&self) -> bool {
-        self.get_attribute("role").as_deref() == Some("link")
-    }
-
-    /// True for any element of type `<a href=[...]>`.
-    fn is_anchor_link(&self) -> bool {
-        self.tag_name().as_str() == "A" && self.has_attribute("href")
-    }
-
-    fn disable_text_selection(&self) {
-        text_selection::disable_text_selection(self);
-    }
-
-    fn restore_text_selection(&self) {
-        text_selection::restore_text_selection(self);
-    }
-}
-
-pub(crate) trait EventTargetExt {
-    fn as_element(&self) -> Option<web_sys::Element>;
-    #[allow(unused)]
-    fn as_html_element(&self) -> Option<web_sys::HtmlElement>;
-    fn as_node(&self) -> Option<web_sys::Node>;
-    fn as_container(&self) -> Option<DomContainer>;
-    fn get_owner_document(&self) -> web_sys::Document;
-    fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool;
-    /// Adds a one-time event listener for the given event name.
-    fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
-    where
-        E: FromWasmAbi + 'static;
-    /// Adds a one-time event listener that calls `prevent_default()` on the event.
-    fn prevent_default_once(&self, event_name: &str);
-}
-
-#[allow(unused)] // May only be used in non-SSR context.
-pub(crate) trait ListenExt {
-    /// Adds an event listener for the given event name.
-    #[must_use]
-    fn listen<E>(
-        &self,
-        event: impl EventDescriptor,
-        callback: impl FnMut(E) + 'static,
-        options: EventListenerOptions,
-    ) -> Closure<dyn FnMut(E)>
-    where
-        E: FromWasmAbi + 'static;
-}
-
-impl EventTargetExt for web_sys::EventTarget {
-    fn as_element(&self) -> Option<web_sys::Element> {
-        use wasm_bindgen::JsCast;
-        self.clone().dyn_into::<web_sys::Element>().ok()
-    }
-
-    fn as_html_element(&self) -> Option<web_sys::HtmlElement> {
-        use wasm_bindgen::JsCast;
-        self.clone().dyn_into::<web_sys::HtmlElement>().ok()
-    }
-
-    fn as_node(&self) -> Option<web_sys::Node> {
-        use wasm_bindgen::JsCast;
-        self.clone().dyn_into::<web_sys::Node>().ok()
-    }
-
-    fn as_container(&self) -> Option<DomContainer> {
-        use wasm_bindgen::JsCast;
-        if let Ok(node) = self.clone().dyn_into::<web_sys::Node>() {
-            return Some(DomContainer::Node(node));
-        }
-        if let Ok(window) = self.clone().dyn_into::<web_sys::Window>() {
-            return Some(DomContainer::Window(window));
-        }
-        None
-    }
-
-    fn get_owner_document(&self) -> web_sys::Document {
-        self.as_element()
-            .and_then(|el| el.owner_document())
-            .unwrap_or_else(document)
-    }
-
-    fn is_over(&self, e: &impl EventExt, element: web_sys::Element) -> bool {
-        let el_rect = element.get_bounding_client_rect().into();
-        let point_rect = e.get_client_interaction_rect();
-        overlapping(el_rect, point_rect)
-    }
-
-    fn listen_once<E>(&self, event_name: &str, callback: impl FnOnce(E) + 'static)
-    where
-        E: FromWasmAbi + 'static,
-    {
-        use wasm_bindgen::closure::Closure;
-        use wasm_bindgen::JsCast;
-
-        let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
-        let closure = Closure::once(boxed);
-
-        let options = web_sys::AddEventListenerOptions::new();
-        options.set_once(true);
-
-        let _ = self.add_event_listener_with_callback_and_add_event_listener_options(
-            event_name,
-            closure.as_ref().unchecked_ref(),
-            &options,
-        );
-
-        closure.forget();
-    }
-
-    fn prevent_default_once(&self, event_name: &str) {
-        self.listen_once(event_name, |e: web_sys::Event| {
-            e.prevent_default();
-        });
-    }
-}
-
-impl<T: AsRef<web_sys::EventTarget>> ListenExt for T {
-    fn listen<E>(
-        &self,
-        event: impl EventDescriptor,
-        callback: impl FnMut(E) + 'static,
-        options: EventListenerOptions,
-    ) -> Closure<dyn FnMut(E)>
-    where
-        E: FromWasmAbi + 'static,
-    {
-        use wasm_bindgen::closure::Closure;
-        use wasm_bindgen::JsCast;
-
-        let target: &web_sys::EventTarget = self.as_ref();
-
-        let closure: Closure<dyn FnMut(E)> = if options.once {
-            let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
-            Closure::once(boxed)
-        } else {
-            let boxed: Box<dyn FnMut(E)> = Box::new(callback);
-            Closure::wrap(boxed)
-        };
-
-        let web_sys_options = web_sys::AddEventListenerOptions::new();
-        web_sys_options.set_once(options.once);
-        web_sys_options.set_capture(options.capture);
-
-        let _ = target.add_event_listener_with_callback_and_add_event_listener_options(
-            event.name().as_ref(),
-            closure.as_ref().unchecked_ref(),
-            &web_sys_options,
-        );
-
-        closure
-    }
-}
-
-fn overlapping(a: RectPrecise, b: RectPrecise) -> bool {
-    if a.left > b.right || b.left > a.right {
-        return false;
-    }
-    // NOTE: Coordinate system starts in upper-left corner!
-    if a.top > b.bottom || b.top > a.bottom {
-        return false;
-    }
-    true
-}
-
-pub(crate) fn current_target_contains_target(
-    current_target: Option<&web_sys::EventTarget>,
-    target: Option<&web_sys::EventTarget>,
-) -> Option<bool> {
-    let current_target = current_target.or_else(|| {
-        tracing::warn!("TouchEvent has no current_target.");
-        None
-    })?;
-
-    let target = target.or_else(|| {
-        tracing::warn!("TouchEvent has no target.");
-        None
-    })?;
-
-    let current_target_container = current_target.as_container().or_else(|| {
-        tracing::warn!(
-            ?current_target,
-            "TouchEvent's current_target was not a container."
-        );
-        None
-    })?;
-
-    let target_node = target.as_node().or_else(|| {
-        tracing::warn!(?target, "TouchEvent's target was not a node.");
-        None
-    })?;
-
-    Some(current_target_container.contains(target_node))
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct RectPrecise {
-    top: f64,
-    right: f64,
-    bottom: f64,
-    left: f64,
-}
-
-impl From<web_sys::DomRect> for RectPrecise {
-    fn from(value: web_sys::DomRect) -> Self {
-        Self {
-            top: value.top(),
-            right: value.right(),
-            bottom: value.bottom(),
-            left: value.left(),
-        }
-    }
-}
-
-#[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, Copy)]
-pub struct Modifiers {
-    /// Whether the shift keyboard modifier was held during the event.
-    pub shift_key: bool,
-
-    /// Whether the ctrl keyboard modifier was held during the event.
-    pub ctrl_key: bool,
-
-    /// Whether the meta keyboard modifier was held during the event.
-    pub meta_key: bool,
-
-    /// Whether the alt keyboard modifier was held during the  event.
-    pub alt_key: bool,
-}
-
-pub trait EventModifiers {
-    fn modifiers(&self) -> Modifiers;
-}
-
-pub trait EventExt {
-    fn current_target_contains_target(&self) -> bool;
-
-    fn get_client_interaction_rect(&self) -> RectPrecise;
-}
-
-impl EventModifiers for web_sys::MouseEvent {
-    fn modifiers(&self) -> Modifiers {
-        Modifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
-impl EventModifiers for web_sys::TouchEvent {
-    fn modifiers(&self) -> Modifiers {
-        Modifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
-impl EventModifiers for web_sys::KeyboardEvent {
-    fn modifiers(&self) -> Modifiers {
-        Modifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
-impl EventModifiers for web_sys::PointerEvent {
-    fn modifiers(&self) -> Modifiers {
-        Modifiers {
-            shift_key: self.shift_key(),
-            ctrl_key: self.ctrl_key(),
-            meta_key: self.meta_key(),
-            alt_key: self.alt_key(),
-        }
-    }
-}
-
-/// Get the owner document of a node, falling back to the global document.
-/// This is useful for correctly handling elements in iframes or shadow DOM.
-pub fn get_owner_document(node: &web_sys::Node) -> web_sys::Document {
-    node.owner_document().unwrap_or_else(document)
-}
-
-/// Get the owner window of a node via its owner document.
-/// Returns None if the document has no default view.
-pub fn get_owner_window(node: &web_sys::Node) -> Option<web_sys::Window> {
-    node.owner_document()?.default_view()
-}
+// Re-exports from interaction_rect
+pub use interaction_rect::{is_over, InteractionRect, RectPrecise};
 
 pub(crate) fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 'static>)
 {
@@ -402,22 +58,4 @@ pub(crate) fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Sen
         state.store(true, Ordering::Release);
     });
     (continue_propagation_state, continue_propagation)
-}
-
-impl EventExt for web_sys::PointerEvent {
-    fn current_target_contains_target(&self) -> bool {
-        current_target_contains_target(self.current_target().as_ref(), self.target().as_ref())
-            .unwrap_or(true)
-    }
-
-    fn get_client_interaction_rect(&self) -> RectPrecise {
-        let offset_x = f64::from(self.width()) / 2.0;
-        let offset_y = f64::from(self.height()) / 2.0;
-        RectPrecise {
-            top: f64::from(self.client_y()) - offset_y,
-            right: f64::from(self.client_x()) + offset_x,
-            bottom: f64::from(self.client_y()) + offset_y,
-            left: f64::from(self.client_x()) - offset_x,
-        }
-    }
 }

@@ -1,6 +1,7 @@
 use crate::pages::documentation::article::Article;
 use crate::pages::documentation::toc::Toc;
 use indoc::indoc;
+use itertools::Itertools;
 use leptonic::atoms::focus_ring::FocusRing;
 use leptonic::atoms::grid::{
     Grid as GridAtom, GridCell as GridCellAtom, GridRow as GridRowAtom,
@@ -89,7 +90,7 @@ fn format_selection(sel: &Selection<String>) -> String {
             } else {
                 let mut sorted: Vec<_> = keys.iter().collect();
                 sorted.sort();
-                sorted.into_iter().cloned().collect::<Vec<_>>().join(", ")
+                sorted.into_iter().cloned().join(", ")
             }
         }
         Selection::All => "All".to_string(),

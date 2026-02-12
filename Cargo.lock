@@ -1216,6 +1216,7 @@ dependencies = [
  "educe",
  "icondata",
  "indoc",
+ "itertools",
  "js-sys",
  "lazy_static",
  "leptonic-theme",

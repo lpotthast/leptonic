@@ -13,7 +13,7 @@ use crate::hooks::selection::use_selection_state::SelectionMode;
 use crate::utils::aria::{AriaDisabled, AriaSelected};
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
 use crate::utils::focus::focus_element;
-use crate::utils::EventHandler;
+use crate::utils::{EventAccessors, EventHandler};
 
 use super::use_grid_list::UseGridListState;
 
@@ -302,8 +302,8 @@ where
     let row_focus = EventHandler::new(move |e: FocusEvent| {
         // If a child element received focus (target != currentTarget), update the grid list's
         // focused key to this row so the container knows which row is active.
-        let target = e.target();
-        let current_target = e.current_target();
+        let target = e.expect_target();
+        let current_target = e.expect_current_target();
         if target != current_target {
             set_focused_key.run(Some(key_for_focus.clone()));
         }

@@ -4,17 +4,14 @@
 //! button semantics with menu trigger behavior.
 
 use leptos::attr;
-use leptos::attr::custom::{custom_attribute, CustomAttr};
 use leptos::attr::Attr;
-use leptos::ev;
-use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
-use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::hooks::button::UseButtonProps;
 use crate::hooks::menu::use_menu_trigger::{UseMenuTriggerMenuProps, UseMenuTriggerProps};
+use crate::hooks::{MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps};
 use crate::utils::aria::{AriaDisabled, AriaExpanded, AriaHasPopup};
-use crate::utils::{EventHandler, MergeWith};
+use crate::utils::MergeWith;
 
 /// Return type from merging `UseButtonProps` with `UseMenuTriggerProps`.
 ///
@@ -63,52 +60,23 @@ pub struct MergedButtonMenuTriggerReturn {
 /// - Button's distinct handlers: `on_pointerenter`, `on_pointerleave`, `on_focus`, `on_blur`
 #[derive(Debug, Clone)]
 pub struct MergedButtonMenuTriggerProps {
-    // Button semantics
+    /// Unique identifier for the trigger element (from menu trigger).
+    pub id: String,
     /// The role of the element ("button").
     pub role: &'static str,
     /// The tabindex of the element.
     pub tabindex: Signal<Option<&'static str>>,
     /// Whether the element is disabled.
     pub disabled: Signal<bool>,
-    /// The aria-disabled state.
-    pub aria_disabled: Signal<Option<AriaDisabled>>,
-
-    // Menu ARIA (takes precedence over button)
-    /// Unique identifier for the trigger element (from menu trigger).
-    pub id: String,
     /// The type of popup this trigger opens (from menu trigger).
     pub aria_haspopup: AriaHasPopup,
     /// Whether the popup is currently expanded (from menu trigger).
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     /// ID of the controlled popup element (from menu trigger).
     pub aria_controls: Signal<Option<String>>,
-
-    /// Accessibility description for long press action (from button's press hook).
-    pub aria_describedby: Option<&'static str>,
-
-    // Button's focus-visible data attribute
-    /// Data attribute for focus-visible styling.
-    pub data_focus_visible: Signal<Option<&'static str>>,
-
-    // Chained event handlers (button first, then menu trigger)
-    /// Keyboard event handler (chained: button, then menu trigger).
-    pub on_keydown: EventHandler<KeyboardEvent>,
-    /// Click event handler (chained: button, then menu trigger).
-    pub on_click: EventHandler<MouseEvent>,
-    /// Pointer down event handler (chained: button, then menu trigger).
-    pub on_pointerdown: EventHandler<PointerEvent>,
-    /// Drag start event handler (from button, for Safari workaround).
-    pub on_dragstart: EventHandler<DragEvent>,
-
-    // Button's distinct handlers
-    /// Pointer enter event handler (from button).
-    pub on_pointerenter: EventHandler<PointerEvent>,
-    /// Pointer leave event handler (from button).
-    pub on_pointerleave: EventHandler<PointerEvent>,
-    /// Focus event handler (from button).
-    pub on_focus: EventHandler<FocusEvent>,
-    /// Blur event handler (from button).
-    pub on_blur: EventHandler<FocusEvent>,
+    /// The aria-disabled state.
+    pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub other: MergedPressHoverFocusRingProps,
 }
 
 impl MergedButtonMenuTriggerProps {
@@ -122,30 +90,17 @@ impl MergedButtonMenuTriggerProps {
     #[must_use]
     pub fn into_attrs(self) -> MergedButtonMenuTriggerAttrs {
         (
-            // Button semantics
-            Attr(attr::Role, self.role),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::Disabled, self.disabled),
-            Attr(attr::AriaDisabled, self.aria_disabled),
-            // Menu ARIA
-            Attr(attr::Id, self.id),
-            Attr(attr::AriaHaspopup, self.aria_haspopup),
-            Attr(attr::AriaExpanded, self.aria_expanded),
-            Attr(attr::AriaControls, self.aria_controls),
-            // Long press accessibility
-            Attr(attr::AriaDescribedby, self.aria_describedby),
-            // Focus visible
-            custom_attribute("data-focus-visible", self.data_focus_visible),
-            // Chained event handlers
-            self.on_keydown.into_on(ev::keydown),
-            self.on_click.into_on(ev::click),
-            self.on_pointerdown.into_on(ev::pointerdown),
-            self.on_dragstart.into_on(ev::dragstart),
-            // Button's distinct handlers
-            self.on_pointerenter.into_on(ev::pointerenter),
-            self.on_pointerleave.into_on(ev::pointerleave),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
+            (
+                Attr(attr::Id, self.id),
+                Attr(attr::Role, self.role),
+                Attr(attr::Tabindex, self.tabindex),
+                Attr(attr::Disabled, self.disabled),
+                Attr(attr::AriaHaspopup, self.aria_haspopup),
+                Attr(attr::AriaExpanded, self.aria_expanded),
+                Attr(attr::AriaControls, self.aria_controls),
+                Attr(attr::AriaDisabled, self.aria_disabled),
+            ),
+            self.other.into_attrs(),
         )
     }
 }
@@ -154,30 +109,17 @@ impl MergedButtonMenuTriggerProps {
 ///
 /// Spread this onto elements: `<button {..attrs}/>`
 pub type MergedButtonMenuTriggerAttrs = (
-    // Button semantics
-    Attr<attr::Role, &'static str>,
-    Attr<attr::Tabindex, Signal<Option<&'static str>>>,
-    Attr<attr::Disabled, Signal<bool>>,
-    Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    // Menu ARIA
-    Attr<attr::Id, String>,
-    Attr<attr::AriaHaspopup, AriaHasPopup>,
-    Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-    Attr<attr::AriaControls, Signal<Option<String>>>,
-    // Long press accessibility
-    Attr<attr::AriaDescribedby, Option<&'static str>>,
-    // Focus visible
-    CustomAttr<&'static str, Signal<Option<&'static str>>>,
-    // Chained event handlers
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::dragstart, SharedEventCallback<DragEvent>>,
-    // Button's distinct handlers
-    On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
-    On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
+    (
+        Attr<attr::Id, String>,
+        Attr<attr::Role, &'static str>,
+        Attr<attr::Tabindex, Signal<Option<&'static str>>>,
+        Attr<attr::Disabled, Signal<bool>>,
+        Attr<attr::AriaHaspopup, AriaHasPopup>,
+        Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
+        Attr<attr::AriaControls, Signal<Option<String>>>,
+        Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    ),
+    MergedPressHoverFocusRingAttrs,
 );
 
 impl MergeWith<UseMenuTriggerProps> for UseButtonProps {
@@ -209,37 +151,58 @@ impl MergeWith<UseMenuTriggerProps> for UseButtonProps {
     /// - `on_pointerenter`, `on_pointerleave`: hover handlers
     /// - `on_focus`, `on_blur`: focus handlers
     fn merge_with(self, menu_trigger: UseMenuTriggerProps) -> Self::Output {
-        let button = self;
-        MergedButtonMenuTriggerProps {
-            // Button semantics
-            role: button.role,
-            tabindex: button.tabindex,
-            disabled: button.disabled,
-            aria_disabled: button.aria_disabled,
+        let UseButtonProps {
+            role: button_role,
+            tabindex: button_tabindex,
+            disabled: button_disabled,
+            aria_disabled: button_aria_disabled,
+            aria_haspopup: _button_aria_haspopup, // menu_trigger props take precedence!
+            aria_expanded: _button_aria_expanded, // menu_trigger props take precedence!
+            other:
+                MergedPressHoverFocusRingProps {
+                    on_keydown: button_on_keydown,
+                    on_click: button_on_click,
+                    on_pointerdown: button_on_pointerdown,
+                    on_dragstart: button_on_dragstart,
+                    on_mousedown: button_on_mousedown,
+                    on_pointerup: button_on_pointerup,
+                    aria_describedby: button_aria_describedby,
+                    on_pointerenter: button_on_pointerenter,
+                    on_pointerleave: button_on_pointerleave,
+                    on_focus: button_on_focus,
+                    on_blur: button_on_blur,
+                    on_focusin: button_on_focusin,
+                    on_focusout: button_on_focusout,
+                    data_focus_visible: button_data_focus_visible,
+                },
+        } = self;
 
-            // Menu trigger ARIA (takes precedence)
+        MergedButtonMenuTriggerProps {
             id: menu_trigger.id,
+            role: button_role,
+            tabindex: button_tabindex,
+            disabled: button_disabled,
             aria_haspopup: menu_trigger.aria_haspopup,
             aria_expanded: menu_trigger.aria_expanded,
             aria_controls: menu_trigger.aria_controls,
+            aria_disabled: button_aria_disabled,
 
-            // Long press accessibility (from button's press hook)
-            aria_describedby: button.aria_describedby,
-
-            // Button's focus-visible attribute
-            data_focus_visible: button.data_focus_visible,
-
-            // Chain overlapping handlers (button first, then menu trigger)
-            on_keydown: button.on_keydown.chain(menu_trigger.on_keydown),
-            on_click: button.on_click.chain(menu_trigger.on_click),
-            on_pointerdown: button.on_pointerdown.chain(menu_trigger.on_pointerdown),
-            on_dragstart: button.on_dragstart,
-
-            // Button's distinct handlers
-            on_pointerenter: button.on_pointerenter,
-            on_pointerleave: button.on_pointerleave,
-            on_focus: button.on_focus,
-            on_blur: button.on_blur,
+            other: MergedPressHoverFocusRingProps {
+                on_keydown: button_on_keydown.chain(menu_trigger.on_keydown),
+                on_click: button_on_click.chain(menu_trigger.on_click),
+                on_pointerdown: button_on_pointerdown.chain(menu_trigger.on_pointerdown),
+                on_dragstart: button_on_dragstart,
+                on_mousedown: button_on_mousedown,
+                on_pointerup: button_on_pointerup,
+                aria_describedby: button_aria_describedby,
+                on_pointerenter: button_on_pointerenter,
+                on_pointerleave: button_on_pointerleave,
+                on_focus: button_on_focus,
+                on_blur: button_on_blur,
+                on_focusin: button_on_focusin,
+                on_focusout: button_on_focusout,
+                data_focus_visible: button_data_focus_visible,
+            },
         }
     }
 }

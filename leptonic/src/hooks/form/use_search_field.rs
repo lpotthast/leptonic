@@ -11,7 +11,7 @@ use web_sys::KeyboardEvent;
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::AriaInvalid;
-use crate::utils::EventHandler;
+use crate::utils::{EventAccessors, EventHandler};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/searchfield/src/useSearchField.ts
 
@@ -366,10 +366,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
             return;
         }
 
-        if let Some(input_el) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
-        {
+        if let Ok(input_el) = e.expect_target().dyn_into::<web_sys::HtmlInputElement>() {
             let new_value = input_el.value();
             if let Some(on_change) = on_change {
                 on_change.run(new_value);

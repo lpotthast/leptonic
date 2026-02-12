@@ -1,4 +1,5 @@
 use crate::utils::styles::StyleProperty;
+use leptos::tachys::html::style::{style, IntoStyleValue};
 use std::borrow::Cow;
 
 /// CSS property names represented as an enum.
@@ -709,5 +710,39 @@ impl From<Style> for &'static str {
 impl From<Style> for StyleProperty {
     fn from(style: Style) -> Self {
         Cow::Borrowed(style.as_str())
+    }
+}
+
+// TODO: Should more styles be concrete types?
+/// Marker for the "touch-action" style.
+///
+/// # Example
+/// ```ignore
+/// pub type UsePressAttrs = (
+///     Style<(TouchActionStyle, &'static str)>,
+/// );
+///
+/// impl UsePressProps {
+///     /// Convert to spreadable attributes for Leptos views.
+///     #[must_use]
+///     pub fn into_attrs(self) -> UsePressAttrs {
+///         (
+///             TouchActionStyle::with_value("pan-x pan-y pinch-zoom"),
+///         )
+///     }
+/// }
+/// ```
+#[derive(Debug, Clone, Copy)]
+pub struct TouchActionStyle;
+impl AsRef<str> for TouchActionStyle {
+    fn as_ref(&self) -> &str {
+        Style::TouchAction.as_ref()
+    }
+}
+impl TouchActionStyle {
+    pub fn with_value<V: IntoStyleValue>(
+        value: V,
+    ) -> leptos::tachys::html::style::Style<(Self, V)> {
+        style((Self, value.into()))
     }
 }

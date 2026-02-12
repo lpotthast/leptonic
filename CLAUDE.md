@@ -13,6 +13,14 @@ components with theming capabilities, built on a layered architecture of hooks, 
   cause.
 - **Long-term solutions**: Prefer maintainable, long-term solutions over quick fixes that accumulate technical debt.
 - **Clean code**: Strive for clean, readable, and maintainable code.
+- **SSR safety**: Always use the SSR-safe `use_window()` and `use_document()` functions from `leptos-use` instead of
+  `web_sys::window()` and `web_sys::document()`. The `leptos-use` variants return `None` during server-side rendering
+  rather than panicking. Access the inner value via `.as_ref()` which returns `Option<&web_sys::Window>` /
+  `Option<&web_sys::Document>`.
+- **Event accessor invariants**: In DOM event handler closures, `e.target()` and `e.current_target()` are always
+  `Some`. Use the `EventAccessors` extension trait (`expect_target()`, `expect_current_target()`) from `utils/mod.rs`
+  instead of `.unwrap()`, `.expect()`, or `.and_then()`. **Exception:** `current_target` becomes `null` after the
+  handler returns (per DOM spec), so stored/deferred events must use `if let Some(...)` for `.current_target()`.
 
 ## Build Commands
 
@@ -58,6 +66,8 @@ The library follows a three-layer hierarchy:
 1. **Hooks** (`leptonic/src/hooks/`) - Low-level interaction logic (usePress, useFocus, useCalendar). Handle ARIA
    attributes and accessibility. No rendering.
    All hooks are based on `react-aria` hooks from Adobe's react-spectrum library, checked out at `~/dev/react-spectrum`.
+   react-aria supports environments not supporting modern PointerEvent's. We DO NOT support these. Any hook we
+   implement may assume that PointerEvent is available.
 
 2. **Atoms** (`leptonic/src/atoms/`) - Headless/unstyled single-element components built on hooks (Button, Link,
    Popover). Easy to style.

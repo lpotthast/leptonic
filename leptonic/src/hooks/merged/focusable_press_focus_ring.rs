@@ -1,4 +1,6 @@
 use crate::hooks::{MergedFocusablePressProps, UseFocusRingProps};
+use crate::utils::aria::AriaDescribedby;
+use crate::utils::style::TouchActionStyle;
 use crate::utils::{ElementCaptureAttr, EventHandler, MergeWith};
 use leptos::attr;
 use leptos::attr::custom::{custom_attribute, CustomAttr};
@@ -6,6 +8,7 @@ use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
+use leptos::tachys::html::style::Style;
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 /// Combined props from `use_focusable`, `use_press` and `use_focus_ring` hooks.
@@ -28,7 +31,7 @@ use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 #[derive(Debug, Clone)]
 pub struct MergedFocusablePressFocusRingProps {
     pub tabindex: Signal<Option<i32>>,
-    pub aria_describedby: Option<&'static str>,
+    pub aria_describedby: Option<AriaDescribedby>,
     pub data_focus_visible: Signal<Option<&'static str>>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -40,6 +43,8 @@ pub struct MergedFocusablePressFocusRingProps {
     pub on_click: EventHandler<MouseEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_mousedown: EventHandler<MouseEvent>,
+    pub on_pointerup: EventHandler<PointerEvent>,
     pub on_dragstart: EventHandler<DragEvent>,
 }
 
@@ -48,7 +53,7 @@ pub struct MergedFocusablePressFocusRingProps {
 /// Spread this onto elements: `<button {..attrs}/>`
 pub type MergedFocusablePressFocusRingAttrs = (
     Attr<attr::Tabindex, Signal<Option<i32>>>,
-    Attr<attr::AriaDescribedby, Option<&'static str>>,
+    Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
     ElementCaptureAttr,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -60,7 +65,10 @@ pub type MergedFocusablePressFocusRingAttrs = (
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::dblclick, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
+    On<ev::pointerup, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
+    Style<(TouchActionStyle, &'static str)>,
 );
 
 impl MergedFocusablePressFocusRingProps {
@@ -88,7 +96,10 @@ impl MergedFocusablePressFocusRingProps {
             self.on_click.into_on(ev::click),
             self.on_dblclick.into_on(ev::dblclick),
             self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_mousedown.into_on(ev::mousedown),
+            self.on_pointerup.into_on(ev::pointerup),
             self.on_dragstart.into_on(ev::dragstart),
+            TouchActionStyle::with_value("pan-x pan-y pinch-zoom"),
         )
     }
 }
@@ -108,6 +119,8 @@ impl MergeWith<UseFocusRingProps> for MergedFocusablePressProps {
             on_click: merged_on_click,
             on_dblclick: merged_on_dblclick,
             on_pointerdown: merged_on_pointerdown,
+            on_mousedown: merged_on_mousedown,
+            on_pointerup: merged_on_pointerup,
             on_dragstart: merged_on_dragstart,
         } = self;
 
@@ -133,6 +146,8 @@ impl MergeWith<UseFocusRingProps> for MergedFocusablePressProps {
             on_click: merged_on_click,
             on_dblclick: merged_on_dblclick,
             on_pointerdown: merged_on_pointerdown,
+            on_mousedown: merged_on_mousedown,
+            on_pointerup: merged_on_pointerup,
             on_dragstart: merged_on_dragstart,
         }
     }

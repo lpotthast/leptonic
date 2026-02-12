@@ -11,7 +11,7 @@ use web_sys::PointerEvent;
 
 use super::use_move::MoveAxis;
 use crate::utils::element_capture::{CapturedElement, ElementCaptureAttr};
-use crate::utils::{EventHandler, EventTargetExt};
+use crate::utils::{EventAccessors, EventHandler, EventTargetExt};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -531,7 +531,7 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
             set_is_moving.set(true);
 
             // Get the document to attach global listeners
-            let doc = e.current_target().unwrap().get_owner_document();
+            let doc = e.expect_current_target().get_owner_document();
 
             // Attach global event listeners
             let event_handlers = MoveWithinEventHandlers {
@@ -573,8 +573,8 @@ pub fn use_move_within(input: UseMoveWithinInput) -> UseMoveWithinReturn {
             return;
         }
         // Only handle if the click is directly on the container (not on the movable)
-        let target = e.target();
-        let current_target = e.current_target();
+        let target = e.expect_target();
+        let current_target = e.expect_current_target();
 
         if target == current_target {
             start_drag(e, true);

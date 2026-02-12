@@ -7,7 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use web_sys::PointerEvent;
 
 use crate::utils::{
-    current_target_contains_target, pointer_type::PointerType, EventExt, EventHandler,
+    node_contains, pointer_type::PointerType, ContainsTarget, EventAccessors, EventHandler,
     EventTargetExt,
 };
 
@@ -36,13 +36,13 @@ static IGNORE_EMULATED_MOUSE_EVENTS: AtomicBool = AtomicBool::new(false);
 #[derive(Debug, Clone)]
 pub struct HoverStartEvent {
     pub pointer_type: PointerType,
-    pub current_target: Option<SendWrapper<web_sys::EventTarget>>,
+    pub current_target: SendWrapper<web_sys::EventTarget>,
 }
 
 #[derive(Debug, Clone)]
 pub struct HoverEndEvent {
     pub pointer_type: PointerType,
-    pub current_target: Option<SendWrapper<web_sys::EventTarget>>,
+    pub current_target: SendWrapper<web_sys::EventTarget>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -115,7 +115,7 @@ pub type UseHoverAttrs = (
 
 struct HoverState {
     pointer_type: PointerType,
-    target: Option<web_sys::EventTarget>,
+    target: web_sys::EventTarget,
     /// Cleanup function for the global `pointerover` listener that detects element removal.
     global_pointerover_cleanup: Option<Box<dyn Fn()>>,
 }
@@ -163,7 +163,7 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         if let Some(on_hover_end) = on_hover_end {
             on_hover_end.run(HoverEndEvent {
                 pointer_type,
-                current_target: target.map(SendWrapper::new),
+                current_target: SendWrapper::new(target),
             });
         }
 
@@ -175,74 +175,71 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
         state.set_value(None);
     };
 
-    let trigger_hover_start =
-        move |pointer_type: PointerType,
-              current_target: Option<web_sys::EventTarget>,
-              target: Option<web_sys::EventTarget>| {
-            if is_hovered.get_untracked() {
-                return;
-            }
+    let trigger_hover_start = move |pointer_type: PointerType,
+                                    current_target: web_sys::EventTarget,
+                                    target: web_sys::EventTarget| {
+        if is_hovered.get_untracked() {
+            return;
+        }
 
-            if pointer_type != PointerType::Mouse && pointer_type != PointerType::Pen {
-                return;
-            }
+        if pointer_type != PointerType::Mouse && pointer_type != PointerType::Pen {
+            return;
+        }
 
-            // Ensure that the event target is contained within current_target.
-            // This guards against events that bubble from outside the element.
-            if current_target_contains_target(current_target.as_ref(), target.as_ref())
-                == Some(false)
-            {
-                return;
-            }
+        // Ensure that the event target is contained within current_target.
+        // This guards against events that bubble from outside the element.
+        if node_contains(current_target.as_node().as_ref(), target.as_node().as_ref())
+            == Some(false)
+        {
+            return;
+        }
 
-            if let Some(on_hover_start) = on_hover_start {
-                on_hover_start.run(HoverStartEvent {
-                    pointer_type: pointer_type.clone(),
-                    current_target: current_target.clone().map(SendWrapper::new),
-                });
-            }
-
-            if let Some(on_hover_change) = on_hover_change {
-                on_hover_change.run(true);
-            }
-
-            set_is_hovered.set(true);
-
-            // When an element that is hovered over is removed from the DOM, no pointerleave event
-            // is fired by the browser. However, a pointerover event will be fired on the new target
-            // the mouse is over. We detect this case by checking if the new pointerover target is
-            // still contained within our hovered element — if not, the element was removed and we
-            // trigger a hover end.
-            let global_pointerover_cleanup = current_target.as_ref().and_then(|ct| {
-                let ct_for_closure = ct.clone();
-                let cleanup = use_event_listener_with_options(
-                    ct.as_node()?.owner_document()?,
-                    ev::pointerover,
-                    move |e: PointerEvent| {
-                        if is_hovered.get_untracked() {
-                            if let Some(event_target) = e.target() {
-                                if current_target_contains_target(
-                                    Some(&ct_for_closure),
-                                    Some(&event_target),
-                                ) == Some(false)
-                                {
-                                    trigger_hover_end();
-                                }
-                            }
-                        }
-                    },
-                    UseEventListenerOptions::default().capture(true),
-                );
-
-                Some(Box::new(cleanup) as Box<dyn Fn()>)
+        if let Some(on_hover_start) = on_hover_start {
+            on_hover_start.run(HoverStartEvent {
+                pointer_type: pointer_type.clone(),
+                current_target: SendWrapper::new(current_target.clone()),
             });
+        }
 
-            state.set_value(Some(HoverState {
-                pointer_type,
-                target: current_target,
-                global_pointerover_cleanup,
-            }));
+        if let Some(on_hover_change) = on_hover_change {
+            on_hover_change.run(true);
+        }
+
+        set_is_hovered.set(true);
+
+        // When an element that is hovered over is removed from the DOM, no pointerleave event
+        // is fired by the browser. However, a pointerover event will be fired on the new target
+        // the mouse is over. We detect this case by checking if the new pointerover target is
+        // still contained within our hovered element — if not, the element was removed and we
+        // trigger a hover end.
+        let global_pointerover_cleanup = {
+            let ct_for_closure = current_target.clone();
+            let cleanup = use_event_listener_with_options(
+                current_target.get_owner_document(),
+                ev::pointerover,
+                move |e: PointerEvent| {
+                    if is_hovered.get_untracked() {
+                        let event_target = e.expect_target();
+                        if node_contains(
+                            ct_for_closure.as_node().as_ref(),
+                            event_target.as_node().as_ref(),
+                        ) == Some(false)
+                        {
+                            trigger_hover_end();
+                        }
+                    }
+                },
+                UseEventListenerOptions::default().capture(true),
+            );
+            Some(Box::new(cleanup) as Box<dyn Fn()>)
         };
+
+        state.set_value(Some(HoverState {
+            pointer_type,
+            target: current_target,
+            global_pointerover_cleanup,
+        }));
+    };
 
     let handle_pointer_enter = move |e: PointerEvent| {
         if disabled.get_untracked() {
@@ -281,8 +278,8 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
 
         trigger_hover_start(
             PointerType::from(e.pointer_type()),
-            e.current_target(),
-            e.target(),
+            e.expect_current_target(),
+            e.expect_target(),
         );
     };
 

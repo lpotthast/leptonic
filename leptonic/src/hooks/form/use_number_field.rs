@@ -10,7 +10,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 use super::use_field::ValidationState;
 use crate::hooks::focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn};
 use crate::utils::aria::{AriaInvalid, AriaLive, AriaRequired};
-use crate::utils::EventHandler;
+use crate::utils::{EventAccessors, EventHandler};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/numberfield/src/useNumberField.ts
 
@@ -532,8 +532,9 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         }
 
         if let Some(input_el) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            .expect_target()
+            .dyn_into::<web_sys::HtmlInputElement>()
+            .ok()
         {
             let text_value = input_el.value();
 

@@ -1,13 +1,13 @@
+use crate::pages::documentation::{article::Article, toc::Toc};
 use indoc::indoc;
 use leptonic::components::prelude::*;
+use leptonic::utils::key::Key;
 use leptos::prelude::*;
-use strum::IntoEnumIterator;
-
-use crate::pages::documentation::{article::Article, toc::Toc};
+use std::borrow::Cow;
 
 #[component]
 pub fn PageKbd() -> impl IntoView {
-    let all_keys = Key::iter();
+    let known_keys = Key::known_keys();
 
     view! {
         <Article>
@@ -76,24 +76,23 @@ pub fn PageKbd() -> impl IntoView {
             <p>"Here is a list of all keys provided by the "<Code inline=true>"Key"</Code>" enum."</p>
 
             {
-                all_keys
-                    .into_iter()
-                    .filter(|key| std::mem::discriminant(key) != std::mem::discriminant(&Key::Custom("")))
-                    .map(|key: Key| view! {
-                        <KbdKey key=key/>
+                known_keys
+                    .map(|key| view! {
+                        <KbdKey key/>
                     })
                     .collect_view()
             }
 
-            <p>"If you need custom content in a "<Code inline=true>"<Kbd>"</Code>" element, use the "<Code inline=true>"Key::Custom(String)"</Code>" variant."</p>
+            <p>"If you need custom content in a "<Code inline=true>"<Kbd>"</Code>" element, use the "<Code inline=true>"Key::Other(Cow::Borrowed(...))"</Code>" variant."</p>
 
             <Code>
                 {indoc!(r#"
-                    <KbdKey key=Key::Custom("Foo")/>
+                    use std::borrow::Cow;
+                    <KbdKey key=Key::Other(Cow::Borrowed("Foo"))/>
                 "#)}
             </Code>
 
-            <KbdKey key=Key::Custom("Foo")/>
+            <KbdKey key=Key::Other(Cow::Borrowed("Foo"))/>
 
             <h2 id="styling" class="anchor">
                 "Styling"

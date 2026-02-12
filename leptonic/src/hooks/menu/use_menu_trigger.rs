@@ -228,16 +228,16 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
         let press = use_press(UsePressInput {
             disabled,
             force_prevent_default: false,
-            allow_propagation: true,
+            force_propagation: true,
             allow_text_selection_on_press: false,
             should_cancel_on_pointer_exit: false,
+            prevent_focus_on_press: false,
+            force_is_pressed: None,
             on_press: Callback::new(move |e: PressEvent| {
                 // Touch triggers toggle on press
                 if e.pointer_type == PointerType::Touch {
                     // Focus the trigger before opening so FocusScope can restore to it
-                    if let Some(ref target) = e.target {
-                        focus_event_target(target, true);
-                    }
+                    focus_event_target(&e.target, true);
                     state.toggle.run(None);
                 }
             }),
@@ -245,9 +245,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
                 // Mouse/virtual pointer toggles on press start
                 if e.pointer_type != PointerType::Touch && e.pointer_type != PointerType::Keyboard {
                     // Focus the trigger before opening so FocusScope can restore to it
-                    if let Some(ref target) = e.target {
-                        focus_event_target(target, true);
-                    }
+                    focus_event_target(&e.target, true);
                     let strategy = if e.pointer_type == PointerType::Virtual {
                         Some(FocusStrategy::First)
                     } else {
@@ -279,9 +277,11 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
         let press = use_press(UsePressInput {
             disabled,
             force_prevent_default: false,
-            allow_propagation: true,
+            force_propagation: true,
             allow_text_selection_on_press: false,
             should_cancel_on_pointer_exit: false,
+            prevent_focus_on_press: false,
+            force_is_pressed: None,
             on_press: Callback::new(|_| {}),
             on_press_up: None,
             on_press_start: None,
@@ -297,7 +297,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             })),
             on_long_press_end: None,
             long_press_threshold: None,
-            long_press_accessibility_description: Some("Long press to open menu"),
+            long_press_accessibility_description: Some("Long press to open menu".into()),
         });
         (
             press.props.on_keydown,

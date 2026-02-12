@@ -10,7 +10,7 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::utils::aria::{AriaExpanded, AriaRequired};
-use crate::utils::EventHandler;
+use crate::utils::{EventAccessors, EventHandler};
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/combobox/src/useComboBox.ts
 
 // =============================================================================
@@ -530,8 +530,9 @@ where
         }
 
         if let Some(input_el) = e
-            .target()
-            .and_then(|t| t.dyn_into::<web_sys::HtmlInputElement>().ok())
+            .expect_target()
+            .dyn_into::<web_sys::HtmlInputElement>()
+            .ok()
         {
             let new_value = input_el.value();
             set_internal_input_value.set(new_value.clone());

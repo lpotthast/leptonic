@@ -40,7 +40,7 @@ use leptos_use::use_event_listener;
 use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 
-use crate::utils::EventHandler;
+use crate::utils::{EventAccessors, EventHandler};
 
 use super::use_overlay_position::{
     use_overlay_position, PlacementX, PlacementY, UseOverlayPositionInput,
@@ -251,19 +251,17 @@ where
 
         let _cleanup =
             use_event_listener(document, ev::mousedown, move |e: web_sys::MouseEvent| {
-                let target = e.target();
-                if let Some(target) = target {
-                    let target_node = target.dyn_ref::<web_sys::Node>();
+                let target = e.expect_target();
+                let target_node = target.dyn_ref::<web_sys::Node>();
 
-                    // Check if click is inside popover or trigger
-                    // This is a simplified check - in practice we'd need to resolve the refs
-                    if let Some(_node) = target_node {
-                        // If click is outside both popover and trigger, close
-                        // For now, we just close on any outside click
-                        // A full implementation would check if the click target is contained
-                        // within the popover or trigger elements
-                        on_close.run(());
-                    }
+                // Check if click is inside popover or trigger
+                // This is a simplified check - in practice we'd need to resolve the refs
+                if let Some(_node) = target_node {
+                    // If click is outside both popover and trigger, close
+                    // For now, we just close on any outside click
+                    // A full implementation would check if the click target is contained
+                    // within the popover or trigger elements
+                    on_close.run(());
                 }
             });
     });
@@ -286,7 +284,7 @@ where
     let on_close_for_backdrop = on_close;
     let handle_backdrop_click = move |e: web_sys::MouseEvent| {
         // Only close if clicking directly on the backdrop, not a child
-        if e.target() == e.current_target() {
+        if e.expect_target() == e.expect_current_target() {
             on_close_for_backdrop.run(());
         }
     };

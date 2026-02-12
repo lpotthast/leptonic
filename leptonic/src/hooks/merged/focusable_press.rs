@@ -1,10 +1,13 @@
 use crate::hooks::{UseFocusableProps, UsePressProps};
+use crate::utils::aria::AriaDescribedby;
+use crate::utils::style::TouchActionStyle;
 use crate::utils::{ElementCaptureAttr, EventHandler, MergeWith};
 use leptos::attr;
 use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
+use leptos::tachys::html::style::Style;
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 /// Combined props from `use_focusable` and `use_press` hooks.
@@ -27,7 +30,7 @@ use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 #[derive(Debug, Clone)]
 pub struct MergedFocusablePressProps {
     pub tabindex: Signal<Option<i32>>,
-    pub aria_describedby: Option<&'static str>,
+    pub aria_describedby: Option<AriaDescribedby>,
     pub element_capture: ElementCaptureAttr,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_keyup: EventHandler<KeyboardEvent>,
@@ -36,6 +39,8 @@ pub struct MergedFocusablePressProps {
     pub on_click: EventHandler<MouseEvent>,
     pub on_dblclick: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_mousedown: EventHandler<MouseEvent>,
+    pub on_pointerup: EventHandler<PointerEvent>,
     pub on_dragstart: EventHandler<DragEvent>,
 }
 
@@ -44,7 +49,7 @@ pub struct MergedFocusablePressProps {
 /// Spread this onto elements: `<button {..attrs}/>`
 pub type MergedFocusablePressAttrs = (
     Attr<attr::Tabindex, Signal<Option<i32>>>,
-    Attr<attr::AriaDescribedby, Option<&'static str>>,
+    Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
     ElementCaptureAttr,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
@@ -53,7 +58,10 @@ pub type MergedFocusablePressAttrs = (
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::dblclick, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
+    On<ev::pointerup, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
+    Style<(TouchActionStyle, &'static str)>,
 );
 
 impl MergedFocusablePressProps {
@@ -78,7 +86,10 @@ impl MergedFocusablePressProps {
             self.on_click.into_on(ev::click),
             self.on_dblclick.into_on(ev::dblclick),
             self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_mousedown.into_on(ev::mousedown),
+            self.on_pointerup.into_on(ev::pointerup),
             self.on_dragstart.into_on(ev::dragstart),
+            TouchActionStyle::with_value("pan-x pan-y pinch-zoom"),
         )
     }
 }
@@ -100,6 +111,8 @@ impl MergeWith<UsePressProps> for UseFocusableProps {
             on_keydown: press_on_keydown,
             on_click: press_on_click,
             on_pointerdown: press_on_pointerdown,
+            on_mousedown: press_on_mousedown,
+            on_pointerup: press_on_pointerup,
             on_dragstart: press_on_dragstart,
             on_dblclick: press_on_dblclick,
             aria_describedby: press_aria_describedby,
@@ -116,6 +129,8 @@ impl MergeWith<UsePressProps> for UseFocusableProps {
             on_click: press_on_click,
             on_dblclick: press_on_dblclick,
             on_pointerdown: press_on_pointerdown,
+            on_mousedown: press_on_mousedown,
+            on_pointerup: press_on_pointerup,
             on_dragstart: press_on_dragstart,
         }
     }

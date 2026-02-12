@@ -90,7 +90,6 @@ pub mod prelude {
     pub use super::kbd::KbdKey;
     pub use super::kbd::KbdShortcut;
     pub use super::kbd::KbdShortcutRoot;
-    pub use super::kbd::Key;
     pub use super::label::Label;
     pub use super::link::AnchorLink;
     pub use super::link::Link;

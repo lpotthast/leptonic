@@ -2,8 +2,10 @@ use std::cell::{Cell, RefCell};
 use std::time::Duration;
 
 use leptos::prelude::set_timeout;
+use leptos_use::use_window;
 use wasm_bindgen::JsCast;
 
+use super::platform::device;
 use super::run_after_transition::run_after_transition;
 
 /// State machine for iOS text selection management.
@@ -27,21 +29,6 @@ thread_local! {
 
 const DATA_SAVED_USER_SELECT: &str = "data-leptonic-saved-user-select";
 
-fn is_ios() -> bool {
-    let Some(window) = web_sys::window() else {
-        return false;
-    };
-    let navigator = window.navigator();
-    navigator
-        .platform()
-        .ok()
-        .is_some_and(|p| p.contains("iPhone") || p.contains("iPad") || p.contains("iPod"))
-        || navigator
-            .user_agent()
-            .ok()
-            .is_some_and(|ua| ua.contains("AppleWebKit") && ua.contains("Mobile"))
-}
-
 /// Returns the `CssStyleDeclaration` for an element, supporting both `HtmlElement` and `SvgElement`.
 fn get_element_style(element: &web_sys::Element) -> Option<web_sys::CssStyleDeclaration> {
     if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
@@ -54,7 +41,8 @@ fn get_element_style(element: &web_sys::Element) -> Option<web_sys::CssStyleDecl
 }
 
 fn get_document_element_style() -> Option<web_sys::CssStyleDeclaration> {
-    let el = web_sys::window()?
+    let el = use_window()
+        .as_ref()?
         .document()?
         .document_element()?
         .dyn_into::<web_sys::HtmlElement>()
@@ -63,7 +51,7 @@ fn get_document_element_style() -> Option<web_sys::CssStyleDeclaration> {
 }
 
 pub(crate) fn disable_text_selection(element: &web_sys::Element) {
-    if is_ios() {
+    if device::is_ios() {
         disable_text_selection_ios();
     } else {
         disable_text_selection_standard(element);
@@ -71,7 +59,7 @@ pub(crate) fn disable_text_selection(element: &web_sys::Element) {
 }
 
 pub(crate) fn restore_text_selection(element: &web_sys::Element) {
-    if is_ios() {
+    if device::is_ios() {
         restore_text_selection_ios();
     } else {
         restore_text_selection_standard(element);

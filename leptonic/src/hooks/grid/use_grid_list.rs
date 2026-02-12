@@ -14,7 +14,7 @@ use crate::hooks::selection::use_selection_state::{
     UseSelectionStateReturn,
 };
 use crate::utils::aria::{AriaDisabled, AriaMultiselectable};
-use crate::utils::EventHandler;
+use crate::utils::{EventAccessors, EventHandler};
 
 use super::use_grid::EscapeKeyBehavior;
 
@@ -520,12 +520,8 @@ where
     let handle_mousedown = move |e: MouseEvent| {
         // If the mousedown target is the grid list itself (scrollbar area), prevent
         // default to avoid stealing focus from focused items.
-        if let Some(target) = e.target() {
-            if let Some(current_target) = e.current_target() {
-                if target == current_target {
-                    e.prevent_default();
-                }
-            }
+        if e.expect_target() == e.expect_current_target() {
+            e.prevent_default();
         }
     };
 

@@ -1,4 +1,6 @@
 use crate::hooks::{MergedPressHoverProps, UseFocusRingProps};
+use crate::utils::aria::AriaDescribedby;
+use crate::utils::style::TouchActionStyle;
 use crate::utils::{EventHandler, MergeWith};
 use leptos::attr;
 use leptos::attr::custom::{custom_attribute, CustomAttr};
@@ -6,6 +8,7 @@ use leptos::attr::Attr;
 use leptos::ev;
 use leptos::ev::{On, SharedEventCallback};
 use leptos::prelude::*;
+use leptos::tachys::html::style::Style;
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 /// Combined props from `use_press`, `use_hover`, and `use_focus_ring` hooks.
@@ -42,7 +45,9 @@ pub struct MergedPressHoverFocusRingProps {
     pub on_click: EventHandler<MouseEvent>,
     pub on_pointerdown: EventHandler<PointerEvent>,
     pub on_dragstart: EventHandler<DragEvent>,
-    pub aria_describedby: Option<&'static str>,
+    pub on_mousedown: EventHandler<MouseEvent>,
+    pub on_pointerup: EventHandler<PointerEvent>,
+    pub aria_describedby: Option<AriaDescribedby>,
     // From hover
     pub on_pointerenter: EventHandler<PointerEvent>,
     pub on_pointerleave: EventHandler<PointerEvent>,
@@ -62,7 +67,10 @@ pub type MergedPressHoverFocusRingAttrs = (
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
-    Attr<attr::AriaDescribedby, Option<&'static str>>,
+    On<ev::mousedown, SharedEventCallback<MouseEvent>>,
+    On<ev::pointerup, SharedEventCallback<PointerEvent>>,
+    Style<(TouchActionStyle, &'static str)>,
+    Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
     On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -88,6 +96,9 @@ impl MergedPressHoverFocusRingProps {
             self.on_click.into_on(ev::click),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.on_dragstart.into_on(ev::dragstart),
+            self.on_mousedown.into_on(ev::mousedown),
+            self.on_pointerup.into_on(ev::pointerup),
+            TouchActionStyle::with_value("pan-x pan-y pinch-zoom"),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),
@@ -110,6 +121,8 @@ impl MergeWith<UseFocusRingProps> for MergedPressHoverProps {
             on_click: self.on_click,
             on_pointerdown: self.on_pointerdown,
             on_dragstart: self.on_dragstart,
+            on_mousedown: self.on_mousedown,
+            on_pointerup: self.on_pointerup,
             aria_describedby: self.aria_describedby,
             on_pointerenter: self.on_pointerenter,
             on_pointerleave: self.on_pointerleave,

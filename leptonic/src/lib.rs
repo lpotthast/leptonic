@@ -384,7 +384,7 @@ impl TrackedElementClientBoundingRect {
     pub(crate) fn track_client_rect(&self) {
         self.el.with_value(|maybe_signal| {
             if let Some(el) = maybe_signal.get_untracked() {
-                let el: web_sys::Element = el.as_element().unwrap();
+                let el: web_sys::Element = el.to_element().unwrap();
                 let rect = el.get_bounding_client_rect();
                 self.set_left.set(rect.left());
                 self.set_top.set(rect.top());

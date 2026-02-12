@@ -216,9 +216,11 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         disabled,
         // Anchor links always need prevent_default for custom scroll behavior.
         force_prevent_default: true,
-        allow_propagation: false,
+        force_propagation: false,
         allow_text_selection_on_press: false,
         should_cancel_on_pointer_exit: false,
+        prevent_focus_on_press: false,
+        force_is_pressed: None,
         on_press,
         on_press_up: None,
         on_press_start,

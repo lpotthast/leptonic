@@ -1,10 +1,12 @@
 use indoc::indoc;
+use std::time::Duration;
 
 use leptonic::atoms::slider::{
     Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
 };
 use leptonic::components::prelude::*;
 use leptonic::hooks::*;
+use leptonic::utils::key::Key;
 use leptonic::utils::styles::Style::*;
 use leptonic::utils::styles::Styles;
 use leptos::prelude::*;
@@ -44,6 +46,7 @@ pub fn PageUsePress() -> impl IntoView {
     let (dbl_count, set_dbl_count) = signal(0);
     let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
     let (disabled, set_disabled) = signal(false);
+    let (press_state, set_press_state) = signal(false);
 
     let string = Memo::new(move |_| {
         events.with(|events| {
@@ -59,35 +62,54 @@ pub fn PageUsePress() -> impl IntoView {
     let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
         disabled: disabled.into(),
         force_prevent_default: false,
-        allow_propagation: false,
+        force_propagation: false,
         allow_text_selection_on_press: false,
         should_cancel_on_pointer_exit: false,
-        on_press: Callback::new(move |e| {
+        prevent_focus_on_press: false,
+        force_is_pressed: None,
+        on_press: Callback::new(move |e: PressEvent| {
             set_count.update(|c| *c += 1);
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Press: {e:?}")));
+                events.push_overwrite(Oco::Owned(format!(
+                    "Press: pointer_type={:?}, x={:?}, y={:?}",
+                    e.pointer_type, e.x, e.y,
+                )));
             });
         }),
-        on_press_up: Some(Callback::new(move |e| {
+        on_press_up: Some(Callback::new(move |e: PressEvent| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressUp: {e:?}")));
+                events.push_overwrite(Oco::Owned(format!(
+                    "PressUp: pointer_type={:?}, x={:?}, y={:?}",
+                    e.pointer_type, e.x, e.y,
+                )));
             });
         })),
-        on_press_start: Some(Callback::new(move |e| {
+        on_press_start: Some(Callback::new(move |e: PressEvent| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressStart: {e:?}")));
+                events.push_overwrite(Oco::Owned(format!(
+                    "PressStart: pointer_type={:?}, x={:?}, y={:?}",
+                    e.pointer_type, e.x, e.y,
+                )));
             });
         })),
-        on_press_end: Some(Callback::new(move |e| {
+        on_press_end: Some(Callback::new(move |e: PressEvent| {
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("PressEnd: {e:?}")));
+                events.push_overwrite(Oco::Owned(format!(
+                    "PressEnd: pointer_type={:?}, x={:?}, y={:?}",
+                    e.pointer_type, e.x, e.y,
+                )));
             });
         })),
-        on_press_change: None,
-        on_double_press: Some(Callback::new(move |e| {
+        on_press_change: Some(Callback::new(move |pressed: bool| {
+            set_press_state.set(pressed);
+        })),
+        on_double_press: Some(Callback::new(move |e: PressEvent| {
             set_dbl_count.update(|c| *c += 1);
             set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("DoublePress: {e:?}")));
+                events.push_overwrite(Oco::Owned(format!(
+                    "DoublePress: pointer_type={:?}, x={:?}, y={:?}",
+                    e.pointer_type, e.x, e.y,
+                )));
             });
         })),
         on_long_press_start: None,
@@ -101,7 +123,7 @@ pub fn PageUsePress() -> impl IntoView {
     let (lp_count, set_lp_count) = signal(0);
     let (lp_events, set_lp_events) = signal(HeapRb::<Oco<'static, str>>::new(20));
     let (lp_disabled, set_lp_disabled) = signal(false);
-    let (threshold, set_threshold) = signal(500u64);
+    let (threshold, set_threshold) = signal(Duration::from_millis(500));
 
     let lp_string = Memo::new(move |_| {
         lp_events.with(|events| {
@@ -114,17 +136,17 @@ pub fn PageUsePress() -> impl IntoView {
         })
     });
 
-    let threshold_signal: Signal<u64> = threshold.into();
-
     let UsePressReturn {
         props: lp_props,
         is_pressed: _,
     } = use_press(UsePressInput {
         disabled: lp_disabled.into(),
         force_prevent_default: false,
-        allow_propagation: false,
+        force_propagation: false,
         allow_text_selection_on_press: false,
         should_cancel_on_pointer_exit: false,
+        prevent_focus_on_press: false,
+        force_is_pressed: None,
         on_press: Callback::new(|_| {}),
         on_press_up: None,
         on_press_start: None,
@@ -156,8 +178,85 @@ pub fn PageUsePress() -> impl IntoView {
                 )));
             });
         })),
-        long_press_threshold: Some(threshold_signal),
-        long_press_accessibility_description: Some("Long press to increment counter"),
+        long_press_threshold: Some(threshold.into()),
+        long_press_accessibility_description: Some("Long press to increment counter".into()),
+    });
+
+    // Configuration options demo: cancel_on_pointer_exit button
+    let (cancel_events, set_cancel_events) = signal(HeapRb::<Oco<'static, str>>::new(10));
+    let cancel_string = Memo::new(move |_| {
+        cancel_events.with(|events| {
+            let mut result = String::new();
+            for e in events.iter().rev() {
+                result.push_str(e.as_str());
+                result.push('\n');
+            }
+            result
+        })
+    });
+    let UsePressReturn {
+        props: cancel_props,
+        is_pressed: cancel_is_pressed,
+    } = use_press(UsePressInput {
+        disabled: Signal::derive(|| false),
+        force_prevent_default: false,
+        force_propagation: false,
+        allow_text_selection_on_press: false,
+        should_cancel_on_pointer_exit: true,
+        prevent_focus_on_press: false,
+        force_is_pressed: None,
+        on_press: Callback::new(move |_: PressEvent| {
+            set_cancel_events.update(|events| {
+                events.push_overwrite(Oco::Borrowed("Press completed"));
+            });
+        }),
+        on_press_up: None,
+        on_press_start: Some(Callback::new(move |_: PressEvent| {
+            set_cancel_events.update(|events| {
+                events.push_overwrite(Oco::Borrowed("PressStart"));
+            });
+        })),
+        on_press_end: Some(Callback::new(move |e: PressEvent| {
+            set_cancel_events.update(|events| {
+                events.push_overwrite(Oco::Owned(format!(
+                    "PressEnd: pointer_type={:?}",
+                    e.pointer_type,
+                )));
+            });
+        })),
+        on_press_change: None,
+        on_double_press: None,
+        on_long_press_start: None,
+        on_long_press: None,
+        on_long_press_end: None,
+        long_press_threshold: None,
+        long_press_accessibility_description: None,
+    });
+
+    // Configuration options demo: prevent_focus_on_press button
+    let (focus_demo_focused, set_focus_demo_focused) = signal(false);
+    let UsePressReturn {
+        props: no_focus_props,
+        is_pressed: no_focus_is_pressed,
+    } = use_press(UsePressInput {
+        disabled: Signal::derive(|| false),
+        force_prevent_default: false,
+        force_propagation: false,
+        allow_text_selection_on_press: false,
+        should_cancel_on_pointer_exit: false,
+        prevent_focus_on_press: true,
+        force_is_pressed: None,
+        on_press: Callback::new(|_| {}),
+        on_press_up: None,
+        on_press_start: None,
+        on_press_end: None,
+        on_press_change: None,
+        on_double_press: None,
+        on_long_press_start: None,
+        on_long_press: None,
+        on_long_press_end: None,
+        long_press_threshold: None,
+        long_press_accessibility_description: None,
     });
 
     view! {
@@ -183,9 +282,11 @@ pub fn PageUsePress() -> impl IntoView {
                     let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
                         disabled: disabled.into(),
                         force_prevent_default: false,
-                        allow_propagation: false,
+                        force_propagation: false,
                         allow_text_selection_on_press: false,
                         should_cancel_on_pointer_exit: false,
+                        prevent_focus_on_press: false,
+                        force_is_pressed: None,
                         on_press: Callback::new(move |e| { /* ... */ }),
                         on_press_up: None,
                         on_press_start: None,
@@ -208,7 +309,13 @@ pub fn PageUsePress() -> impl IntoView {
 
             <p>"Try interacting with the button below using mouse, touch, or keyboard (Tab to focus, Enter/Space to press)."</p>
 
-            <button {..props.into_attrs()}>
+            <button
+                {..props.into_attrs()}
+                style:background=move || if is_pressed.get() { "var(--brand-color)" } else { "" }
+                style:color=move || if is_pressed.get() { "white" } else { "" }
+                style:transform=move || if is_pressed.get() { "scale(0.97)" } else { "" }
+                style:transition="background 0.1s, color 0.1s, transform 0.1s"
+            >
                 "Press me"
             </button>
 
@@ -218,6 +325,7 @@ pub fn PageUsePress() -> impl IntoView {
             </FormControl>
 
             <p>"Is pressed: " { move || is_pressed.get() }</p>
+            <p>"on_press_change: " { move || press_state.get() }</p>
             <p>"Was pressed: " { move || count.get() } { move || match count.get() {
                 1 => " time",
                 _ => " times",
@@ -259,6 +367,95 @@ pub fn PageUsePress() -> impl IntoView {
                 <li>"macOS Meta key workaround for stuck key states"</li>
             </ul>
 
+            <h2 id="keyboard" class="anchor">
+                "Keyboard Interaction"
+                <AnchorLink href="#keyboard" description="Direct link to keyboard interaction"/>
+            </h2>
+
+            <p>
+                "Press events from keyboard activation include a "
+                <code>"key"</code> " field on the " <code>"PressEvent"</code> " so consumers "
+                "can distinguish which key was used."
+            </p>
+
+            <ul>
+                <li><KbdKey key=Key::Tab/> " — Focus the pressable element"</li>
+                <li><KbdKey key=Key::Enter/> " — Activate the press"</li>
+                <li><KbdKey key=Key::Space/> " — Activate the press"</li>
+            </ul>
+
+            <p>
+                "Tab to the demo button above, then try pressing Enter vs Space "
+                "— the event log shows the pointer type as " <code>"Keyboard"</code>
+                " and double-press also works with keyboard activation."
+            </p>
+
+            <h2 id="options" class="anchor">
+                "Configuration Options"
+                <AnchorLink href="#options" description="Direct link to configuration options"/>
+            </h2>
+
+            <ul>
+                <li><code>"force_prevent_default"</code> " — When true, calls " <code>"prevent_default()"</code> " on all pointer and keyboard events. Useful for elements that should not exhibit default browser behavior (e.g., preventing form submission on Enter)."</li>
+                <li><code>"force_propagation"</code> " — When true, unconditionally allows event propagation, bypassing per-event " <code>"continue_propagation()"</code> " control. By default (false), propagation is stopped unless a callback explicitly calls " <code>"continue_propagation()"</code> "."</li>
+                <li><code>"prevent_focus_on_press"</code> " — When true, prevents the pressed element from receiving focus. Useful for toolbar buttons adjacent to text editors."</li>
+                <li><code>"force_is_pressed"</code> " — An optional external signal that, when true, forces the pressed visual state regardless of actual press interactions."</li>
+                <li><code>"allow_text_selection_on_press"</code> " — When true, allows text within the pressable element to be selected during press."</li>
+                <li><code>"should_cancel_on_pointer_exit"</code> " — When true, cancels the press when the pointer leaves the element boundary."</li>
+            </ul>
+
+            <h3 id="options-demo" class="anchor">
+                "Configuration Options Demo"
+                <AnchorLink href="#options-demo" description="Direct link to configuration options demo"/>
+            </h3>
+
+            <p><strong>"should_cancel_on_pointer_exit"</strong>
+               " — Press the button below, then drag the pointer outside before releasing. "
+               "The press is cancelled and " <code>"on_press"</code> " does not fire."</p>
+
+            <button
+                {..cancel_props.into_attrs()}
+                style:background=move || if cancel_is_pressed.get() { "var(--brand-color)" } else { "" }
+                style:color=move || if cancel_is_pressed.get() { "white" } else { "" }
+                style:transform=move || if cancel_is_pressed.get() { "scale(0.97)" } else { "" }
+                style:transition="background 0.1s, color 0.1s, transform 0.1s"
+            >
+                "Drag outside to cancel"
+            </button>
+
+            <pre style="
+                width: 100%;
+                height: 5em;
+                overflow: auto;
+                padding: var(--typography-code-padding);
+                border: none;
+                border-radius: var(--typography-code-border-radius);
+                background-color: var(--typography-code-background-color);
+                color: var(--typography-code-color);
+            ">
+                { move || cancel_string.get() }
+            </pre>
+
+            <p><strong>"prevent_focus_on_press"</strong>
+               " — Click the button below: it will not receive focus (no outline appears). "
+               "Compare with the demo button above which receives focus on click."</p>
+
+            <button
+                {..no_focus_props.into_attrs()}
+                on:focus=move |_| set_focus_demo_focused.set(true)
+                on:blur=move |_| set_focus_demo_focused.set(false)
+                style:background=move || if no_focus_is_pressed.get() { "var(--brand-color)" } else { "" }
+                style:color=move || if no_focus_is_pressed.get() { "white" } else { "" }
+                style:transform=move || if no_focus_is_pressed.get() { "scale(0.97)" } else { "" }
+                style:transition="background 0.1s, color 0.1s, transform 0.1s"
+                style:outline=move || if focus_demo_focused.get() { "2px solid var(--brand-color)" } else { "none" }
+                style:outline-offset="2px"
+            >
+                "Click me (no focus)"
+            </button>
+
+            <p>"Focused: " { move || focus_demo_focused.get() }</p>
+
             <h2 id="long-press" class="anchor">
                 "Long Press"
                 <AnchorLink href="#long-press" description="Direct link to long press"/>
@@ -279,14 +476,16 @@ pub fn PageUsePress() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let (threshold, set_threshold) = signal(500u64);
+                    let (threshold, set_threshold) = signal(Duration::from_millis(500));
 
                     let UsePressReturn { props, .. } = use_press(UsePressInput {
                         disabled: Signal::derive(|| false),
                         force_prevent_default: false,
-                        allow_propagation: false,
+                        force_propagation: false,
                         allow_text_selection_on_press: false,
                         should_cancel_on_pointer_exit: false,
+                        prevent_focus_on_press: false,
+                        force_is_pressed: None,
                         on_press: Callback::new(|_| {}),
                         on_press_up: None,
                         on_press_start: None,
@@ -296,7 +495,7 @@ pub fn PageUsePress() -> impl IntoView {
                         on_long_press_start: Some(Callback::new(|e| { /* ... */ })),
                         on_long_press: Some(Callback::new(|e| { /* ... */ })),
                         on_long_press_end: Some(Callback::new(|e| { /* ... */ })),
-                        long_press_threshold: Some(threshold.into()), // reactive Signal<u64>
+                        long_press_threshold: Some(threshold.into()), // reactive Signal<Duration>
                         long_press_accessibility_description: Some("Long press to open menu"),
                     });
 
@@ -313,7 +512,7 @@ pub fn PageUsePress() -> impl IntoView {
                 <AnchorLink href="#long-press-demo" description="Direct link to long press demo"/>
             </h3>
 
-            <p>"Press and hold the button below for " { move || threshold.get() } "ms to trigger a long press:"</p>
+            <p>"Press and hold the button below for " { move || threshold.get().as_millis() } "ms to trigger a long press:"</p>
 
             <button
                 {..lp_props.into_attrs()}
@@ -344,7 +543,7 @@ pub fn PageUsePress() -> impl IntoView {
                     max=2000.0
                     step=100.0
                     on_change=Callback::new(move |vals: Vec<f64>| {
-                        set_threshold.set(vals[0] as u64);
+                        set_threshold.set(Duration::from_millis(vals[0] as u64));
                     })
                     styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "0.5em"), (Flex, "0 0 200px")]
                 >
@@ -426,6 +625,9 @@ pub fn PageUsePress() -> impl IntoView {
                 Toc::Leaf { title: "Example", link: "#example" },
                 Toc::Leaf { title: "Interactive Demo", link: "#demo" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "Keyboard Interaction", link: "#keyboard" },
+                Toc::Leaf { title: "Configuration Options", link: "#options" },
+                Toc::Leaf { title: "Configuration Options Demo", link: "#options-demo" },
                 Toc::Leaf { title: "Long Press", link: "#long-press" },
                 Toc::Leaf { title: "Long Press Example", link: "#long-press-example" },
                 Toc::Leaf { title: "Long Press Demo", link: "#long-press-demo" },

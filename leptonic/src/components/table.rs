@@ -53,9 +53,11 @@ pub fn TableHeaderCell(
     let UsePressReturn { props, .. } = use_press(UsePressInput {
         disabled: false.into(),
         force_prevent_default: false,
-        allow_propagation: false,
+        force_propagation: false,
         allow_text_selection_on_press: false,
         should_cancel_on_pointer_exit: false,
+        prevent_focus_on_press: false,
+        force_is_pressed: None,
         on_press: Callback::new(move |e| {
             if let Some(on_press) = on_press {
                 on_press.run(e);
