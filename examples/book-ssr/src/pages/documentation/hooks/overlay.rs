@@ -93,6 +93,7 @@ pub fn PageUseOverlay() -> impl IntoView {
             disabled: false.into(),
             within: false,
             auto_focus: false,
+            is_text_input: false,
             on_focus: None,
             on_blur: None,
             on_focus_change: None,

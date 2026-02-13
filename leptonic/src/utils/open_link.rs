@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use wasm_bindgen::{JsCast, JsValue};
 
 use crate::utils::{
@@ -5,6 +7,15 @@ use crate::utils::{
     platform::{browser, device},
     Modifiers,
 };
+
+/// Whether a link is currently being programmatically opened.
+static IS_OPENING_LINK: AtomicBool = AtomicBool::new(false);
+
+/// Returns whether a link is currently being programmatically opened.
+/// Used by focus-visible tracking to suppress modality changes during link activation.
+pub(crate) fn is_opening_link() -> bool {
+    IS_OPENING_LINK.load(Ordering::Acquire)
+}
 
 /// Programmatically open a link element by dispatching a synthetic click event.
 ///
@@ -20,7 +31,12 @@ use crate::utils::{
 ///
 /// # Deviations from react-aria
 ///
-/// None. This matches the `openLink` function from
+/// - No global router-provider (`LinkProvider`) or `RouterContext`.
+///   React-aria supports a `RouterProvider` that intercepts link clicks for
+///   client-side routing. Leptonic relies on the framework's own routing and
+///   does not replicate this indirection.
+///
+/// Otherwise matches the `openLink` function from
 /// `packages/@react-aria/utils/src/openLink.tsx`.
 pub(crate) fn open_link(element: &web_sys::Element, modifiers: Modifiers, is_keyboard_event: bool) {
     let mut modifiers = modifiers;
@@ -52,10 +68,16 @@ pub(crate) fn open_link(element: &web_sys::Element, modifiers: Modifiers, is_key
         create_click_event(modifiers)
     };
 
+    // Set the flag so that focus-visible tracking suppresses modality changes
+    // during the synthetic click dispatch.
+    IS_OPENING_LINK.store(true, Ordering::Release);
+
     // Focus the element before dispatching, without scrolling the page.
     focus_element(element, true);
 
     let _ = element.dispatch_event(&event);
+
+    IS_OPENING_LINK.store(false, Ordering::Release);
 }
 
 fn create_click_event(modifiers: Modifiers) -> web_sys::Event {

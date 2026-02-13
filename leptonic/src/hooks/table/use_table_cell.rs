@@ -200,6 +200,7 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
         disabled,
         within: false,
         auto_focus: false,
+        is_text_input: false,
         on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
         on_blur: None,
         on_focus_change: None,

@@ -347,6 +347,7 @@ where
         disabled: is_disabled,
         within: false,
         auto_focus: false,
+        is_text_input: false,
         on_focus: on_focus_input.map(|cb| Callback::new(move |_: FocusEvent| cb.run(()))),
         on_blur: None,
         on_focus_change: None,

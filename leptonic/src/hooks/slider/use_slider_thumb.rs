@@ -517,6 +517,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         disabled: is_disabled,
         within: false,
         auto_focus: false,
+        is_text_input: false,
         on_focus: Some(Callback::new(move |_: FocusEvent| {
             set_is_focused.set(true);
             state.set_focused_thumb.run(Some(index));

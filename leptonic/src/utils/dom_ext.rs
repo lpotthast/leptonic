@@ -1,5 +1,5 @@
 use leptos::prelude::document;
-use wasm_bindgen::convert::FromWasmAbi;
+use wasm_bindgen::{convert::FromWasmAbi, JsCast};
 
 /// Extension trait for accessing event targets inside DOM event handler closures,
 /// where `.target()` and `.current_target()` are guaranteed to be `Some`.
@@ -128,19 +128,51 @@ impl EventTargetExt for web_sys::EventTarget {
     }
 }
 
-/// # Deviations from react-aria
+/// Check if `node` contains `other_node`, traversing shadow DOM boundaries.
 ///
-/// - We have no shadow DOM support.
-/// - We are not walking from `other_node` upwards to find `node`.
-/// - We are not recognizing `HTMLSlotElement` in the path from `other_node` to `node`.
+/// This walks from `other_node` upwards through parent nodes, slot assignments,
+/// and shadow root host elements to determine containment. This correctly handles
+/// elements distributed into shadow DOM via `<slot>` elements.
+///
+/// Based on react-aria's `nodeContains` from `domHelpers.ts`.
 pub(crate) fn node_contains(
     node: Option<&web_sys::Node>,
     other_node: Option<&web_sys::Node>,
 ) -> Option<bool> {
     let node = node?;
     let other_node = other_node?;
-    let contained = node.contains(Some(other_node));
-    Some(contained)
+
+    // Fast path: native contains works for same-tree nodes.
+    if node.contains(Some(other_node)) {
+        return Some(true);
+    }
+
+    // Slow path: walk up from other_node, crossing shadow boundaries.
+    let mut current: Option<web_sys::Node> = Some(other_node.clone());
+    while let Some(ref cur) = current {
+        if cur == node {
+            return Some(true);
+        }
+
+        // If the current node is a slotted element, follow its assigned slot.
+        if let Some(el) = cur.dyn_ref::<web_sys::Element>() {
+            if let Some(slot) = el.assigned_slot() {
+                let slot_node: web_sys::Node = slot.into();
+                current = Some(slot_node);
+                continue;
+            }
+        }
+
+        // If we've reached a shadow root, jump to its host element.
+        if let Some(shadow) = cur.dyn_ref::<web_sys::ShadowRoot>() {
+            current = Some(shadow.host().into());
+            continue;
+        }
+
+        current = cur.parent_node();
+    }
+
+    Some(false)
 }
 
 /// Get the owner document of a node, falling back to the global document.
@@ -167,4 +199,29 @@ impl ContainsTarget for web_sys::Event {
         )
         .unwrap_or(true)
     }
+}
+
+/// Override the `target` and `currentTarget` properties of an event using
+/// `Object.defineProperty`. This is necessary because these properties are
+/// read-only on native events.
+///
+/// Used for synthetic blur events in `use_focus_within` where we need the
+/// event to appear as if it originated from the tracked element.
+///
+/// Based on react-aria's `setEventTarget` approach.
+pub(crate) fn set_event_target(
+    event: &web_sys::Event,
+    target: &web_sys::EventTarget,
+    current_target: &web_sys::EventTarget,
+) {
+    let descriptor = js_sys::Object::new();
+    let _ = js_sys::Reflect::set(&descriptor, &"configurable".into(), &true.into());
+
+    // Set target
+    let _ = js_sys::Reflect::set(&descriptor, &"value".into(), target);
+    let _ = js_sys::Object::define_property(event, &"target".into(), &descriptor);
+
+    // Set currentTarget
+    let _ = js_sys::Reflect::set(&descriptor, &"value".into(), current_target);
+    let _ = js_sys::Object::define_property(event, &"currentTarget".into(), &descriptor);
 }

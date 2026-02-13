@@ -1,24 +1,41 @@
+use wasm_bindgen::JsCast;
+
 /// Detects screen reader / assistive technology clicks.
 ///
 /// Screen readers fire synthetic click events with specific characteristics
 /// that differ from real user clicks. This function identifies those patterns.
+///
+/// Based on react-aria's `isVirtualClick` from `isVirtualEvent.ts`.
+///
+/// Accepts `&MouseEvent` because click handlers receive `MouseEvent`. Internally
+/// attempts to downcast to `PointerEvent` to access `pointer_type()`, since modern
+/// browsers emit click events as `PointerEvent` instances.
+///
+/// # Detection rules
+///
+/// - JAWS/NVDA with Firefox: `pointer_type` is empty and the event is trusted.
+/// - Android `TalkBack`: event type is `"click"` with `buttons == 1` and a non-empty pointer type.
+/// - Default (`VoiceOver`, other screen readers): `detail == 0` and no pointer type.
 pub fn is_virtual_click(e: &web_sys::MouseEvent) -> bool {
-    let detail = e.detail();
-    let offset_x = e.offset_x();
-    let offset_y = e.offset_y();
+    let pointer_type = e
+        .dyn_ref::<web_sys::PointerEvent>()
+        .map(web_sys::PointerEvent::pointer_type);
 
-    // detail === 0 indicates a non-physical click
-    // However, real clicks on zero-size elements also have offsetX/offsetY === 0,
-    // so we need to distinguish those cases.
-    if detail == 0 && !(offset_x == 0 && offset_y == 0) {
+    // JAWS/NVDA with Firefox fire trusted pointer events with empty pointer_type.
+    if pointer_type.as_deref() == Some("") && e.is_trusted() {
         return true;
     }
 
-    let client_x = e.client_x();
-    let client_y = e.client_y();
+    // Android TalkBack fires click events with a non-empty pointer_type and buttons == 1.
+    if crate::utils::platform::device::is_android()
+        && pointer_type.as_ref().is_some_and(|pt| !pt.is_empty())
+    {
+        return e.type_() == "click" && e.buttons() == 1;
+    }
 
-    // `VoiceOver` on macOS/iOS fires clicks with all coordinates at 0.
-    detail == 0 && offset_x == 0 && offset_y == 0 && client_x == 0 && client_y == 0
+    // Default: screen reader synthetic click has detail == 0 and no/empty pointer_type.
+    // When the event is not a PointerEvent (pointer_type is None), or pointer_type is empty.
+    e.detail() == 0 && !pointer_type.as_ref().is_some_and(|pt| !pt.is_empty())
 }
 
 /// Detects virtual pointer events (e.g., `VoiceOver` on iOS).

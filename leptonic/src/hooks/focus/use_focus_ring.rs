@@ -24,7 +24,18 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## ADDITIONAL FUNCTIONALITY
+//
+// - Additional `disabled`, `on_focus`, `on_blur`, `on_focus_change` props
+//   React-aria's `useFocusRing` does not accept these; it only exposes an
+//   internal `onFocusChange`. Leptonic forwards these to the underlying
+//   `use_focus` / `use_focus_within` hooks as a convenience so consumers can
+//   receive focus events without a separate `use_focus` call.
+//
+// - `data-focus-visible` attribute output
+//   React-aria does not output any data attributes; consumers style based on the
+//   `isFocusVisible` boolean. Leptonic outputs a `data-focus-visible="true"`
+//   custom attribute for CSS-only styling. This is an ergonomic addition.
 //
 // =============================================================================
 
@@ -49,6 +60,12 @@ pub struct UseFocusRingInput {
     /// Whether to auto-focus the element.
     pub auto_focus: bool,
 
+    /// Whether the element is a text input. When `true`, only Tab/Escape keys
+    /// trigger focus-visible; other keyboard events are suppressed. This is
+    /// used for compound text-input components (e.g., a date picker where focus
+    /// is on a button but the component should use text-input focus rules).
+    pub is_text_input: bool,
+
     /// Optional callback when the element receives focus (or focus enters when `within=true`).
     pub on_focus: Option<Callback<FocusEvent>>,
 
@@ -65,6 +82,7 @@ impl Default for UseFocusRingInput {
             disabled: Signal::derive(|| false),
             within: false,
             auto_focus: false,
+            is_text_input: false,
             on_focus: None,
             on_blur: None,
             on_focus_change: None,
@@ -161,6 +179,7 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
         disabled,
         within,
         auto_focus,
+        is_text_input,
         on_focus,
         on_blur,
         on_focus_change,
@@ -170,7 +189,12 @@ pub fn use_focus_ring(input: UseFocusRingInput) -> UseFocusRingReturn {
 
     let UseFocusVisibleReturn {
         focus_should_be_visible,
-    } = use_focus_visible(UseFocusVisibleInput { auto_focus });
+        modality: _,
+    } = use_focus_visible(UseFocusVisibleInput {
+        auto_focus,
+        enabled: focused.into(),
+        is_text_input,
+    });
 
     let focus_visible = Signal::derive(move || {
         let is_focused = focused.get();

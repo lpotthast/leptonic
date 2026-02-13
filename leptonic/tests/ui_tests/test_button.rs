@@ -13,12 +13,12 @@ impl UiTest for ButtonTests {
         "button_tests".to_string()
     }
 
-    async fn run(&self, driver: &WebDriver) -> anyhow::Result<()> {
+    async fn run(&self, driver: &WebDriver, base_url: &str) -> anyhow::Result<()> {
         let mut timeouts = TimeoutConfiguration::default();
         timeouts.set_implicit(Some(Duration::from_secs(3)));
         driver.update_timeouts(timeouts).await?;
 
-        let page = ButtonPage { driver };
+        let page = ButtonPage { driver, base_url };
         page.goto().await?;
 
         // Test: basic button click increments counter

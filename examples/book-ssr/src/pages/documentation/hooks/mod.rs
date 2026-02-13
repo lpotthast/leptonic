@@ -10,6 +10,7 @@ pub mod dnd;
 pub mod focus;
 pub mod focus_manager;
 pub mod focus_ring;
+pub mod focus_visible;
 pub mod focus_within;
 pub mod focusable;
 pub mod grid;

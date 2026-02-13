@@ -74,6 +74,9 @@ pub mod routes {
             #[route("/use-focus-ring")]
             pub mod use_focus_ring {}
 
+            #[route("/use-focus-visible")]
+            pub mod use_focus_visible {}
+
             #[route("/use-focus-manager")]
             pub mod use_focus_manager {}
 

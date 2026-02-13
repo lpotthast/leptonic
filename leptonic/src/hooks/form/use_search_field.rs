@@ -395,6 +395,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
         disabled: is_disabled,
         within: false,
         auto_focus,
+        is_text_input: true,
         on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,

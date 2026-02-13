@@ -101,8 +101,7 @@ impl CapturedElement {
     ///
     /// Use this inside event handlers where tracking is not needed.
     pub fn with_untracked<U>(&self, accessor: impl Fn(Option<&web_sys::Element>) -> U) -> U {
-        self.storage
-            .with_value(move |e| accessor(e.as_deref()))
+        self.storage.with_value(move |e| accessor(e.as_deref()))
     }
 
     /// Create the [`ElementCaptureAttr`] to spread onto the target element.

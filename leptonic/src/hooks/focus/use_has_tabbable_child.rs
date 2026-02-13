@@ -1,9 +1,12 @@
 use leptos::prelude::*;
-use wasm_bindgen::JsCast;
+use wasm_bindgen::{prelude::*, JsCast};
 
 use crate::{
     hooks::IntoAttrs,
-    utils::element_capture::{CapturedElement, ElementCaptureAttr},
+    utils::{
+        element_capture::{CapturedElement, ElementCaptureAttr},
+        focusability, shadow_tree_walker,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/useHasTabbableChild.ts
@@ -22,7 +25,19 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## DIFFERENT BEHAVIOR
+//
+// - Element capture pattern vs caller-provided ref
+//   React-aria: `useHasTabbableChild(scopeRef)` takes a ref as parameter.
+//   Leptonic: Returns `ElementCaptureAttr` for automatic element capture.
+//
+// ## OMITTED FUNCTIONALITY
+//
+// - No radio button group handling
+//   React-aria's `isTabbableRadio()` ensures only one radio per group is tabbable.
+//   `focusability::is_tabbable_radio` is now available but is not used here because
+//   at least one radio in any group is always tabbable, so the boolean result of
+//   `has_tabbable_child` is unaffected.
 //
 // =============================================================================
 
@@ -68,9 +83,6 @@ impl IntoAttrs for UseHasTabbableChildProps {
 /// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseHasTabbableChildAttrs = (ElementCaptureAttr,);
 
-/// Selector for potentially tabbable elements.
-const TABBABLE_SELECTOR: &str = "input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], area[href], summary, iframe, object, embed, audio[controls], video[controls], [contenteditable]:not([contenteditable=false]), [tabindex]:not([tabindex=\"-1\"])";
-
 /// Checks whether an element has any tabbable (focusable via Tab key) children.
 ///
 /// This is useful for determining whether to make a container itself focusable
@@ -79,6 +91,9 @@ const TABBABLE_SELECTOR: &str = "input:not([disabled]):not([type=hidden]), selec
 /// The hook automatically captures the DOM element through [`ElementCaptureAttr`],
 /// so you don't need to create or pass a `NodeRef`. Just spread the props
 /// onto your element and the detection works automatically.
+///
+/// A `MutationObserver` watches for child additions/removals and attribute changes
+/// (`tabindex`, `disabled`) to keep the result up-to-date with dynamic content.
 ///
 /// # Example
 ///
@@ -102,10 +117,22 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
 
     let element = CapturedElement::new();
 
+    // Store cleanup for MutationObserver.
+    #[cfg(not(feature = "ssr"))]
+    let observer_cleanup: StoredValue<Option<Box<dyn Fn()>>, LocalStorage> =
+        StoredValue::new_local(None);
+
     // Check for tabbable children when element is captured or disabled changes.
-    // Uses `element.get()` (reactive) so the Effect re-runs when the element
-    // is captured — critical for client-side navigation.
+    // Also sets up a MutationObserver for dynamic child changes.
     Effect::new(move |_| {
+        // Clean up previous observer.
+        #[cfg(not(feature = "ssr"))]
+        observer_cleanup.update_value(|cleanup| {
+            if let Some(cleanup_fn) = cleanup.take() {
+                cleanup_fn();
+            }
+        });
+
         if disabled.get() {
             set_has_tabbable_child.set(false);
             return;
@@ -116,8 +143,51 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
             return;
         };
 
+        // Initial check.
         let has_tabbable = has_tabbable_element(&el);
         set_has_tabbable_child.set(has_tabbable);
+
+        // Set up MutationObserver to detect dynamic child changes.
+        #[cfg(not(feature = "ssr"))]
+        {
+            let el_clone = (*el).clone();
+            let callback: Closure<dyn FnMut(js_sys::Array, web_sys::MutationObserver)> =
+                Closure::new(
+                    move |_mutations: js_sys::Array, _observer: web_sys::MutationObserver| {
+                        let has = has_tabbable_element(&el_clone);
+                        set_has_tabbable_child.set(has);
+                    },
+                );
+
+            if let Ok(observer) = web_sys::MutationObserver::new(callback.as_ref().unchecked_ref())
+            {
+                let options = web_sys::MutationObserverInit::new();
+                options.set_subtree(true);
+                options.set_child_list(true);
+                options.set_attributes(true);
+                let filter = js_sys::Array::new();
+                filter.push(&"tabindex".into());
+                filter.push(&"disabled".into());
+                options.set_attribute_filter(&filter);
+
+                if observer.observe_with_options(&el, &options).is_ok() {
+                    callback.forget();
+                    observer_cleanup.set_value(Some(Box::new(move || {
+                        observer.disconnect();
+                    })));
+                }
+            }
+        }
+    });
+
+    // Cleanup observer on unmount.
+    #[cfg(not(feature = "ssr"))]
+    on_cleanup(move || {
+        observer_cleanup.update_value(|cleanup| {
+            if let Some(cleanup_fn) = cleanup.take() {
+                cleanup_fn();
+            }
+        });
     });
 
     UseHasTabbableChildReturn {
@@ -129,110 +199,26 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
 }
 
 /// Check if an element has any tabbable descendant elements.
+///
+/// Uses a `ShadowTreeWalker` to lazily iterate descendant elements (descending into
+/// shadow roots), stopping at the first tabbable match. This mirrors react-aria's
+/// approach of using `getFocusableTreeWalker` with `{tabbable: true}` followed by
+/// `!!walker.nextNode()`.
 fn has_tabbable_element(element: &web_sys::Element) -> bool {
-    // Query for potentially tabbable elements
-    let Ok(nodes) = element.query_selector_all(TABBABLE_SELECTOR) else {
+    // 0x1 = NodeFilter.SHOW_ELEMENT
+    let Some(mut walker) =
+        shadow_tree_walker::create_shadow_tree_walker(element.as_ref(), 0x1, None)
+    else {
         return false;
     };
 
-    // Check each element to see if it's actually tabbable
-    for i in 0..nodes.length() {
-        let Some(node) = nodes.get(i) else {
-            continue;
-        };
-
-        let Some(el) = node.dyn_ref::<web_sys::HtmlElement>() else {
-            continue;
-        };
-
-        if is_tabbable(el) {
-            return true;
+    while let Some(node) = walker.next_node() {
+        if let Some(el) = node.dyn_ref::<web_sys::Element>() {
+            if focusability::is_tabbable(el) {
+                return true;
+            }
         }
     }
 
     false
-}
-
-/// Check if a specific element is tabbable.
-fn is_tabbable(element: &web_sys::HtmlElement) -> bool {
-    // Check if element is visible
-    if !is_element_visible(element) {
-        return false;
-    }
-
-    // Check tabindex
-    let tab_index = element.tab_index();
-    if tab_index < 0 {
-        return false;
-    }
-
-    // Check if it's a disabled form element
-    if let Some(input) = element.dyn_ref::<web_sys::HtmlInputElement>() {
-        if input.disabled() {
-            return false;
-        }
-        // Hidden inputs are not tabbable
-        if input.type_() == "hidden" {
-            return false;
-        }
-    }
-
-    if let Some(button) = element.dyn_ref::<web_sys::HtmlButtonElement>() {
-        if button.disabled() {
-            return false;
-        }
-    }
-
-    if let Some(select) = element.dyn_ref::<web_sys::HtmlSelectElement>() {
-        if select.disabled() {
-            return false;
-        }
-    }
-
-    if let Some(textarea) = element.dyn_ref::<web_sys::HtmlTextAreaElement>() {
-        if textarea.disabled() {
-            return false;
-        }
-    }
-
-    true
-}
-
-/// Check if an element is visible (not hidden via CSS).
-fn is_element_visible(element: &web_sys::HtmlElement) -> bool {
-    // Check if element or any ancestor is hidden
-    // Use owner document's default view to correctly handle iframes/shadow DOM
-    let Some(window) = element.owner_document().and_then(|d| d.default_view()) else {
-        return true;
-    };
-
-    let Ok(Some(style)) = window.get_computed_style(element) else {
-        return true;
-    };
-
-    // Check display
-    if let Ok(display) = style.get_property_value("display") {
-        if display == "none" {
-            return false;
-        }
-    }
-
-    // Check visibility
-    if let Ok(visibility) = style.get_property_value("visibility") {
-        if visibility == "hidden" || visibility == "collapse" {
-            return false;
-        }
-    }
-
-    // Check if element has zero size (often used for hiding)
-    let rect = element.get_bounding_client_rect();
-    if rect.width() == 0.0 && rect.height() == 0.0 {
-        // Could be collapsed, but might still be tabbable if it has size from children
-        // Check the offset dimensions as well
-        if element.offset_width() == 0 && element.offset_height() == 0 {
-            return false;
-        }
-    }
-
-    true
 }

@@ -82,17 +82,27 @@ wasm-bindgen = "0.2.108"
 wasm-bindgen-futures = "0.4.58"
 web-sys = { version = "0.3.85", features = [
     "DomRect",
+    "Element",
     "Event",
     "EventTarget",
+    "FocusEventInit",
     "FocusOptions",
+    "HtmlCollection",
+    "HtmlElement",
+    "HtmlFormElement",
+    "HtmlInputElement",
+    "HtmlSlotElement",
+    "HtmlTextAreaElement",
     "KeyboardEventInit",
     "MouseEvent",
     "MouseEventInit",
+    "NodeList",
+    "RadioNodeList",
     "ScrollIntoViewOptions",
-    "HtmlFormElement",
-    "HtmlInputElement",
+    "ShadowRoot",
     "Storage",
     "SvgElement",
+    "TreeWalker",
 ] }
 itertools = "0.14.0"
 

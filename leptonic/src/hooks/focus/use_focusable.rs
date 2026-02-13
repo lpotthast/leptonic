@@ -26,13 +26,6 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// ## OMITTED FUNCTIONALITY
-//
-// - useSyntheticBlurEvent
-//   React-aria includes a synthetic blur event workaround for React < 17 where
-//   blur events do not fire on disabled elements. Native DOM handles this
-//   correctly. Not needed in Leptos.
-//
 // ## DIFFERENT BEHAVIOR
 //
 // - Handler optimization when disabled
@@ -40,6 +33,18 @@ use crate::{
 //   relying on React's reconciliation to avoid attaching empty listeners.
 //   Our `EventHandler` always attaches a listener but checks the disabled
 //   state inside the handler. The overhead is negligible.
+//
+// - Context handler disabled guard
+//   React-aria: `let interactionProps = props.isDisabled ? {} : domProps`
+//   discards all interaction props (including context-provided handlers) when
+//   disabled. Leptonic: context handlers are guarded with a `disabled` check
+//   at chain time — the own handler (from `use_focus`) already checks disabled
+//   internally, and context handlers are wrapped to also skip when disabled.
+//
+// - No FocusableProvider component
+//   There is no wrapper component for providing FocusableContext to children.
+//   Parent components must call `provide_context(FocusableContext { ... })`
+//   directly before rendering focusable children.
 //
 // =============================================================================
 
@@ -89,19 +94,21 @@ impl Default for UseFocusableInput {
 
 /// Context for parent-to-child interaction prop forwarding.
 ///
-/// Parent components (e.g., `TooltipTrigger`) can provide a `FocusableContext` to inject
-/// additional event handlers and element capture into a focusable child without the child
-/// needing to know about the parent's needs.
+/// Parent components (e.g., `TooltipTrigger`) that need to inject additional
+/// event handlers or capture a focusable child's element **must** provide this
+/// context via [`provide_context`].
 ///
-/// This mirrors react-aria's `FocusableContext` from
-/// `packages/@react-aria/interactions/src/useFocusable.tsx`.
+/// When provided, [`use_focusable`] automatically reads the context and chains
+/// the parent's handlers after its own. When not provided, `use_focusable`
+/// uses only the handlers from its input.
 ///
 /// # Example
 ///
 /// ```ignore
-/// // Parent provides context:
+/// // Parent component provides context:
 /// provide_context(FocusableContext {
 ///     on_focus: Some(EventHandler::new(|_| { /* parent focus handler */ })),
+///     element: Some(parent_element_capture),
 ///     ..Default::default()
 /// });
 ///
@@ -252,6 +259,14 @@ pub type UseFocusableAttrs = (
 /// so you don't need to create or pass a `NodeRef`. Just spread the props
 /// onto your element and focus management works automatically.
 ///
+/// # Context
+///
+/// If a [`FocusableContext`] is provided by an ancestor (via [`provide_context`]),
+/// this hook automatically chains the context's handlers after its own and
+/// captures the element for the parent. This is how parent components inject
+/// interaction behavior into focusable children without the child needing to
+/// know about the parent.
+///
 /// # Example
 ///
 /// ```ignore
@@ -320,23 +335,42 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
         on_key_up,
     });
 
-    // When not disabled, chain context handlers with own handlers (own first, context second).
-    // This matches react-aria's mergeProps order where the component's own handlers fire first.
-    // When disabled, context props are ignored (react-aria: `let interactionProps = props.isDisabled ? {} : domProps`).
+    // Chain context handlers with own handlers (own first, context second).
+    // Context handlers are guarded with a disabled check: when disabled is true,
+    // context handlers are skipped. This matches react-aria's behavior where
+    // `interactionProps = props.isDisabled ? {} : domProps` discards all
+    // interaction props (including context-provided handlers) when disabled.
+    // The own handlers (from use_focus/use_keyboard) already check disabled internally.
     let on_focus = match ctx.as_ref().and_then(|c| c.on_focus.clone()) {
-        Some(ctx_handler) => focus.props.on_focus.chain(ctx_handler),
+        Some(ctx_handler) => focus.props.on_focus.chain(move |e: FocusEvent| {
+            if !disabled.get_untracked() {
+                ctx_handler.call(e);
+            }
+        }),
         None => focus.props.on_focus,
     };
     let on_blur = match ctx.as_ref().and_then(|c| c.on_blur.clone()) {
-        Some(ctx_handler) => focus.props.on_blur.chain(ctx_handler),
+        Some(ctx_handler) => focus.props.on_blur.chain(move |e: FocusEvent| {
+            if !disabled.get_untracked() {
+                ctx_handler.call(e);
+            }
+        }),
         None => focus.props.on_blur,
     };
     let on_keydown = match ctx.as_ref().and_then(|c| c.on_keydown.clone()) {
-        Some(ctx_handler) => keyboard.props.on_keydown.chain(ctx_handler),
+        Some(ctx_handler) => keyboard.props.on_keydown.chain(move |e: KeyboardEvent| {
+            if !disabled.get_untracked() {
+                ctx_handler.call(e);
+            }
+        }),
         None => keyboard.props.on_keydown,
     };
     let on_keyup = match ctx.as_ref().and_then(|c| c.on_keyup.clone()) {
-        Some(ctx_handler) => keyboard.props.on_keyup.chain(ctx_handler),
+        Some(ctx_handler) => keyboard.props.on_keyup.chain(move |e: KeyboardEvent| {
+            if !disabled.get_untracked() {
+                ctx_handler.call(e);
+            }
+        }),
         None => keyboard.props.on_keyup,
     };
 

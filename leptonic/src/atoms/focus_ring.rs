@@ -28,6 +28,7 @@ pub fn FocusRing(
         disabled: disabled.unwrap_or(false.into()),
         within,
         auto_focus,
+        is_text_input: false,
         on_focus,
         on_blur,
         on_focus_change,

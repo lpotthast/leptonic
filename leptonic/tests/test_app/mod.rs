@@ -1,4 +1,4 @@
-use std::{env, time::Duration};
+use std::{env, net::TcpListener, time::Duration};
 
 use tokio::process::Command;
 use tokio_process_tools::{
@@ -12,6 +12,16 @@ pub struct Frontend {
     stdout_replay: Inspector,
     #[expect(unused)]
     stderr_replay: Inspector,
+    pub base_url: String,
+}
+
+/// Bind a `TcpListener` to port 0 and return the OS-assigned port.
+fn find_free_port() -> u16 {
+    let listener = TcpListener::bind("127.0.0.1:0").expect("failed to bind to a free port");
+    listener
+        .local_addr()
+        .expect("failed to get local address")
+        .port()
 }
 
 pub async fn start_frontend() -> Frontend {
@@ -21,11 +31,18 @@ pub async fn start_frontend() -> Frontend {
         .canonicalize()
         .unwrap();
 
-    tracing::info!("Starting frontend in {fe_dir:?}");
+    let site_port = find_free_port();
+    let reload_port = find_free_port();
+    let site_addr = format!("127.0.0.1:{site_port}");
+    let base_url = format!("http://{site_addr}");
+
+    tracing::info!("Starting frontend in {fe_dir:?} on {site_addr} (reload port {reload_port})");
     let mut cmd = Command::new("cargo");
     cmd.arg("leptos")
         .arg("watch")
         .env("RUST_BACKTRACE", "1")
+        .env("LEPTOS_SITE_ADDR", &site_addr)
+        .env("LEPTOS_RELOAD_PORT", reload_port.to_string())
         .current_dir(fe_dir);
 
     let fe_process = Process::new(cmd)
@@ -50,12 +67,13 @@ pub async fn start_frontend() -> Frontend {
         LineParsingOptions::default(),
     );
 
+    let expected_msg = format!("listening on http://{site_addr}");
     let fe_start_timeout = Duration::from_secs(60 * 10);
     tracing::info!("Waiting {fe_start_timeout:?} for frontend to start...");
     match fe_process
         .stdout()
         .wait_for_line_with_timeout(
-            |line| line.contains("listening on http://127.0.0.1:4200"),
+            move |line| line.contains(&expected_msg),
             LineParsingOptions::default(),
             fe_start_timeout,
         )
@@ -64,15 +82,16 @@ pub async fn start_frontend() -> Frontend {
         Ok(_wait_for) => {}
         Err(_elapsed) => {
             tracing::error!(
-                "Frontend failed to start in {fe_start_timeout:?}. Expected to see 'listening on http://127.0.0.1:4200' on stdout. Compilation might not be ready yet. A restart might work as it will pick up the previously done compilation work."
+                "Frontend failed to start in {fe_start_timeout:?}. Expected to see 'listening on http://{site_addr}' on stdout. Compilation might not be ready yet. A restart might work as it will pick up the previously done compilation work."
             );
         }
     }
 
-    tracing::info!("Frontend started!");
+    tracing::info!("Frontend started at {base_url}!");
     Frontend {
         cargo_leptos_process: fe_process,
         stdout_replay,
         stderr_replay,
+        base_url,
     }
 }

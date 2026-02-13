@@ -242,6 +242,7 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
         disabled,
         within: false,
         auto_focus: false,
+        is_text_input: false,
         on_focus: None,
         on_blur: None,
         on_focus_change: None,

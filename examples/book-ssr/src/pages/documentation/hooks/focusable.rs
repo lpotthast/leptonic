@@ -2,7 +2,7 @@ use indoc::indoc;
 use leptonic::{atoms::focus_ring::FocusRing, components::prelude::*, hooks::*, prelude::Size};
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
 
 #[component]
 pub fn PageUseFocusable() -> impl IntoView {
@@ -51,6 +51,11 @@ pub fn PageUseFocusable() -> impl IntoView {
 
             <p>"Make any element focusable with proper keyboard event handling. Combines " <code>"use_focus"</code> " and " <code>"use_keyboard"</code> " for a complete focusable element solution."</p>
 
+            <h2 id="basic-usage" class="anchor">
+                "Basic Usage"
+                <AnchorLink href="#basic-usage" description="Direct link to basic usage"/>
+            </h2>
+
             <Code>
                 {indoc!(r#"
                     let UseFocusableReturn { props, focus_handle } = use_focusable(UseFocusableInput {
@@ -85,7 +90,7 @@ pub fn PageUseFocusable() -> impl IntoView {
 
             <p>"Focus the custom element below using Tab, click, or the button. The demo uses " <code>"FocusRing"</code> " (powered by " <code>"use_focus_ring"</code> ") to show a visible ring on keyboard focus:"</p>
 
-            <div style="display: flex; gap: 1em; align-items: center;">
+            <div style=flex_row_center()>
                 <FocusRing>
                     <div
                         {..attrs}
@@ -109,34 +114,28 @@ pub fn PageUseFocusable() -> impl IntoView {
 
                 <button
                     on:click=move |_| focus_handle.focus()
-                    style="
-                        padding: 0.5em 1em;
-                        border-radius: 4px;
-                        border: 1px solid var(--brand-color);
-                        background: transparent;
-                        cursor: pointer;
-                    "
+                    style=demo_button()
                 >
                     "Click to focus"
                 </button>
             </div>
 
             <Stack orientation=StackOrientation::Vertical spacing=Size::Em(0.5) attr:style="margin-top: 1em;">
-                <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em;">
+                <FormControl attr:style=form_control_row()>
                     <Checkbox checked=disabled set_checked=set_disabled />
                     <Label>"Disabled"</Label>
                 </FormControl>
 
-                <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em;">
+                <FormControl attr:style=form_control_row()>
                     <Checkbox checked=exclude_from_tab set_checked=set_exclude_from_tab />
                     <Label>"Exclude from tab order (tabindex=-1)"</Label>
                 </FormControl>
             </Stack>
 
-            <div style="margin-top: 1em; display: flex; gap: 2em; flex-wrap: wrap;">
+            <div style=flex_row_gap()>
                 <p>"Focus count: " { move || focus_count.get() }</p>
                 <p>"Blur count: " { move || blur_count.get() }</p>
-                <p style:color=move || if is_focused.get() { "green" } else { "gray" }>
+                <p style=move || if is_focused.get() { state_active() } else { state_inactive() }>
                     { move || if is_focused.get() { "Focused" } else { "Not focused" } }
                 </p>
             </div>
@@ -206,6 +205,128 @@ pub fn PageUseFocusable() -> impl IntoView {
                 ")}
             </Code>
 
+            <h2 id="context" class="anchor">
+                "FocusableContext"
+                <AnchorLink href="#context" description="Direct link to FocusableContext"/>
+            </h2>
+
+            <p>"Parent components (e.g., " <code>"TooltipTrigger"</code> ") can inject additional event handlers into a focusable child via " <code>"FocusableContext"</code> ". The child's " <code>"use_focusable"</code> " automatically reads the context and chains the parent's handlers with its own."</p>
+
+            <Code>
+                {indoc!(r"
+                    // Parent provides context:
+                    provide_context(FocusableContext {
+                        on_focus: Some(EventHandler::new(|_| { /* parent focus handler */ })),
+                        ..Default::default()
+                    });
+
+                    // Child's use_focusable automatically chains context handlers.
+                    // Context handlers are guarded by the disabled state — they are
+                    // skipped when the focusable element is disabled.
+                ")}
+            </Code>
+
+            <h2 id="input" class="anchor">
+                "Input"
+                <AnchorLink href="#input" description="Direct link to input"/>
+            </h2>
+
+            <p><code>"UseFocusableInput"</code> " fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Default"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><code>"disabled"</code></TableCell>
+                            <TableCell><code>"Signal<bool>"</code></TableCell>
+                            <TableCell><code>"false"</code></TableCell>
+                            <TableCell>"Whether focus should be disabled."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"auto_focus"</code></TableCell>
+                            <TableCell><code>"bool"</code></TableCell>
+                            <TableCell><code>"false"</code></TableCell>
+                            <TableCell>"Whether the element should be focused on mount."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"exclude_from_tab_order"</code></TableCell>
+                            <TableCell><code>"Signal<bool>"</code></TableCell>
+                            <TableCell><code>"false"</code></TableCell>
+                            <TableCell>"When true, sets tabindex=\"-1\"."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"on_focus"</code></TableCell>
+                            <TableCell><code>"Option<Callback<FocusEvent>>"</code></TableCell>
+                            <TableCell><code>"None"</code></TableCell>
+                            <TableCell>"Handler called when the element receives focus."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"on_blur"</code></TableCell>
+                            <TableCell><code>"Option<Callback<FocusEvent>>"</code></TableCell>
+                            <TableCell><code>"None"</code></TableCell>
+                            <TableCell>"Handler called when the element loses focus."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"on_focus_change"</code></TableCell>
+                            <TableCell><code>"Option<Callback<bool>>"</code></TableCell>
+                            <TableCell><code>"None"</code></TableCell>
+                            <TableCell>"Handler called when focus state changes."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"on_key_down"</code></TableCell>
+                            <TableCell><code>"Option<Callback<KeyboardEventWrapper>>"</code></TableCell>
+                            <TableCell><code>"None"</code></TableCell>
+                            <TableCell>"Handler called when a key is pressed."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"on_key_up"</code></TableCell>
+                            <TableCell><code>"Option<Callback<KeyboardEventWrapper>>"</code></TableCell>
+                            <TableCell><code>"None"</code></TableCell>
+                            <TableCell>"Handler called when a key is released."</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            <h2 id="return-value" class="anchor">
+                "Return Value"
+                <AnchorLink href="#return-value" description="Direct link to return value"/>
+            </h2>
+
+            <p><code>"UseFocusableReturn"</code> " fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><code>"props"</code></TableCell>
+                            <TableCell><code>"UseFocusableProps"</code></TableCell>
+                            <TableCell>"Spread onto the target element via " <code>"props.into_attrs()"</code> ". Manages tabindex, focus, blur, and keyboard listeners."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"focus_handle"</code></TableCell>
+                            <TableCell><code>"FocusHandle"</code></TableCell>
+                            <TableCell>"Allows programmatic focus via " <code>"focus_handle.focus()"</code> "."</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
             <h2 id="related-hooks" class="anchor">
                 "Related Hooks"
                 <AnchorLink href="#related-hooks" description="Direct link to related hooks"/>
@@ -224,17 +345,21 @@ pub fn PageUseFocusable() -> impl IntoView {
             </h2>
 
             <ul>
-                <li><b>"useSyntheticBlurEvent"</b> " — React-aria includes a workaround for React < 17 where blur events do not fire on disabled elements. Native DOM handles this correctly, so it is not needed."</li>
                 <li><b>"Handler optimization"</b> " — React-aria returns " <code>"undefined"</code> " props when no callbacks are provided. Our " <code>"EventHandler"</code> " always attaches a listener but checks the disabled state inside. The overhead is negligible."</li>
+                <li><b>"Context handler guard"</b> " — React-aria discards all interaction props when disabled (" <code>"isDisabled ? {} : domProps"</code> "). Leptonic wraps context-provided handlers with a disabled check so they are skipped when the focusable element is disabled."</li>
             </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "use_focusable", link: "#use_focusable" },
+                Toc::Leaf { title: "Basic Usage", link: "#basic-usage" },
                 Toc::Leaf { title: "Programmatic Focus", link: "#programmatic-focus" },
                 Toc::Leaf { title: "Tab Index Management", link: "#tab-index" },
                 Toc::Leaf { title: "Auto Focus", link: "#auto-focus" },
+                Toc::Leaf { title: "FocusableContext", link: "#context" },
+                Toc::Leaf { title: "Input", link: "#input" },
+                Toc::Leaf { title: "Return Value", link: "#return-value" },
                 Toc::Leaf { title: "Related Hooks", link: "#related-hooks" },
                 Toc::Leaf { title: "Deviations from react-aria", link: "#deviations" },
             ]

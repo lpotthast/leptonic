@@ -203,6 +203,7 @@ where
         disabled: is_disabled,
         within: false,
         auto_focus: false,
+        is_text_input: false,
         on_focus: None,
         on_blur: None,
         on_focus_change: None,

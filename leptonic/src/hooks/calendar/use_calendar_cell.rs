@@ -320,6 +320,7 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
         disabled: is_disabled,
         within: false,
         auto_focus: false,
+        is_text_input: false,
         on_focus: Some(Callback::new(move |_e| {
             if let Some(on_focus) = on_focus {
                 on_focus.run(day);

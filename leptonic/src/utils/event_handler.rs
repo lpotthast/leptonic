@@ -74,6 +74,12 @@ impl<E: 'static> Default for EventHandler<E> {
     }
 }
 
+impl<E, F: Fn(E) + Send + Sync + 'static> From<F> for EventHandler<E> {
+    fn from(f: F) -> Self {
+        EventHandler::new(f)
+    }
+}
+
 impl<E: 'static> EventHandler<E> {
     /// Create from a single closure (no Vec allocation).
     /// The closure must be `Fn + Send + Sync` (use signals/`StoredValue` for mutable state).
@@ -99,9 +105,9 @@ impl<E: 'static> EventHandler<E> {
 
     /// Chain another handler to run after this one.
     #[must_use]
-    pub fn chain(self, other: Self) -> Self {
+    pub fn chain(self, other: impl Into<Self>) -> Self {
         use EventHandlerInner::{Empty, Multiple, Single};
-        let inner = match (self.inner, other.inner) {
+        let inner = match (self.inner, other.into().inner) {
             (Empty, other) => other,
             (this, Empty) => this,
             (Single(a), Single(b)) => Multiple(vec![a, b]),
@@ -127,6 +133,29 @@ impl<E: 'static> EventHandler<E> {
     #[must_use]
     pub fn then<F: Fn(E) + Send + Sync + 'static>(self, f: F) -> Self {
         self.chain(Self::new(f))
+    }
+}
+
+impl<E: Clone + 'static> EventHandler<E> {
+    /// Invoke all handlers in this chain with the given event.
+    ///
+    /// Useful for calling a handler programmatically (e.g., from within a
+    /// wrapper closure that adds a guard condition).
+    pub fn call(&self, e: E) {
+        match &self.inner {
+            EventHandlerInner::Empty => {}
+            EventHandlerInner::Single(h) => h(e),
+            EventHandlerInner::Multiple(handlers) => {
+                let last_idx = handlers.len() - 1;
+                for (i, h) in handlers.iter().enumerate() {
+                    if i == last_idx {
+                        h(e);
+                        break;
+                    }
+                    h(e.clone());
+                }
+            }
+        }
     }
 }
 

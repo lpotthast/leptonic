@@ -40,7 +40,17 @@ async fn browser_tests() -> anyhow::Result<()> {
     }
 
     // 3. Collect all test implementations.
-    let tests: Vec<Box<dyn UiTest>> = vec![Box::new(ui_tests::test_button::ButtonTests {})];
+    let tests: Vec<Box<dyn UiTest>> = vec![
+        Box::new(ui_tests::test_button::ButtonTests {}),
+        Box::new(ui_tests::test_focus::FocusTests {}),
+        Box::new(ui_tests::test_focus_within::FocusWithinTests {}),
+        Box::new(ui_tests::test_focus_ring::FocusRingTests {}),
+        Box::new(ui_tests::test_focusable::FocusableTests {}),
+        Box::new(ui_tests::test_focus_manager::FocusManagerTests {}),
+        Box::new(ui_tests::test_focus_visible::FocusVisibleTests {}),
+        Box::new(ui_tests::test_has_tabbable_child::HasTabbableChildTests {}),
+        Box::new(ui_tests::test_focus_scope::FocusScopeTests {}),
+    ];
 
     // 4. Launch chromedriver (auto-downloads matching Chrome version).
     tracing::info!("Starting webdriver...");
@@ -48,6 +58,7 @@ async fn browser_tests() -> anyhow::Result<()> {
         Chromedriver::run(VersionRequest::LatestIn(Channel::Stable), PortRequest::Any).await?;
 
     // 5. Run each test with a fresh WebDriver session.
+    let base_url = &fe.base_url;
     for test in tests {
         #[allow(clippy::redundant_closure_for_method_calls)]
         chromedriver
@@ -60,7 +71,7 @@ async fn browser_tests() -> anyhow::Result<()> {
                 },
                 async |driver| {
                     tracing::info!("Executing test: {}", test.name());
-                    match test.run(driver).await {
+                    match test.run(driver, base_url).await {
                         Ok(()) => {
                             tracing::info!("Test '{}' passed!", test.name());
                         }

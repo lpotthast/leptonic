@@ -12,6 +12,8 @@ pub mod element_capture;
 pub mod event_handler;
 pub(crate) mod event_listeners;
 pub mod focus;
+pub mod focus_scope_tree;
+pub mod focusability;
 pub mod formatters;
 pub mod i18n;
 pub(crate) mod interaction_rect;
@@ -26,9 +28,12 @@ pub mod platform;
 pub mod pointer_type;
 pub(crate) mod run_after_transition;
 pub mod scroll_behavior;
+pub(crate) mod shadow_dom;
+pub(crate) mod shadow_tree_walker;
 pub mod signals;
 pub mod style;
 pub mod styles;
+pub(crate) mod synthetic_blur;
 pub(crate) mod text_selection;
 pub mod time;
 pub mod use_description;
@@ -36,7 +41,9 @@ pub(crate) mod virtual_click;
 
 // Re-exports from dom_ext
 pub use dom_ext::{get_owner_document, get_owner_window, ContainsTarget};
-pub(crate) use dom_ext::{node_contains, ElementExt, EventAccessors, EventTargetExt};
+pub(crate) use dom_ext::{
+    node_contains, set_event_target, ElementExt, EventAccessors, EventTargetExt,
+};
 pub use element_capture::{CapturedElement, ElementCaptureAttr};
 pub use event_handler::EventHandler;
 // Re-exports from event_listeners

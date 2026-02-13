@@ -40,7 +40,8 @@ use crate::{
                 button::PageUseButton, checkbox::PageUseCheckboxHook, combobox::PageUseCombobox,
                 disclosure::PageUseDisclosure, dnd::PageUseDnd, focus::PageUseFocus,
                 focus_manager::PageUseFocusManager, focus_ring::PageUseFocusRing,
-                focus_within::PageUseFocusWithin, focusable::PageUseFocusable, grid::PageUseGrid,
+                focus_visible::PageUseFocusVisible, focus_within::PageUseFocusWithin,
+                focusable::PageUseFocusable, grid::PageUseGrid,
                 has_tabbable_child::PageUseHasTabbableChild, hover::PageUseHover,
                 interact_outside::PageUseInteractOutside, keyboard::PageUseKeyboard,
                 label::PageUseLabel, link::PageUseLink, listbox::PageUseListbox,
@@ -133,6 +134,7 @@ pub fn App() -> impl IntoView {
                                 <Route path=routes::doc::hooks::UseFocusWithin.path() view=PageUseFocusWithin/>
                                 <Route path=routes::doc::hooks::UseFocusable.path() view=PageUseFocusable/>
                                 <Route path=routes::doc::hooks::UseFocusRing.path() view=PageUseFocusRing/>
+                                <Route path=routes::doc::hooks::UseFocusVisible.path() view=PageUseFocusVisible/>
                                 <Route path=routes::doc::hooks::UseFocusManager.path() view=PageUseFocusManager/>
                                 <Route path=routes::doc::hooks::UseHasTabbableChild.path() view=PageUseHasTabbableChild/>
                                 <Route path=routes::doc::hooks::Selection.path() view=PageUseSelection/>

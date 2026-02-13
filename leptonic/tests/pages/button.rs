@@ -4,20 +4,23 @@ use crate::pages::BaseActions;
 
 pub struct ButtonPage<'d> {
     pub driver: &'d WebDriver,
+    pub base_url: &'d str,
 }
 
 impl BaseActions for ButtonPage<'_> {
     fn driver(&self) -> &WebDriver {
         self.driver
     }
+
+    fn base_url(&self) -> &str {
+        self.base_url
+    }
 }
 
 impl ButtonPage<'_> {
     pub async fn goto(&self) -> anyhow::Result<()> {
         tracing::info!("Navigating to button test page...");
-        self.driver
-            .goto("http://127.0.0.1:4200/atoms/button")
-            .await?;
+        self.goto_path("/atoms/button").await?;
         Ok(())
     }
 

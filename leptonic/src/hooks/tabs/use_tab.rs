@@ -262,6 +262,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         disabled,
         within: false,
         auto_focus: false,
+        is_text_input: false,
         on_focus: Some(Callback::new(move |_e| {
             if disabled.get_untracked() {
                 return;

@@ -430,20 +430,26 @@ impl EventRef<'_> {
                 self.current_target()
                     .to_element()
                     .map(|el| el.get_bounding_client_rect())
-                    .map_or((None, None), |rect| (Some(client_x - rect.left()), Some(client_y - rect.top())))
+                    .map_or((None, None), |rect| {
+                        (Some(client_x - rect.left()), Some(client_y - rect.top()))
+                    })
             }
             EventRef::Mouse(e) => {
                 let (client_x, client_y) = (f64::from(e.client_x()), f64::from(e.client_y()));
                 self.current_target()
                     .to_element()
                     .map(|el| el.get_bounding_client_rect())
-                    .map_or((None, None), |rect| (Some(client_x - rect.left()), Some(client_y - rect.top())))
+                    .map_or((None, None), |rect| {
+                        (Some(client_x - rect.left()), Some(client_y - rect.top()))
+                    })
             }
             EventRef::Keyboard(_) => self
                 .current_target()
                 .to_element()
                 .map(|el| el.get_bounding_client_rect())
-                .map_or((None, None), |rect| (Some(rect.width() / 2.0), Some(rect.height() / 2.0))),
+                .map_or((None, None), |rect| {
+                    (Some(rect.width() / 2.0), Some(rect.height() / 2.0))
+                }),
         }
     }
 }

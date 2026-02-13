@@ -68,6 +68,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
                     <Link href=routes::doc::atoms::FocusRing.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "FocusRing"</Link>
                     <Link href=routes::doc::hooks::UseFocusRing.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_focus_ring"</Link>
+                    <Link href=routes::doc::hooks::UseFocusVisible.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_focus_visible"</Link>
                 </Stack>
             </DrawerSection>
         </DrawerSection>

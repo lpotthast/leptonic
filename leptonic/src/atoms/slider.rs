@@ -166,10 +166,14 @@ pub fn SliderTrackFill(
                 }))
                 .add((Height, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some(Cow::Borrowed("100%")),
-                    SliderOrientation::Vertical => Some(Cow::Owned(format!("{}%", percentage.get()))),
+                    SliderOrientation::Vertical => {
+                        Some(Cow::Owned(format!("{}%", percentage.get())))
+                    }
                 }))
                 .add((Width, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some(Cow::Owned(format!("{}%", percentage.get()))),
+                    SliderOrientation::Horizontal => {
+                        Some(Cow::Owned(format!("{}%", percentage.get())))
+                    }
                     SliderOrientation::Vertical => Some(Cow::Borrowed("100%")),
                 }));
             view! { <div class=classes style=styles /> }.into_any()
@@ -194,18 +198,26 @@ pub fn SliderTrackFill(
                 }))
                 .add((Bottom, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => None,
-                    SliderOrientation::Vertical => Some(Cow::Owned(format!("{}%", first_percentage.get()))),
+                    SliderOrientation::Vertical => {
+                        Some(Cow::Owned(format!("{}%", first_percentage.get())))
+                    }
                 }))
                 .add((Left, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some(Cow::Owned(format!("{}%", first_percentage.get()))),
+                    SliderOrientation::Horizontal => {
+                        Some(Cow::Owned(format!("{}%", first_percentage.get())))
+                    }
                     SliderOrientation::Vertical => Some(Cow::Borrowed("0")),
                 }))
                 .add((Height, move || match state.orientation.get() {
                     SliderOrientation::Horizontal => Some(Cow::Borrowed("100%")),
-                    SliderOrientation::Vertical => Some(Cow::Owned(format!("{}%", difference.get()))),
+                    SliderOrientation::Vertical => {
+                        Some(Cow::Owned(format!("{}%", difference.get())))
+                    }
                 }))
                 .add((Width, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some(Cow::Owned(format!("{}%", difference.get()))),
+                    SliderOrientation::Horizontal => {
+                        Some(Cow::Owned(format!("{}%", difference.get())))
+                    }
                     SliderOrientation::Vertical => Some(Cow::Borrowed("100%")),
                 }));
             view! { <div class=classes style=styles /> }.into_any()

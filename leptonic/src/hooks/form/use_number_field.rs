@@ -512,10 +512,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
             return;
         }
 
-        if let Ok(input_el) = e
-            .expect_target()
-            .dyn_into::<web_sys::HtmlInputElement>()
-        {
+        if let Ok(input_el) = e.expect_target().dyn_into::<web_sys::HtmlInputElement>() {
             let text_value = input_el.value();
 
             // Parse the value
@@ -577,6 +574,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         disabled: is_disabled,
         within: false,
         auto_focus,
+        is_text_input: true,
         on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
         on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
         on_focus_change: None,

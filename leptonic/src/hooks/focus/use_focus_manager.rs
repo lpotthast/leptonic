@@ -5,7 +5,12 @@ use wasm_bindgen::JsCast;
 
 use crate::{
     hooks::IntoAttrs,
-    utils::element_capture::{CapturedElement, ElementCaptureAttr},
+    utils::{
+        dom_ext::node_contains,
+        element_capture::{CapturedElement, ElementCaptureAttr},
+        focusability, shadow_dom,
+        shadow_tree_walker::{self, ShadowTreeWalker},
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/FocusScope.tsx
@@ -24,12 +29,24 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## DIFFERENT BEHAVIOR
+//
+// - Element capture pattern vs scope context
+//   React-aria: `useFocusManager()` reads from `FocusContext` provided by a parent
+//   `FocusScope`. `createFocusManager(ref)` takes an explicit ref.
+//   Leptonic: `use_focus_manager(input)` returns `ElementCaptureAttr` that auto-
+//   captures the element when spread. No wrapper or manual NodeRef needed.
+//
+// ## OMITTED FUNCTIONALITY
+//
+// - No `defaultOptions` merging
+//   React-aria's `createFocusManager(ref, defaultOptions)` merges defaults with
+//   per-call options. Leptonic requires full options on each method call.
 //
 // =============================================================================
 
 /// Options for focus movement.
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct FocusManagerOptions {
     /// Element to start navigation from. Defaults to document.activeElement.
     pub from: Option<web_sys::Element>,
@@ -40,8 +57,20 @@ pub struct FocusManagerOptions {
     /// Whether to only consider tabbable elements (tabindex >= 0).
     pub tabbable: bool,
 
-    /// Whether to accept the starting element itself if it matches.
-    pub accept: Option<fn(&web_sys::Element) -> bool>,
+    /// Custom filter function for acceptable elements.
+    /// Unlike a bare `fn` pointer, this accepts closures that capture state.
+    pub accept: Option<Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
+}
+
+impl std::fmt::Debug for FocusManagerOptions {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("FocusManagerOptions")
+            .field("from", &self.from)
+            .field("wrap", &self.wrap)
+            .field("tabbable", &self.tabbable)
+            .field("accept", &self.accept.as_ref().map(|_| ".."))
+            .finish()
+    }
 }
 
 /// A focus manager provides methods for moving focus within a scope.
@@ -70,243 +99,285 @@ impl FocusManager {
     }
 
     /// Move focus to the next focusable element.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn focus_next(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
-        self.move_focus(Direction::Next, opts)
+        let scope = (self.get_scope)()?;
+        let mut walker = create_scope_walker(&scope)?;
+
+        let from = opts.from.or_else(|| {
+            scope
+                .owner_document()
+                .and_then(|d| shadow_dom::get_active_element(&d))
+        });
+
+        let from_radio_group = from.as_ref().and_then(focusability::get_radio_group_name);
+
+        if let Some(ref from_el) = from {
+            if node_contains(Some(scope.as_ref()), Some(from_el.as_ref())).unwrap_or(false) {
+                walker.set_current_node(from_el);
+            } else {
+                // Active element is outside scope — focus first element (react-aria behavior).
+                let result = find_first_focusable(
+                    &mut walker,
+                    &scope,
+                    opts.tabbable,
+                    opts.accept.as_ref(),
+                    None,
+                );
+                if let Some(ref el) = result {
+                    focus_element(el);
+                }
+                return result;
+            }
+        }
+
+        let next = walker_next_focusable(
+            &mut walker,
+            opts.tabbable,
+            opts.accept.as_ref(),
+            from_radio_group.as_deref(),
+        );
+
+        let result = if next.is_none() && opts.wrap {
+            find_first_focusable(
+                &mut walker,
+                &scope,
+                opts.tabbable,
+                opts.accept.as_ref(),
+                None,
+            )
+        } else {
+            next
+        };
+
+        if let Some(ref el) = result {
+            focus_element(el);
+        }
+        result
     }
 
     /// Move focus to the previous focusable element.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn focus_previous(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
-        self.move_focus(Direction::Previous, opts)
+        let scope = (self.get_scope)()?;
+        let mut walker = create_scope_walker(&scope)?;
+
+        let from = opts.from.or_else(|| {
+            scope
+                .owner_document()
+                .and_then(|d| shadow_dom::get_active_element(&d))
+        });
+
+        let from_radio_group = from.as_ref().and_then(focusability::get_radio_group_name);
+
+        if let Some(ref from_el) = from {
+            if node_contains(Some(scope.as_ref()), Some(from_el.as_ref())).unwrap_or(false) {
+                walker.set_current_node(from_el);
+            } else {
+                // Active element is outside scope — focus last element (react-aria behavior).
+                let result = find_last_focusable(
+                    &mut walker,
+                    &scope,
+                    opts.tabbable,
+                    opts.accept.as_ref(),
+                    None,
+                );
+                if let Some(ref el) = result {
+                    focus_element(el);
+                }
+                return result;
+            }
+        }
+
+        let prev = walker_previous_focusable(
+            &mut walker,
+            opts.tabbable,
+            opts.accept.as_ref(),
+            from_radio_group.as_deref(),
+        );
+
+        let result = if prev.is_none() && opts.wrap {
+            find_last_focusable(
+                &mut walker,
+                &scope,
+                opts.tabbable,
+                opts.accept.as_ref(),
+                None,
+            )
+        } else {
+            prev
+        };
+
+        if let Some(ref el) = result {
+            focus_element(el);
+        }
+        result
     }
 
     /// Move focus to the first focusable element.
     #[allow(clippy::needless_pass_by_value)]
     pub fn focus_first(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
         let scope = (self.get_scope)()?;
-        let elements = get_focusable_elements(&scope, opts.tabbable);
+        let mut walker = create_scope_walker(&scope)?;
 
-        for element in elements {
-            if let Some(accept) = opts.accept {
-                if !accept(&element) {
-                    continue;
-                }
-            }
-            focus_element(&element);
-            return Some(element);
+        let result = walker_next_focusable(&mut walker, opts.tabbable, opts.accept.as_ref(), None);
+
+        if let Some(ref el) = result {
+            focus_element(el);
         }
-
-        None
+        result
     }
 
     /// Move focus to the last focusable element.
     #[allow(clippy::needless_pass_by_value)]
     pub fn focus_last(&self, opts: FocusManagerOptions) -> Option<web_sys::Element> {
         let scope = (self.get_scope)()?;
-        let elements = get_focusable_elements(&scope, opts.tabbable);
+        let mut walker = create_scope_walker(&scope)?;
 
-        for element in elements.into_iter().rev() {
-            if let Some(accept) = opts.accept {
-                if !accept(&element) {
-                    continue;
-                }
-            }
-            focus_element(&element);
-            return Some(element);
+        let result = find_last_focusable(
+            &mut walker,
+            &scope,
+            opts.tabbable,
+            opts.accept.as_ref(),
+            None,
+        );
+
+        if let Some(ref el) = result {
+            focus_element(el);
         }
-
-        None
-    }
-
-    /// Move focus in a direction.
-    fn move_focus(
-        &self,
-        direction: Direction,
-        opts: FocusManagerOptions,
-    ) -> Option<web_sys::Element> {
-        let scope = (self.get_scope)()?;
-        let elements = get_focusable_elements(&scope, opts.tabbable);
-
-        if elements.is_empty() {
-            return None;
-        }
-
-        // Get the starting element
-        // Use the scope's owner document to correctly handle iframes/shadow DOM
-        let from = opts
-            .from
-            .or_else(|| scope.owner_document().and_then(|d| d.active_element()));
-
-        // Find current index
-        let current_index = from
-            .as_ref()
-            .and_then(|f| elements.iter().position(|e| e == f));
-
-        let next_index = match (direction, current_index) {
-            (Direction::Next, Some(idx)) => {
-                let next = idx + 1;
-                if next >= elements.len() {
-                    if opts.wrap {
-                        Some(0)
-                    } else {
-                        None
-                    }
-                } else {
-                    Some(next)
-                }
-            }
-            (Direction::Next, None) => Some(0),
-            (Direction::Previous, Some(idx)) => {
-                if idx == 0 {
-                    if opts.wrap {
-                        Some(elements.len() - 1)
-                    } else {
-                        None
-                    }
-                } else {
-                    Some(idx - 1)
-                }
-            }
-            (Direction::Previous, None) => Some(elements.len() - 1),
-        };
-
-        let next_index = next_index?;
-
-        // Find next valid element
-        let len = elements.len();
-        let mut checked = 0;
-        let mut idx = next_index;
-
-        while checked < len {
-            let element = &elements[idx];
-
-            let is_valid = opts.accept.map_or(true, |accept| accept(element));
-
-            if is_valid {
-                focus_element(element);
-                return Some(element.clone());
-            }
-
-            // Move to next element
-            match direction {
-                Direction::Next => {
-                    idx = (idx + 1) % len;
-                }
-                Direction::Previous => {
-                    idx = if idx == 0 { len - 1 } else { idx - 1 };
-                }
-            }
-            checked += 1;
-
-            // Stop if we've wrapped and wrap is disabled
-            if !opts.wrap && checked > 0 {
-                match direction {
-                    Direction::Next if idx == 0 => break,
-                    Direction::Previous if idx == len - 1 => break,
-                    _ => {}
-                }
-            }
-        }
-
-        None
+        result
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-enum Direction {
-    Next,
-    Previous,
+/// Create a `ShadowTreeWalker` rooted at `scope` that visits all element nodes,
+/// descending into shadow roots.
+fn create_scope_walker(scope: &web_sys::Element) -> Option<ShadowTreeWalker> {
+    // 0x1 = NodeFilter.SHOW_ELEMENT
+    shadow_tree_walker::create_shadow_tree_walker(scope.as_ref(), 0x1, None)
 }
 
-/// Selector for focusable elements.
-const FOCUSABLE_SELECTOR: &str = "input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), a[href], area[href], summary, iframe, object, embed, audio[controls], video[controls], [contenteditable]:not([contenteditable=false]), [tabindex]";
-
-/// Get all focusable elements within a scope.
-fn get_focusable_elements(scope: &web_sys::Element, tabbable_only: bool) -> Vec<web_sys::Element> {
-    let Ok(nodes) = scope.query_selector_all(FOCUSABLE_SELECTOR) else {
-        return Vec::new();
-    };
-
-    let mut elements = Vec::new();
-
-    for i in 0..nodes.length() {
-        let Some(node) = nodes.get(i) else {
+/// Advance to the next focusable/tabbable element using the walker.
+fn walker_next_focusable(
+    walker: &mut ShadowTreeWalker,
+    tabbable_only: bool,
+    accept: Option<&Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
+    from_radio_group: Option<&str>,
+) -> Option<web_sys::Element> {
+    while let Some(node) = walker.next_node() {
+        let Some(el) = node.dyn_ref::<web_sys::Element>() else {
             continue;
         };
 
-        let Some(element) = node.dyn_ref::<web_sys::Element>().cloned() else {
+        if is_acceptable(el, tabbable_only, accept, from_radio_group) {
+            return Some(el.clone());
+        }
+    }
+    None
+}
+
+/// Walk backwards to the previous focusable/tabbable element.
+fn walker_previous_focusable(
+    walker: &mut ShadowTreeWalker,
+    tabbable_only: bool,
+    accept: Option<&Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
+    from_radio_group: Option<&str>,
+) -> Option<web_sys::Element> {
+    while let Some(node) = walker.previous_node() {
+        let Some(el) = node.dyn_ref::<web_sys::Element>() else {
             continue;
         };
 
-        // Check visibility
-        if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
-            if !is_element_visible(html_el) {
-                continue;
-            }
-
-            // Check tabindex for tabbable-only mode
-            if tabbable_only && html_el.tab_index() < 0 {
-                continue;
-            }
+        if is_acceptable(el, tabbable_only, accept, from_radio_group) {
+            return Some(el.clone());
         }
-
-        elements.push(element);
     }
-
-    // Sort by tabindex (elements with tabindex > 0 come first, in order)
-    // Then elements with tabindex = 0 in DOM order
-    elements.sort_by(|a, b| {
-        let a_idx = a
-            .dyn_ref::<web_sys::HtmlElement>()
-            .map_or(0, web_sys::HtmlElement::tab_index);
-        let b_idx = b
-            .dyn_ref::<web_sys::HtmlElement>()
-            .map_or(0, web_sys::HtmlElement::tab_index);
-
-        match (a_idx, b_idx) {
-            // Both positive: sort by tabindex
-            (a, b) if a > 0 && b > 0 => a.cmp(&b),
-            // One positive, one zero/negative: positive comes first
-            (a, _) if a > 0 => std::cmp::Ordering::Less,
-            (_, b) if b > 0 => std::cmp::Ordering::Greater,
-            // Both zero or negative: maintain DOM order (already in order from querySelectorAll)
-            _ => std::cmp::Ordering::Equal,
-        }
-    });
-
-    elements
+    None
 }
 
-/// Focus an element.
-fn focus_element(element: &web_sys::Element) {
-    if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
-        let _ = html_el.focus();
-    }
-}
-
-/// Check if an element is visible.
-fn is_element_visible(element: &web_sys::HtmlElement) -> bool {
-    // Use owner document's default view to correctly handle iframes/shadow DOM
-    let Some(window) = element.owner_document().and_then(|d| d.default_view()) else {
-        return true;
-    };
-
-    let Ok(Some(style)) = window.get_computed_style(element) else {
-        return true;
-    };
-
-    if let Ok(display) = style.get_property_value("display") {
-        if display == "none" {
+/// Check whether an element passes all focusability, tabbability, radio group,
+/// and accept-filter checks.
+fn is_acceptable(
+    el: &web_sys::Element,
+    tabbable_only: bool,
+    accept: Option<&Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
+    from_radio_group: Option<&str>,
+) -> bool {
+    if tabbable_only {
+        // Radio group handling: skip non-tabbable radios and radios in the
+        // same group as the starting element.
+        if let Some(input) = el.dyn_ref::<web_sys::HtmlInputElement>() {
+            if input.type_() == "radio" {
+                if !focusability::is_tabbable_radio(input) {
+                    return false;
+                }
+                if let Some(group) = from_radio_group {
+                    if input.name() == group {
+                        return false;
+                    }
+                }
+            }
+        }
+        if !focusability::is_tabbable(el) {
             return false;
         }
+    } else if !focusability::is_focusable(el) {
+        return false;
     }
 
-    if let Ok(visibility) = style.get_property_value("visibility") {
-        if visibility == "hidden" || visibility == "collapse" {
+    if let Some(accept_fn) = accept {
+        if !accept_fn(el) {
             return false;
         }
     }
 
     true
+}
+
+/// Navigate the walker to the deepest last descendant of `scope`.
+fn set_walker_to_last_descendant(walker: &ShadowTreeWalker, scope: &web_sys::Element) {
+    let mut node: web_sys::Node = scope.clone().into();
+    while let Some(last) = node.last_child() {
+        node = last;
+    }
+    walker.set_current_node(&node);
+}
+
+/// Find the first focusable element within the scope.
+fn find_first_focusable(
+    walker: &mut ShadowTreeWalker,
+    scope: &web_sys::Element,
+    tabbable_only: bool,
+    accept: Option<&Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
+    from_radio_group: Option<&str>,
+) -> Option<web_sys::Element> {
+    walker.set_current_node(scope);
+    walker_next_focusable(walker, tabbable_only, accept, from_radio_group)
+}
+
+/// Find the last focusable element within the scope.
+fn find_last_focusable(
+    walker: &mut ShadowTreeWalker,
+    scope: &web_sys::Element,
+    tabbable_only: bool,
+    accept: Option<&Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync>>,
+    from_radio_group: Option<&str>,
+) -> Option<web_sys::Element> {
+    set_walker_to_last_descendant(walker, scope);
+    let last_node = walker.current_node();
+    if let Some(el) = last_node.dyn_ref::<web_sys::Element>() {
+        if is_acceptable(el, tabbable_only, accept, from_radio_group) {
+            return Some(el.clone());
+        }
+    }
+    walker_previous_focusable(walker, tabbable_only, accept, from_radio_group)
+}
+
+/// Focus an element, allowing the browser to scroll it into view.
+///
+/// React-aria's `createFocusManager` uses standard `element.focus()` (with scroll)
+/// for programmatic navigation, rather than `focusSafely` (which prevents scroll).
+fn focus_element(element: &web_sys::Element) {
+    crate::utils::focus::focus_element(element, false);
 }
 
 /// Input parameters for the `use_focus_manager` hook.
