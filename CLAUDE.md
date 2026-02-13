@@ -156,6 +156,15 @@ js-dir = "public/js"           # Where to output JS dependencies (for tiptap)
 
 When generating tests, use the `assertr` library for assertions instead of standard `assert!` macros.
 
+### Browser Tests
+
+Browser tests live in `leptonic/tests/` and use **thirtyfour** (Selenium WebDriver) against a test-app served at
+`http://127.0.0.1:4200`. The test-app source is in `testing/test-app/`.
+
+- **Running**: `just browser-test` (or `BROWSER_TEST_VISIBLE=1 just browser-test` for visual debugging).
+- **Always execute browser tests** when adding or modifying them. Compilation alone is not sufficient — browser tests
+  must be run and pass before considering the work complete.
+
 ## Clippy Lint Overrides
 
 These lints are allowed in workspace: `option_if_let_else`, `module_name_repetitions`, `must_use_candidate`,
