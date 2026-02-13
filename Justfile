@@ -59,7 +59,7 @@ serve:
 serve-release:
   cd ./examples/book-ssr && cargo leptos serve --release
 
-# Serve the test app (for manual inspection)
+# Serve the test app for manual inspection (http://127.0.0.1:4200)
 serve-test-app:
   cd ./testing/test-app && cargo leptos serve
 
