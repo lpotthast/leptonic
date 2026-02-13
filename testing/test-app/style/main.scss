@@ -1,1 +1,9 @@
 @use "./leptonic/leptonic-themes";
+
+*:focus {
+  outline: 3px solid cornflowerblue;
+}
+
+*:focus-visible {
+  outline: 3px solid red;
+}
