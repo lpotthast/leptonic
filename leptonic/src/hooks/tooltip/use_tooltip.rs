@@ -5,6 +5,7 @@ use leptos::{
 };
 use web_sys::PointerEvent;
 
+use super::use_tooltip_trigger_state::UseTooltipTriggerStateReturn;
 use crate::{
     hooks::{
         interactions::use_hover::{use_hover, UseHoverInput},
@@ -19,20 +20,29 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## LEPTOS-SPECIFIC ADAPTATIONS
+//
+// - Accepts `UseTooltipTriggerStateReturn` directly instead of separate
+//   `on_open`/`on_close` callbacks, enabling the tooltip to participate in
+//   the warmup/cooldown system when hovered.
 //
 // =============================================================================
 
 /// Input parameters for the `use_tooltip` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone, Copy)]
 pub struct UseTooltipInput {
     /// Whether the tooltip is disabled.
     pub disabled: Signal<bool>,
 
-    /// Called when the tooltip should open.
+    /// Tooltip trigger state. When provided, hovering the tooltip itself
+    /// keeps it open (calls `state.open(true)` on hover start and
+    /// `state.close(false)` on hover end).
+    pub state: Option<UseTooltipTriggerStateReturn>,
+
+    /// Called when the tooltip should open. Used when `state` is `None`.
     pub on_open: Option<Callback<()>>,
 
-    /// Called when the tooltip should close.
+    /// Called when the tooltip should close. Used when `state` is `None`.
     pub on_close: Option<Callback<()>>,
 }
 
@@ -72,21 +82,23 @@ pub type UseTooltipAttrs = (
 /// Tooltips display contextual help or information about an element when it is hovered.
 /// The tooltip should have `role="tooltip"` set on the actual tooltip content element.
 ///
+/// When `state` is provided, hovering over the tooltip itself keeps it open
+/// (participates in the warmup/cooldown system).
+///
 /// # Example
 ///
 /// ```ignore
+/// let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput::default());
+/// let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
 /// let tooltip = use_tooltip(UseTooltipInput {
 ///     disabled: Signal::derive(|| false),
-///     on_open: Some(Callback::new(|_| {
-///         // Show tooltip
-///     })),
-///     on_close: Some(Callback::new(|_| {
-///         // Hide tooltip
-///     })),
+///     state: Some(state),
+///     on_open: None,
+///     on_close: None,
 /// });
 ///
 /// view! {
-///     <div {..tooltip.attrs} role="tooltip">
+///     <div {..tooltip.props.into_attrs()} role="tooltip">
 ///         "Tooltip content"
 ///     </div>
 /// }
@@ -94,20 +106,38 @@ pub type UseTooltipAttrs = (
 pub fn use_tooltip(input: UseTooltipInput) -> UseTooltipReturn {
     let UseTooltipInput {
         disabled,
+        state,
         on_open,
         on_close,
     } = input;
 
+    // Determine hover callbacks: prefer state-based, fall back to direct callbacks.
+    let on_hover_start: Option<Callback<()>> = if let Some(st) = state {
+        Some(Callback::new(move |_| {
+            st.open.run(true);
+        }))
+    } else {
+        on_open
+    };
+
+    let on_hover_end: Option<Callback<()>> = if let Some(st) = state {
+        Some(Callback::new(move |_| {
+            st.close.run(false);
+        }))
+    } else {
+        on_close
+    };
+
     let hover = use_hover(UseHoverInput {
         disabled,
-        on_hover_start: on_open.map(|on_open| {
+        on_hover_start: on_hover_start.map(|cb| {
             Callback::new(move |_| {
-                on_open.run(());
+                cb.run(());
             })
         }),
-        on_hover_end: on_close.map(|on_close| {
+        on_hover_end: on_hover_end.map(|cb| {
             Callback::new(move |_| {
-                on_close.run(());
+                cb.run(());
             })
         }),
         on_hover_change: None,

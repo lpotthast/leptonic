@@ -574,6 +574,29 @@ Document "why", when deviating from this recommendation.
 
 **Reference**: `use_press`, `use_move`, `use_slider_thumb`
 
+## Hook-Owned State (React Aria Deviation)
+
+React Aria's state hooks (e.g., `useOverlayTriggerState`) use `useControlledState` to support both
+controlled (`isOpen` prop from parent) and uncontrolled (`defaultOpen`) patterns. This exists because
+React components cannot share mutable state — parent-child communication requires explicit props.
+
+In Leptos, `Signal<T>` is `Copy` and inherently shared. However, accepting a writable signal
+(e.g., `RwSignal<bool>`) from the caller would allow them to mutate state directly, bypassing the
+hook's mutation path. This breaks invariants and prevents the hook from intercepting changes
+(e.g., firing `on_open_change`, resetting related state).
+
+**Convention:** Hooks always create and own their internal `WriteSignal`. They expose:
+- A read-only `Signal<T>` for observation
+- Semantic mutation callbacks (`open`, `close`, `toggle`, `set_open`, etc.)
+- An `on_X_change` callback that fires on every mutation
+
+The caller sets the initial value via `default_X: T` in the input struct. They cannot pass an
+external signal to control the state.
+
+When porting a React Aria hook that accepts both `isOpen` and `defaultOpen` via `useControlledState`,
+we automatically deviate by only supporting `default_open` and hook-owned state. This is a
+**project-wide pattern**, not a per-hook deviation.
+
 ## Based On React-Aria
 
 Most hooks are loosely based on hooks from Adobe's `react-aria` library (part of `react-spectrum`), checked out at

@@ -34,7 +34,7 @@ use crate::{
 // - Escape key / dismiss handling
 //   React-aria's `useDialog` does NOT handle Escape key or any dismiss behavior.
 //   Dismissal is handled by `useOverlay` / `useModalOverlay`. In Leptonic,
-//   this is handled by `use_modal`.
+//   this is handled by `use_modal_backdrop` (which delegates to `use_overlay`).
 //
 // - useOverlayFocusContain
 //   React-aria calls `useOverlayFocusContain()` to signal to the parent `Overlay`
@@ -56,8 +56,9 @@ use crate::{
 /// Input parameters for the `use_dialog` hook.
 ///
 /// This hook handles ARIA semantics (role, labeling) and focus management.
-/// For dismiss behavior (Escape key, outside click) and `aria-modal`, use
-/// `use_modal`. Compose both for a fully accessible modal dialog.
+/// For dismiss behavior (Escape key, outside click), use `use_modal_backdrop`.
+/// For `aria-modal`, use `use_modal`. Compose all three for a fully accessible
+/// modal dialog.
 #[derive(Debug, Clone)]
 pub struct UseDialogInput {
     /// The title of the dialog (for `aria-labelledby`).
@@ -209,8 +210,9 @@ pub type UseDialogDescriptionAttrs = (Attr<attr::Id, String>,);
 /// The dialog element is captured automatically when `dialog_props` are spread
 /// onto it — no manual `NodeRef` wiring required.
 ///
-/// For dismiss behavior (Escape key, `aria-modal`), use `use_modal`.
-/// Compose both for a fully accessible modal dialog.
+/// For dismiss behavior (Escape key, outside click), use `use_modal_backdrop`.
+/// For `aria-modal`, use `use_modal`. Compose all three for a fully accessible
+/// modal dialog.
 ///
 /// # Example
 ///

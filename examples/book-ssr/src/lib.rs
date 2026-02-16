@@ -26,6 +26,9 @@ pub mod routes {
         #[route("/changelog")]
         pub mod changelog {}
 
+        #[route("/event-propagation")]
+        pub mod event_propagation {}
+
         #[route("/hooks")]
         pub mod hooks {
 
@@ -35,10 +38,7 @@ pub mod routes {
             #[route("/use-move")]
             pub mod use_move {}
 
-            #[route("/use-move-within")]
-            pub mod use_move_within {}
-
-            #[route("/use-hover")]
+#[route("/use-hover")]
             pub mod use_hover {}
 
             #[route("/use-focus")]
@@ -170,6 +170,9 @@ pub mod routes {
 
             #[route("/button")]
             pub mod button {}
+
+            #[route("/dismiss-button")]
+            pub mod dismiss_button {}
 
             #[route("/popover")]
             pub mod popover {}

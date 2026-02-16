@@ -32,7 +32,7 @@ pub fn PageAtomPopover() -> impl IntoView {
                     use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger};
 
                     view! {
-                        <Popover disabled=false>
+                        <Popover>
                             <PopoverTrigger>
                                 {
                                     let ctx = expect_context::<PopoverContext>();
@@ -52,7 +52,7 @@ pub fn PageAtomPopover() -> impl IntoView {
                 "#)}
             </Code>
 
-            <Popover disabled=false>
+            <Popover>
                 <PopoverTrigger>
                     {
                         let ctx = expect_context::<PopoverContext>();

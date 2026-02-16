@@ -15,9 +15,41 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// 1. No `overlayProps` / ID generation: react-aria generates an ID for the
+//    overlay and returns `overlayProps` with that ID. In leptonic, the ID is
+//    generated in `use_overlay` instead, and passed here as `overlay_id`.
+//
+// 2. No `onPress` in trigger props: react-aria includes an `onPress` handler
+//    in the trigger props that toggles the overlay. In leptonic, press handling
+//    is the caller's responsibility (e.g., via `use_button` or `use_menu_trigger`).
+//
+// 3. No `onCloseMap` integration: react-aria integrates with a global close
+//    handler map for overlay stacking. Leptonic handles dismiss differently
+//    via `use_overlay`.
 //
 // =============================================================================
+
+/// The type of overlay opened by a trigger.
+///
+/// This restricts the input to the 5 valid overlay types that react-aria supports,
+/// rather than accepting the full `AriaHasPopup` enum (which includes `False` and `True`).
+///
+/// Note: `aria-haspopup` is only set for `Menu` and `Listbox`. For `Dialog`, `Tree`,
+/// and `Grid`, the attribute is omitted because screen readers may misinterpret
+/// non-menu values as "menu".
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum OverlayTriggerType {
+    /// The overlay is a dialog (e.g., popover, modal).
+    Dialog,
+    /// The overlay is a menu.
+    Menu,
+    /// The overlay is a listbox.
+    Listbox,
+    /// The overlay is a tree.
+    Tree,
+    /// The overlay is a grid.
+    Grid,
+}
 
 #[derive(Debug, Clone)]
 pub struct UseOverlayTriggerInput {
@@ -27,9 +59,7 @@ pub struct UseOverlayTriggerInput {
     pub overlay_id: Oco<'static, str>,
 
     /// The type of overlay opened by this trigger.
-    /// Using the variants `False` or `True` will result in a runtime warning on debug builds!
-    /// Prefer `AriaHasPopup::Menu` if you are unsure what to use otherwise.
-    pub overlay_type: AriaHasPopup,
+    pub overlay_type: OverlayTriggerType,
 }
 
 #[derive(Debug)]
@@ -41,7 +71,7 @@ pub struct UseOverlayTriggerReturn {
 /// Props from `use_overlay_trigger` that can be converted to spreadable attributes.
 #[derive(Debug)]
 pub struct UseOverlayTriggerProps {
-    pub aria_haspopup: AriaHasPopup,
+    pub aria_haspopup: Option<AriaHasPopup>,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_controls: Signal<Option<String>>,
 }
@@ -60,38 +90,32 @@ impl IntoAttrs for UseOverlayTriggerProps {
 
 /// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseOverlayTriggerAttrs = (
-    Attr<attr::AriaHaspopup, AriaHasPopup>,
+    Attr<attr::AriaHaspopup, Option<AriaHasPopup>>,
     Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaControls, Signal<Option<String>>>,
 );
 
 pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerReturn {
-    #[cfg(debug_assertions)]
-    fn validate_overlay_type(overlay_type: AriaHasPopup) -> AriaHasPopup {
-        match overlay_type {
-            unexpected @ (AriaHasPopup::False | AriaHasPopup::True) => {
-                tracing::warn!(?unexpected, "use_overlay_trigger received unexpected AriaHasPopup variant. Do not use `False` or `True`.");
-                unexpected
-            }
-            other => other,
-        }
-    }
-    #[cfg(not(debug_assertions))]
-    fn validate_overlay_type(overlay_type: AriaHasPopup) -> AriaHasPopup {
-        overlay_type
-    }
-
     let UseOverlayTriggerInput {
         show,
         overlay_id,
         overlay_type,
     } = input;
 
-    let aria_has_popup = validate_overlay_type(overlay_type);
+    // Match react-aria behavior: only set aria-haspopup for Menu and Listbox.
+    // Screen readers may misinterpret other values (dialog, tree, grid) as "menu",
+    // so we omit the attribute entirely for those types.
+    let aria_haspopup = match overlay_type {
+        OverlayTriggerType::Menu => Some(AriaHasPopup::True),
+        OverlayTriggerType::Listbox => Some(AriaHasPopup::Listbox),
+        OverlayTriggerType::Dialog
+        | OverlayTriggerType::Tree
+        | OverlayTriggerType::Grid => None,
+    };
 
     UseOverlayTriggerReturn {
         props: UseOverlayTriggerProps {
-            aria_haspopup: aria_has_popup,
+            aria_haspopup,
             aria_expanded: Signal::derive(move || Some(AriaExpanded::from(show.get()))),
             aria_controls: Signal::derive(move || {
                 show.get()

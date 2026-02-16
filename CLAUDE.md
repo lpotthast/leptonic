@@ -92,6 +92,9 @@ See [documentation/hooks-implementation.md](documentation/hooks-implementation.m
 - Element capture pattern (`ElementCaptureAttr`)
 - Event handler patterns (Copy requirements, cleanup, dynamic listeners)
 - React-aria deviation documentation format
+- Hook-owned state: Hooks always create and own their `WriteSignal` internally. Callers get
+  read-only `Signal<T>` output and must use the hook's mutation callbacks. This is an intentional
+  deviation from React Aria's `useControlledState` pattern. See `documentation/hooks-implementation.md`.
 - Book-SSR documentation page structure
 
 ## Book-SSR (Documentation App)

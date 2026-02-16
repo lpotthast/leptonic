@@ -127,7 +127,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
     // Set up the menu trigger with menu-specific behavior
     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
-        menu_type: AriaHasPopup::Menu,
+        menu_type: OverlayTriggerType::Menu,
         disabled: false.into(),
         trigger: MenuTriggerType::Press,
         state,
@@ -261,7 +261,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
 
                     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
-                        menu_type: AriaHasPopup::Menu,
+                        menu_type: OverlayTriggerType::Menu,
                         disabled: false.into(),
                         trigger: MenuTriggerType::Press,
                         state,

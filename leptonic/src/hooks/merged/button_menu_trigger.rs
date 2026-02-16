@@ -73,7 +73,7 @@ pub struct MergedButtonMenuTriggerProps {
     /// Whether the element is disabled.
     pub disabled: Signal<bool>,
     /// The type of popup this trigger opens (from menu trigger).
-    pub aria_haspopup: AriaHasPopup,
+    pub aria_haspopup: Option<AriaHasPopup>,
     /// Whether the popup is currently expanded (from menu trigger).
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     /// ID of the controlled popup element (from menu trigger).
@@ -112,7 +112,7 @@ pub type MergedButtonMenuTriggerAttrs = (
         Attr<attr::Role, &'static str>,
         Attr<attr::Tabindex, Signal<Option<&'static str>>>,
         Attr<attr::Disabled, Signal<bool>>,
-        Attr<attr::AriaHaspopup, AriaHasPopup>,
+        Attr<attr::AriaHaspopup, Option<AriaHasPopup>>,
         Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
         Attr<attr::AriaControls, Signal<Option<String>>>,
         Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,

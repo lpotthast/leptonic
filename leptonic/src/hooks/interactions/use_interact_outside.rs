@@ -152,11 +152,8 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
             document,
             leptos::ev::click,
             move |e: web_sys::MouseEvent| {
-                if disabled.get_untracked() {
-                    return;
-                }
-
-                if is_pointer_down.get_value()
+                if !disabled.get_untracked()
+                    && is_pointer_down.get_value()
                     && is_valid_event(&e, element.get_untracked().as_ref())
                 {
                     if let Some(on_interact_outside) = on_interact_outside {
@@ -205,7 +202,7 @@ fn is_valid_event(
     // Check if target is within a top layer element (e.g. toasts)
     if let Some(target_el) = target.dyn_ref::<web_sys::Element>() {
         if target_el
-            .closest("[data-react-aria-top-layer]")
+            .closest("[data-leptonic-top-layer]")
             .ok()
             .flatten()
             .is_some()

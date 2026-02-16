@@ -361,12 +361,13 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
     // Use use_move hook for thumb dragging. This handles all the pointer event
     // management (pointerdown, pointermove, pointerup, pointercancel) automatically.
-    let UseMoveReturn { props: move_props } = use_move(UseMoveInput {
+    let UseMoveReturn { props: move_props, .. } = use_move(UseMoveInput {
+        disabled: is_disabled,
         axis: Signal::derive(move || match orientation.get() {
             SliderOrientation::Horizontal => Some(MoveAxis::Horizontal),
             SliderOrientation::Vertical => Some(MoveAxis::Vertical),
         }),
-        on_move_start: Callback::new(move |_: MoveStartEvent| {
+        on_move_start: Some(Callback::new(move |_: MoveStartEvent| {
             // Initialize pixel position from current thumb percent
             if let Some(rect) = track.get_bounding_client_rect_untracked() {
                 let size = match orientation.get() {
@@ -380,8 +381,8 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             set_is_dragging.set(true);
             state.set_thumb_dragging.run((index, true));
             state.set_focused_thumb.run(Some(index));
-        }),
-        on_move: Callback::new(move |e: MoveEvent| {
+        })),
+        on_move: Some(Callback::new(move |e: MoveEvent| {
             if let Some(rect) = track.get_bounding_client_rect_untracked() {
                 let orientation = orientation.get_untracked();
                 let size = match orientation {
@@ -413,16 +414,19 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
                 let new_percent = (new_pos / size).clamp(0.0, 1.0);
                 state.set_thumb_percent.run((index, new_percent));
             }
-        }),
-        on_move_end: Callback::new(move |_: MoveEndEvent| {
+        })),
+        on_move_end: Some(Callback::new(move |_: MoveEndEvent| {
             set_is_dragging.set(false);
             state.set_thumb_dragging.run((index, false));
             current_position_px.set_value(None);
-        }),
+        })),
+        constraint: None,
     });
 
     // Destructure move_props to catch future type-changes / extensions early.
-    let UseMoveProps { on_pointerdown } = move_props;
+    // Sliders have their own keyboard handling, so on_keydown from use_move is ignored.
+    // element_capture is harmless when unused.
+    let UseMoveProps { on_pointerdown, on_keydown: _, element_capture: _ } = move_props;
 
     // Focus the thumb element explicitly. use_move calls prevent_default()
     // on pointerdown which suppresses the browser's default focus behavior.

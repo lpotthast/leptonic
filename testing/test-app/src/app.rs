@@ -134,7 +134,9 @@ fn PageAtomButton() -> impl IntoView {
                 >
                     "Disabled"
                 </Button>
-                <div>"Press count: " <span id="test-button-disabled-count">{disabled_count}</span></div>
+                <div>
+                    "Press count: " <span id="test-button-disabled-count">{disabled_count}</span>
+                </div>
             </section>
         </div>
     }
@@ -180,30 +182,33 @@ fn PageHookFocus() -> impl IntoView {
                 <h2>"Basic Focus"</h2>
                 <button id="test-focus-before">"Before"</button>
 
-                <div
-                    id="test-focus-target"
-                    tabindex="0"
-                    {..focus.props.into_attrs()}
-                >
+                <div id="test-focus-target" tabindex="0" {..focus.props.into_attrs()}>
                     "Focus Target"
                 </div>
 
                 <div>"Focus count: " <span id="test-focus-count">{focus_count}</span></div>
                 <div>"Blur count: " <span id="test-blur-count">{blur_count}</span></div>
-                <div>"Is focused: " <span id="test-is-focused">{move || if is_focused.get() { "true" } else { "false" }}</span></div>
-                <div>"Focus change count: " <span id="test-focus-change-count">{focus_change_count}</span></div>
+                <div>
+                    "Is focused: "
+                    <span id="test-is-focused">
+                        {move || if is_focused.get() { "true" } else { "false" }}
+                    </span>
+                </div>
+                <div>
+                    "Focus change count: "
+                    <span id="test-focus-change-count">{focus_change_count}</span>
+                </div>
             </section>
 
             <section>
                 <h2>"Disabled Focus"</h2>
-                <div
-                    id="test-focus-disabled"
-                    tabindex="0"
-                    {..disabled_focus.props.into_attrs()}
-                >
+                <div id="test-focus-disabled" tabindex="0" {..disabled_focus.props.into_attrs()}>
                     "Disabled Focus Target"
                 </div>
-                <div>"Disabled focus count: " <span id="test-disabled-focus-count">{disabled_focus_count}</span></div>
+                <div>
+                    "Disabled focus count: "
+                    <span id="test-disabled-focus-count">{disabled_focus_count}</span>
+                </div>
             </section>
 
             <button id="test-focus-elsewhere">"Elsewhere"</button>
@@ -213,15 +218,18 @@ fn PageHookFocus() -> impl IntoView {
                 {
                     let (parent_focus_count, set_parent_focus_count) = signal(0u32);
                     let (parent_blur_count, set_parent_blur_count) = signal(0u32);
-
                     let parent_focus = use_focus(UseFocusInput {
                         disabled: Signal::derive(|| false),
-                        on_focus: Some(Callback::new(move |_| {
-                            set_parent_focus_count.update(|c| *c += 1);
-                        })),
-                        on_blur: Some(Callback::new(move |_| {
-                            set_parent_blur_count.update(|c| *c += 1);
-                        })),
+                        on_focus: Some(
+                            Callback::new(move |_| {
+                                set_parent_focus_count.update(|c| *c += 1);
+                            }),
+                        ),
+                        on_blur: Some(
+                            Callback::new(move |_| {
+                                set_parent_blur_count.update(|c| *c += 1);
+                            }),
+                        ),
                         on_focus_change: None,
                     });
 
@@ -234,8 +242,14 @@ fn PageHookFocus() -> impl IntoView {
                             "Parent"
                             <button id="test-focus-child">"Child"</button>
                         </div>
-                        <div>"Parent focus count: " <span id="test-focus-parent-focus-count">{parent_focus_count}</span></div>
-                        <div>"Parent blur count: " <span id="test-focus-parent-blur-count">{parent_blur_count}</span></div>
+                        <div>
+                            "Parent focus count: "
+                            <span id="test-focus-parent-focus-count">{parent_focus_count}</span>
+                        </div>
+                        <div>
+                            "Parent blur count: "
+                            <span id="test-focus-parent-blur-count">{parent_blur_count}</span>
+                        </div>
                     }
                 }
             </section>
@@ -297,44 +311,59 @@ fn PageHookFocusWithin() -> impl IntoView {
                 <h2>"Basic Focus Within"</h2>
                 <button id="test-fw-before">"Before"</button>
 
-                <div
-                    id="test-fw-container"
-                    {..focus_within.props.into_attrs()}
-                >
+                <div id="test-fw-container" {..focus_within.props.into_attrs()}>
                     <input id="test-fw-input-a" type="text" placeholder="Input A" />
                     <input id="test-fw-input-b" type="text" placeholder="Input B" />
                 </div>
 
-                <div>"Is focus-within: " <span id="test-fw-is-focus-within">{move || if is_focus_within.get() { "true" } else { "false" }}</span></div>
-                <div>"Focus-within count: " <span id="test-fw-focus-within-count">{focus_within_count}</span></div>
-                <div>"Blur-within count: " <span id="test-fw-blur-within-count">{blur_within_count}</span></div>
+                <div>
+                    "Is focus-within: "
+                    <span id="test-fw-is-focus-within">
+                        {move || if is_focus_within.get() { "true" } else { "false" }}
+                    </span>
+                </div>
+                <div>
+                    "Focus-within count: "
+                    <span id="test-fw-focus-within-count">{focus_within_count}</span>
+                </div>
+                <div>
+                    "Blur-within count: "
+                    <span id="test-fw-blur-within-count">{blur_within_count}</span>
+                </div>
 
                 <button id="test-fw-outside">"Outside"</button>
             </section>
 
             <section>
                 <h2>"Disabled Focus Within"</h2>
-                <div
-                    id="test-fw-disabled-container"
-                    {..disabled_fw.props.into_attrs()}
-                >
+                <div id="test-fw-disabled-container" {..disabled_fw.props.into_attrs()}>
                     <input id="test-fw-disabled-input" type="text" placeholder="Disabled Input" />
                 </div>
 
-                <div>"Is focus-within: " <span id="test-fw-disabled-is-focus-within">{move || if disabled_is_focus_within.get() { "true" } else { "false" }}</span></div>
-                <div>"Focus count: " <span id="test-fw-disabled-focus-count">{disabled_focus_count}</span></div>
+                <div>
+                    "Is focus-within: "
+                    <span id="test-fw-disabled-is-focus-within">
+                        {move || if disabled_is_focus_within.get() { "true" } else { "false" }}
+                    </span>
+                </div>
+                <div>
+                    "Focus count: "
+                    <span id="test-fw-disabled-focus-count">{disabled_focus_count}</span>
+                </div>
             </section>
 
             <section>
                 <h2>"Change Callback"</h2>
-                <div
-                    id="test-fw-change-container"
-                    {..change_fw.props.into_attrs()}
-                >
+                <div id="test-fw-change-container" {..change_fw.props.into_attrs()}>
                     <input id="test-fw-change-input" type="text" placeholder="Change Input" />
                 </div>
 
-                <div>"Change value: " <span id="test-fw-change-value">{move || if change_value.get() { "true" } else { "false" }}</span></div>
+                <div>
+                    "Change value: "
+                    <span id="test-fw-change-value">
+                        {move || if change_value.get() { "true" } else { "false" }}
+                    </span>
+                </div>
                 <div>"Change count: " <span id="test-fw-change-count">{change_count}</span></div>
             </section>
 
@@ -348,7 +377,6 @@ fn PageHookFocusWithin() -> impl IntoView {
                         on_focus_within_change: None,
                     });
                     let nested_outer_is_fw = nested_outer_fw.is_focus_within;
-
                     let nested_inner_fw = use_focus_within(UseFocusWithinInput {
                         disabled: Signal::derive(|| false),
                         on_focus_within: None,
@@ -358,19 +386,27 @@ fn PageHookFocusWithin() -> impl IntoView {
                     let nested_inner_is_fw = nested_inner_fw.is_focus_within;
 
                     view! {
-                        <div
-                            id="test-fw-nested-outer"
-                            {..nested_outer_fw.props.into_attrs()}
-                        >
-                            <div
-                                id="test-fw-nested-inner"
-                                {..nested_inner_fw.props.into_attrs()}
-                            >
-                                <input id="test-fw-nested-input" type="text" placeholder="Nested Input" />
+                        <div id="test-fw-nested-outer" {..nested_outer_fw.props.into_attrs()}>
+                            <div id="test-fw-nested-inner" {..nested_inner_fw.props.into_attrs()}>
+                                <input
+                                    id="test-fw-nested-input"
+                                    type="text"
+                                    placeholder="Nested Input"
+                                />
                             </div>
                         </div>
-                        <div>"Outer is focus-within: " <span id="test-fw-nested-outer-is-focus-within">{move || if nested_outer_is_fw.get() { "true" } else { "false" }}</span></div>
-                        <div>"Inner is focus-within: " <span id="test-fw-nested-inner-is-focus-within">{move || if nested_inner_is_fw.get() { "true" } else { "false" }}</span></div>
+                        <div>
+                            "Outer is focus-within: "
+                            <span id="test-fw-nested-outer-is-focus-within">
+                                {move || if nested_outer_is_fw.get() { "true" } else { "false" }}
+                            </span>
+                        </div>
+                        <div>
+                            "Inner is focus-within: "
+                            <span id="test-fw-nested-inner-is-focus-within">
+                                {move || if nested_inner_is_fw.get() { "true" } else { "false" }}
+                            </span>
+                        </div>
                     }
                 }
             </section>
@@ -427,16 +463,22 @@ fn PageHookFocusRing() -> impl IntoView {
                 <h2>"Basic Focus Ring"</h2>
                 <button id="test-fr-before">"Before"</button>
 
-                <div
-                    id="test-fr-target"
-                    tabindex="0"
-                    {..focus_ring.props.into_attrs()}
-                >
+                <div id="test-fr-target" tabindex="0" {..focus_ring.props.into_attrs()}>
                     "Focus Ring Target"
                 </div>
 
-                <div>"Is focus-visible: " <span id="test-fr-is-focus-visible">{move || if is_focus_visible.get() { "true" } else { "false" }}</span></div>
-                <div>"Is focused: " <span id="test-fr-is-focused">{move || if is_focused.get() { "true" } else { "false" }}</span></div>
+                <div>
+                    "Is focus-visible: "
+                    <span id="test-fr-is-focus-visible">
+                        {move || if is_focus_visible.get() { "true" } else { "false" }}
+                    </span>
+                </div>
+                <div>
+                    "Is focused: "
+                    <span id="test-fr-is-focused">
+                        {move || if is_focused.get() { "true" } else { "false" }}
+                    </span>
+                </div>
 
                 <button id="test-fr-elsewhere">"Elsewhere"</button>
             </section>
@@ -445,16 +487,23 @@ fn PageHookFocusRing() -> impl IntoView {
                 <h2>"Within Mode"</h2>
                 <button id="test-fr-within-before">"Within Before"</button>
 
-                <div
-                    id="test-fr-within-container"
-                    {..focus_ring_within.props.into_attrs()}
-                >
+                <div id="test-fr-within-container" {..focus_ring_within.props.into_attrs()}>
                     <button id="test-fr-within-child-1">"Within Child 1"</button>
                     <button id="test-fr-within-child-2">"Within Child 2"</button>
                 </div>
 
-                <div>"Within is focus-visible: " <span id="test-fr-within-is-focus-visible">{move || if within_is_focus_visible.get() { "true" } else { "false" }}</span></div>
-                <div>"Within is focused: " <span id="test-fr-within-is-focused">{move || if within_is_focused.get() { "true" } else { "false" }}</span></div>
+                <div>
+                    "Within is focus-visible: "
+                    <span id="test-fr-within-is-focus-visible">
+                        {move || if within_is_focus_visible.get() { "true" } else { "false" }}
+                    </span>
+                </div>
+                <div>
+                    "Within is focused: "
+                    <span id="test-fr-within-is-focused">
+                        {move || if within_is_focused.get() { "true" } else { "false" }}
+                    </span>
+                </div>
 
                 <button id="test-fr-within-elsewhere">"Within Elsewhere"</button>
             </section>
@@ -469,8 +518,18 @@ fn PageHookFocusRing() -> impl IntoView {
                     "Disabled Focus Ring Target"
                 </div>
 
-                <div>"Is focused: " <span id="test-fr-disabled-is-focused">{move || if disabled_is_focused.get() { "true" } else { "false" }}</span></div>
-                <div>"Is focus-visible: " <span id="test-fr-disabled-is-focus-visible">{move || if disabled_is_focus_visible.get() { "true" } else { "false" }}</span></div>
+                <div>
+                    "Is focused: "
+                    <span id="test-fr-disabled-is-focused">
+                        {move || if disabled_is_focused.get() { "true" } else { "false" }}
+                    </span>
+                </div>
+                <div>
+                    "Is focus-visible: "
+                    <span id="test-fr-disabled-is-focus-visible">
+                        {move || if disabled_is_focus_visible.get() { "true" } else { "false" }}
+                    </span>
+                </div>
             </section>
         </div>
     }
@@ -540,7 +599,9 @@ fn PageHookFocusable() -> impl IntoView {
 
             <section>
                 <h2>"Keyboard Events"</h2>
-                <div>"Keydown count: " <span id="test-fcbl-keydown-count">{keydown_count}</span></div>
+                <div>
+                    "Keydown count: " <span id="test-fcbl-keydown-count">{keydown_count}</span>
+                </div>
                 <div>"Keyup count: " <span id="test-fcbl-keyup-count">{keyup_count}</span></div>
 
                 <button
@@ -556,7 +617,6 @@ fn PageHookFocusable() -> impl IntoView {
                 <h2>"Dynamic Disabled"</h2>
                 {
                     let (dynamic_disabled, set_dynamic_disabled) = signal(false);
-
                     let dynamic = use_focusable(UseFocusableInput {
                         disabled: dynamic_disabled.into(),
                         ..Default::default()
@@ -566,7 +626,10 @@ fn PageHookFocusable() -> impl IntoView {
                         <div id="test-fcbl-dynamic" {..dynamic.props.into_attrs()}>
                             "Dynamic Focusable"
                         </div>
-                        <button id="test-fcbl-dynamic-toggle" on:click=move |_| set_dynamic_disabled.update(|v| *v = !*v)>
+                        <button
+                            id="test-fcbl-dynamic-toggle"
+                            on:click=move |_| set_dynamic_disabled.update(|v| *v = !*v)
+                        >
                             "Toggle Disabled"
                         </button>
                     }
@@ -636,7 +699,9 @@ fn PageHookFocusManager() -> impl IntoView {
                 <h2>"Tabbable Filtering"</h2>
                 <div id="test-fm-tabbable-scope" {..fm_tabbable.props.into_attrs()}>
                     <button id="test-fm-tabbable-item-1">"Tabbable Item 1"</button>
-                    <button id="test-fm-tabbable-item-2" tabindex="-1">"Tabbable Item 2 (tabindex=-1)"</button>
+                    <button id="test-fm-tabbable-item-2" tabindex="-1">
+                        "Tabbable Item 2 (tabindex=-1)"
+                    </button>
                     <button id="test-fm-tabbable-item-3">"Tabbable Item 3"</button>
                 </div>
                 <FocusManagerTabbableControls focus_manager=fm_tabbable_mgr />
@@ -657,7 +722,13 @@ fn PageHookFocusManager() -> impl IntoView {
                 <div id="test-fm-radio-scope" {..fm_radio.props.into_attrs()}>
                     <button id="test-fm-radio-btn-before">"Before"</button>
                     <input type="radio" name="test-radio-group" id="test-fm-radio-a" value="a" />
-                    <input type="radio" name="test-radio-group" id="test-fm-radio-b" value="b" checked />
+                    <input
+                        type="radio"
+                        name="test-radio-group"
+                        id="test-fm-radio-b"
+                        value="b"
+                        checked
+                    />
                     <input type="radio" name="test-radio-group" id="test-fm-radio-c" value="c" />
                     <button id="test-fm-radio-btn-after">"After"</button>
                 </div>
@@ -668,9 +739,24 @@ fn PageHookFocusManager() -> impl IntoView {
                 <h2>"Radio Group (None Checked)"</h2>
                 <div id="test-fm-radio-none-scope" {..fm_radio_none.props.into_attrs()}>
                     <button id="test-fm-radio-none-btn-before">"Before"</button>
-                    <input type="radio" name="test-radio-none-group" id="test-fm-radio-none-a" value="a" />
-                    <input type="radio" name="test-radio-none-group" id="test-fm-radio-none-b" value="b" />
-                    <input type="radio" name="test-radio-none-group" id="test-fm-radio-none-c" value="c" />
+                    <input
+                        type="radio"
+                        name="test-radio-none-group"
+                        id="test-fm-radio-none-a"
+                        value="a"
+                    />
+                    <input
+                        type="radio"
+                        name="test-radio-none-group"
+                        id="test-fm-radio-none-b"
+                        value="b"
+                    />
+                    <input
+                        type="radio"
+                        name="test-radio-none-group"
+                        id="test-fm-radio-none-c"
+                        value="c"
+                    />
                     <button id="test-fm-radio-none-btn-after">"After"</button>
                 </div>
                 <FocusManagerRadioNoneControls focus_manager=fm_radio_none_mgr />
@@ -679,9 +765,25 @@ fn PageHookFocusManager() -> impl IntoView {
             <section>
                 <h2>"Radio Group (Wrap)"</h2>
                 <div id="test-fm-radio-wrap-scope" {..fm_radio_wrap.props.into_attrs()}>
-                    <input type="radio" name="test-radio-wrap-group" id="test-fm-radio-wrap-a" value="a" />
-                    <input type="radio" name="test-radio-wrap-group" id="test-fm-radio-wrap-b" value="b" checked />
-                    <input type="radio" name="test-radio-wrap-group" id="test-fm-radio-wrap-c" value="c" />
+                    <input
+                        type="radio"
+                        name="test-radio-wrap-group"
+                        id="test-fm-radio-wrap-a"
+                        value="a"
+                    />
+                    <input
+                        type="radio"
+                        name="test-radio-wrap-group"
+                        id="test-fm-radio-wrap-b"
+                        value="b"
+                        checked
+                    />
+                    <input
+                        type="radio"
+                        name="test-radio-wrap-group"
+                        id="test-fm-radio-wrap-c"
+                        value="c"
+                    />
                 </div>
                 <FocusManagerRadioWrapControls focus_manager=fm_radio_wrap_mgr />
             </section>
@@ -690,9 +792,15 @@ fn PageHookFocusManager() -> impl IntoView {
                 <h2>"Visibility Filtering"</h2>
                 <div id="test-fm-vis-scope" {..fm_vis.props.into_attrs()}>
                     <button id="test-fm-vis-item-1">"Visible 1"</button>
-                    <button id="test-fm-vis-item-2" style="display:none">"Hidden display:none"</button>
-                    <button id="test-fm-vis-item-3" hidden>"Hidden attr"</button>
-                    <button id="test-fm-vis-item-4" style="visibility:hidden">"Hidden visibility"</button>
+                    <button id="test-fm-vis-item-2" style="display:none">
+                        "Hidden display:none"
+                    </button>
+                    <button id="test-fm-vis-item-3" hidden>
+                        "Hidden attr"
+                    </button>
+                    <button id="test-fm-vis-item-4" style="visibility:hidden">
+                        "Hidden visibility"
+                    </button>
                     <button id="test-fm-vis-item-5">"Visible 2"</button>
                 </div>
                 <FocusManagerVisControls focus_manager=fm_vis_mgr />
@@ -759,10 +867,22 @@ fn FocusManagerControls(focus_manager: StoredValue<FocusManager>) -> impl IntoVi
 
     view! {
         <div id="test-fm-controls">
-            <button id="test-fm-focus-next" on:mousedown=prevent_focus_steal on:click=on_focus_next>"Focus Next"</button>
-            <button id="test-fm-focus-prev" on:mousedown=prevent_focus_steal on:click=on_focus_prev>"Focus Previous"</button>
-            <button id="test-fm-focus-first" on:mousedown=prevent_focus_steal on:click=on_focus_first>"Focus First"</button>
-            <button id="test-fm-focus-last" on:mousedown=prevent_focus_steal on:click=on_focus_last>"Focus Last"</button>
+            <button id="test-fm-focus-next" on:mousedown=prevent_focus_steal on:click=on_focus_next>
+                "Focus Next"
+            </button>
+            <button id="test-fm-focus-prev" on:mousedown=prevent_focus_steal on:click=on_focus_prev>
+                "Focus Previous"
+            </button>
+            <button
+                id="test-fm-focus-first"
+                on:mousedown=prevent_focus_steal
+                on:click=on_focus_first
+            >
+                "Focus First"
+            </button>
+            <button id="test-fm-focus-last" on:mousedown=prevent_focus_steal on:click=on_focus_last>
+                "Focus Last"
+            </button>
         </div>
     }
 }
@@ -815,10 +935,34 @@ fn FocusManagerWrapControls(focus_manager: StoredValue<FocusManager>) -> impl In
 
     view! {
         <div id="test-fm-wrap-controls">
-            <button id="test-fm-wrap-focus-next" on:mousedown=prevent_focus_steal on:click=wrap_next>"Wrap Next"</button>
-            <button id="test-fm-wrap-focus-prev" on:mousedown=prevent_focus_steal on:click=wrap_prev>"Wrap Prev"</button>
-            <button id="test-fm-nowrap-focus-next" on:mousedown=prevent_focus_steal on:click=nowrap_next>"No-Wrap Next"</button>
-            <button id="test-fm-nowrap-focus-prev" on:mousedown=prevent_focus_steal on:click=nowrap_prev>"No-Wrap Prev"</button>
+            <button
+                id="test-fm-wrap-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=wrap_next
+            >
+                "Wrap Next"
+            </button>
+            <button
+                id="test-fm-wrap-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=wrap_prev
+            >
+                "Wrap Prev"
+            </button>
+            <button
+                id="test-fm-nowrap-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=nowrap_next
+            >
+                "No-Wrap Next"
+            </button>
+            <button
+                id="test-fm-nowrap-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=nowrap_prev
+            >
+                "No-Wrap Prev"
+            </button>
         </div>
     }
 }
@@ -871,10 +1015,34 @@ fn FocusManagerTabbableControls(focus_manager: StoredValue<FocusManager>) -> imp
 
     view! {
         <div id="test-fm-tabbable-controls">
-            <button id="test-fm-tabbable-focus-next" on:mousedown=prevent_focus_steal on:click=tabbable_next>"Tabbable Next"</button>
-            <button id="test-fm-tabbable-focus-prev" on:mousedown=prevent_focus_steal on:click=tabbable_prev>"Tabbable Prev"</button>
-            <button id="test-fm-nontabbable-focus-next" on:mousedown=prevent_focus_steal on:click=nontabbable_next>"Non-Tabbable Next"</button>
-            <button id="test-fm-nontabbable-focus-prev" on:mousedown=prevent_focus_steal on:click=nontabbable_prev>"Non-Tabbable Prev"</button>
+            <button
+                id="test-fm-tabbable-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=tabbable_next
+            >
+                "Tabbable Next"
+            </button>
+            <button
+                id="test-fm-tabbable-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=tabbable_prev
+            >
+                "Tabbable Prev"
+            </button>
+            <button
+                id="test-fm-nontabbable-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=nontabbable_next
+            >
+                "Non-Tabbable Next"
+            </button>
+            <button
+                id="test-fm-nontabbable-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=nontabbable_prev
+            >
+                "Non-Tabbable Prev"
+            </button>
         </div>
     }
 }
@@ -912,8 +1080,20 @@ fn FocusManagerAcceptControls(focus_manager: StoredValue<FocusManager>) -> impl 
 
     view! {
         <div id="test-fm-accept-controls">
-            <button id="test-fm-accept-focus-next" on:mousedown=prevent_focus_steal on:click=accept_next>"Accept Next"</button>
-            <button id="test-fm-accept-focus-prev" on:mousedown=prevent_focus_steal on:click=accept_prev>"Accept Prev"</button>
+            <button
+                id="test-fm-accept-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=accept_next
+            >
+                "Accept Next"
+            </button>
+            <button
+                id="test-fm-accept-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=accept_prev
+            >
+                "Accept Prev"
+            </button>
         </div>
     }
 }
@@ -944,8 +1124,20 @@ fn FocusManagerRadioControls(focus_manager: StoredValue<FocusManager>) -> impl I
 
     view! {
         <div id="test-fm-radio-controls">
-            <button id="test-fm-radio-focus-next" on:mousedown=prevent_focus_steal on:click=tabbable_next>"Radio Next"</button>
-            <button id="test-fm-radio-focus-prev" on:mousedown=prevent_focus_steal on:click=tabbable_prev>"Radio Prev"</button>
+            <button
+                id="test-fm-radio-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=tabbable_next
+            >
+                "Radio Next"
+            </button>
+            <button
+                id="test-fm-radio-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=tabbable_prev
+            >
+                "Radio Prev"
+            </button>
         </div>
     }
 }
@@ -976,8 +1168,20 @@ fn FocusManagerRadioNoneControls(focus_manager: StoredValue<FocusManager>) -> im
 
     view! {
         <div id="test-fm-radio-none-controls">
-            <button id="test-fm-radio-none-focus-next" on:mousedown=prevent_focus_steal on:click=tabbable_next>"Radio None Next"</button>
-            <button id="test-fm-radio-none-focus-prev" on:mousedown=prevent_focus_steal on:click=tabbable_prev>"Radio None Prev"</button>
+            <button
+                id="test-fm-radio-none-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=tabbable_next
+            >
+                "Radio None Next"
+            </button>
+            <button
+                id="test-fm-radio-none-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=tabbable_prev
+            >
+                "Radio None Prev"
+            </button>
         </div>
     }
 }
@@ -1008,8 +1212,20 @@ fn FocusManagerRadioWrapControls(focus_manager: StoredValue<FocusManager>) -> im
 
     view! {
         <div id="test-fm-radio-wrap-controls">
-            <button id="test-fm-radio-wrap-focus-next" on:mousedown=prevent_focus_steal on:click=tabbable_next>"Radio Wrap Next"</button>
-            <button id="test-fm-radio-wrap-focus-prev" on:mousedown=prevent_focus_steal on:click=tabbable_prev>"Radio Wrap Prev"</button>
+            <button
+                id="test-fm-radio-wrap-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=tabbable_next
+            >
+                "Radio Wrap Next"
+            </button>
+            <button
+                id="test-fm-radio-wrap-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=tabbable_prev
+            >
+                "Radio Wrap Prev"
+            </button>
         </div>
     }
 }
@@ -1037,8 +1253,20 @@ fn FocusManagerVisControls(focus_manager: StoredValue<FocusManager>) -> impl Int
 
     view! {
         <div id="test-fm-vis-controls">
-            <button id="test-fm-vis-focus-next" on:mousedown=prevent_focus_steal on:click=on_focus_next>"Vis Next"</button>
-            <button id="test-fm-vis-focus-prev" on:mousedown=prevent_focus_steal on:click=on_focus_prev>"Vis Prev"</button>
+            <button
+                id="test-fm-vis-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=on_focus_next
+            >
+                "Vis Next"
+            </button>
+            <button
+                id="test-fm-vis-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=on_focus_prev
+            >
+                "Vis Prev"
+            </button>
         </div>
     }
 }
@@ -1066,8 +1294,20 @@ fn FocusManagerInertControls(focus_manager: StoredValue<FocusManager>) -> impl I
 
     view! {
         <div id="test-fm-inert-controls">
-            <button id="test-fm-inert-focus-next" on:mousedown=prevent_focus_steal on:click=on_focus_next>"Inert Next"</button>
-            <button id="test-fm-inert-focus-prev" on:mousedown=prevent_focus_steal on:click=on_focus_prev>"Inert Prev"</button>
+            <button
+                id="test-fm-inert-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=on_focus_next
+            >
+                "Inert Next"
+            </button>
+            <button
+                id="test-fm-inert-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=on_focus_prev
+            >
+                "Inert Prev"
+            </button>
         </div>
     }
 }
@@ -1098,8 +1338,20 @@ fn FocusManagerOutsideControls(focus_manager: StoredValue<FocusManager>) -> impl
 
     view! {
         <div id="test-fm-outside-controls">
-            <button id="test-fm-outside-focus-next" on:mousedown=prevent_focus_steal on:click=on_focus_next>"Outside Next"</button>
-            <button id="test-fm-outside-focus-prev" on:mousedown=prevent_focus_steal on:click=on_focus_prev>"Outside Prev"</button>
+            <button
+                id="test-fm-outside-focus-next"
+                on:mousedown=prevent_focus_steal
+                on:click=on_focus_next
+            >
+                "Outside Next"
+            </button>
+            <button
+                id="test-fm-outside-focus-prev"
+                on:mousedown=prevent_focus_steal
+                on:click=on_focus_prev
+            >
+                "Outside Prev"
+            </button>
         </div>
     }
 }
@@ -1114,7 +1366,8 @@ fn PageHookFocusVisible() -> impl IntoView {
     let (stored_modality, set_stored_modality) = signal(get_modality());
 
     view! {
-        <div id="test-page-hook-focus-visible"
+        <div
+            id="test-page-hook-focus-visible"
             on:keyup=move |_| {
                 set_stored_modality.set(get_modality());
             }
@@ -1134,19 +1387,34 @@ fn PageHookFocusVisible() -> impl IntoView {
 
             <button id="test-fv-after">"After"</button>
 
-            <div>"Focus visible: " <span id="test-fv-visible">{move || if focus_should_be_visible.get() { "true" } else { "false" }}</span></div>
-            <div>"Modality: " <span id="test-fv-modality">{move || match modality.get() {
-                Modality::Unknown => "Unknown",
-                Modality::Pointer => "Pointer",
-                Modality::Keyboard => "Keyboard",
-                Modality::Virtual => "Virtual",
-            }}</span></div>
-            <div>"Stored modality: " <span id="test-fv-stored-modality">{move || match stored_modality.get() {
-                Modality::Unknown => "Unknown",
-                Modality::Pointer => "Pointer",
-                Modality::Keyboard => "Keyboard",
-                Modality::Virtual => "Virtual",
-            }}</span></div>
+            <div>
+                "Focus visible: "
+                <span id="test-fv-visible">
+                    {move || if focus_should_be_visible.get() { "true" } else { "false" }}
+                </span>
+            </div>
+            <div>
+                "Modality: "
+                <span id="test-fv-modality">
+                    {move || match modality.get() {
+                        Modality::Unknown => "Unknown",
+                        Modality::Pointer => "Pointer",
+                        Modality::Keyboard => "Keyboard",
+                        Modality::Virtual => "Virtual",
+                    }}
+                </span>
+            </div>
+            <div>
+                "Stored modality: "
+                <span id="test-fv-stored-modality">
+                    {move || match stored_modality.get() {
+                        Modality::Unknown => "Unknown",
+                        Modality::Pointer => "Pointer",
+                        Modality::Keyboard => "Keyboard",
+                        Modality::Virtual => "Virtual",
+                    }}
+                </span>
+            </div>
         </div>
     }
 }
@@ -1189,8 +1457,15 @@ fn PageHookHasTabbableChild() -> impl IntoView {
                         <button id="test-htc-child-btn">"Child Button"</button>
                     </Show>
                 </div>
-                <div>"Has tabbable child: " <span id="test-htc-result">{move || if has_tabbable_child.get() { "true" } else { "false" }}</span></div>
-                <button id="test-htc-toggle" on:click=move |_| set_show_child.update(|v| *v = !*v)>"Toggle"</button>
+                <div>
+                    "Has tabbable child: "
+                    <span id="test-htc-result">
+                        {move || if has_tabbable_child.get() { "true" } else { "false" }}
+                    </span>
+                </div>
+                <button id="test-htc-toggle" on:click=move |_| set_show_child.update(|v| *v = !*v)>
+                    "Toggle"
+                </button>
             </section>
 
             <section>
@@ -1199,7 +1474,12 @@ fn PageHookHasTabbableChild() -> impl IntoView {
                     <span>"Just a span"</span>
                     <div tabindex="-1">"Focusable but not tabbable"</div>
                 </div>
-                <div>"Has tabbable child: " <span id="test-htc-none-result">{move || if has_tabbable_none.get() { "true" } else { "false" }}</span></div>
+                <div>
+                    "Has tabbable child: "
+                    <span id="test-htc-none-result">
+                        {move || if has_tabbable_none.get() { "true" } else { "false" }}
+                    </span>
+                </div>
             </section>
 
             <section>
@@ -1207,7 +1487,12 @@ fn PageHookHasTabbableChild() -> impl IntoView {
                 <div id="test-htc-disabled-container" {..htc_disabled.props.into_attrs()}>
                     <button>"A button child"</button>
                 </div>
-                <div>"Has tabbable child: " <span id="test-htc-disabled-result">{move || if has_tabbable_disabled.get() { "true" } else { "false" }}</span></div>
+                <div>
+                    "Has tabbable child: "
+                    <span id="test-htc-disabled-result">
+                        {move || if has_tabbable_disabled.get() { "true" } else { "false" }}
+                    </span>
+                </div>
             </section>
 
             <section>
@@ -1219,7 +1504,12 @@ fn PageHookHasTabbableChild() -> impl IntoView {
                         </div>
                     </div>
                 </div>
-                <div>"Has tabbable child: " <span id="test-htc-nested-result">{move || if has_tabbable_nested.get() { "true" } else { "false" }}</span></div>
+                <div>
+                    "Has tabbable child: "
+                    <span id="test-htc-nested-result">
+                        {move || if has_tabbable_nested.get() { "true" } else { "false" }}
+                    </span>
+                </div>
             </section>
 
             <section>
@@ -1227,8 +1517,18 @@ fn PageHookHasTabbableChild() -> impl IntoView {
                 <div id="test-htc-attr-container" {..htc_attr.props.into_attrs()}>
                     <button disabled=move || child_disabled.get()>"Attr Button"</button>
                 </div>
-                <div>"Has tabbable child: " <span id="test-htc-attr-result">{move || if has_tabbable_attr.get() { "true" } else { "false" }}</span></div>
-                <button id="test-htc-attr-toggle" on:click=move |_| set_child_disabled.update(|v| *v = !*v)>"Toggle Disabled"</button>
+                <div>
+                    "Has tabbable child: "
+                    <span id="test-htc-attr-result">
+                        {move || if has_tabbable_attr.get() { "true" } else { "false" }}
+                    </span>
+                </div>
+                <button
+                    id="test-htc-attr-toggle"
+                    on:click=move |_| set_child_disabled.update(|v| *v = !*v)
+                >
+                    "Toggle Disabled"
+                </button>
             </section>
         </div>
     }
@@ -1316,7 +1616,9 @@ fn PageAtomFocusScope() -> impl IntoView {
                             <button id="test-fs-nested-restore-outer-btn">"Outer Btn"</button>
                             <FocusScope restore_focus=true auto_focus=true>
                                 <div id="test-fs-nested-restore-inner">
-                                    <button id="test-fs-nested-restore-inner-btn">"Inner Btn"</button>
+                                    <button id="test-fs-nested-restore-inner-btn">
+                                        "Inner Btn"
+                                    </button>
                                 </div>
                             </FocusScope>
                         </div>

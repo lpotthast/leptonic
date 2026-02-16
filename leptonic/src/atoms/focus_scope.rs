@@ -489,7 +489,11 @@ pub fn FocusScope(
         }
     });
 
-    view! { <div node_ref=scope_ref style="display: contents">{children()}</div> }
+    view! {
+        <div node_ref=scope_ref style="display: contents">
+            {children()}
+        </div>
+    }
 }
 
 /// Dispatch the [`RESTORE_FOCUS_EVENT`] on the target element.

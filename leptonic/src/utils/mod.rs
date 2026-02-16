@@ -1,8 +1,3 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
-
 pub mod aria;
 pub mod callback;
 pub mod classes;
@@ -11,6 +6,7 @@ pub(crate) mod dom_ext;
 pub mod element_capture;
 pub mod event_handler;
 pub(crate) mod event_listeners;
+pub mod event_wrapper;
 pub mod focus;
 pub mod focus_scope_tree;
 pub mod focusability;
@@ -26,6 +22,7 @@ pub(crate) mod modifiers;
 pub(crate) mod open_link;
 pub mod platform;
 pub mod pointer_type;
+pub mod propagation_control;
 pub(crate) mod run_after_transition;
 pub mod scroll_behavior;
 pub(crate) mod shadow_dom;
@@ -46,21 +43,12 @@ pub(crate) use dom_ext::{
 };
 pub use element_capture::{CapturedElement, ElementCaptureAttr};
 pub use event_handler::EventHandler;
-// Re-exports from event_listeners
+pub use event_wrapper::EventWrapper;
 pub use event_listeners::EventListenerOptions;
-pub(crate) use event_listeners::ListenExt;
 // Re-exports from interaction_rect
 pub use interaction_rect::{is_over, InteractionRect, RectPrecise};
 pub use merge::{MergeWith, MergeWithExt};
 // Re-exports from modifiers
 pub use modifiers::{EventModifiers, Modifiers};
-
-pub(crate) fn use_continue_propagation() -> (Arc<AtomicBool>, Arc<dyn Fn() + Send + Sync + 'static>)
-{
-    let continue_propagation_state = Arc::new(AtomicBool::new(false));
-    let state = continue_propagation_state.clone();
-    let continue_propagation = Arc::new(move || {
-        state.store(true, Ordering::Release);
-    });
-    (continue_propagation_state, continue_propagation)
-}
+// Re-exports from propagation_control
+pub use propagation_control::{Propagation, PropagationControl};

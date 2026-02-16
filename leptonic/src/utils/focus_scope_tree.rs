@@ -425,6 +425,56 @@ fn is_descendant_of(tree: &FocusScopeTree, candidate: ScopeId, ancestor: ScopeId
     }
 }
 
+/// Check if `element` is inside any child scope of the currently active scope.
+///
+/// This is used by `use_overlay` to avoid closing an outer overlay when focus
+/// moves into a nested scope (e.g., a menu opening inside a dialog).
+/// Equivalent to react-aria's `isElementInChildOfActiveScope`.
+///
+/// Returns `true` if:
+/// - The element is inside a `[data-leptonic-top-layer]` container, OR
+/// - The element is within the DOM subtree of any scope that is a descendant
+///   of the active scope.
+pub fn is_element_in_child_of_active_scope(element: &web_sys::Element) -> bool {
+    TREE.with_borrow(|tree| {
+        let Some(active_id) = tree.active_scope else {
+            return false;
+        };
+
+        is_element_in_child_scope(tree, element, active_id)
+    })
+}
+
+/// Check if `element` is in any child scope of the given scope.
+fn is_element_in_child_scope(
+    tree: &FocusScopeTree,
+    element: &web_sys::Element,
+    scope_id: ScopeId,
+) -> bool {
+    // Allow focus on top-layer elements (e.g., toasts in portals).
+    if element
+        .closest("[data-leptonic-top-layer]")
+        .ok()
+        .flatten()
+        .is_some()
+    {
+        return true;
+    }
+
+    let Some(node) = tree.nodes.get(&scope_id) else {
+        return false;
+    };
+
+    // Check all descendant scopes (but not this scope itself).
+    for &child_id in &node.children {
+        if is_in_scope_recursive(tree, element, child_id) {
+            return true;
+        }
+    }
+
+    false
+}
+
 /// Find the innermost containing scope that is an ancestor of (or is)
 /// `scope_id`. Used to determine which scope should actually recapture.
 pub fn innermost_containing_ancestor(scope_id: ScopeId) -> Option<ScopeId> {

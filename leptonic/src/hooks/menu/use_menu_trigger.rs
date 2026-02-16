@@ -13,7 +13,9 @@ use super::use_menu_trigger_state::UseMenuTriggerStateReturn;
 use crate::{
     hooks::{
         interactions::use_press::{use_press, LongPressEvent, PressEvent, UsePressInput},
-        overlay::use_overlay_trigger::{use_overlay_trigger, UseOverlayTriggerInput},
+        overlay::use_overlay_trigger::{
+            use_overlay_trigger, OverlayTriggerType, UseOverlayTriggerInput,
+        },
         selection::use_selectable_collection::FocusStrategy,
         IntoAttrs,
     },
@@ -47,7 +49,7 @@ pub enum MenuTriggerType {
 #[derive(Debug, Clone, Copy)]
 pub struct UseMenuTriggerInput {
     /// The type of menu that the menu trigger opens.
-    pub menu_type: AriaHasPopup,
+    pub menu_type: OverlayTriggerType,
 
     /// Whether the menu trigger is disabled.
     pub disabled: Signal<bool>,
@@ -93,7 +95,7 @@ pub struct UseMenuTriggerProps {
     /// Unique identifier for the trigger element.
     pub id: String,
     /// The type of popup this trigger opens (e.g., "menu").
-    pub aria_haspopup: AriaHasPopup,
+    pub aria_haspopup: Option<AriaHasPopup>,
     /// Whether the popup is currently expanded.
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     /// ID of the controlled popup element.
@@ -125,7 +127,7 @@ impl IntoAttrs for UseMenuTriggerProps {
 /// These attributes must be spread onto the menu trigger element.
 pub type UseMenuTriggerAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::AriaHaspopup, AriaHasPopup>,
+    Attr<attr::AriaHaspopup, Option<AriaHasPopup>>,
     Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaControls, Signal<Option<String>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -145,7 +147,7 @@ pub type UseMenuTriggerAttrs = (
 /// let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
 ///
 /// let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
-///     menu_type: AriaHasPopup::Menu,
+///     menu_type: OverlayTriggerType::Menu,
 ///     disabled: Signal::derive(|| false),
 ///     trigger: MenuTriggerType::Press,
 ///     state,

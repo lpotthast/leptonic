@@ -415,13 +415,14 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
     // Use use_move hook for track-level dragging. use_move handles pointer event
     // management (pointerdown, pointermove, pointerup, pointercancel) for drag deltas.
     // on_move_start is a no-op because we handle the initial click in on_track_pointerdown.
-    let track_move_props = use_move(UseMoveInput {
+    let track_move_return = use_move(UseMoveInput {
+        disabled,
         axis: Signal::derive(move || match orientation.get() {
             SliderOrientation::Horizontal => Some(MoveAxis::Horizontal),
             SliderOrientation::Vertical => Some(MoveAxis::Vertical),
         }),
-        on_move_start: Callback::new(move |_: MoveStartEvent| {}),
-        on_move: Callback::new(move |e: MoveEvent| {
+        on_move_start: Some(Callback::new(move |_: MoveStartEvent| {})),
+        on_move: Some(Callback::new(move |e: MoveEvent| {
             if let Some(idx) = dragging_thumb_index.get_value() {
                 if let Some(track) = track_element.get_untracked().as_deref().cloned() {
                     let orientation = orientation.get_untracked();
@@ -457,8 +458,8 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
                     state.set_thumb_percent.run((idx, new_percent));
                 }
             }
-        }),
-        on_move_end: Callback::new(move |_: MoveEndEvent| {
+        })),
+        on_move_end: Some(Callback::new(move |_: MoveEndEvent| {
             // Idempotent: on_track_pointerdown's global pointerup handler may have
             // already cleared this state. Both handlers guard with `if let Some`.
             if let Some(idx) = dragging_thumb_index.get_value() {
@@ -466,7 +467,8 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             }
             dragging_thumb_index.set_value(None);
             current_position_px.set_value(None);
-        }),
+        })),
+        constraint: None,
     });
 
     on_cleanup(move || {
@@ -495,7 +497,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             role: "presentation",
             style_touch_action: "none",
             on_pointerdown: EventHandler::new(handle_track_pointerdown)
-                .chain(track_move_props.props.on_pointerdown),
+                .chain(track_move_return.props.on_pointerdown),
             element_capture: track_element.attr(),
         },
         track_ref: track_element,

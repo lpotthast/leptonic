@@ -25,7 +25,6 @@ pub mod menu;
 pub mod meter;
 pub mod modal;
 pub mod r#move;
-pub mod move_within;
 pub mod overlay;
 pub mod popover;
 pub mod press;

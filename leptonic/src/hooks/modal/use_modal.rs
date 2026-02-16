@@ -1,17 +1,6 @@
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
-use uuid::Uuid;
-use web_sys::KeyboardEvent;
+use leptos::{attr, attr::Attr};
 
-use crate::{
-    hooks::IntoAttrs,
-    utils::{aria::AriaModal, EventHandler},
-};
+use crate::{hooks::IntoAttrs, utils::aria::AriaModal};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModal.ts
 
@@ -19,139 +8,92 @@ use crate::{
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## DIFFERENT BEHAVIOR
+//
+// - aria-modal vs aria-hidden
+//   React-aria's `useModal` aria-hides all content *outside* the modal by
+//   setting `aria-hidden` on sibling DOM trees (via `ariaHideOutside()`) and
+//   uses a `ModalProvider` context to track nested modals. This lets screen
+//   readers ignore everything outside the modal.
+//
+//   Leptonic instead sets `aria-modal="true"` on the modal element itself.
+//   Modern browsers/AT already honour `aria-modal` and hide outside content,
+//   so the `aria-hidden` approach is unnecessary for our target environments.
+//   This simplification means we do not need `ModalProvider` or
+//   `ariaHideOutside()`.
+//
+// ## OMITTED FEATURES
+//
+// - `ariaHideOutside()`: Not implemented. Covered by `aria-modal="true"`.
+// - `ModalProvider` / `ModalContext`: Not needed without `ariaHideOutside()`.
 //
 // =============================================================================
 
 /// Input parameters for the `use_modal` hook.
-#[derive(Debug, Clone, Copy)]
+///
+/// This hook marks an element as a modal for assistive technology by setting
+/// `aria-modal="true"`. For dismiss behavior (Escape key, outside click) and
+/// overlay stacking, use `use_modal_backdrop` (which delegates to `use_overlay`).
+/// For ARIA role and labeling, use `use_dialog`.
+#[derive(Debug, Clone, Copy, Default)]
 pub struct UseModalInput {
-    /// Whether the modal is open.
-    pub is_open: Signal<bool>,
-
-    /// Callback when the modal should close.
-    pub on_close: Option<Callback<()>>,
-
-    /// Whether to close when pressing Escape.
-    pub is_dismissable: bool,
-
-    /// Whether to close when clicking outside.
-    pub should_close_on_interact_outside: bool,
-
-    /// Whether the modal is a keyboard-dismissable modal.
-    pub is_keyboard_dismiss_disabled: bool,
-}
-
-impl Default for UseModalInput {
-    fn default() -> Self {
-        Self {
-            is_open: Signal::derive(|| false),
-            on_close: None,
-            is_dismissable: true,
-            should_close_on_interact_outside: true,
-            is_keyboard_dismiss_disabled: false,
-        }
-    }
+    /// Whether the modal behavior is disabled.
+    /// When `true`, `aria-modal` is not set.
+    pub is_disabled: bool,
 }
 
 /// The return value of the `use_modal` hook.
 pub struct UseModalReturn {
-    /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
+    /// Props for the modal element. Call `.into_attrs()` for view spreading.
     pub modal_props: UseModalProps,
-
-    /// The ID of the modal.
-    pub id: String,
 }
 
-/// Props from `use_modal` that can be extracted and merged programmatically.
+/// Props from `use_modal` that can be converted to spreadable attributes.
 #[derive(Debug)]
 pub struct UseModalProps {
-    pub id: String,
-    pub role: &'static str,
-    pub aria_modal: AriaModal,
-    pub tabindex: &'static str,
-    pub on_keydown: EventHandler<KeyboardEvent>,
+    pub aria_modal: Option<AriaModal>,
 }
 
 impl IntoAttrs for UseModalProps {
     type Attrs = UseModalAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Id, self.id),
-            Attr(attr::Role, self.role),
-            Attr(attr::AriaModal, self.aria_modal),
-            Attr(attr::Tabindex, self.tabindex),
-            self.on_keydown.into_on(ev::keydown),
-        )
+        (Attr(attr::AriaModal, self.aria_modal),)
     }
 }
 
-/// These attributes must be spread onto the target element: `<div {..attrs} />`
-pub type UseModalAttrs = (
-    Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
-    Attr<attr::AriaModal, AriaModal>,
-    Attr<attr::Tabindex, &'static str>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-);
+/// These attributes must be spread onto the modal element: `<div {..attrs} />`
+pub type UseModalAttrs = (Attr<attr::AriaModal, Option<AriaModal>>,);
 
-/// Provides accessibility and behavior for modal dialogs.
+/// Marks an element as a modal for assistive technology.
 ///
-/// This hook manages focus trapping and escape key handling for modals.
-/// It should be used together with `use_modal_backdrop` for a complete modal experience.
+/// Sets `aria-modal="true"` on the element so that screen readers treat content
+/// outside the modal as hidden.
+///
+/// This hook only handles the aria-modal marker. Combine with:
+/// - `use_modal_backdrop` for dismiss behavior (Escape, outside click) and scroll prevention
+/// - `use_dialog` for ARIA role, labeling, and focus-on-mount
+/// - `FocusScope` atom for focus trapping and restoration
 ///
 /// # Example
 ///
 /// ```ignore
-/// let (is_open, set_is_open) = signal(false);
-///
-/// let modal = use_modal(UseModalInput {
-///     is_open: is_open.into(),
-///     on_close: Some(Callback::new(move |_| set_is_open.set(false))),
-///     is_dismissable: true,
-///     ..Default::default()
-/// });
+/// let UseModalReturn { modal_props } = use_modal(UseModalInput { is_disabled: false });
 ///
 /// view! {
-///     <Show when=move || is_open.get()>
-///         <div {..modal.modal_props.into_attrs()}>
-///             "Modal content"
-///             <button on:click=move |_| set_is_open.set(false)>"Close"</button>
-///         </div>
-///     </Show>
+///     <div {..modal_props.into_attrs()}>
+///         "Modal content"
+///     </div>
 /// }
 /// ```
 pub fn use_modal(input: UseModalInput) -> UseModalReturn {
-    let UseModalInput {
-        is_open,
-        on_close,
-        is_dismissable,
-        should_close_on_interact_outside,
-        is_keyboard_dismiss_disabled,
-    } = input;
-
-    let modal_id = format!("modal-{}", Uuid::new_v4());
-
-    // Handle keydown for escape
-    let handle_keydown = move |e: KeyboardEvent| {
-        if is_dismissable && !is_keyboard_dismiss_disabled && e.key() == "Escape" {
-            e.prevent_default();
-            e.stop_propagation();
-            if let Some(on_close) = on_close {
-                on_close.run(());
-            }
-        }
+    let aria_modal = if input.is_disabled {
+        None
+    } else {
+        Some(AriaModal::True)
     };
 
     UseModalReturn {
-        modal_props: UseModalProps {
-            id: modal_id.clone(),
-            role: "dialog",
-            aria_modal: AriaModal::True,
-            tabindex: "-1",
-            on_keydown: EventHandler::new(handle_keydown),
-        },
-        id: modal_id,
+        modal_props: UseModalProps { aria_modal },
     }
 }

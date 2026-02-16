@@ -32,6 +32,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=routes::doc::Installation.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
                 <Link href=routes::doc::Themes.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
                 <Link href=routes::doc::Changelog.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
+                <Link href=routes::doc::EventPropagation.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Event Propagation"</Link>
             </Stack>
         </DrawerSection>
 
@@ -43,7 +44,6 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=routes::doc::hooks::UsePress.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_press"</Link>
                 <Link href=routes::doc::hooks::UseHover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_hover"</Link>
                 <Link href=routes::doc::hooks::UseMove.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_move"</Link>
-                <Link href=routes::doc::hooks::UseMoveWithin.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_move_within"</Link>
                 <Link href=routes::doc::hooks::UseKeyboard.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_keyboard"</Link>
                 <Link href=routes::doc::hooks::UseInteractOutside.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_interact_outside"</Link>
                 <Link href=routes::doc::hooks::UseScrollWheel.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_scroll_wheel"</Link>
@@ -79,6 +79,7 @@ pub fn DocLayout() -> impl IntoView {
         }>
             <DrawerSection level=3 header=move || "Overlay">
                 <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
+                    <Link href=routes::doc::atoms::DismissButton.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "DismissButton"</Link>
                     <Link href=routes::doc::hooks::UseOverlay.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_overlay"</Link>
                 </Stack>
             </DrawerSection>

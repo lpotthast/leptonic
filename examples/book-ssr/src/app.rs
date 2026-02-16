@@ -9,8 +9,9 @@ use crate::{
         documentation::{
             atoms::{
                 anchor_link::PageAtomAnchorLink, button::PageAtomButton,
-                focus_ring::PageAtomFocusRing, focus_scope::PageAtomFocusScope, grid::PageAtomGrid,
-                link::PageAtomLink, popover::PageAtomPopover, slider::PageAtomSlider,
+                dismiss_button::PageAtomDismissButton, focus_ring::PageAtomFocusRing,
+                focus_scope::PageAtomFocusScope, grid::PageAtomGrid, link::PageAtomLink,
+                popover::PageAtomPopover, slider::PageAtomSlider,
             },
             components::{
                 feedback::{
@@ -32,7 +33,9 @@ use crate::{
             },
             doc_layout::DocLayout,
             getting_started::{
-                changelog::PageChangelog, installation::PageInstallation, overview::PageOverview,
+                changelog::PageChangelog,
+                event_propagation::PageEventPropagation,
+                installation::PageInstallation, overview::PageOverview,
                 themes::PageThemes,
             },
             hooks::{
@@ -46,7 +49,7 @@ use crate::{
                 interact_outside::PageUseInteractOutside, keyboard::PageUseKeyboard,
                 label::PageUseLabel, link::PageUseLink, listbox::PageUseListbox,
                 menu::PageUseMenuHook, meter::PageUseMeter, modal::PageUseModalHook,
-                move_within::PageUseMoveWithin, overlay::PageUseOverlay,
+                overlay::PageUseOverlay,
                 popover::PageUsePopoverHook, press::PageUsePress,
                 prevent_scroll::PageUsePreventScroll, progress::PageUseProgressBar,
                 r#move::PageUseMove, radio::PageUseRadioHook, scroll_wheel::PageUseScrollWheel,
@@ -117,11 +120,11 @@ pub fn App() -> impl IntoView {
                             <Route path=routes::doc::Installation.path() view=PageInstallation/>
                             <Route path=routes::doc::Themes.path() view=PageThemes/>
                             <Route path=routes::doc::Changelog.path() view=PageChangelog/>
+                            <Route path=routes::doc::EventPropagation.path() view=PageEventPropagation/>
 
                             <ParentRoute path=routes::doc::Hooks.path() view=||view! { <Outlet/> }>
                                 <Route path=routes::doc::hooks::UsePress.path() view=PageUsePress/>
                                 <Route path=routes::doc::hooks::UseMove.path() view=PageUseMove/>
-                                <Route path=routes::doc::hooks::UseMoveWithin.path() view=PageUseMoveWithin/>
                                 <Route path=routes::doc::hooks::UseHover.path() view=PageUseHover/>
                                 <Route path=routes::doc::hooks::UseFocus.path() view=PageUseFocus/>
                                 <Route path=routes::doc::hooks::UseButton.path() view=PageUseButton/>
@@ -168,6 +171,7 @@ pub fn App() -> impl IntoView {
 
                             <ParentRoute path=routes::doc::Atoms.path() view=||view! { <Outlet/> }>
                                 <Route path=routes::doc::atoms::Button.path() view=PageAtomButton/>
+                                <Route path=routes::doc::atoms::DismissButton.path() view=PageAtomDismissButton/>
                                 <Route path=routes::doc::atoms::Popover.path() view=PageAtomPopover/>
                                 <Route path=routes::doc::atoms::AnchorLink.path() view=PageAtomAnchorLink/>
                                 <Route path=routes::doc::atoms::FocusScope.path() view=PageAtomFocusScope/>

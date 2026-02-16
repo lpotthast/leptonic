@@ -1,9 +1,5 @@
-use std::{
-    sync::{atomic::Ordering, Arc},
-    time::Duration,
-};
+use std::{sync::atomic::Ordering, time::Duration};
 
-use educe::Educe;
 use leptos::{
     attr,
     attr::Attr,
@@ -29,12 +25,12 @@ use crate::{
         open_link::open_link,
         platform::device,
         pointer_type::PointerType,
+        propagation_control::{PropagationControl, Sealed},
         style::TouchActionStyle,
-        use_continue_propagation,
         use_description::use_description,
         virtual_click::{is_virtual_click, is_virtual_pointer_event},
         ContainsTarget, ElementExt, EventAccessors, EventHandler, EventModifiers, EventTargetExt,
-        Modifiers,
+        Modifiers, Propagation,
     },
 };
 
@@ -123,8 +119,7 @@ pub enum PressEvents {
     Press(PressEvent),
 }
 
-#[derive(Educe)]
-#[educe(Debug)]
+#[derive(Debug)]
 pub struct PressEvent {
     /// The pointer type that triggered the press event.
     pub pointer_type: PointerType,
@@ -147,11 +142,14 @@ pub struct PressEvent {
     /// `None` for pointer/mouse/virtual events.
     pub key: Option<String>,
 
-    /// By default, press events stop propagation to parent elements.
-    /// In cases where a handler decides not to handle a specific event,
-    /// it can call `continue_propagation()` to allow a parent to handle it.
-    #[educe(Debug(ignore))]
-    pub continue_propagation: Arc<dyn Fn() + Send + Sync + 'static>,
+    propagation: PropagationControl,
+}
+
+impl Sealed for PressEvent {}
+impl Propagation for PressEvent {
+    fn propagation_control(&self) -> &PropagationControl {
+        &self.propagation
+    }
 }
 
 #[allow(clippy::struct_excessive_bools)]
@@ -461,7 +459,7 @@ fn fire_press_callback(
     force_propagation: bool,
     is_triggering_event: StoredValue<bool, LocalStorage>,
 ) {
-    let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+    let (propagation, propagation_state) = PropagationControl::new();
     let (x, y) = event.coordinates();
     let key = event.key();
     is_triggering_event.set_value(true);
@@ -472,10 +470,10 @@ fn fire_press_callback(
         x,
         y,
         key,
-        continue_propagation,
+        propagation,
     });
     is_triggering_event.set_value(false);
-    if !force_propagation && !continue_propagation_state.load(Ordering::Acquire) {
+    if !force_propagation && !propagation_state.load(Ordering::Acquire) {
         event.stop_propagation();
     }
 }
@@ -1160,7 +1158,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         };
 
         let e = EventRef::Mouse(&e);
-        let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+        let (propagation, propagation_state) = PropagationControl::new();
         let (x, y) = e.coordinates();
         let key = e.key();
         is_triggering_event.set_value(true);
@@ -1171,10 +1169,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             x,
             y,
             key,
-            continue_propagation,
+            propagation,
         });
         is_triggering_event.set_value(false);
-        if !force_propagation && !continue_propagation_state.load(Ordering::Acquire) {
+        if !force_propagation && !propagation_state.load(Ordering::Acquire) {
             e.stop_propagation();
         }
     };
@@ -1210,7 +1208,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         }
         if let Some(on_press_up) = on_press_up {
             let (x, y) = e.coordinates();
-            let (continue_propagation_state, continue_propagation) = use_continue_propagation();
+            let (propagation, propagation_state) = PropagationControl::new();
             is_triggering_event.set_value(true);
             on_press_up.run(PressEvent {
                 pointer_type: PointerType::from(ev.pointer_type()),
@@ -1219,10 +1217,10 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 x,
                 y,
                 key: None,
-                continue_propagation,
+                propagation,
             });
             is_triggering_event.set_value(false);
-            if !force_propagation && !continue_propagation_state.load(Ordering::Acquire) {
+            if !force_propagation && !propagation_state.load(Ordering::Acquire) {
                 e.stop_propagation();
             }
         }

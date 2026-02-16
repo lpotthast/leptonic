@@ -1,7 +1,4 @@
-use std::sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-};
+use std::sync::atomic::Ordering;
 
 use leptos::{
     ev,
@@ -10,7 +7,13 @@ use leptos::{
 };
 use web_sys::KeyboardEvent;
 
-use crate::{hooks::IntoAttrs, utils::EventHandler};
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        propagation_control::{PropagationControl, Sealed},
+        EventHandler, EventWrapper, Propagation,
+    },
+};
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useKeyboard.ts
 
 // =============================================================================
@@ -22,87 +25,104 @@ use crate::{hooks::IntoAttrs, utils::EventHandler};
 // =============================================================================
 
 /// A keyboard event with additional functionality.
-#[derive(Debug, Clone)]
+///
+/// Wraps a [`KeyboardEvent`] with propagation control following react-aria
+/// semantics: events stop propagation by default; call
+/// [`continue_propagation()`](Self::continue_propagation) to opt in to bubbling.
 pub struct KeyboardEventWrapper {
-    /// The underlying keyboard event.
-    pub event: KeyboardEvent,
-    /// Shared state for propagation control.
-    continue_propagation_state: Arc<AtomicBool>,
+    inner: EventWrapper<KeyboardEvent>,
+}
+
+impl Sealed for KeyboardEventWrapper {}
+impl Propagation for KeyboardEventWrapper {
+    fn propagation_control(&self) -> &PropagationControl {
+        self.inner.propagation_control()
+    }
 }
 
 impl KeyboardEventWrapper {
     /// Create a new keyboard event wrapper.
-    fn new(event: KeyboardEvent) -> (Self, Arc<AtomicBool>) {
-        let state = Arc::new(AtomicBool::new(false));
-        (
-            Self {
-                event,
-                continue_propagation_state: state.clone(),
-            },
-            state,
-        )
+    fn new(event: KeyboardEvent) -> (Self, std::sync::Arc<std::sync::atomic::AtomicBool>) {
+        let (inner, state) = EventWrapper::new(event);
+        (Self { inner }, state)
     }
 
-    /// Call this to allow parent handlers to also handle this event.
-    /// By default, keyboard events stop propagation.
-    pub fn continue_propagation(&self) {
-        self.continue_propagation_state
-            .store(true, Ordering::Release);
+    /// Access the underlying [`KeyboardEvent`].
+    pub fn event(&self) -> &KeyboardEvent {
+        self.inner.event()
     }
 
-    /// Get the key that was pressed.
-    pub fn key(&self) -> String {
-        self.event.key()
-    }
-
-    /// Get the key code.
-    pub fn code(&self) -> String {
-        self.event.code()
-    }
-
-    /// Whether this is a repeat event (key held down).
-    pub fn repeat(&self) -> bool {
-        self.event.repeat()
-    }
-
-    /// Whether the shift key was held.
-    pub fn shift_key(&self) -> bool {
-        self.event.shift_key()
-    }
-
-    /// Whether the ctrl key was held.
-    pub fn ctrl_key(&self) -> bool {
-        self.event.ctrl_key()
-    }
-
-    /// Whether the alt key was held.
-    pub fn alt_key(&self) -> bool {
-        self.event.alt_key()
-    }
-
-    /// Whether the meta key was held.
-    pub fn meta_key(&self) -> bool {
-        self.event.meta_key()
-    }
-
-    /// Prevent the default action.
+    /// Prevent the browser's default action for this event.
     pub fn prevent_default(&self) {
-        self.event.prevent_default();
+        self.inner.prevent_default();
     }
 
-    /// Stop propagation of the event.
-    pub fn stop_propagation(&self) {
-        self.event.stop_propagation();
+    /// Whether `prevent_default()` has been called.
+    pub fn is_default_prevented(&self) -> bool {
+        self.inner.is_default_prevented()
     }
 
     /// Get the event target.
     pub fn target(&self) -> Option<web_sys::EventTarget> {
-        self.event.target()
+        self.inner.target()
     }
 
     /// Get the current target.
     pub fn current_target(&self) -> Option<web_sys::EventTarget> {
-        self.event.current_target()
+        self.inner.current_target()
+    }
+
+    // -- Keyboard-specific accessors ------------------------------------------
+
+    /// Get the key that was pressed.
+    pub fn key(&self) -> String {
+        self.inner.event().key()
+    }
+
+    /// Get the key code.
+    pub fn code(&self) -> String {
+        self.inner.event().code()
+    }
+
+    /// Whether this is a repeat event (key held down).
+    pub fn repeat(&self) -> bool {
+        self.inner.event().repeat()
+    }
+
+    /// Whether the shift key was held.
+    pub fn shift_key(&self) -> bool {
+        self.inner.event().shift_key()
+    }
+
+    /// Whether the ctrl key was held.
+    pub fn ctrl_key(&self) -> bool {
+        self.inner.event().ctrl_key()
+    }
+
+    /// Whether the alt key was held.
+    pub fn alt_key(&self) -> bool {
+        self.inner.event().alt_key()
+    }
+
+    /// Whether the meta key was held.
+    pub fn meta_key(&self) -> bool {
+        self.inner.event().meta_key()
+    }
+}
+
+impl std::fmt::Debug for KeyboardEventWrapper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("KeyboardEventWrapper")
+            .field("inner", &self.inner)
+            .finish()
+    }
+}
+
+impl Clone for KeyboardEventWrapper {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
     }
 }
 
