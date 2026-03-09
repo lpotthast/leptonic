@@ -1,6 +1,6 @@
 use leptos::{attr, attr::Attr};
 
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -26,7 +26,7 @@ pub struct UseTableHeaderRowReturn {
 /// Props from `use_table_header_row` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTableHeaderRowProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_rowindex: &'static str,
 }
 
@@ -43,7 +43,7 @@ impl IntoAttrs for UseTableHeaderRowProps {
 
 /// Attributes for the table header row element.
 pub type UseTableHeaderRowAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaRowindex, &'static str>,
 );
 
@@ -53,7 +53,7 @@ pub fn use_table_header_row(input: UseTableHeaderRowInput) -> UseTableHeaderRowR
 
     UseTableHeaderRowReturn {
         row_props: UseTableHeaderRowProps {
-            role: "row",
+            role: AriaRole::Row,
             aria_rowindex: "1",
         },
     }

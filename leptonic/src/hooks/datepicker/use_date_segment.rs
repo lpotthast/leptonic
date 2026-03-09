@@ -10,7 +10,7 @@ use web_sys::{FocusEvent, KeyboardEvent};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaReadonly},
+        aria::{AriaDisabled, AriaReadonly, AriaRole},
         EventHandler,
     },
 };
@@ -225,7 +225,7 @@ pub struct UseDateSegmentReturn {
 /// Props from `use_date_segment` for the segment element.
 #[derive(Debug)]
 pub struct UseDateSegmentProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
     pub aria_valuenow: Option<String>,
     pub aria_valuemin: Option<String>,
@@ -258,7 +258,7 @@ impl IntoAttrs for UseDateSegmentProps {
 
 /// Attributes for the date segment element.
 pub type UseDateSegmentAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaValuenow, Option<String>>,
     Attr<attr::AriaValuemin, Option<String>>,
@@ -403,9 +403,9 @@ pub fn use_date_segment(input: UseDateSegmentInput) -> UseDateSegmentReturn {
 
     // Role depends on whether segment is editable
     let role = if is_editable {
-        "spinbutton"
+        AriaRole::Spinbutton
     } else {
-        "presentation"
+        AriaRole::Presentation
     };
 
     UseDateSegmentReturn {

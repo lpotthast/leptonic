@@ -21,7 +21,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaSelected},
+        aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::{CapturedElement, ElementCaptureAttr},
         focus::focus_element,
         EventAccessors, EventHandler,
@@ -78,7 +78,7 @@ pub struct UseGridListItemReturn {
 /// Props for the row element of a grid list item.
 #[derive(Clone)]
 pub struct UseGridListItemRowProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
     pub aria_rowindex: String,
     pub aria_selected: Signal<Option<AriaSelected>>,
@@ -115,7 +115,7 @@ impl IntoAttrs for UseGridListItemRowProps {
 
 /// Attributes for the row element of a grid list item.
 pub type UseGridListItemRowAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaRowindex, String>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
@@ -132,7 +132,7 @@ pub type UseGridListItemRowAttrs = (
 /// Props for the gridcell element of a grid list item.
 #[derive(Clone)]
 pub struct UseGridListItemGridCellProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_colindex: &'static str,
     pub element_capture: ElementCaptureAttr,
 }
@@ -151,7 +151,7 @@ impl IntoAttrs for UseGridListItemGridCellProps {
 
 /// Attributes for the gridcell element of a grid list item.
 pub type UseGridListItemGridCellAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaColindex, &'static str>,
     ElementCaptureAttr,
 );
@@ -317,7 +317,7 @@ where
 
     UseGridListItemReturn {
         row_props: UseGridListItemRowProps {
-            role: "row",
+            role: AriaRole::Row,
             tabindex,
             aria_rowindex,
             aria_selected,
@@ -331,7 +331,7 @@ where
             on_mouseenter,
         },
         gridcell_props: UseGridListItemGridCellProps {
-            role: "gridcell",
+            role: AriaRole::Gridcell,
             aria_colindex: "1",
             element_capture: scope_element.attr(),
         },

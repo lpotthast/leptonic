@@ -11,6 +11,7 @@ use web_sys::FocusEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
+        aria::AriaRole,
         element_capture::{CapturedElement, ElementCaptureAttr},
         EventHandler,
     },
@@ -119,7 +120,7 @@ pub struct UseDialogReturn {
 #[derive(Debug)]
 pub struct UseDialogProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
     pub tabindex: &'static str,
@@ -148,7 +149,7 @@ impl IntoAttrs for UseDialogProps {
 /// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseDialogAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::Tabindex, &'static str>,
@@ -264,8 +265,8 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
     };
 
     let role = match dialog_role {
-        DialogRole::Dialog => "dialog",
-        DialogRole::AlertDialog => "alertdialog",
+        DialogRole::Dialog => AriaRole::Dialog,
+        DialogRole::AlertDialog => AriaRole::Alertdialog,
     };
 
     // Track whether we're in the middle of the iOS Safari VoiceOver refocus

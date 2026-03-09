@@ -12,7 +12,10 @@ use crate::{
         focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
     },
-    utils::{aria::AriaDisabled, EventHandler},
+    utils::{
+        aria::{AriaDisabled, AriaRole},
+        EventHandler,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableCell.ts
@@ -79,7 +82,7 @@ pub struct UseTableCellReturn {
 /// Props from `use_table_cell` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTableCellProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_colindex: String,
     pub tabindex: Signal<&'static str>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -112,7 +115,7 @@ impl IntoAttrs for UseTableCellProps {
 
 /// Attributes for the table cell element.
 pub type UseTableCellAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaColindex, String>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -211,7 +214,7 @@ pub fn use_table_cell(input: UseTableCellInput) -> UseTableCellReturn {
 
     UseTableCellReturn {
         cell_props: UseTableCellProps {
-            role: "gridcell",
+            role: AriaRole::Gridcell,
             aria_colindex,
             tabindex,
             aria_disabled,

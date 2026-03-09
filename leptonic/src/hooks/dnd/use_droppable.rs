@@ -10,7 +10,7 @@ use web_sys::DragEvent;
 
 use crate::{
     hooks::{DragItem, DropEffect, IntoAttrs},
-    utils::EventHandler,
+    utils::{aria::AriaRole, EventHandler},
 };
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrop.ts
 
@@ -128,7 +128,7 @@ pub struct UseDroppableReturn {
 #[derive(Debug)]
 pub struct UseDroppableProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_dropeffect: Signal<&'static str>,
     pub on_dragenter: EventHandler<DragEvent>,
     pub on_dragover: EventHandler<DragEvent>,
@@ -155,7 +155,7 @@ impl IntoAttrs for UseDroppableProps {
 /// Attributes for the droppable element.
 pub type UseDroppableAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaDropeffect, Signal<&'static str>>,
     On<ev::dragenter, SharedEventCallback<DragEvent>>,
     On<ev::dragover, SharedEventCallback<DragEvent>>,
@@ -417,7 +417,7 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
     UseDroppableReturn {
         drop_props: UseDroppableProps {
             id: droppable_id.clone(),
-            role: "button",
+            role: AriaRole::Button,
             aria_dropeffect,
             on_dragenter: EventHandler::new(handle_drag_enter),
             on_dragover: EventHandler::new(handle_drag_over),

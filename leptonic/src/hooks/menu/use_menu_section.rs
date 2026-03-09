@@ -1,7 +1,7 @@
 use leptos::{attr, attr::Attr};
 use uuid::Uuid;
 
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuSection.ts
 
@@ -40,7 +40,7 @@ pub struct UseMenuSectionReturn {
 #[derive(Debug, Clone, Copy)]
 pub struct UseMenuSectionItemProps {
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 impl IntoAttrs for UseMenuSectionItemProps {
@@ -52,7 +52,7 @@ impl IntoAttrs for UseMenuSectionItemProps {
 }
 
 /// Attributes for a menu section wrapper item.
-pub type UseMenuSectionItemAttrs = (Attr<attr::Role, &'static str>,);
+pub type UseMenuSectionItemAttrs = (Attr<attr::Role, AriaRole>,);
 
 /// Props for the menu section heading element.
 #[derive(Debug)]
@@ -61,7 +61,7 @@ pub struct UseMenuSectionHeadingProps {
     pub id: Option<String>,
 
     /// The role attribute. Set to "presentation" to hide from assistive technology.
-    pub role: Option<&'static str>,
+    pub role: Option<AriaRole>,
 }
 
 impl IntoAttrs for UseMenuSectionHeadingProps {
@@ -75,14 +75,14 @@ impl IntoAttrs for UseMenuSectionHeadingProps {
 /// Attributes for a menu section heading element.
 pub type UseMenuSectionHeadingAttrs = (
     Attr<attr::Id, Option<String>>,
-    Attr<attr::Role, Option<&'static str>>,
+    Attr<attr::Role, Option<AriaRole>>,
 );
 
 /// Props for the menu section group element.
 #[derive(Debug)]
 pub struct UseMenuSectionGroupProps {
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// An accessibility label for the section.
     pub aria_label: Option<String>,
@@ -105,7 +105,7 @@ impl IntoAttrs for UseMenuSectionGroupProps {
 
 /// Attributes for a menu section group element.
 pub type UseMenuSectionGroupAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
 );
@@ -147,7 +147,7 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
 
     UseMenuSectionReturn {
         item_props: UseMenuSectionItemProps {
-            role: "presentation",
+            role: AriaRole::Presentation,
         },
         heading_props: if has_heading {
             UseMenuSectionHeadingProps {
@@ -155,7 +155,7 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
                 // We hide the heading from assistive technology, using role="presentation",
                 // and only use it as a label for the nested group.
                 id: Some(heading_id.clone()),
-                role: Some("presentation"),
+                role: Some(AriaRole::Presentation),
             }
         } else {
             UseMenuSectionHeadingProps {
@@ -164,7 +164,7 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
             }
         },
         group_props: UseMenuSectionGroupProps {
-            role: "group",
+            role: AriaRole::Group,
             aria_label,
             aria_labelledby: if has_heading { Some(heading_id) } else { None },
         },
@@ -182,10 +182,10 @@ mod tests {
             aria_label: None,
         });
 
-        assert_eq!(result.item_props.role, "presentation");
-        assert_eq!(result.heading_props.role, Some("presentation"));
+        assert_eq!(result.item_props.role, AriaRole::Presentation);
+        assert_eq!(result.heading_props.role, Some(AriaRole::Presentation));
         assert!(result.heading_props.id.is_some());
-        assert_eq!(result.group_props.role, "group");
+        assert_eq!(result.group_props.role, AriaRole::Group);
         assert!(result.group_props.aria_labelledby.is_some());
     }
 
@@ -196,7 +196,7 @@ mod tests {
             aria_label: Some("Actions".to_string()),
         });
 
-        assert_eq!(result.item_props.role, "presentation");
+        assert_eq!(result.item_props.role, AriaRole::Presentation);
         assert!(result.heading_props.id.is_none());
         assert_eq!(result.group_props.aria_label, Some("Actions".to_string()));
         assert!(result.group_props.aria_labelledby.is_none());

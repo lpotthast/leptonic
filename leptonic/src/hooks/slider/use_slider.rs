@@ -59,7 +59,7 @@ use crate::{
         use_move, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
     },
     utils::{
-        aria::{AriaDisabled, AriaLive},
+        aria::{AriaDisabled, AriaLive, AriaRole},
         element_capture::{CapturedElement, ElementCaptureAttr},
         EventAccessors, EventHandler, EventTargetExt,
     },
@@ -112,7 +112,7 @@ pub struct UseSliderReturn {
 
 #[derive(Debug)]
 pub struct UseSliderGroupProps {
-    role: &'static str,
+    role: AriaRole,
     id: String,
     aria_label: Option<&'static str>,
     aria_labelledby: Option<String>,
@@ -135,7 +135,7 @@ impl IntoAttrs for UseSliderGroupProps {
 
 /// Attributes for the slider group element.
 pub type UseSliderGroupAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Id, String>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
@@ -144,7 +144,7 @@ pub type UseSliderGroupAttrs = (
 
 #[derive(Debug)]
 pub struct UseSliderTrackProps {
-    role: &'static str,
+    role: AriaRole,
     style_touch_action: &'static str,
     on_pointerdown: EventHandler<PointerEvent>,
     element_capture: ElementCaptureAttr,
@@ -165,7 +165,7 @@ impl IntoAttrs for UseSliderTrackProps {
 
 /// Attributes for the slider track element.
 pub type UseSliderTrackAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Style<(&'static str, &'static str)>, // touch-action: none
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     ElementCaptureAttr,
@@ -481,7 +481,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
 
     UseSliderReturn {
         group_props: UseSliderGroupProps {
-            role: "group",
+            role: AriaRole::Group,
             id: group_id,
             aria_label,
             aria_labelledby,
@@ -494,7 +494,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             aria_live: AriaLive::Off,
         },
         track_props: UseSliderTrackProps {
-            role: "presentation",
+            role: AriaRole::Presentation,
             style_touch_action: "none",
             on_pointerdown: EventHandler::new(handle_track_pointerdown)
                 .chain(track_move_return.props.on_pointerdown),

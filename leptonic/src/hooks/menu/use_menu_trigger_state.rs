@@ -6,7 +6,18 @@ use crate::hooks::selection::use_selectable_collection::FocusStrategy;
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## OMITTED FEATURES
+// - `useControlledState` / controlled `isOpen` prop: React Aria supports both
+//   controlled (`isOpen` from parent) and uncontrolled (`defaultOpen`) patterns
+//   because React components cannot share mutable state. In Leptos, `Signal<T>`
+//   is `Copy` and inherently shared, so controlled state is unnecessary. The
+//   hook always owns its `WriteSignal` internally and exposes a read-only
+//   `Signal<bool>`. This ensures `on_open_change` always fires and the hook
+//   can enforce invariants. See documentation/hooks-implementation.md for the
+//   full rationale.
+// - Submenu state (`RootMenuTriggerState` with `expandedKeysStack`,
+//   `openSubmenu`, `closeSubmenu`): Deferred until leptonic adds submenu
+//   support.
 //
 // =============================================================================
 
@@ -15,6 +26,9 @@ use crate::hooks::selection::use_selectable_collection::FocusStrategy;
 pub struct UseMenuTriggerStateInput {
     /// Initial open state (defaults to false).
     pub default_open: bool,
+
+    /// Called whenever the open state changes.
+    pub on_open_change: Option<Callback<bool>>,
 }
 
 /// Return value of `use_menu_trigger_state` hook.
@@ -29,8 +43,10 @@ pub struct UseMenuTriggerStateReturn {
     pub open: Callback<Option<FocusStrategy>>,
     /// Close the menu.
     pub close: Callback<()>,
-    /// Toggle the menu with optional focus strategy for opening.
+    /// Toggle the menu with optional focus strategy.
     pub toggle: Callback<Option<FocusStrategy>>,
+    /// Set the open state directly.
+    pub set_open: Callback<bool>,
 }
 
 /// Manages the state for a menu trigger.
@@ -58,29 +74,33 @@ pub struct UseMenuTriggerStateReturn {
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_menu_trigger_state(input: UseMenuTriggerStateInput) -> UseMenuTriggerStateReturn {
-    let UseMenuTriggerStateInput { default_open } = input;
+    let UseMenuTriggerStateInput {
+        default_open,
+        on_open_change,
+    } = input;
 
     let (is_open, set_is_open) = signal(default_open);
     let (focus_strategy, set_focus_strategy) = signal::<Option<FocusStrategy>>(None);
 
+    let update_open = move |value: bool| {
+        set_is_open.set(value);
+        if let Some(cb) = on_open_change {
+            cb.run(value);
+        }
+    };
+
     let open = Callback::new(move |strategy: Option<FocusStrategy>| {
         set_focus_strategy.set(strategy);
-        set_is_open.set(true);
+        update_open(true);
     });
 
     let close = Callback::new(move |_: ()| {
-        set_focus_strategy.set(None);
-        set_is_open.set(false);
+        update_open(false);
     });
 
     let toggle = Callback::new(move |strategy: Option<FocusStrategy>| {
-        if is_open.get_untracked() {
-            set_focus_strategy.set(None);
-            set_is_open.set(false);
-        } else {
-            set_focus_strategy.set(strategy);
-            set_is_open.set(true);
-        }
+        set_focus_strategy.set(strategy);
+        update_open(!is_open.get_untracked());
     });
 
     UseMenuTriggerStateReturn {
@@ -89,5 +109,6 @@ pub fn use_menu_trigger_state(input: UseMenuTriggerStateInput) -> UseMenuTrigger
         open,
         close,
         toggle,
+        set_open: Callback::new(update_open),
     }
 }

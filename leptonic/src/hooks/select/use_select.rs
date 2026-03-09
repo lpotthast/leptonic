@@ -13,7 +13,7 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaRequired},
+        aria::{AriaDisabled, AriaExpanded, AriaRequired, AriaRole},
         EventHandler,
     },
 };
@@ -152,7 +152,7 @@ where
 #[derive(Debug)]
 pub struct UseSelectTriggerProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: &'static str,
     pub aria_haspopup: &'static str,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
@@ -189,7 +189,7 @@ impl IntoAttrs for UseSelectTriggerProps {
 /// Attributes for the select trigger button.
 pub type UseSelectTriggerAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaHaspopup, &'static str>,
     Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
@@ -216,7 +216,7 @@ pub struct UseSelectListBoxProps {
     pub id: String,
 
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-labelledby attribute.
     pub aria_labelledby: String,
@@ -409,7 +409,7 @@ where
     UseSelectReturn {
         trigger_props: UseSelectTriggerProps {
             id: trigger_id.clone(),
-            role: "combobox",
+            role: AriaRole::Combobox,
             tabindex: "0",
             aria_haspopup: "listbox",
             aria_expanded,
@@ -424,7 +424,7 @@ where
         value_props: UseSelectValueProps { id: value_id },
         listbox_props: UseSelectListBoxProps {
             id: listbox_id.clone(),
-            role: "listbox",
+            role: AriaRole::Listbox,
             aria_labelledby: trigger_id.clone(),
             tabindex: "-1",
         },

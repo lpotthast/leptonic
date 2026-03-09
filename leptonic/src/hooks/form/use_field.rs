@@ -3,7 +3,7 @@ use uuid::Uuid;
 
 use crate::{
     hooks::IntoAttrs,
-    utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, AriaRequired},
+    utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, AriaRequired, AriaRole},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useField.ts
@@ -171,7 +171,7 @@ pub struct UseFieldErrorMessageProps {
     pub id: String,
 
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-live attribute.
     pub aria_live: AriaLive,
@@ -193,7 +193,7 @@ impl IntoAttrs for UseFieldErrorMessageProps {
 /// Spread onto the error message element using `<p {..error_message_props.into_attrs()}>`.
 pub type UseFieldErrorMessageAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLive, AriaLive>,
 );
 
@@ -291,7 +291,7 @@ pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
         description_props: UseFieldDescriptionProps { id: description_id },
         error_message_props: UseFieldErrorMessageProps {
             id: error_message_id,
-            role: "alert",
+            role: AriaRole::Alert,
             aria_live: AriaLive::Polite,
         },
     }

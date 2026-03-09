@@ -1,6 +1,6 @@
 use leptos::{attr, attr::Attr};
 
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -23,7 +23,7 @@ pub struct UseTableBodyReturn {
 /// Props from `use_table_body` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTableBodyProps {
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 impl IntoAttrs for UseTableBodyProps {
@@ -35,7 +35,7 @@ impl IntoAttrs for UseTableBodyProps {
 }
 
 /// Attributes for the table body element.
-pub type UseTableBodyAttrs = (Attr<attr::Role, &'static str>,);
+pub type UseTableBodyAttrs = (Attr<attr::Role, AriaRole>,);
 
 /// Provides the behavior and accessibility for a table body group.
 ///
@@ -52,6 +52,8 @@ pub type UseTableBodyAttrs = (Attr<attr::Role, &'static str>,);
 /// ```
 pub fn use_table_body(_input: UseTableBodyInput) -> UseTableBodyReturn {
     UseTableBodyReturn {
-        body_props: UseTableBodyProps { role: "rowgroup" },
+        body_props: UseTableBodyProps {
+            role: AriaRole::Rowgroup,
+        },
     }
 }

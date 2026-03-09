@@ -1057,7 +1057,9 @@ fn NonDismissableModalDemo() -> impl IntoView {
         dialog_id: _,
     } = use_dialog(UseDialogInput {
         title: Some("Non-Dismissable Modal".to_string()),
-        description: Some("This modal cannot be closed by pressing Escape or clicking outside.".to_string()),
+        description: Some(
+            "This modal cannot be closed by pressing Escape or clicking outside.".to_string(),
+        ),
         aria_label: None,
         role: DialogRole::Dialog,
     });

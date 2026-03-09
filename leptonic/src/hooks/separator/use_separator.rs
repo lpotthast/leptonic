@@ -1,6 +1,9 @@
 use leptos::{attr, attr::Attr};
 
-use crate::{hooks::IntoAttrs, utils::aria::AriaOrientation};
+use crate::{
+    hooks::IntoAttrs,
+    utils::aria::{AriaOrientation, AriaRole},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/separator/src/useSeparator.ts
 
@@ -71,7 +74,7 @@ pub struct UseSeparatorReturn {
 /// Props from `use_separator` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseSeparatorProps {
-    pub role: Option<&'static str>,
+    pub role: Option<AriaRole>,
     pub aria_orientation: Option<AriaOrientation>,
 }
 
@@ -88,7 +91,7 @@ impl IntoAttrs for UseSeparatorProps {
 
 /// Attributes for the separator element.
 pub type UseSeparatorAttrs = (
-    Attr<attr::Role, Option<&'static str>>,
+    Attr<attr::Role, Option<AriaRole>>,
     Attr<attr::AriaOrientation, Option<AriaOrientation>>,
 );
 
@@ -118,9 +121,10 @@ pub fn use_separator(input: UseSeparatorInput) -> UseSeparatorReturn {
     // Other elements need role="separator"
     let (role, aria_orientation) = match element_type {
         SeparatorElementType::Hr => (None, None),
-        SeparatorElementType::Div | SeparatorElementType::Span => {
-            (Some("separator"), Some(AriaOrientation::from(orientation)))
-        }
+        SeparatorElementType::Div | SeparatorElementType::Span => (
+            Some(AriaRole::Separator),
+            Some(AriaOrientation::from(orientation)),
+        ),
     };
 
     UseSeparatorReturn {

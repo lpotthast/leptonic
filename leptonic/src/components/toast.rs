@@ -173,7 +173,6 @@ pub enum ToastVerticalPosition {
 }
 
 #[component]
-#[allow(clippy::needless_pass_by_value)]
 pub fn Toast(toast: Toast) -> impl IntoView {
     let manually_closable = match toast.timeout {
         ToastTimeout::None => true,

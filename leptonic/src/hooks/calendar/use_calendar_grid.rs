@@ -11,7 +11,7 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaReadonly},
+        aria::{AriaDisabled, AriaReadonly, AriaRole},
         time::Week,
         EventHandler,
     },
@@ -85,7 +85,7 @@ pub struct UseCalendarGridReturn {
 #[derive(Debug)]
 pub struct UseCalendarGridProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_readonly: Signal<Option<AriaReadonly>>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -108,7 +108,7 @@ impl IntoAttrs for UseCalendarGridProps {
 /// Attributes for the calendar grid element.
 pub type UseCalendarGridAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaReadonly, Signal<Option<AriaReadonly>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -118,7 +118,7 @@ pub type UseCalendarGridAttrs = (
 #[derive(Debug)]
 pub struct UseCalendarGridHeaderProps {
     /// The role for the header row.
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 /// Provides the behavior and accessibility for a calendar grid.
@@ -207,12 +207,14 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
     UseCalendarGridReturn {
         grid_props: UseCalendarGridProps {
             id: grid_id.clone(),
-            role: "grid",
+            role: AriaRole::Grid,
             aria_disabled,
             aria_readonly,
             on_keydown: EventHandler::new(handle_keydown),
         },
-        header_props: UseCalendarGridHeaderProps { role: "row" },
+        header_props: UseCalendarGridHeaderProps {
+            role: AriaRole::Row,
+        },
         weekday_labels,
         grid_id,
     }

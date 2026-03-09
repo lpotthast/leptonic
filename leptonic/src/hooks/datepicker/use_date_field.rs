@@ -12,7 +12,7 @@ use super::use_date_segment::{DateSegment, DateSegmentType};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaRequired},
+        aria::{AriaDisabled, AriaRequired, AriaRole},
         time::whole_days_in,
         EventHandler,
     },
@@ -134,7 +134,7 @@ pub struct UseDateFieldReturn {
 #[derive(Debug)]
 pub struct UseDateFieldProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -161,7 +161,7 @@ impl IntoAttrs for UseDateFieldProps {
 /// Attributes for the date field container element.
 pub type UseDateFieldAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -189,7 +189,7 @@ pub struct UseDateFieldErrorProps {
     /// The id of the error message element.
     pub id: String,
     /// The role for the error message.
-    pub role: &'static str,
+    pub role: AriaRole,
     /// The aria-live attribute.
     pub aria_live: &'static str,
 }
@@ -534,7 +534,7 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
     UseDateFieldReturn {
         field_props: UseDateFieldProps {
             id: field_id.clone(),
-            role: "group",
+            role: AriaRole::Group,
             aria_labelledby,
             aria_describedby,
             aria_disabled,
@@ -545,7 +545,7 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
         description_props: UseDateFieldDescriptionProps { id: description_id },
         error_props: UseDateFieldErrorProps {
             id: error_id,
-            role: "alert",
+            role: AriaRole::Alert,
             aria_live: "polite",
         },
         segments,

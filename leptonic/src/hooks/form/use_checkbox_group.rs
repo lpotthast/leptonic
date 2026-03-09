@@ -6,7 +6,7 @@ use uuid::Uuid;
 use super::use_field::ValidationState;
 use crate::{
     hooks::IntoAttrs,
-    utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired},
+    utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired, AriaRole},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckboxGroup.ts
@@ -94,7 +94,7 @@ where
 #[derive(Debug)]
 pub struct UseCheckboxGroupProps {
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-labelledby attribute.
     pub aria_labelledby: Option<String>,
@@ -134,7 +134,7 @@ impl IntoAttrs for UseCheckboxGroupProps {
 /// Attributes for the checkbox group container.
 /// Spread onto the group element using `<fieldset {..group_props.into_attrs()}>`.
 pub type UseCheckboxGroupAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::AriaInvalid, Option<AriaInvalid>>,
@@ -314,7 +314,7 @@ where
 
     UseCheckboxGroupReturn {
         group_props: UseCheckboxGroupProps {
-            role: "group",
+            role: AriaRole::Group,
             aria_labelledby,
             aria_describedby,
             aria_invalid: (validation_state == ValidationState::Invalid)

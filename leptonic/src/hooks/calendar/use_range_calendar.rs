@@ -12,7 +12,7 @@ use super::use_calendar_state::create_weeks;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::AriaDisabled,
+        aria::{AriaDisabled, AriaRole},
         time::{start_of_next_month, start_of_previous_month, Day, Week},
         EventHandler,
     },
@@ -158,7 +158,7 @@ pub struct UseRangeCalendarReturn {
 #[derive(Debug)]
 pub struct UseRangeCalendarProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_label: &'static str,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -181,7 +181,7 @@ impl IntoAttrs for UseRangeCalendarProps {
 /// Attributes for the range calendar container.
 pub type UseRangeCalendarAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, &'static str>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -335,7 +335,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
     UseRangeCalendarReturn {
         calendar_props: UseRangeCalendarProps {
             id: calendar_id.clone(),
-            role: "application",
+            role: AriaRole::Application,
             aria_label: "Date range picker",
             aria_disabled,
             on_keydown: EventHandler::new(handle_keydown),

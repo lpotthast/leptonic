@@ -1,7 +1,10 @@
 use leptos::{attr, attr::Attr, prelude::*};
 use uuid::Uuid;
 
-use crate::{hooks::IntoAttrs, utils::math::percentage_in_range};
+use crate::{
+    hooks::IntoAttrs,
+    utils::{aria::AriaRole, math::percentage_in_range},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/progress/src/useProgressBar.ts
 
@@ -73,7 +76,7 @@ pub struct UseProgressBarReturn {
 #[derive(Debug)]
 pub struct UseProgressBarProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_valuenow: Signal<Option<String>>,
     pub aria_valuemin: String,
     pub aria_valuemax: String,
@@ -100,7 +103,7 @@ impl IntoAttrs for UseProgressBarProps {
 /// Attributes for the progress bar container element.
 pub type UseProgressBarAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaValuenow, Signal<Option<String>>>,
     Attr<attr::AriaValuemin, String>,
     Attr<attr::AriaValuemax, String>,
@@ -208,7 +211,7 @@ pub fn use_progress_bar(input: UseProgressBarInput) -> UseProgressBarReturn {
     UseProgressBarReturn {
         progress_props: UseProgressBarProps {
             id: progress_id.clone(),
-            role: "progressbar",
+            role: AriaRole::Progressbar,
             aria_valuenow,
             aria_valuemin: min_value.to_string(),
             aria_valuemax: max_value.to_string(),

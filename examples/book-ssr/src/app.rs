@@ -33,10 +33,8 @@ use crate::{
             },
             doc_layout::DocLayout,
             getting_started::{
-                changelog::PageChangelog,
-                event_propagation::PageEventPropagation,
-                installation::PageInstallation, overview::PageOverview,
-                themes::PageThemes,
+                changelog::PageChangelog, event_propagation::PageEventPropagation,
+                installation::PageInstallation, overview::PageOverview, themes::PageThemes,
             },
             hooks::{
                 anchor_link::PageUseAnchorLink, breadcrumbs::PageUseBreadcrumbs,
@@ -49,8 +47,7 @@ use crate::{
                 interact_outside::PageUseInteractOutside, keyboard::PageUseKeyboard,
                 label::PageUseLabel, link::PageUseLink, listbox::PageUseListbox,
                 menu::PageUseMenuHook, meter::PageUseMeter, modal::PageUseModalHook,
-                overlay::PageUseOverlay,
-                popover::PageUsePopoverHook, press::PageUsePress,
+                overlay::PageUseOverlay, popover::PageUsePopoverHook, press::PageUsePress,
                 prevent_scroll::PageUsePreventScroll, progress::PageUseProgressBar,
                 r#move::PageUseMove, radio::PageUseRadioHook, scroll_wheel::PageUseScrollWheel,
                 select::PageUseSelectHook, selection::PageUseSelection,

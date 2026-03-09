@@ -19,7 +19,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaInvalid, AriaLive, AriaRequired},
+        aria::{AriaInvalid, AriaLive, AriaRequired, AriaRole},
         EventAccessors, EventHandler,
     },
 };
@@ -177,7 +177,7 @@ pub struct UseNumberFieldReturn {
 pub struct UseNumberFieldInputProps {
     pub id: String,
     pub r#type: &'static str,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub name: Option<&'static str>,
     pub placeholder: Option<&'static str>,
     pub disabled: Signal<bool>,
@@ -239,7 +239,7 @@ impl IntoAttrs for UseNumberFieldInputProps {
 pub type UseNumberFieldInputAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Type, &'static str>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Name, Option<&'static str>>,
     Attr<attr::Placeholder, Option<&'static str>>,
     Attr<attr::Disabled, Signal<bool>>,
@@ -346,7 +346,7 @@ pub struct UseNumberFieldErrorProps {
     pub id: String,
 
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-live attribute.
     pub aria_live: AriaLive,
@@ -368,7 +368,7 @@ impl IntoAttrs for UseNumberFieldErrorProps {
 /// Spread onto the error message element using `<p {..error_props.into_attrs()}>`.
 pub type UseNumberFieldErrorAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLive, AriaLive>,
 );
 
@@ -628,7 +628,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         input_props: UseNumberFieldInputProps {
             id: input_id.clone(),
             r#type: "text",
-            role: "spinbutton",
+            role: AriaRole::Spinbutton,
             name,
             placeholder,
             disabled: is_disabled,
@@ -672,7 +672,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         description_props: UseNumberFieldDescriptionProps { id: description_id },
         error_props: UseNumberFieldErrorProps {
             id: error_id,
-            role: "alert",
+            role: AriaRole::Alert,
             aria_live: AriaLive::Polite,
         },
         display_value,

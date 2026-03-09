@@ -12,7 +12,7 @@ use crate::{
         IntoAttrs, MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps,
     },
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaHasPopup},
+        aria::{AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
         MergeWith,
     },
 };
@@ -67,7 +67,7 @@ pub struct MergedButtonMenuTriggerProps {
     /// Unique identifier for the trigger element (from menu trigger).
     pub id: String,
     /// The role of the element ("button").
-    pub role: &'static str,
+    pub role: AriaRole,
     /// The tabindex of the element.
     pub tabindex: Signal<Option<&'static str>>,
     /// Whether the element is disabled.
@@ -109,7 +109,7 @@ impl IntoAttrs for MergedButtonMenuTriggerProps {
 pub type MergedButtonMenuTriggerAttrs = (
     (
         Attr<attr::Id, String>,
-        Attr<attr::Role, &'static str>,
+        Attr<attr::Role, AriaRole>,
         Attr<attr::Tabindex, Signal<Option<&'static str>>>,
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::AriaHaspopup, Option<AriaHasPopup>>,

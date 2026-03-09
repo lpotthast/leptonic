@@ -13,7 +13,7 @@ use crate::{
         UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn,
     },
     utils::{
-        aria::{AriaCurrent, AriaDisabled},
+        aria::{AriaCurrent, AriaDisabled, AriaRole},
         ElementCaptureAttr, MergeWith,
     },
 };
@@ -107,7 +107,7 @@ pub struct UseLinkProps {
     pub href: Option<String>,
     pub target: Option<LinkTarget>,
     pub rel: Option<String>,
-    pub role: Option<&'static str>,
+    pub role: Option<AriaRole>,
     pub aria_current: Option<AriaCurrent>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub merged: MergedFocusablePressFocusRingProps,
@@ -137,7 +137,7 @@ pub type UseLinkAttrs = (
         Attr<attr::Href, Option<String>>,
         Attr<attr::Target, Option<Oco<'static, str>>>,
         Attr<attr::Rel, Option<String>>,
-        Attr<attr::Role, Option<&'static str>>,
+        Attr<attr::Role, Option<AriaRole>>,
         Attr<attr::AriaCurrent, Option<AriaCurrent>>,
         Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     ),
@@ -184,7 +184,7 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
     // Non-anchor elements need role="link".
     let role = match element_type {
         LinkElementType::Anchor => None,
-        LinkElementType::Span | LinkElementType::Button => Some("link"),
+        LinkElementType::Span | LinkElementType::Button => Some(AriaRole::Link),
     };
 
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));

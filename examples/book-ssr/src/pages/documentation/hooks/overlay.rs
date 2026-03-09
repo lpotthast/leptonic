@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use indoc::indoc;
 use leptonic::{
     components::prelude::*,
@@ -8,9 +6,10 @@ use leptonic::{
     utils::{
         aria::{AriaExpanded, AriaHasPopup},
         locale::WritingDirection,
+        CapturedElement,
     },
 };
-use leptos::{html, portal::Portal, prelude::*};
+use leptos::{portal::Portal, prelude::*};
 
 use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
 
@@ -131,8 +130,9 @@ pub fn PageUseOverlay() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    let trigger_el: NodeRef<html::Div> = NodeRef::new();
-                    let overlay_el: NodeRef<html::Div> = NodeRef::new();
+                    use leptonic::utils::CapturedElement;
+
+                    let target_element = CapturedElement::new();
                     let (is_open, set_is_open) = signal(false);
 
                     // 1. Dismiss behavior + overlay stacking
@@ -155,10 +155,10 @@ pub fn PageUseOverlay() -> impl IntoView {
                         });
 
                     // 3. CSS positioning relative to the trigger
+                    //    The overlay element is captured internally by use_overlay_position.
                     let UseOverlayPositionReturn { props: pos_props, .. } =
                         use_overlay_position(UseOverlayPositionInput {
-                            overlay: overlay_el,
-                            target: trigger_el,
+                            target: target_element,
                             placement_x: Signal::derive(|| PlacementX::Center),
                             placement_y: Signal::derive(|| PlacementY::Below),
                             writing_direction: Signal::derive(|| WritingDirection::Ltr),
@@ -168,11 +168,12 @@ pub fn PageUseOverlay() -> impl IntoView {
                             should_flip: true.into(),
                             max_height: None,
                             is_open: is_open.into(),
-                            phantom_data: PhantomData,
                         });
 
+                    let target_capture = target_element.attr();
+
                     view! {
-                        <div {..trigger_props.into_attrs()} node_ref=trigger_el>
+                        <div {..trigger_props.into_attrs()} {..target_capture}>
                             "Trigger"
                         </div>
 
@@ -181,7 +182,6 @@ pub fn PageUseOverlay() -> impl IntoView {
                                 <div
                                     {..overlay_props.into_attrs()}
                                     {..pos_props.into_attrs()}
-                                    node_ref=overlay_el
                                 >
                                     "Positioned overlay content"
                                 </div>
@@ -391,16 +391,10 @@ pub fn PageUseOverlay() -> impl IntoView {
                     </TableHeader>
                     <TableBody>
                         <TableRow>
-                            <TableCell><code>"overlay"</code></TableCell>
-                            <TableCell><code>"Overlay"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Element ref for the overlay."</TableCell>
-                        </TableRow>
-                        <TableRow>
                             <TableCell><code>"target"</code></TableCell>
-                            <TableCell><code>"Target"</code></TableCell>
+                            <TableCell><code>"CapturedElement"</code></TableCell>
                             <TableCell>"-"</TableCell>
-                            <TableCell>"Element ref for the positioning target."</TableCell>
+                            <TableCell>"Captured element for the positioning target. The overlay element is captured internally via the returned props."</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><code>"placement_x"</code></TableCell>
@@ -649,8 +643,7 @@ fn PositioningDemo() -> impl IntoView {
     let (selected_placement_x, set_selected_placement_x) = signal(PlacementX::Right);
     let (selected_placement_y, set_selected_placement_y) = signal(PlacementY::Above);
 
-    let trigger_el: NodeRef<html::Div> = NodeRef::new();
-    let overlay_el: NodeRef<html::Div> = NodeRef::new();
+    let target_element = CapturedElement::new();
 
     let (is_open, set_is_open) = signal(false);
 
@@ -682,8 +675,7 @@ fn PositioningDemo() -> impl IntoView {
         resolved_placement_x: _,
         resolved_placement_y: _,
     } = use_overlay_position(UseOverlayPositionInput {
-        overlay: overlay_el,
-        target: trigger_el,
+        target: target_element,
         placement_y: selected_placement_y.into(),
         placement_x: selected_placement_x.into(),
         writing_direction: WritingDirection::Ltr.into(),
@@ -693,9 +685,9 @@ fn PositioningDemo() -> impl IntoView {
         should_flip: true.into(),
         max_height: None,
         is_open: is_open.into(),
-        phantom_data: PhantomData,
     });
     let overlay_pos_attrs = StoredValue::new(overlay_pos_props.into_attrs());
+    let target_capture = target_element.attr();
 
     let UseButtonReturn {
         props: btn_props,
@@ -844,7 +836,7 @@ fn PositioningDemo() -> impl IntoView {
             <div
                 {..trigger_attrs.get_value()}
                 {..btn_attrs.get_value()}
-                node_ref=trigger_el
+                {..target_capture}
                 style="
                     display: inline-flex;
                     border: 0.1em solid green;
@@ -865,7 +857,6 @@ fn PositioningDemo() -> impl IntoView {
                 <div
                     {..overlay_attrs.get_value()}
                     {..overlay_pos_attrs.get_value()}
-                    node_ref=overlay_el
                     style="
                         background-color: #0009;
                         color: white;

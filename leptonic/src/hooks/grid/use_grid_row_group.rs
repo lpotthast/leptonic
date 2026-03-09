@@ -1,6 +1,6 @@
 use leptos::{attr, attr::Attr};
 
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridRowGroup.ts
 
@@ -25,7 +25,7 @@ pub struct UseGridRowGroupReturn {
 /// Props from `use_grid_row_group` that can be extracted and merged programmatically.
 #[derive(Debug, Clone, Copy)]
 pub struct UseGridRowGroupProps {
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 impl IntoAttrs for UseGridRowGroupProps {
@@ -37,7 +37,7 @@ impl IntoAttrs for UseGridRowGroupProps {
 }
 
 /// Attributes for a grid row group.
-pub type UseGridRowGroupAttrs = Attr<attr::Role, &'static str>;
+pub type UseGridRowGroupAttrs = Attr<attr::Role, AriaRole>;
 
 /// Provides the behavior and accessibility for a grid row group.
 ///
@@ -58,6 +58,8 @@ pub type UseGridRowGroupAttrs = Attr<attr::Role, &'static str>;
 #[must_use]
 pub fn use_grid_row_group() -> UseGridRowGroupReturn {
     UseGridRowGroupReturn {
-        props: UseGridRowGroupProps { role: "rowgroup" },
+        props: UseGridRowGroupProps {
+            role: AriaRole::Rowgroup,
+        },
     }
 }

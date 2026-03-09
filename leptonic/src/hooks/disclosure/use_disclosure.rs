@@ -17,7 +17,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaHidden},
+        aria::{AriaDisabled, AriaExpanded, AriaHidden, AriaRole},
         EventHandler,
     },
 };
@@ -135,7 +135,7 @@ pub type UseDisclosureTriggerAttrs = (
 #[derive(Debug)]
 pub struct UseDisclosureContentProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_labelledby: String,
     pub aria_hidden: Signal<Option<AriaHidden>>,
 }
@@ -156,7 +156,7 @@ impl IntoAttrs for UseDisclosureContentProps {
 /// Attributes for the disclosure content panel.
 pub type UseDisclosureContentAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, String>,
     Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
 );
@@ -264,7 +264,7 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
         },
         content_props: UseDisclosureContentProps {
             id: content_id.clone(),
-            role: "region",
+            role: AriaRole::Region,
             aria_labelledby: trigger_id.clone(),
             aria_hidden,
         },

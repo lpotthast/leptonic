@@ -90,9 +90,7 @@ fn compute_top(target: &Rect, overlay_height: f64, placement_y: PlacementY) -> f
     match placement_y {
         PlacementY::Above => target.top - overlay_height,
         PlacementY::Top => target.top,
-        PlacementY::Center => {
-            target.top + (target.height / 2.0) - (overlay_height / 2.0)
-        }
+        PlacementY::Center => target.top + (target.height / 2.0) - (overlay_height / 2.0),
         PlacementY::Bottom => target.bottom() - overlay_height,
         PlacementY::Below => target.bottom(),
     }
@@ -103,9 +101,7 @@ fn compute_left(target: &Rect, overlay_width: f64, placement_x: PhysicalPlacemen
     match placement_x {
         PhysicalPlacementX::OuterLeft => target.left - overlay_width,
         PhysicalPlacementX::Left => target.left,
-        PhysicalPlacementX::Center => {
-            target.left + (target.width / 2.0) - (overlay_width / 2.0)
-        }
+        PhysicalPlacementX::Center => target.left + (target.width / 2.0) - (overlay_width / 2.0),
         PhysicalPlacementX::Right => target.right() - overlay_width,
         PhysicalPlacementX::OuterRight => target.right(),
     }
@@ -144,12 +140,7 @@ fn apply_offset(
 }
 
 /// Apply cross-axis offset.
-fn apply_cross_offset(
-    top: &mut f64,
-    left: &mut f64,
-    cross_offset: f64,
-    y_main: Option<bool>,
-) {
+fn apply_cross_offset(top: &mut f64, left: &mut f64, cross_offset: f64, y_main: Option<bool>) {
     match y_main {
         Some(true) => {
             // Y is main axis → cross axis is X
@@ -301,24 +292,36 @@ fn apply_boundary_nudging(
     match y_main {
         Some(true) => {
             *left += get_delta(
-                *left, *left + overlay_width,
-                boundary.left, boundary.right(), container_padding,
+                *left,
+                *left + overlay_width,
+                boundary.left,
+                boundary.right(),
+                container_padding,
             );
         }
         Some(false) => {
             *top += get_delta(
-                *top, *top + overlay_height,
-                boundary.top, boundary.bottom(), container_padding,
+                *top,
+                *top + overlay_height,
+                boundary.top,
+                boundary.bottom(),
+                container_padding,
             );
         }
         None => {
             *left += get_delta(
-                *left, *left + overlay_width,
-                boundary.left, boundary.right(), container_padding,
+                *left,
+                *left + overlay_width,
+                boundary.left,
+                boundary.right(),
+                container_padding,
             );
             *top += get_delta(
-                *top, *top + overlay_height,
-                boundary.top, boundary.bottom(), container_padding,
+                *top,
+                *top + overlay_height,
+                boundary.top,
+                boundary.bottom(),
+                container_padding,
             );
         }
     }
@@ -337,24 +340,43 @@ pub(crate) fn calculate_position(input: &CalculatePositionInput) -> PositionResu
 
     if input.should_flip {
         (placement_x, placement_y) = apply_flip(
-            &input.target, &input.overlay, &input.boundary,
-            placement_x, placement_y, input.container_padding,
+            &input.target,
+            &input.overlay,
+            &input.boundary,
+            placement_x,
+            placement_y,
+            input.container_padding,
         );
     }
 
     let mut top = compute_top(&input.target, input.overlay.height, placement_y);
     let mut left = compute_left(&input.target, input.overlay.width, placement_x);
 
-    apply_offset(&mut top, &mut left, input.offset, placement_x, placement_y, y_main);
+    apply_offset(
+        &mut top,
+        &mut left,
+        input.offset,
+        placement_x,
+        placement_y,
+        y_main,
+    );
     apply_cross_offset(&mut top, &mut left, input.cross_offset, y_main);
     apply_boundary_nudging(
-        &mut top, &mut left,
-        input.overlay.width, input.overlay.height,
-        &input.boundary, input.container_padding, y_main,
+        &mut top,
+        &mut left,
+        input.overlay.width,
+        input.overlay.height,
+        &input.boundary,
+        input.container_padding,
+        y_main,
     );
 
     let mut max_height = compute_max_height(
-        top, input.overlay.height, &input.boundary, input.container_padding, placement_y,
+        top,
+        input.overlay.height,
+        &input.boundary,
+        input.container_padding,
+        placement_y,
     );
     if let Some(user_mh) = input.max_height {
         max_height = max_height.min(user_mh);
@@ -364,19 +386,35 @@ pub(crate) fn calculate_position(input: &CalculatePositionInput) -> PositionResu
     // Two-pass: if overlay is taller than max_height, recompute position with constrained height.
     if input.overlay.height > max_height {
         top = compute_top(&input.target, max_height, placement_y);
-        apply_offset(&mut top, &mut left, input.offset, placement_x, placement_y, y_main);
+        apply_offset(
+            &mut top,
+            &mut left,
+            input.offset,
+            placement_x,
+            placement_y,
+            y_main,
+        );
         if y_main == Some(false) {
             top += input.cross_offset;
         }
         if y_main == Some(false) {
             top += get_delta(
-                top, top + max_height,
-                input.boundary.top, input.boundary.bottom(), input.container_padding,
+                top,
+                top + max_height,
+                input.boundary.top,
+                input.boundary.bottom(),
+                input.container_padding,
             );
         }
     }
 
-    PositionResult { top, left, max_height, placement_x, placement_y }
+    PositionResult {
+        top,
+        left,
+        max_height,
+        placement_x,
+        placement_y,
+    }
 }
 
 #[cfg(test)]

@@ -8,7 +8,10 @@ use leptos::{
 
 use crate::{
     hooks::IntoAttrs,
-    utils::{aria::AriaDisabled, EventHandler},
+    utils::{
+        aria::{AriaDisabled, AriaRole},
+        EventHandler,
+    },
 };
 
 // =============================================================================
@@ -47,7 +50,7 @@ pub struct UseTableCheckboxCellReturn {
 /// Props from `use_table_checkbox_cell` for the cell element.
 #[derive(Debug)]
 pub struct UseTableCheckboxCellProps {
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 impl IntoAttrs for UseTableCheckboxCellProps {
@@ -83,7 +86,7 @@ impl IntoAttrs for UseTableCheckboxProps {
 }
 
 /// Attributes for the checkbox cell.
-pub type UseTableCheckboxCellAttrs = (Attr<attr::Role, &'static str>,);
+pub type UseTableCheckboxCellAttrs = (Attr<attr::Role, AriaRole>,);
 
 /// Attributes for the checkbox input.
 pub type UseTableCheckboxAttrs = (
@@ -132,7 +135,9 @@ pub fn use_table_checkbox_cell(input: UseTableCheckboxCellInput) -> UseTableChec
     };
 
     UseTableCheckboxCellReturn {
-        cell_props: UseTableCheckboxCellProps { role: "gridcell" },
+        cell_props: UseTableCheckboxCellProps {
+            role: AriaRole::Gridcell,
+        },
         checkbox_props: UseTableCheckboxProps {
             r#type: "checkbox",
             checked: is_selected,

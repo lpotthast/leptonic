@@ -25,7 +25,7 @@ use crate::{
         UseMoveReturn, ValidationState,
     },
     utils::{
-        aria::{AriaDisabled, AriaHidden, AriaInvalid, AriaOrientation, AriaRequired},
+        aria::{AriaDisabled, AriaHidden, AriaInvalid, AriaOrientation, AriaRequired, AriaRole},
         focus::focus_element,
         math::percentage_in_range,
         CapturedElement, EventAccessors, EventHandler,
@@ -125,7 +125,7 @@ pub struct UseSliderThumbReturn {
 #[derive(Debug)]
 pub struct UseSliderThumbProps {
     id: String,
-    role: &'static str,
+    role: AriaRole,
     tabindex: &'static str,
     aria_label: Option<Cow<'static, str>>,
     aria_labelledby: Option<&'static str>,
@@ -188,7 +188,7 @@ impl IntoAttrs for UseSliderThumbProps {
 /// Attributes for the slider thumb element.
 pub type UseSliderThumbAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaLabel, Option<Cow<'static, str>>>,
     Attr<attr::AriaLabelledby, Option<&'static str>>,
@@ -361,7 +361,9 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
 
     // Use use_move hook for thumb dragging. This handles all the pointer event
     // management (pointerdown, pointermove, pointerup, pointercancel) automatically.
-    let UseMoveReturn { props: move_props, .. } = use_move(UseMoveInput {
+    let UseMoveReturn {
+        props: move_props, ..
+    } = use_move(UseMoveInput {
         disabled: is_disabled,
         axis: Signal::derive(move || match orientation.get() {
             SliderOrientation::Horizontal => Some(MoveAxis::Horizontal),
@@ -426,7 +428,11 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     // Destructure move_props to catch future type-changes / extensions early.
     // Sliders have their own keyboard handling, so on_keydown from use_move is ignored.
     // element_capture is harmless when unused.
-    let UseMoveProps { on_pointerdown, on_keydown: _, element_capture: _ } = move_props;
+    let UseMoveProps {
+        on_pointerdown,
+        on_keydown: _,
+        element_capture: _,
+    } = move_props;
 
     // Focus the thumb element explicitly. use_move calls prevent_default()
     // on pointerdown which suppresses the browser's default focus behavior.
@@ -550,7 +556,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
     UseSliderThumbReturn {
         thumb_props: UseSliderThumbProps {
             id: thumb_id.clone(),
-            role: "slider",
+            role: AriaRole::Slider,
             tabindex: "0",
             aria_label,
             aria_labelledby,

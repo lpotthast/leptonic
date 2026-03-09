@@ -229,23 +229,20 @@ fn ConstrainedBasicExample() -> impl IntoView {
         axis: Signal::derive(|| None),
         on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
             set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Start: pointer={}", e.pointer_type
-                )));
+                events.push_overwrite(Oco::Owned(format!("Start: pointer={}", e.pointer_type)));
             });
         })),
         on_move: Some(Callback::new(move |e: MoveEvent| {
             set_events.update(move |events| {
                 events.push_overwrite(Oco::Owned(format!(
-                    "Move: delta=({:.1}, {:.1})", e.delta_x, e.delta_y
+                    "Move: delta=({:.1}, {:.1})",
+                    e.delta_x, e.delta_y
                 )));
             });
         })),
         on_move_end: Some(Callback::new(move |e: MoveEndEvent| {
             set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "End: pointer={}", e.pointer_type
-                )));
+                events.push_overwrite(Oco::Owned(format!("End: pointer={}", e.pointer_type)));
             });
         })),
         constraint: Some(MoveConstraint {
@@ -454,9 +451,7 @@ fn AxisExample() -> impl IntoView {
 #[component]
 fn ContainerClickExample() -> impl IntoView {
     let UseMoveReturn {
-        props,
-        constraint,
-        ..
+        props, constraint, ..
     } = use_move(UseMoveInput {
         disabled: false.into(),
         axis: Signal::derive(|| None),
@@ -639,9 +634,7 @@ fn ConstrainCenterExample() -> impl IntoView {
 #[component]
 fn ProgrammaticExample() -> impl IntoView {
     let UseMoveReturn {
-        props,
-        constraint,
-        ..
+        props, constraint, ..
     } = use_move(UseMoveInput {
         disabled: false.into(),
         axis: Signal::derive(|| None),

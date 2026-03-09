@@ -17,7 +17,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaChecked, AriaDisabled, AriaHidden, AriaInvalid},
+        aria::{AriaChecked, AriaDisabled, AriaHidden, AriaInvalid, AriaRole},
         EventHandler,
     },
 };
@@ -96,7 +96,7 @@ pub struct UseSwitchReturn {
 /// Props from `use_switch` for the switch element that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseSwitchProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_checked: Signal<AriaChecked>,
     pub aria_label: Option<&'static str>,
     pub aria_invalid: Option<AriaInvalid>,
@@ -135,7 +135,7 @@ impl IntoAttrs for UseSwitchProps {
 
 /// These attributes must be spread onto the switch element using the spread syntax `<div {..attrs}/>`.
 pub type UseSwitchAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaChecked, Signal<AriaChecked>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaInvalid, Option<AriaInvalid>>,
@@ -287,7 +287,7 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
 
     UseSwitchReturn {
         switch_props: UseSwitchProps {
-            role: "switch",
+            role: AriaRole::Switch,
             aria_checked,
             aria_label,
             aria_invalid,

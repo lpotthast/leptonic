@@ -19,7 +19,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaInvalid, AriaLive, AriaRequired},
+        aria::{AriaInvalid, AriaLive, AriaRequired, AriaRole},
         EventAccessors, EventHandler,
     },
 };
@@ -276,7 +276,7 @@ pub struct UseTextFieldErrorProps {
     pub id: String,
 
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-live attribute.
     pub aria_live: AriaLive,
@@ -297,7 +297,7 @@ impl IntoAttrs for UseTextFieldErrorProps {
 /// Attributes for the text field error message element.
 pub type UseTextFieldErrorAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLive, AriaLive>,
 );
 
@@ -451,7 +451,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
         description_props: UseTextFieldDescriptionProps { id: description_id },
         error_props: UseTextFieldErrorProps {
             id: error_id,
-            role: "alert",
+            role: AriaRole::Alert,
             aria_live: AriaLive::Polite,
         },
         is_focus_visible,

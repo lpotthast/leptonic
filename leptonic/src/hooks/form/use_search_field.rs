@@ -18,7 +18,10 @@ use crate::{
         focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
     },
-    utils::{aria::AriaInvalid, EventAccessors, EventHandler},
+    utils::{
+        aria::{AriaInvalid, AriaRole},
+        EventAccessors, EventHandler,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/searchfield/src/useSearchField.ts
@@ -132,7 +135,7 @@ pub struct UseSearchFieldReturn {
 pub struct UseSearchFieldInputProps {
     pub id: String,
     pub r#type: &'static str,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub name: Option<&'static str>,
     pub value: Signal<String>,
     pub placeholder: Option<&'static str>,
@@ -187,7 +190,7 @@ impl IntoAttrs for UseSearchFieldInputProps {
 pub type UseSearchFieldInputAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Type, &'static str>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Name, Option<&'static str>>,
     Attr<attr::Value, Signal<String>>,
     Attr<attr::Placeholder, Option<&'static str>>,
@@ -436,7 +439,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
         input_props: UseSearchFieldInputProps {
             id: input_id.clone(),
             r#type: "search",
-            role: "searchbox",
+            role: AriaRole::Searchbox,
             name,
             value,
             placeholder,

@@ -11,7 +11,7 @@ use web_sys::{KeyboardEvent, MouseEvent};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaModal},
+        aria::{AriaDisabled, AriaExpanded, AriaModal, AriaRole},
         EventHandler,
     },
 };
@@ -125,7 +125,7 @@ pub struct UseDatePickerReturn {
 #[derive(Debug)]
 pub struct UseDatePickerGroupProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -148,7 +148,7 @@ impl IntoAttrs for UseDatePickerGroupProps {
 /// Attributes for the date picker group container.
 pub type UseDatePickerGroupAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -168,7 +168,7 @@ pub struct UseDatePickerFieldProps {
     /// The id of the field element.
     pub id: String,
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
     /// aria-haspopup attribute.
     pub aria_haspopup: &'static str,
     /// aria-expanded attribute.
@@ -224,7 +224,7 @@ pub struct UseDatePickerDialogProps {
     /// The id of the dialog element.
     pub id: String,
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
     /// aria-modal attribute.
     pub aria_modal: AriaModal,
     /// aria-labelledby attribute.
@@ -376,7 +376,7 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
     UseDatePickerReturn {
         group_props: UseDatePickerGroupProps {
             id: picker_id.clone(),
-            role: "group",
+            role: AriaRole::Group,
             aria_labelledby,
             aria_describedby,
             aria_disabled,
@@ -386,7 +386,7 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
         },
         field_props: UseDatePickerFieldProps {
             id: field_id,
-            role: "presentation",
+            role: AriaRole::Presentation,
             aria_haspopup: "dialog",
             aria_expanded,
         },
@@ -402,7 +402,7 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
         },
         dialog_props: UseDatePickerDialogProps {
             id: dialog_id,
-            role: "dialog",
+            role: AriaRole::Dialog,
             aria_modal: AriaModal::True,
             aria_labelledby: label_id,
         },

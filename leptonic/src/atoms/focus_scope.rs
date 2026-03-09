@@ -122,7 +122,11 @@ pub fn FocusScope(
             focus_scope_tree::register_scope(
                 scope_id,
                 parent_id,
-                move || scope_ref.get().map(|el| -> web_sys::Element { el.into() }),
+                move || {
+                    scope_ref
+                        .get_untracked()
+                        .map(|el| -> web_sys::Element { el.into() })
+                },
                 contain,
             );
             if restore_focus {
@@ -132,8 +136,11 @@ pub fn FocusScope(
     });
 
     // Create focus manager with a getter that reads from the NodeRef.
-    let focus_manager =
-        FocusManager::new(move || scope_ref.get().map(|el| -> web_sys::Element { el.into() }));
+    let focus_manager = FocusManager::new(move || {
+        scope_ref
+            .get_untracked()
+            .map(|el| -> web_sys::Element { el.into() })
+    });
 
     // Provide context so child components can access the focus manager.
     provide_context(FocusScopeContext {

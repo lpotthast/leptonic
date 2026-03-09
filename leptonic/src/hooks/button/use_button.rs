@@ -44,7 +44,7 @@ pub struct UseButtonReturn {
 /// Props from `use_button` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseButtonProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: Signal<Option<&'static str>>,
     pub disabled: Signal<bool>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -74,7 +74,7 @@ impl IntoAttrs for UseButtonProps {
 /// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UseButtonAttrs = (
     (
-        Attr<attr::Role, &'static str>,
+        Attr<attr::Role, AriaRole>,
         Attr<attr::Tabindex, Signal<Option<&'static str>>>,
         Attr<attr::Disabled, Signal<bool>>,
         Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -115,7 +115,7 @@ pub fn use_button(input: UseButtonInput) -> UseButtonReturn {
 
     UseButtonReturn {
         props: UseButtonProps {
-            role: "button",
+            role: AriaRole::Button,
             tabindex: Signal::derive(move || if disabled.get() { None } else { Some("0") }),
             disabled: Signal::derive(move || disabled.get().into_attribute_value()),
             aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),

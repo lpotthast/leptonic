@@ -15,7 +15,14 @@ use web_sys::KeyboardEvent;
 // REACT-ARIA DEVIATIONS
 // =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// 1. `selection_mode` defaults to `SelectionMode::None` (action-only menu).
+//    React-aria determines mode from the collection; we require it upfront.
+//
+// 2. Auto-focus defaults to `FocusStrategy::First` when no explicit strategy
+//    is provided, matching react-aria's `autoFocus: state.focusStrategy || true`.
+//
+// 3. Tab key is not intercepted at the menu level. React-aria delegates Tab
+//    handling to `useSelectableCollection` / `FocusScope`. We do the same.
 //
 // =============================================================================
 use crate::hooks::selection::use_selectable_collection::FocusStrategy;
@@ -30,7 +37,7 @@ use crate::{
         },
         IntoAttrs,
     },
-    utils::EventHandler,
+    utils::{aria::AriaRole, EventHandler},
 };
 
 /// Input parameters for the `use_menu` hook.
@@ -66,6 +73,12 @@ where
     /// Focus strategy signal. When this becomes Some(strategy), focus moves accordingly.
     /// Connect this to `use_menu_trigger_state().focus_strategy` for proper menu focus behavior.
     pub auto_focus: Signal<Option<FocusStrategy>>,
+
+    /// The selection mode for this menu.
+    /// - `None` (default): Action-only menu items (`role="menuitem"`).
+    /// - `Single`: Radio-style selection (`role="menuitemradio"`).
+    /// - `Multiple`: Checkbox-style selection (`role="menuitemcheckbox"`).
+    pub selection_mode: SelectionMode,
 }
 
 impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseMenuInput<K> {
@@ -80,6 +93,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseMenuInput<K> {
             on_action: None,
             disabled: Signal::derive(|| false),
             auto_focus: Signal::derive(|| None),
+            selection_mode: SelectionMode::None,
         }
     }
 }
@@ -97,12 +111,15 @@ where
 
     /// The type select state.
     pub type_select: UseTypeSelectReturn,
+
+    /// The selection mode of this menu. Pass to `UseMenuItemInput` for correct ARIA roles.
+    pub selection_mode: SelectionMode,
 }
 
 /// Props from `use_menu` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseMenuProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_label: Option<String>,
     pub tabindex: i32,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -123,7 +140,7 @@ impl IntoAttrs for UseMenuProps {
 
 /// Attributes for the menu element.
 pub type UseMenuAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::Tabindex, i32>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -173,12 +190,29 @@ where
         on_action,
         disabled,
         auto_focus,
+        selection_mode,
     } = input;
+
+    // Auto-focus fallback: default to FocusStrategy::First when no explicit strategy
+    // is provided, matching react-aria's `autoFocus: state.focusStrategy || true`.
+    let auto_focus_with_fallback =
+        Signal::derive(move || auto_focus.get().or(Some(FocusStrategy::First)));
+
+    // Determine list selection mode and behavior.
+    // For action-only menus (SelectionMode::None), we still use Single/Replace internally
+    // so that the selectable list handles navigation. The on_selection_change callback
+    // routes to on_action for action-only menus.
+    let (list_selection_mode, list_selection_behavior) = match selection_mode {
+        SelectionMode::None | SelectionMode::Single => {
+            (SelectionMode::Single, SelectionBehavior::Replace)
+        }
+        SelectionMode::Multiple => (SelectionMode::Multiple, SelectionBehavior::Toggle),
+    };
 
     // Create the selectable list
     let list = use_selectable_list(UseSelectableListInput {
-        selection_mode: SelectionMode::Single,
-        selection_behavior: SelectionBehavior::Replace,
+        selection_mode: list_selection_mode,
+        selection_behavior: list_selection_behavior,
         disabled,
         selected_keys: None,
         default_selected_keys: None,
@@ -196,7 +230,7 @@ where
         disallow_empty_selection: false,
         all_keys,
         should_focus_wrap,
-        auto_focus,
+        auto_focus: auto_focus_with_fallback,
         select_on_focus: false,
     });
 
@@ -214,7 +248,11 @@ where
     let list_on_keydown = list.on_keydown;
     let type_select_on_keydown = type_select.on_keydown;
 
-    // Unified keyboard handler that delegates to sub-hook handlers
+    // Keyboard handler: only handles Escape at the menu level.
+    // Enter/Space is handled exclusively by use_menu_item (which stops propagation).
+    // Tab is not intercepted — FocusScope handles it.
+    // Navigation keys delegate to the selectable list.
+    // Other keys delegate to type-ahead.
     let handle_keydown = move |e: KeyboardEvent| {
         if disabled.get_untracked() {
             return;
@@ -226,19 +264,6 @@ where
             // Menu-specific: close on Escape (override list's Escape which clears selection)
             "Escape" => {
                 e.prevent_default();
-                if let Some(on_close) = on_close {
-                    on_close.run(());
-                }
-            }
-            // Menu-specific: prevent Tab from moving focus out
-            "Tab" => {
-                e.prevent_default();
-            }
-            // Menu-specific: close menu after Enter/Space selection
-            " " | "Enter" => {
-                // Let the list handler process the selection first
-                list_on_keydown.run(e);
-                // Then close the menu
                 if let Some(on_close) = on_close {
                     on_close.run(());
                 }
@@ -256,12 +281,13 @@ where
 
     UseMenuReturn {
         menu_props: UseMenuProps {
-            role: "menu",
+            role: AriaRole::Menu,
             aria_label,
             tabindex: 0,
             on_keydown: EventHandler::new(handle_keydown),
         },
         list,
         type_select,
+        selection_mode,
     }
 }

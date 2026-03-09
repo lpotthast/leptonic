@@ -11,7 +11,7 @@ use super::use_tabs::TabsOrientation;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaOrientation},
+        aria::{AriaDisabled, AriaOrientation, AriaRole},
         EventHandler,
     },
 };
@@ -68,7 +68,7 @@ pub struct UseTabListReturn {
 #[derive(Debug)]
 pub struct UseTabListProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_label: Option<String>,
     pub aria_orientation: AriaOrientation,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -93,7 +93,7 @@ impl IntoAttrs for UseTabListProps {
 /// Attributes for the tab list element.
 pub type UseTabListAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -191,7 +191,7 @@ pub fn use_tab_list(input: UseTabListInput) -> UseTabListReturn {
     UseTabListReturn {
         props: UseTabListProps {
             id: tab_list_id.clone(),
-            role: "tablist",
+            role: AriaRole::Tablist,
             aria_label: label,
             aria_orientation,
             aria_disabled,

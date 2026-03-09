@@ -11,7 +11,7 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable},
+        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
         EventHandler,
     },
 };
@@ -109,7 +109,7 @@ pub struct UseTreeReturn {
 #[derive(Debug)]
 pub struct UseTreeProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_label: Option<String>,
     pub aria_multiselectable: Option<AriaMultiselectable>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -134,7 +134,7 @@ impl IntoAttrs for UseTreeProps {
 /// Attributes for the tree element.
 pub type UseTreeAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -261,7 +261,7 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
     UseTreeReturn {
         tree_props: UseTreeProps {
             id: tree_id.clone(),
-            role: "tree",
+            role: AriaRole::Tree,
             aria_label: label,
             aria_multiselectable,
             aria_disabled,

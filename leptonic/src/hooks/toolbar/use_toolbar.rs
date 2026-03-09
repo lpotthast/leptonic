@@ -11,7 +11,7 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaOrientation},
+        aria::{AriaDisabled, AriaOrientation, AriaRole},
         EventHandler,
     },
 };
@@ -101,7 +101,7 @@ pub struct UseToolbarReturn {
 #[derive(Debug)]
 pub struct UseToolbarProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_label: Option<String>,
     pub aria_orientation: AriaOrientation,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -126,7 +126,7 @@ impl IntoAttrs for UseToolbarProps {
 /// Attributes for the toolbar element.
 pub type UseToolbarAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -222,7 +222,7 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
     UseToolbarReturn {
         toolbar_props: UseToolbarProps {
             id: toolbar_id.clone(),
-            role: "toolbar",
+            role: AriaRole::Toolbar,
             aria_label: label,
             aria_orientation,
             aria_disabled,

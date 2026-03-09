@@ -4,11 +4,11 @@ use indoc::indoc;
 use leptonic::{
     atoms::focus_scope::FocusScope,
     components::prelude::*,
-    hooks::*,
-    prelude::{AriaExpanded, AriaHasPopup},
-    utils::MergeWith,
+    hooks::{PlacementX, PlacementY, *},
+    prelude::AriaHasPopup,
+    utils::{locale::WritingDirection, MergeWith},
 };
-use leptos::prelude::*;
+use leptos::{portal::Portal, prelude::*};
 
 use crate::pages::documentation::{article::Article, toc::Toc};
 
@@ -24,6 +24,8 @@ fn MenuItem(
     focused_key: Signal<Option<String>>,
     /// The current selection state.
     selected_keys: Signal<Selection<String>>,
+    /// The selection mode from the parent menu.
+    selection_mode: SelectionMode,
     /// Callback when this item gains focus.
     on_focus: Callback<Option<String>>,
     /// Callback when this item is activated.
@@ -31,9 +33,11 @@ fn MenuItem(
     /// Callback to close the menu.
     on_close: Callback<()>,
 ) -> impl IntoView {
-    // No need for element_ref - use_menu_item captures the element automatically!
     let UseMenuItemReturn {
         item_props,
+        label_props: _,
+        description_props: _,
+        keyboard_shortcut_props: _,
         is_focused,
         is_selected: _,
         is_disabled,
@@ -46,13 +50,13 @@ fn MenuItem(
         on_focus,
         on_action,
         on_close: Some(on_close),
-        close_on_select: true,
+        close_on_select: None,
+        selection_mode,
     });
 
     let item_label = item.clone();
 
     view! {
-        // No node_ref needed - just spread item_props!
         <li
             {..item_props.into_attrs()}
             style=move || {
@@ -91,11 +95,12 @@ pub fn PageUseMenuHook() -> impl IntoView {
         move || items.clone()
     });
 
-    // Set up the button with hover and focus tracking
+    // Set up the button (ARIA haspopup/expanded are set to defaults — the merge
+    // with menu_trigger discards them in favour of menu trigger's ARIA attributes).
     let button = use_button(UseButtonInput {
         disabled: false.into(),
-        aria_haspopup: AriaHasPopup::Menu.into(),
-        aria_expanded: Signal::derive(move || Some(AriaExpanded::from(state.is_open.get()))),
+        aria_haspopup: Signal::stored(AriaHasPopup::default()),
+        aria_expanded: Signal::stored(None),
         use_press_input: UsePressInput {
             disabled: false.into(),
             force_prevent_default: false,
@@ -133,13 +138,32 @@ pub fn PageUseMenuHook() -> impl IntoView {
         state,
     });
 
+    // Capture the menu id so `aria-controls` on the trigger points to the `<ul>`.
+    let menu_id = menu_trigger.menu_props.id;
+
     // Merge button and menu trigger into a single set of attributes.
-    // This combines:
-    // - Button semantics: role="button", tabindex, disabled state
-    // - Menu ARIA: aria-haspopup, aria-expanded, aria-controls
-    // - Menu trigger's keydown handler (handles Enter/Space/Arrow for menu)
-    // - Button's hover and focus handlers (for visual feedback)
     let trigger_props = button.props.merge_with(menu_trigger.props);
+
+    // Set up the popover for overlay positioning and dismiss behavior.
+    let popover = use_popover(UsePopoverInput {
+        is_open: state.is_open,
+        on_close: state.close,
+        placement_x: Signal::derive(|| PlacementX::Start),
+        placement_y: Signal::derive(|| PlacementY::Below),
+        writing_direction: Signal::derive(|| WritingDirection::Ltr),
+        offset: 4.0.into(),
+        cross_offset: 0.0.into(),
+        container_padding: 12.0.into(),
+        should_flip: true.into(),
+        is_non_modal: false,
+        is_keyboard_dismiss_disabled: false,
+        should_close_on_interact_outside: None,
+    });
+
+    // Memoize popover attrs before the Show boundary (Props is non-Clone, Attrs is Clone).
+    let popover_trigger_attrs = StoredValue::new(popover.trigger_props.into_attrs());
+    let popover_attrs = StoredValue::new(popover.props.into_attrs());
+    let underlay_attrs = StoredValue::new(popover.underlay_props.into_attrs());
 
     // Set up the menu with auto_focus connected to state.focus_strategy
     let menu = use_menu(UseMenuInput {
@@ -159,9 +183,11 @@ pub fn PageUseMenuHook() -> impl IntoView {
     let focused_key = menu.list.collection.focused_key;
     let selected_keys = menu.list.collection.selection_state.selected_keys;
     let set_focused_key = menu.list.collection.set_focused_key;
+    let selection_mode = menu.selection_mode;
 
-    // Convert menu props to attrs before the Show closure (Props is non-Clone, Attrs is Clone)
-    let menu_attrs = menu.menu_props.into_attrs();
+    // Store menu attrs and items in StoredValue so Portal's Fn children closure can access them.
+    let menu_attrs = StoredValue::new(menu.menu_props.into_attrs());
+    let menu_items = StoredValue::new(items.clone());
 
     view! {
         <Article>
@@ -188,9 +214,10 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <li>"Type a letter (e.g., " <kbd>"D"</kbd> ") to jump to matching items"</li>
             </ul>
 
-            <div style="position: relative; display: inline-block; margin: 1em 0;">
+            <div style="display: inline-block; margin: 1em 0;">
                 <button
                     {..trigger_props.into_attrs()}
+                    {..popover_trigger_attrs.get_value()}
                     style="padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; background: var(--brand-color); color: white; border: none; font-size: 1em; display: flex; align-items: center; gap: 0.5em;"
                 >
                     "Actions"
@@ -202,39 +229,54 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     }>"▼"</span>
                 </button>
 
-                <Show when=move || state.is_open.get()>
-                    {
-                        let items = items.clone();
-                        let menu_attrs = menu_attrs.clone();
-                        view! {
-                            <FocusScope restore_focus=true>
-                                <ul
-                                    {..menu_attrs.clone()}
-                                    style="position: absolute; top: 100%; left: 0; margin: 4px 0 0 0; padding: 0.25em 0; min-width: 180px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 100;"
+                <Portal>
+                    <Show when=move || state.is_open.get()>
+                        {
+                            let items = menu_items.get_value();
+                            let menu_attrs = menu_attrs.get_value();
+                            view! {
+                                // Underlay captures outside clicks to dismiss
+                                <div
+                                    {..underlay_attrs.get_value()}
+                                    style="position: fixed; inset: 0; z-index: 999;"
+                                />
+                                // Popover container with overlay positioning
+                                <div
+                                    {..popover_attrs.get_value()}
+                                    style="z-index: 1000;"
                                 >
-                                    {items
-                                        .into_iter()
-                                        .map(|item| {
-                                            view! {
-                                                <MenuItem
-                                                    item=item
-                                                    is_disabled=false
-                                                    focused_key=focused_key
-                                                    selected_keys=selected_keys
-                                                    on_focus=set_focused_key
-                                                    on_action=Callback::new(move |key: String| {
-                                                        set_selected.set(Some(key));
-                                                    })
-                                                    on_close=state.close
-                                                />
-                                            }
-                                        })
-                                        .collect_view()}
-                                </ul>
-                            </FocusScope>
+                                    <FocusScope contain=true restore_focus=true>
+                                        <ul
+                                            {..menu_attrs}
+                                            id=menu_id
+                                            style="margin: 0; padding: 0.25em 0; min-width: 180px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
+                                        >
+                                            {items
+                                                .into_iter()
+                                                .map(|item| {
+                                                    view! {
+                                                        <MenuItem
+                                                            item=item
+                                                            is_disabled=false
+                                                            focused_key=focused_key
+                                                            selected_keys=selected_keys
+                                                            selection_mode=selection_mode
+                                                            on_focus=set_focused_key
+                                                            on_action=Callback::new(move |key: String| {
+                                                                set_selected.set(Some(key));
+                                                            })
+                                                            on_close=state.close
+                                                        />
+                                                    }
+                                                })
+                                                .collect_view()}
+                                        </ul>
+                                    </FocusScope>
+                                </div>
+                            }
                         }
-                    }
-                </Show>
+                    </Show>
+                </Portal>
             </div>
 
             <p>
@@ -256,8 +298,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
             <Code>
                 {indoc!(
-                    r#"
-                    // Create state using the state hook
+                    r"
                     let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
 
                     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
@@ -266,18 +307,15 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         trigger: MenuTriggerType::Press,
                         state,
                     });
-
-                    view! {
-                        <button {..menu_trigger.props.into_attrs()}>
-                            "Open Menu"
-                        </button>
-                        <Show when=move || state.is_open.get()>
-                            // Menu content here
-                        </Show>
-                    }
-                "#
+                "
                 )}
             </Code>
+
+            <p>
+                "Menus require overlay integration via " <code>"use_popover"</code>
+                " for proper dismiss behavior (click-outside, Escape key, re-clicking the trigger). "
+                "See the interactive demo above for a complete example."
+            </p>
 
             <p>"The hook provides:"</p>
             <ul>
@@ -305,10 +343,16 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     <strong>"open/close/toggle"</strong>
                     " - Callbacks to control the menu"
                 </li>
+                <li>
+                    <strong>"set_open"</strong>
+                    " - Callback to set the open state directly"
+                </li>
             </ul>
 
+            <p>"The state hook accepts an optional " <code>"on_open_change"</code> " callback that fires whenever the open state changes."</p>
+
             <h3 id="merge_with_button" class="anchor">
-                "merge_with_button"
+                "Merging with use_button"
                 <AnchorLink
                     href="#merge_with_button"
                     description="Direct link to merge_with_button"
@@ -317,21 +361,20 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
             <p>
                 "When using " <code>"use_menu_trigger"</code> " with " <code>"use_button"</code> ", "
-                "you can merge their attributes using " <code>"merge_with_button"</code> ":"
+                "you can merge their props using the " <code>"MergeWith"</code> " trait:"
             </p>
 
             <Code>
                 {indoc!(
                     r#"
-                    // Create both hooks
                     let button = use_button(UseButtonInput { ... });
                     let menu_trigger = use_menu_trigger(UseMenuTriggerInput { ... });
 
-                    // Merge them into a single attribute set
-                    let merged = menu_trigger.merge_with_button(button);
+                    // Merge using the MergeWith trait (order is irrelevant)
+                    let trigger_props = button.props.merge_with(menu_trigger.props);
 
                     view! {
-                        <button {..merged.props.into_attrs()}>
+                        <button {..trigger_props.into_attrs()}>
                             "Actions"
                         </button>
                     }
@@ -378,6 +421,9 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         on_close: Some(Callback::new(|_| {
                             // Close the menu
                         })),
+                        // selection_mode: SelectionMode::None (default, action-only menu)
+                        // Use SelectionMode::Single for radio items,
+                        // or SelectionMode::Multiple for checkbox items.
                         ..Default::default()
                     });
 
@@ -404,6 +450,10 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     <strong>"type_select"</strong>
                     " - Type-ahead search functionality"
                 </li>
+                <li>
+                    <strong>"selection_mode"</strong>
+                    " - The selection mode, to pass through to menu items"
+                </li>
             </ul>
 
             <h2 id="use_menu_item" class="anchor">
@@ -418,7 +468,6 @@ pub fn PageUseMenuHook() -> impl IntoView {
             <Code>
                 {indoc!(
                     r#"
-                    // No element_ref needed - element is captured automatically!
                     let item = use_menu_item(UseMenuItemInput {
                         key: "edit".to_string(),
                         is_disabled: false.into(),
@@ -431,13 +480,13 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         on_close: Some(Callback::new(|_| {
                             // Close menu
                         })),
-                        close_on_select: true,
+                        close_on_select: None, // Smart default
+                        selection_mode: menu.selection_mode,
                     });
 
                     view! {
-                        // Just spread item_props - focus management works automatically
                         <li {..item.item_props.into_attrs()}>
-                            "Edit"
+                            <span {..item.label_props.into_attrs()}>"Edit"</span>
                         </li>
                     }
                 "#
@@ -448,7 +497,19 @@ pub fn PageUseMenuHook() -> impl IntoView {
             <ul>
                 <li>
                     <strong>"item_props"</strong>
-                    " - ARIA role, tabindex, disabled state, and event handlers"
+                    " - ARIA role, tabindex, disabled state, checked state, and event handlers"
+                </li>
+                <li>
+                    <strong>"label_props"</strong>
+                    " - Props for the label slot (connects via aria-labelledby)"
+                </li>
+                <li>
+                    <strong>"description_props"</strong>
+                    " - Props for the description slot (connects via aria-describedby)"
+                </li>
+                <li>
+                    <strong>"keyboard_shortcut_props"</strong>
+                    " - Props for the keyboard shortcut slot"
                 </li>
                 <li>
                     <strong>"is_focused"</strong>
@@ -466,6 +527,44 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     <strong>"is_focus_visible"</strong>
                     " - Whether focus ring should be visible (keyboard nav only)"
                 </li>
+            </ul>
+
+            <h3 id="selection_modes" class="anchor">
+                "Selection Modes"
+                <AnchorLink href="#selection_modes" description="Direct link to selection modes" />
+            </h3>
+
+            <p>"Menu items automatically adapt their ARIA role based on the selection mode:"</p>
+            <ul>
+                <li>
+                    <code>"SelectionMode::None"</code>
+                    " (default) - Action menu: " <code>"role=\"menuitem\""</code>
+                </li>
+                <li>
+                    <code>"SelectionMode::Single"</code>
+                    " - Radio selection: " <code>"role=\"menuitemradio\""</code> " with " <code>"aria-checked"</code>
+                </li>
+                <li>
+                    <code>"SelectionMode::Multiple"</code>
+                    " - Checkbox selection: " <code>"role=\"menuitemcheckbox\""</code> " with " <code>"aria-checked"</code>
+                </li>
+            </ul>
+
+            <h3 id="close_behavior" class="anchor">
+                "Close Behavior"
+                <AnchorLink href="#close_behavior" description="Direct link to close behavior" />
+            </h3>
+
+            <p>
+                "The " <code>"close_on_select"</code> " option controls whether the menu closes after activation:"
+            </p>
+            <ul>
+                <li>
+                    <code>"None"</code>
+                    " (default) - Smart behavior: keyboard Enter always closes; multi-select click stays open; action/single-select always closes"
+                </li>
+                <li><code>"Some(true)"</code> " - Always close after activation"</li>
+                <li><code>"Some(false)"</code> " - Never close after activation"</li>
             </ul>
 
             <h2 id="use_menu_section" class="anchor">
@@ -550,6 +649,10 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 <li>"Section grouping with accessible headings"</li>
                 <li>"Disabled items support"</li>
                 <li>"Press and long-press trigger modes"</li>
+                <li>"Selection modes: action, radio, and checkbox menu items"</li>
+                <li>"Smart close behavior that varies by interaction type and selection mode"</li>
+                <li>"Repeat key event filtering to prevent accidental activation"</li>
+                <li>"Label, description, and keyboard shortcut slot props for accessible content"</li>
                 <li>"Proper ARIA attributes for screen readers"</li>
                 <li>"Mouse hover and click support"</li>
             </ul>
@@ -570,7 +673,7 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     link: "#use_menu_trigger",
                 },
                 Toc::Leaf {
-                    title: "merge_with_button",
+                    title: "Merging with use_button",
                     link: "#merge_with_button",
                 },
                 Toc::Leaf {
@@ -580,6 +683,14 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 Toc::Leaf {
                     title: "use_menu_item",
                     link: "#use_menu_item",
+                },
+                Toc::Leaf {
+                    title: "Selection Modes",
+                    link: "#selection_modes",
+                },
+                Toc::Leaf {
+                    title: "Close Behavior",
+                    link: "#close_behavior",
                 },
                 Toc::Leaf {
                     title: "use_menu_section",

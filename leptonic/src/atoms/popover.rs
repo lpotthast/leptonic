@@ -1,10 +1,8 @@
-use std::marker::PhantomData;
-
-use leptos::{context::Provider, html, portal::Portal, prelude::*};
+use leptos::{context::Provider, portal::Portal, prelude::*};
 
 use crate::{
     hooks::{UseOverlayAttrs, *},
-    utils::locale::WritingDirection,
+    utils::{locale::WritingDirection, CapturedElement},
 };
 
 #[derive(Debug, Clone)]
@@ -14,8 +12,7 @@ pub struct PopoverContext {
 
     id: Oco<'static, str>,
     overlay_attrs: UseOverlayAttrs,
-    trigger_el: ReadSignal<Option<NodeRef<html::Div>>>,
-    set_trigger_el: WriteSignal<Option<NodeRef<html::Div>>>,
+    trigger_element: CapturedElement,
 }
 
 #[component]
@@ -35,7 +32,7 @@ pub fn Popover(children: Children) -> impl IntoView {
         should_close_on_interact_outside: None,
     });
 
-    let (trigger_el, set_trigger_el) = signal(None);
+    let trigger_element = CapturedElement::new();
     let overlay_attrs = overlay_props.into_attrs();
 
     view! {
@@ -44,8 +41,7 @@ pub fn Popover(children: Children) -> impl IntoView {
             set_state,
             id,
             overlay_attrs,
-            trigger_el,
-            set_trigger_el,
+            trigger_element,
         }>{children()}</Provider>
     }
 }
@@ -53,9 +49,6 @@ pub fn Popover(children: Children) -> impl IntoView {
 #[component]
 pub fn PopoverTrigger(children: Children) -> impl IntoView {
     let ctx = expect_context::<PopoverContext>();
-
-    let trigger_el: NodeRef<html::Div> = NodeRef::new();
-    ctx.set_trigger_el.set(Some(trigger_el));
 
     let UseOverlayTriggerReturn {
         props: trigger_props,
@@ -65,8 +58,10 @@ pub fn PopoverTrigger(children: Children) -> impl IntoView {
         overlay_type: OverlayTriggerType::Dialog,
     });
 
+    let trigger_capture = ctx.trigger_element.attr();
+
     view! {
-        <div class="leptonic-popover-trigger" {..trigger_props.into_attrs()} node_ref=trigger_el>
+        <div class="leptonic-popover-trigger" {..trigger_props.into_attrs()} {..trigger_capture}>
             {children()}
         </div>
     }
@@ -81,15 +76,12 @@ pub fn PopoverContent(
 ) -> impl IntoView {
     let ctx = expect_context::<PopoverContext>();
 
-    let overlay_el: NodeRef<html::Div> = NodeRef::new();
-
     let UseOverlayPositionReturn {
         props: overlay_pos_props,
         resolved_placement_x: _,
         resolved_placement_y: _,
     } = use_overlay_position(UseOverlayPositionInput {
-        overlay: overlay_el,
-        target: ctx.trigger_el.get_untracked().expect("trigger present"),
+        target: ctx.trigger_element,
         placement_x,
         placement_y,
         writing_direction,
@@ -99,7 +91,6 @@ pub fn PopoverContent(
         should_flip: true.into(),
         max_height: None,
         is_open: ctx.state.into(),
-        phantom_data: PhantomData,
     });
 
     let overlay_pos_attrs = overlay_pos_props.into_attrs();
@@ -110,14 +101,12 @@ pub fn PopoverContent(
                 let overlay_attrs = ctx.overlay_attrs.clone();
                 let overlay_pos_attrs = overlay_pos_attrs.clone();
                 let children = children.clone();
-                let overlay_el = overlay_el;
                 view! {
                     <Show when=move || ctx.state.get()>
                         <div
                             class="leptonic-popover-content"
                             {..overlay_attrs.clone()}
                             {..overlay_pos_attrs.clone()}
-                            node_ref=overlay_el
                         >
                             {children()}
                         </div>

@@ -108,9 +108,7 @@ pub fn use_overlay_trigger(input: UseOverlayTriggerInput) -> UseOverlayTriggerRe
     let aria_haspopup = match overlay_type {
         OverlayTriggerType::Menu => Some(AriaHasPopup::True),
         OverlayTriggerType::Listbox => Some(AriaHasPopup::Listbox),
-        OverlayTriggerType::Dialog
-        | OverlayTriggerType::Tree
-        | OverlayTriggerType::Grid => None,
+        OverlayTriggerType::Dialog | OverlayTriggerType::Tree | OverlayTriggerType::Grid => None,
     };
 
     UseOverlayTriggerReturn {

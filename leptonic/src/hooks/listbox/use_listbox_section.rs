@@ -1,7 +1,10 @@
 use leptos::{attr, attr::Attr};
 use uuid::Uuid;
 
-use crate::{hooks::IntoAttrs, utils::aria::AriaHidden};
+use crate::{
+    hooks::IntoAttrs,
+    utils::aria::{AriaHidden, AriaRole},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useListBoxSection.ts
 
@@ -37,7 +40,7 @@ pub struct UseListBoxSectionReturn {
 #[derive(Debug)]
 pub struct UseListBoxSectionGroupProps {
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-labelledby attribute.
     pub aria_labelledby: Option<String>,
@@ -56,7 +59,7 @@ impl IntoAttrs for UseListBoxSectionGroupProps {
 
 /// Attributes for the section group element.
 pub type UseListBoxSectionGroupAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
 );
 
@@ -67,7 +70,7 @@ pub struct UseListBoxSectionHeadingProps {
     pub id: String,
 
     /// The role attribute for the heading.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-hidden attribute.
     pub aria_hidden: AriaHidden,
@@ -88,7 +91,7 @@ impl IntoAttrs for UseListBoxSectionHeadingProps {
 /// Attributes for the section heading element.
 pub type UseListBoxSectionHeadingAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaHidden, AriaHidden>,
 );
 
@@ -96,7 +99,7 @@ pub type UseListBoxSectionHeadingAttrs = (
 #[derive(Debug)]
 pub struct UseListBoxSectionItemsProps {
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 impl IntoAttrs for UseListBoxSectionItemsProps {
@@ -108,7 +111,7 @@ impl IntoAttrs for UseListBoxSectionItemsProps {
 }
 
 /// Attributes for the section items container.
-pub type UseListBoxSectionItemsAttrs = (Attr<attr::Role, &'static str>,);
+pub type UseListBoxSectionItemsAttrs = (Attr<attr::Role, AriaRole>,);
 
 /// Provides accessibility attributes for a section within a listbox.
 ///
@@ -150,14 +153,16 @@ pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionRe
 
     UseListBoxSectionReturn {
         group_props: UseListBoxSectionGroupProps {
-            role: "presentation",
+            role: AriaRole::Presentation,
             aria_labelledby,
         },
         heading_props: UseListBoxSectionHeadingProps {
             id: heading_id,
-            role: "presentation",
+            role: AriaRole::Presentation,
             aria_hidden: AriaHidden::True,
         },
-        items_props: UseListBoxSectionItemsProps { role: "group" },
+        items_props: UseListBoxSectionItemsProps {
+            role: AriaRole::Group,
+        },
     }
 }

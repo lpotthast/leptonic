@@ -1,5 +1,3 @@
-use std::marker::PhantomData;
-
 use indoc::indoc;
 use leptonic::{
     components::prelude::*,
@@ -7,7 +5,7 @@ use leptonic::{
     prelude::Size,
     utils::locale::WritingDirection,
 };
-use leptos::{html, portal::Portal, prelude::*};
+use leptos::{portal::Portal, prelude::*};
 
 use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
 
@@ -87,7 +85,6 @@ pub fn PageUsePopoverHook() -> impl IntoView {
 
             <Code>
                 {indoc!(r#"
-                    use std::marker::PhantomData;
                     use leptonic::hooks::{
                         use_popover, UsePopoverInput, UsePopoverReturn,
                         PlacementX, PlacementY,
@@ -96,18 +93,15 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                     use leptos::portal::Portal;
 
                     let (is_open, set_is_open) = signal(false);
-                    let trigger_ref = NodeRef::<html::Button>::new();
-                    let popover_ref = NodeRef::<html::Div>::new();
 
                     let UsePopoverReturn {
                         props,
+                        trigger_props,
                         underlay_props,
                         id,
                         resolved_placement_x,
                         resolved_placement_y,
                     } = use_popover(UsePopoverInput {
-                        trigger_ref,
-                        popover_ref,
                         is_open: is_open.into(),
                         on_close: Callback::new(move |_| set_is_open.set(false)),
                         placement_x: Signal::derive(|| PlacementX::Center),
@@ -120,15 +114,15 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         is_non_modal: false,
                         is_keyboard_dismiss_disabled: false,
                         should_close_on_interact_outside: None,
-                        phantom_data: PhantomData,
                     });
 
+                    let trigger_attrs = StoredValue::new(trigger_props.into_attrs());
                     let popover_props = StoredValue::new(props.into_attrs());
                     let underlay_props = StoredValue::new(underlay_props.into_attrs());
 
                     view! {
                         <button
-                            node_ref=trigger_ref
+                            {..trigger_attrs.get_value()}
                             on:click=move |_| set_is_open.set(!is_open.get())
                         >
                             "Toggle Popover"
@@ -144,7 +138,6 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                                 // Popover content — positioned automatically
                                 <div
                                     {..popover_props.get_value()}
-                                    node_ref=popover_ref
                                     style="z-index: 1000;"
                                 >
                                     "Popover content"
@@ -325,14 +318,14 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                             {..underlay_props.get_value()}
                             style="position: fixed; inset: 0; z-index: 999;"
                         />
-                        <div {..popover_props.get_value()} node_ref=popover_ref>
+                        <div {..popover_props.get_value()}>
                             "Popover content"
                         </div>
                     </Show>
 
                     // Non-modal popover: no underlay
                     <Show when=move || is_open.get()>
-                        <div {..popover_props.get_value()} node_ref=popover_ref>
+                        <div {..popover_props.get_value()}>
                             "Popover content"
                         </div>
                     </Show>
@@ -360,18 +353,6 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow>
-                            <TableCell><code>"trigger_ref"</code></TableCell>
-                            <TableCell><code>"Trigger"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Element ref for the trigger (what the popover positions relative to)."</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><code>"popover_ref"</code></TableCell>
-                            <TableCell><code>"Popover"</code></TableCell>
-                            <TableCell>"-"</TableCell>
-                            <TableCell>"Element ref for the popover itself."</TableCell>
-                        </TableRow>
                         <TableRow>
                             <TableCell><code>"is_open"</code></TableCell>
                             <TableCell><code>"Signal<bool>"</code></TableCell>
@@ -467,6 +448,11 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                             <TableCell><code>"props"</code></TableCell>
                             <TableCell><code>"UsePopoverProps"</code></TableCell>
                             <TableCell>"Props for the popover element (overlay + positioning attrs)."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"trigger_props"</code></TableCell>
+                            <TableCell><code>"UsePopoverTriggerProps"</code></TableCell>
+                            <TableCell>"Props for the trigger element (element capture for positioning)."</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><code>"underlay_props"</code></TableCell>
@@ -593,18 +579,14 @@ pub fn PageUsePopoverHook() -> impl IntoView {
 fn BasicPopoverDemo() -> impl IntoView {
     let (is_open, set_is_open) = signal(false);
 
-    let trigger_el: NodeRef<html::Button> = NodeRef::new();
-    let popover_el: NodeRef<html::Div> = NodeRef::new();
-
     let UsePopoverReturn {
         props,
+        trigger_props,
         underlay_props,
         id: _,
         resolved_placement_x: _,
         resolved_placement_y: _,
     } = use_popover(UsePopoverInput {
-        trigger_ref: trigger_el,
-        popover_ref: popover_el,
         is_open: is_open.into(),
         on_close: Callback::new(move |_| set_is_open.set(false)),
         placement_x: Signal::derive(|| PlacementX::Center),
@@ -617,16 +599,16 @@ fn BasicPopoverDemo() -> impl IntoView {
         is_non_modal: false,
         is_keyboard_dismiss_disabled: false,
         should_close_on_interact_outside: None,
-        phantom_data: PhantomData,
     });
 
+    let trigger_attrs = StoredValue::new(trigger_props.into_attrs());
     let popover_props = StoredValue::new(props.into_attrs());
     let underlay_props = StoredValue::new(underlay_props.into_attrs());
 
     view! {
         <div style=demo_flex_center()>
             <button
-                node_ref=trigger_el
+                {..trigger_attrs.get_value()}
                 on:click=move |_| set_is_open.set(!is_open.get())
                 style=demo_button_primary()
             >
@@ -644,7 +626,6 @@ fn BasicPopoverDemo() -> impl IntoView {
                 // Popover content
                 <div
                     {..popover_props.get_value()}
-                    node_ref=popover_el
                     style=popover_panel()
                 >
                     <h4 style="margin: 0 0 0.5em 0; color: #333;">"Popover Title"</h4>
@@ -664,18 +645,14 @@ fn PlacementPopoverDemo() -> impl IntoView {
     let (placement_x, set_placement_x) = signal(PlacementX::Center);
     let (placement_y, set_placement_y) = signal(PlacementY::Below);
 
-    let trigger_el: NodeRef<html::Button> = NodeRef::new();
-    let popover_el: NodeRef<html::Div> = NodeRef::new();
-
     let UsePopoverReturn {
         props,
+        trigger_props,
         underlay_props,
         id: _,
         resolved_placement_x: _,
         resolved_placement_y: _,
     } = use_popover(UsePopoverInput {
-        trigger_ref: trigger_el,
-        popover_ref: popover_el,
         is_open: is_open.into(),
         on_close: Callback::new(move |_| set_is_open.set(false)),
         placement_x: placement_x.into(),
@@ -688,9 +665,9 @@ fn PlacementPopoverDemo() -> impl IntoView {
         is_non_modal: false,
         is_keyboard_dismiss_disabled: false,
         should_close_on_interact_outside: None,
-        phantom_data: PhantomData,
     });
 
+    let trigger_attrs = StoredValue::new(trigger_props.into_attrs());
     let popover_props = StoredValue::new(props.into_attrs());
     let underlay_props = StoredValue::new(underlay_props.into_attrs());
 
@@ -790,7 +767,7 @@ fn PlacementPopoverDemo() -> impl IntoView {
 
         <div style="display: flex; justify-content: center; padding: 4em;">
             <button
-                node_ref=trigger_el
+                {..trigger_attrs.get_value()}
                 on:click=move |_| set_is_open.set(!is_open.get())
                 style=demo_button_primary()
             >
@@ -806,7 +783,6 @@ fn PlacementPopoverDemo() -> impl IntoView {
                 />
                 <div
                     {..popover_props.get_value()}
-                    node_ref=popover_el
                     style="
                         background: white;
                         border: 1px solid #ccc;
@@ -831,18 +807,14 @@ fn NonModalPopoverDemo() -> impl IntoView {
     let (is_open, set_is_open) = signal(false);
     let (counter, set_counter) = signal(0);
 
-    let trigger_el: NodeRef<html::Button> = NodeRef::new();
-    let popover_el: NodeRef<html::Div> = NodeRef::new();
-
     let UsePopoverReturn {
         props,
+        trigger_props,
         underlay_props: _,
         id: _,
         resolved_placement_x: _,
         resolved_placement_y: _,
     } = use_popover(UsePopoverInput {
-        trigger_ref: trigger_el,
-        popover_ref: popover_el,
         is_open: is_open.into(),
         on_close: Callback::new(move |_| set_is_open.set(false)),
         placement_x: Signal::derive(|| PlacementX::OuterRight),
@@ -855,15 +827,15 @@ fn NonModalPopoverDemo() -> impl IntoView {
         is_non_modal: true, // Allow interaction outside
         is_keyboard_dismiss_disabled: false,
         should_close_on_interact_outside: None,
-        phantom_data: PhantomData,
     });
 
+    let trigger_attrs = StoredValue::new(trigger_props.into_attrs());
     let popover_props = StoredValue::new(props.into_attrs());
 
     view! {
         <div style="display: flex; gap: 1em; align-items: center; justify-content: center; padding: 2em;">
             <button
-                node_ref=trigger_el
+                {..trigger_attrs.get_value()}
                 on:click=move |_| set_is_open.set(!is_open.get())
                 style=demo_button_primary()
             >
@@ -887,7 +859,6 @@ fn NonModalPopoverDemo() -> impl IntoView {
                 // No underlay for non-modal popover
                 <div
                     {..popover_props.get_value()}
-                    node_ref=popover_el
                     style="
                         background: white;
                         border: 1px solid #ccc;

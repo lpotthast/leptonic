@@ -74,6 +74,10 @@ pub struct UseMenuTriggerReturn {
 /// Props for the menu opened by this trigger.
 #[derive(Debug, Clone, Copy)]
 pub struct UseMenuTriggerMenuProps {
+    /// The unique ID for the menu element.
+    /// This must be set on the menu so that `aria-controls` on the trigger points to it.
+    pub id: Signal<String>,
+
     /// The id that labels this menu.
     pub aria_labelledby: Signal<String>,
 
@@ -200,8 +204,9 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
 
         match e.key().as_str() {
             "Enter" | " " => {
-                // Don't open menu on Enter/Space for long press trigger
-                if trigger_type == MenuTriggerType::LongPress {
+                // Don't open menu on Enter/Space for long press trigger.
+                // Also skip if default was already prevented (e.g. by typeahead consuming Space).
+                if trigger_type == MenuTriggerType::LongPress || e.default_prevented() {
                     return;
                 }
                 e.prevent_default();
@@ -232,7 +237,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             force_propagation: true,
             allow_text_selection_on_press: false,
             should_cancel_on_pointer_exit: false,
-            prevent_focus_on_press: false,
+            prevent_focus_on_press: true,
             force_is_pressed: None,
             on_press: Callback::new(move |e: PressEvent| {
                 // Touch triggers toggle on press
@@ -243,7 +248,8 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
                 }
             }),
             on_press_start: Some(Callback::new(move |e: PressEvent| {
-                // Mouse/virtual pointer toggles on press start
+                // Mouse/virtual pointer opens on press start (not toggle — the overlay
+                // dismiss mechanism handles closing; the trigger only opens).
                 if e.pointer_type != PointerType::Touch && e.pointer_type != PointerType::Keyboard {
                     // Focus the trigger before opening so FocusScope can restore to it
                     focus_event_target(&e.target, true);
@@ -252,7 +258,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
                     } else {
                         None
                     };
-                    state.toggle.run(strategy);
+                    state.open.run(strategy);
                 }
             })),
             on_press_up: None,
@@ -312,6 +318,11 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
         move || id.clone()
     });
 
+    let menu_id_signal = Signal::derive({
+        let id = menu_id;
+        move || id.clone()
+    });
+
     // Chain press keydown with menu keydown (press first, then menu)
     let combined_keydown = press_on_keydown.chain(menu_keydown_handler);
 
@@ -326,6 +337,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             on_pointerdown: press_on_pointerdown,
         },
         menu_props: UseMenuTriggerMenuProps {
+            id: menu_id_signal,
             aria_labelledby: menu_trigger_id_signal,
             auto_focus: state.focus_strategy,
             on_close: state.close,

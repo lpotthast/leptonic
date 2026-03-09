@@ -10,7 +10,7 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaSelected},
+        aria::{AriaDisabled, AriaExpanded, AriaRole, AriaSelected},
         EventHandler,
     },
 };
@@ -98,7 +98,7 @@ pub struct UseTreeItemReturn {
 /// Note: aria-level, aria-setsize, aria-posinset should be set via custom attributes.
 #[derive(Debug)]
 pub struct UseTreeItemProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -128,7 +128,7 @@ impl IntoAttrs for UseTreeItemProps {
 /// Attributes for the tree item element.
 /// Note: aria-level, aria-setsize, aria-posinset should be set via custom attributes.
 pub type UseTreeItemAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -141,7 +141,7 @@ pub type UseTreeItemAttrs = (
 /// Props from `use_tree_item` for the content element that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTreeItemContentProps {
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 impl IntoAttrs for UseTreeItemContentProps {
@@ -153,7 +153,7 @@ impl IntoAttrs for UseTreeItemContentProps {
 }
 
 /// Attributes for the tree item content element.
-pub type UseTreeItemContentAttrs = (Attr<attr::Role, &'static str>,);
+pub type UseTreeItemContentAttrs = (Attr<attr::Role, AriaRole>,);
 
 /// Provides the behavior and accessibility for a tree item.
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
@@ -283,7 +283,7 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
 
     UseTreeItemReturn {
         item_props: UseTreeItemProps {
-            role: "treeitem",
+            role: AriaRole::Treeitem,
             aria_expanded,
             aria_selected,
             aria_disabled,
@@ -293,7 +293,7 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
             on_focus: EventHandler::new(handle_focus),
         },
         content_props: UseTreeItemContentProps {
-            role: "presentation",
+            role: AriaRole::Presentation,
         },
         item_key,
         is_expanded,

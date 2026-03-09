@@ -13,7 +13,10 @@ use crate::{
         focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
     },
-    utils::{aria::AriaDisabled, EventHandler},
+    utils::{
+        aria::{AriaDisabled, AriaRole},
+        EventHandler,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableColumnHeader.ts
@@ -72,7 +75,7 @@ pub struct UseTableColumnHeaderReturn {
 /// Props from `use_table_column_header` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTableColumnHeaderProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_colindex: String,
     pub aria_sort: Signal<Option<&'static str>>,
     pub tabindex: Signal<&'static str>,
@@ -109,7 +112,7 @@ impl IntoAttrs for UseTableColumnHeaderProps {
 
 /// Attributes for the table column header element.
 pub type UseTableColumnHeaderAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaColindex, String>,
     Attr<attr::AriaSort, Signal<Option<&'static str>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
@@ -233,7 +236,7 @@ pub fn use_table_column_header(input: UseTableColumnHeaderInput) -> UseTableColu
 
     UseTableColumnHeaderReturn {
         column_props: UseTableColumnHeaderProps {
-            role: "columnheader",
+            role: AriaRole::Columnheader,
             aria_colindex,
             aria_sort,
             tabindex,

@@ -92,7 +92,7 @@ pub struct UseAnchorLinkReturn {
 #[derive(Debug)]
 pub struct UseAnchorLinkProps {
     pub href: Oco<'static, str>,
-    pub role: Option<&'static str>,
+    pub role: Option<AriaRole>,
     pub aria_label: Option<Oco<'static, str>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub merged: MergedFocusablePressFocusRingProps,
@@ -117,7 +117,7 @@ impl IntoAttrs for UseAnchorLinkProps {
 pub type UseAnchorLinkAttrs = (
     (
         Attr<attr::Href, Oco<'static, str>>,
-        Attr<attr::Role, Option<&'static str>>,
+        Attr<attr::Role, Option<AriaRole>>,
         Attr<attr::AriaLabel, Option<Oco<'static, str>>>,
         Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     ),
@@ -189,7 +189,7 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
     // Non-anchor elements need role="link".
     let role = match element_type {
         LinkElementType::Anchor => None,
-        LinkElementType::Span | LinkElementType::Button => Some("link"),
+        LinkElementType::Span | LinkElementType::Button => Some(AriaRole::Link),
     };
 
     // Compose sub-hooks.

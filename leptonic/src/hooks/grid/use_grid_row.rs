@@ -20,7 +20,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaSelected},
+        aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::{CapturedElement, ElementCaptureAttr},
         focus::focus_element,
         EventHandler,
@@ -82,7 +82,7 @@ pub struct UseGridRowReturn {
 /// Props from `use_grid_row` that can be extracted and merged programmatically.
 #[derive(Clone)]
 pub struct UseGridRowProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
     pub aria_rowindex: String,
     pub aria_selected: Signal<Option<AriaSelected>>,
@@ -115,7 +115,7 @@ impl IntoAttrs for UseGridRowProps {
 
 /// Attributes for a grid row.
 pub type UseGridRowAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaRowindex, String>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
@@ -215,7 +215,7 @@ where
 
     UseGridRowReturn {
         props: UseGridRowProps {
-            role: "row",
+            role: AriaRole::Row,
             tabindex,
             aria_rowindex,
             aria_selected,

@@ -16,7 +16,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaSelected},
+        aria::{AriaDisabled, AriaRole, AriaSelected},
         time::Day,
         EventHandler,
     },
@@ -105,7 +105,7 @@ pub struct UseCalendarCellReturn {
 /// Props from `use_calendar_cell` for the cell element (td).
 #[derive(Debug)]
 pub struct UseCalendarCellProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_disabled: Option<AriaDisabled>,
     pub aria_selected: Signal<Option<AriaSelected>>,
 }
@@ -124,7 +124,7 @@ impl IntoAttrs for UseCalendarCellProps {
 
 /// Attributes for the calendar cell element (td).
 pub type UseCalendarCellAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaDisabled, Option<AriaDisabled>>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
 );
@@ -132,7 +132,7 @@ pub type UseCalendarCellAttrs = (
 /// Props from `use_calendar_cell` for the button inside the cell.
 #[derive(Debug)]
 pub struct UseCalendarCellButtonProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
     pub aria_label: String,
     pub aria_disabled: Option<AriaDisabled>,
@@ -167,7 +167,7 @@ impl IntoAttrs for UseCalendarCellButtonProps {
 
 /// Attributes for the button inside the calendar cell.
 pub type UseCalendarCellButtonAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaLabel, String>,
     Attr<attr::AriaDisabled, Option<AriaDisabled>>,
@@ -332,12 +332,12 @@ pub fn use_calendar_cell(input: UseCalendarCellInput) -> UseCalendarCellReturn {
 
     UseCalendarCellReturn {
         cell_props: UseCalendarCellProps {
-            role: "gridcell",
+            role: AriaRole::Gridcell,
             aria_disabled: cell_disabled,
             aria_selected,
         },
         button_props: UseCalendarCellButtonProps {
-            role: "button",
+            role: AriaRole::Button,
             tabindex,
             aria_label,
             aria_disabled: cell_disabled,

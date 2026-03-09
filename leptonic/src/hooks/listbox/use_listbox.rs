@@ -22,7 +22,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable, AriaOrientation},
+        aria::{AriaDisabled, AriaMultiselectable, AriaOrientation, AriaRole},
         EventHandler,
     },
 };
@@ -158,7 +158,7 @@ where
 #[derive(Debug)]
 pub struct UseListBoxProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: &'static str,
     pub aria_label: Option<&'static str>,
     pub aria_labelledby: Option<String>,
@@ -189,7 +189,7 @@ impl IntoAttrs for UseListBoxProps {
 /// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UseListBoxAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
@@ -408,7 +408,7 @@ where
     UseListBoxReturn {
         listbox_props: UseListBoxProps {
             id: listbox_id.clone(),
-            role: "listbox",
+            role: AriaRole::Listbox,
             tabindex: "0",
             aria_label,
             aria_labelledby,

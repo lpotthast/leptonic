@@ -27,23 +27,10 @@
 //
 // =============================================================================
 
-use std::marker::PhantomData;
-
-use educe::Educe;
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    oco::Oco,
-    prelude::*,
-    tachys::html::style::{style, Style},
-};
-use leptos_use::core::IntoElementMaybeSignal;
-use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
+use leptos::{oco::Oco, prelude::*};
 
 use super::{
-    use_overlay::{use_overlay, UseOverlayInput},
+    use_overlay::{use_overlay, UseOverlayInput, UseOverlayUnderlayAttrs, UseOverlayUnderlayProps},
     use_overlay_position::{
         use_overlay_position, PhysicalPlacementX, PlacementX, PlacementY, UseOverlayPositionInput,
     },
@@ -51,27 +38,16 @@ use super::{
 use crate::{
     hooks::{
         interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput},
-        IntoAttrs,
+        merged::MergedOverlayOverlayPositionProps,
+        IntoAttrs, MergedOverlayOverlayPositionAttrs, UsePreventScrollProps,
+        UsePreventScrollReturn,
     },
-    utils::{locale::WritingDirection, ElementCaptureAttr, EventHandler},
+    utils::{locale::WritingDirection, CapturedElement, ElementCaptureAttr, MergeWith},
 };
 
 /// Input parameters for the `use_popover` hook.
-#[derive(Clone, Educe)]
-#[educe(Debug)]
-pub struct UsePopoverInput<Trigger, Popover, M>
-where
-    Trigger: IntoElementMaybeSignal<web_sys::Element, M> + Clone,
-    Popover: IntoElementMaybeSignal<web_sys::Element, M> + Clone,
-{
-    /// The ref for the element which the popover positions itself with respect to.
-    #[educe(Debug(ignore))]
-    pub trigger_ref: Trigger,
-
-    /// The ref for the popover element.
-    #[educe(Debug(ignore))]
-    pub popover_ref: Popover,
-
+#[derive(Debug, Clone)]
+pub struct UsePopoverInput {
     /// Whether the popover is open.
     pub is_open: Signal<bool>,
 
@@ -114,8 +90,6 @@ where
     /// filter out interaction with elements that should not dismiss the popover.
     /// By default, `on_close` will always be called on interaction outside the popover.
     pub should_close_on_interact_outside: Option<Callback<web_sys::Element, bool>>,
-
-    pub phantom_data: PhantomData<M>,
 }
 
 /// The return value of the `use_popover` hook.
@@ -123,6 +97,10 @@ where
 pub struct UsePopoverReturn {
     /// Props for the popover element. Call `.into_attrs()` for view spreading.
     pub props: UsePopoverProps,
+
+    /// Props for the trigger element. Call `.into_attrs()` for view spreading.
+    /// Spread these onto the trigger element so the hook can capture it for positioning.
+    pub trigger_props: UsePopoverTriggerProps,
 
     /// Props for the underlay element (optional background layer behind the popover).
     /// Call `.into_attrs()` for view spreading.
@@ -140,77 +118,60 @@ pub struct UsePopoverReturn {
 
 /// Props from `use_popover` for the popover element that can be extracted and merged programmatically.
 ///
-/// These merge overlay props (from `use_overlay`) with position props (from `use_overlay_position`).
+/// These merge overlay props (from `use_overlay`) with position props (from `use_overlay_position`)
+/// via `MergeWith`, stored in the `other` field.
 #[derive(Debug)]
 pub struct UsePopoverProps {
-    // From use_overlay
-    pub id: String,
-    pub element_capture: ElementCaptureAttr,
-    pub on_keydown: EventHandler<KeyboardEvent>,
-    pub on_focusin: EventHandler<FocusEvent>,
-    pub on_focusout: EventHandler<FocusEvent>,
-    // From use_overlay_position
-    pub position: Signal<(&'static str, String)>,
-    pub z_index: Signal<(&'static str, String)>,
-    pub top: Signal<(&'static str, String)>,
-    pub left: Signal<(&'static str, String)>,
-    pub max_height: Signal<(&'static str, String)>,
+    pub other: MergedOverlayOverlayPositionProps,
 }
 
 impl IntoAttrs for UsePopoverProps {
     type Attrs = UsePopoverAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            // Overlay attrs
-            Attr(attr::Id, self.id),
-            self.element_capture,
-            self.on_keydown.into_on(ev::keydown),
-            self.on_focusin.into_on(ev::focusin),
-            self.on_focusout.into_on(ev::focusout),
-            // Position attrs
-            style(self.position),
-            style(self.z_index),
-            style(self.top),
-            style(self.left),
-            style(self.max_height),
-        )
+        self.other.into_attrs()
     }
 }
 
-/// Props from `use_popover` for the underlay element that can be extracted and merged programmatically.
+/// Props from `use_popover` for the trigger element.
+///
+/// Contains the `ElementCaptureAttr` that captures the trigger element for positioning.
 #[derive(Debug)]
-pub struct UsePopoverUnderlayProps {
-    pub on_pointerdown: EventHandler<PointerEvent>,
+pub struct UsePopoverTriggerProps {
+    pub element_capture: ElementCaptureAttr,
 }
+
+impl IntoAttrs for UsePopoverTriggerProps {
+    type Attrs = UsePopoverTriggerAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        (self.element_capture,)
+    }
+}
+
+/// These attributes must be spread onto the trigger element.
+pub type UsePopoverTriggerAttrs = (ElementCaptureAttr,);
+
+/// Props from `use_popover` for the underlay element, delegated from `use_overlay`.
+///
+/// Call `.into_attrs()` to get spreadable attributes.
+#[derive(Debug)]
+pub struct UsePopoverUnderlayProps(pub UseOverlayUnderlayProps);
 
 impl IntoAttrs for UsePopoverUnderlayProps {
     type Attrs = UsePopoverUnderlayAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (self.on_pointerdown.into_on(ev::pointerdown),)
+        self.0.into_attrs()
     }
 }
 
 /// These attributes must be spread onto the popover element.
-pub type UsePopoverAttrs = (
-    // Overlay
-    Attr<attr::Id, String>,
-    ElementCaptureAttr,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focusin, SharedEventCallback<FocusEvent>>,
-    On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    // Position
-    Style<Signal<(&'static str, String)>>,
-    Style<Signal<(&'static str, String)>>,
-    Style<Signal<(&'static str, String)>>,
-    Style<Signal<(&'static str, String)>>,
-    Style<Signal<(&'static str, String)>>,
-);
+pub type UsePopoverAttrs = MergedOverlayOverlayPositionAttrs;
 
 /// These attributes can be spread onto an underlay element.
 /// The underlay captures pointer events behind the popover content.
-pub type UsePopoverUnderlayAttrs = (On<ev::pointerdown, SharedEventCallback<PointerEvent>>,);
+pub type UsePopoverUnderlayAttrs = UseOverlayUnderlayAttrs;
 
 /// Provides the behavior and accessibility implementation for a popover component.
 ///
@@ -222,8 +183,6 @@ pub type UsePopoverUnderlayAttrs = (On<ev::pointerdown, SharedEventCallback<Poin
 ///
 /// ```ignore
 /// let popover = use_popover(UsePopoverInput {
-///     trigger_ref: trigger_el,
-///     popover_ref: popover_el,
 ///     is_open: is_open.into(),
 ///     on_close: Callback::new(move |_| set_is_open.set(false)),
 ///     placement_x: Signal::derive(|| PlacementX::Center),
@@ -236,28 +195,40 @@ pub type UsePopoverUnderlayAttrs = (On<ev::pointerdown, SharedEventCallback<Poin
 ///     is_non_modal: false,
 ///     is_keyboard_dismiss_disabled: false,
 ///     should_close_on_interact_outside: None,
-///     phantom_data: PhantomData,
 /// });
 ///
+/// let trigger_attrs = StoredValue::new(popover.trigger_props.into_attrs());
+/// let popover_props = StoredValue::new(popover.props.into_attrs());
+/// let underlay_props = StoredValue::new(popover.underlay_props.into_attrs());
+///
 /// view! {
-///     <Show when=move || is_open.get()>
-///         <div class="underlay" {..popover.underlay_props.into_attrs()}/>
-///         <div class="popover" {..popover.props.into_attrs()}>
-///             "Popover content"
-///         </div>
-///     </Show>
+///     <button
+///         {..trigger_attrs.get_value()}
+///         on:click=move |_| set_is_open.set(!is_open.get())
+///     >
+///         "Toggle Popover"
+///     </button>
+///
+///     <Portal>
+///         <Show when=move || is_open.get()>
+///             // Underlay captures pointer events to close (modal only)
+///             <div
+///                 {..underlay_props.get_value()}
+///                 style="position: fixed; inset: 0; z-index: 999;"
+///             />
+///             // Popover content — positioned automatically
+///             <div
+///                 {..popover_props.get_value()}
+///                 style="z-index: 1000;"
+///             >
+///                 "Popover content"
+///             </div>
+///         </Show>
+///     </Portal>
 /// }
 /// ```
-pub fn use_popover<Trigger, Popover, M>(
-    input: UsePopoverInput<Trigger, Popover, M>,
-) -> UsePopoverReturn
-where
-    Trigger: IntoElementMaybeSignal<web_sys::Element, M> + Clone + 'static,
-    Popover: IntoElementMaybeSignal<web_sys::Element, M> + Clone + 'static,
-{
+pub fn use_popover(input: UsePopoverInput) -> UsePopoverReturn {
     let UsePopoverInput {
-        trigger_ref,
-        popover_ref,
         is_open,
         on_close,
         placement_x,
@@ -270,8 +241,11 @@ where
         is_non_modal,
         is_keyboard_dismiss_disabled,
         should_close_on_interact_outside,
-        phantom_data: _,
     } = input;
+
+    // Create a CapturedElement for the trigger — the caller will spread
+    // trigger_props onto their trigger element.
+    let trigger_element = CapturedElement::new();
 
     // 1. Delegate all dismissal to use_overlay (overlay stack, escape, interact outside, blur).
     //    react-aria: isDismissable = !isNonModal || isSubmenu (no submenu support here).
@@ -286,9 +260,9 @@ where
     });
 
     // 2. Positioning relative to the trigger.
+    //    The overlay element is captured internally by use_overlay_position.
     let position = use_overlay_position(UseOverlayPositionInput {
-        overlay: popover_ref,
-        target: trigger_ref,
+        target: trigger_element,
         placement_x,
         placement_y,
         writing_direction,
@@ -298,11 +272,12 @@ where
         should_flip,
         max_height: None,
         is_open,
-        phantom_data: PhantomData,
     });
 
     // 3. Scroll prevention (disabled when non-modal or not open).
-    use_prevent_scroll(UsePreventScrollInput {
+    let UsePreventScrollReturn {
+        props: UsePreventScrollProps { /* Empty, no further prop merge required. */ },
+    } = use_prevent_scroll(UsePreventScrollInput {
         disabled: Signal::derive(move || is_non_modal || !is_open.get()),
     });
 
@@ -310,22 +285,12 @@ where
     let id = overlay.id;
     UsePopoverReturn {
         props: UsePopoverProps {
-            // Overlay
-            id: overlay.props.id,
-            element_capture: overlay.props.element_capture,
-            on_keydown: overlay.props.on_keydown,
-            on_focusin: overlay.props.on_focusin,
-            on_focusout: overlay.props.on_focusout,
-            // Position
-            position: position.props.position,
-            z_index: position.props.z_index,
-            top: position.props.top,
-            left: position.props.left,
-            max_height: position.props.max_height,
+            other: overlay.props.merge_with(position.props),
         },
-        underlay_props: UsePopoverUnderlayProps {
-            on_pointerdown: overlay.underlay_props.on_pointerdown,
+        trigger_props: UsePopoverTriggerProps {
+            element_capture: trigger_element.attr(),
         },
+        underlay_props: UsePopoverUnderlayProps(overlay.underlay_props),
         id,
         resolved_placement_x: position.resolved_placement_x,
         resolved_placement_y: position.resolved_placement_y,

@@ -4,7 +4,7 @@ use uuid::Uuid;
 use super::{use_checkbox_group::Orientation, use_field::ValidationState};
 use crate::{
     hooks::IntoAttrs,
-    utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired},
+    utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired, AriaRole},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadioGroup.ts
@@ -90,7 +90,7 @@ where
 #[derive(Debug)]
 pub struct UseRadioGroupProps {
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-labelledby attribute.
     pub aria_labelledby: Option<String>,
@@ -128,7 +128,7 @@ impl IntoAttrs for UseRadioGroupProps {
 }
 
 pub type UseRadioGroupAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::AriaInvalid, Option<AriaInvalid>>,
@@ -263,7 +263,7 @@ where
 
     UseRadioGroupReturn {
         group_props: UseRadioGroupProps {
-            role: "radiogroup",
+            role: AriaRole::Radiogroup,
             aria_labelledby,
             aria_describedby,
             aria_invalid: (validation_state == ValidationState::Invalid)

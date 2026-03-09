@@ -10,7 +10,10 @@ use web_sys::KeyboardEvent;
 
 use crate::{
     hooks::IntoAttrs,
-    utils::{aria::AriaDisabled, EventHandler},
+    utils::{
+        aria::{AriaDisabled, AriaRole},
+        EventHandler,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tag/src/useTagGroup.ts
@@ -97,7 +100,7 @@ pub struct UseTagGroupReturn {
 #[derive(Debug)]
 pub struct UseTagGroupProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_label: Option<String>,
     pub aria_labelledby: Option<String>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -122,7 +125,7 @@ impl IntoAttrs for UseTagGroupProps {
 /// Attributes for the tag group container element.
 pub type UseTagGroupAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -197,7 +200,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
     UseTagGroupReturn {
         group_props: UseTagGroupProps {
             id: group_id.clone(),
-            role: "grid",
+            role: AriaRole::Grid,
             aria_label: None,
             aria_labelledby,
             aria_disabled,

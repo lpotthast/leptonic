@@ -1,6 +1,6 @@
 use leptos::{attr, attr::Attr};
 
-use crate::hooks::IntoAttrs;
+use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableRowGroup.ts
 
@@ -28,7 +28,7 @@ pub struct UseTableHeaderReturn {
 /// Props from `use_table_header` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTableHeaderProps {
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 impl IntoAttrs for UseTableHeaderProps {
@@ -40,7 +40,7 @@ impl IntoAttrs for UseTableHeaderProps {
 }
 
 /// Attributes for the table header element.
-pub type UseTableHeaderAttrs = (Attr<attr::Role, &'static str>,);
+pub type UseTableHeaderAttrs = (Attr<attr::Role, AriaRole>,);
 
 /// Provides the behavior and accessibility for a table header group.
 ///
@@ -62,6 +62,8 @@ pub type UseTableHeaderAttrs = (Attr<attr::Role, &'static str>,);
 pub fn use_table_header(_input: UseTableHeaderInput) -> UseTableHeaderReturn {
     // The role is "rowgroup" for table headers
     UseTableHeaderReturn {
-        header_props: UseTableHeaderProps { role: "rowgroup" },
+        header_props: UseTableHeaderProps {
+            role: AriaRole::Rowgroup,
+        },
     }
 }

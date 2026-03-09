@@ -12,7 +12,7 @@ use super::use_date_segment::{DateSegment, DateSegmentType};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaRequired},
+        aria::{AriaDisabled, AriaRequired, AriaRole},
         EventHandler,
     },
 };
@@ -178,7 +178,7 @@ pub struct UseTimeFieldReturn {
 #[derive(Debug)]
 pub struct UseTimeFieldProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_labelledby: Option<String>,
     pub aria_describedby: Option<String>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -205,7 +205,7 @@ impl IntoAttrs for UseTimeFieldProps {
 /// Attributes for the time field container element.
 pub type UseTimeFieldAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -233,7 +233,7 @@ pub struct UseTimeFieldErrorProps {
     /// The id of the error message element.
     pub id: String,
     /// The role for the error message.
-    pub role: &'static str,
+    pub role: AriaRole,
     /// The aria-live attribute.
     pub aria_live: &'static str,
 }
@@ -526,7 +526,7 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
     UseTimeFieldReturn {
         field_props: UseTimeFieldProps {
             id: field_id.clone(),
-            role: "group",
+            role: AriaRole::Group,
             aria_labelledby,
             aria_describedby,
             aria_disabled,
@@ -537,7 +537,7 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
         description_props: UseTimeFieldDescriptionProps { id: description_id },
         error_props: UseTimeFieldErrorProps {
             id: error_id,
-            role: "alert",
+            role: AriaRole::Alert,
             aria_live: "polite",
         },
         segments,

@@ -1,14 +1,14 @@
-use std::marker::PhantomData;
-
-use educe::Educe;
 use leptos::{
     prelude::*,
     tachys::html::style::{style, Style},
 };
-use leptos_use::{core::IntoElementMaybeSignal, use_document, use_element_bounding};
+use leptos_use::{use_document, use_element_bounding};
 
 use super::calculate_position::{calculate_position, CalculatePositionInput, Rect};
-use crate::{hooks::IntoAttrs, utils::locale::WritingDirection};
+use crate::{
+    hooks::IntoAttrs,
+    utils::{locale::WritingDirection, CapturedElement, ElementCaptureAttr},
+};
 
 // =============================================================================
 // REACT-ARIA DEVIATIONS
@@ -58,6 +58,12 @@ use crate::{hooks::IntoAttrs, utils::locale::WritingDirection};
 //
 // - Position is computed via a `Memo<PositionResult>` rather than imperative DOM
 //   style manipulation.
+//
+// - **Element capture**: The overlay element is captured internally via
+//   `CapturedElement` / `ElementCaptureAttr` (spread onto the overlay element
+//   via the returned props). The target element is accepted as a `CapturedElement`
+//   from the caller because the overlay position props are spread onto the overlay
+//   element, not the target.
 //
 // =============================================================================
 
@@ -122,20 +128,12 @@ impl PlacementX {
     }
 }
 
-#[derive(Clone, Copy, Educe)]
-#[educe(Debug)]
-pub struct UseOverlayPositionInput<Overlay, Target, M>
-where
-    Overlay: IntoElementMaybeSignal<web_sys::Element, M>,
-    Target: IntoElementMaybeSignal<web_sys::Element, M>,
-{
-    /// Element that resembles the overlay content.
-    #[educe(Debug(ignore))]
-    pub overlay: Overlay,
-
+#[derive(Debug, Clone)]
+pub struct UseOverlayPositionInput {
     /// Element to which the overlay should be positioned relative to.
-    #[educe(Debug(ignore))]
-    pub target: Target,
+    /// This is a `CapturedElement` from the caller because the overlay position
+    /// props are spread onto the overlay element, not the target.
+    pub target: CapturedElement,
 
     pub placement_x: Signal<PlacementX>,
     pub placement_y: Signal<PlacementY>,
@@ -163,8 +161,6 @@ where
 
     /// Whether the overlay is currently open. When false, position computation is skipped.
     pub is_open: Signal<bool>,
-
-    pub phantom_data: PhantomData<M>,
 }
 
 #[derive(Debug)]
@@ -182,6 +178,7 @@ pub struct UseOverlayPositionReturn {
 /// Props from `use_overlay_position` that can be converted to spreadable attributes.
 #[derive(Debug)]
 pub struct UseOverlayPositionProps {
+    pub element_capture: ElementCaptureAttr,
     pub position: Signal<(&'static str, String)>,
     pub z_index: Signal<(&'static str, String)>,
     pub top: Signal<(&'static str, String)>,
@@ -194,6 +191,7 @@ impl IntoAttrs for UseOverlayPositionProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
+            self.element_capture,
             style(self.position),
             style(self.z_index),
             style(self.top),
@@ -204,6 +202,7 @@ impl IntoAttrs for UseOverlayPositionProps {
 }
 
 pub type UseOverlayPositionAttrs = (
+    ElementCaptureAttr,
     Style<Signal<(&'static str, String)>>, // position: fixed
     Style<Signal<(&'static str, String)>>, // z-index: 100000
     Style<Signal<(&'static str, String)>>, // top: Xpx
@@ -211,15 +210,8 @@ pub type UseOverlayPositionAttrs = (
     Style<Signal<(&'static str, String)>>, // max-height: Xpx
 );
 
-pub fn use_overlay_position<Overlay, Target, M>(
-    input: UseOverlayPositionInput<Overlay, Target, M>,
-) -> UseOverlayPositionReturn
-where
-    Overlay: IntoElementMaybeSignal<web_sys::Element, M>,
-    Target: IntoElementMaybeSignal<web_sys::Element, M>,
-{
+pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositionReturn {
     let UseOverlayPositionInput {
-        overlay,
         target,
         placement_x,
         placement_y,
@@ -230,11 +222,19 @@ where
         should_flip,
         max_height: user_max_height,
         is_open,
-        phantom_data: _,
     } = input;
 
-    let overlay_bounding = use_element_bounding(overlay);
-    let target_bounding = use_element_bounding(target);
+    // Capture the overlay element internally.
+    let overlay_element = CapturedElement::new();
+
+    // Bridge CapturedElement -> Signal for use_element_bounding.
+    // Signal<Option<SendWrapper<Element>>> implements IntoElementMaybeSignal
+    // via leptos-use's OptionSendWrapperSignalMarker impl.
+    let overlay_signal = Signal::derive(move || overlay_element.get());
+    let target_signal = Signal::derive(move || target.get());
+
+    let overlay_bounding = use_element_bounding(overlay_signal);
+    let target_bounding = use_element_bounding(target_signal);
 
     let container_width = move || match use_document().as_ref() {
         Some(document) => match document.body() {
@@ -293,6 +293,7 @@ where
 
     UseOverlayPositionReturn {
         props: UseOverlayPositionProps {
+            element_capture: overlay_element.attr(),
             position: Signal::derive(|| ("position", String::from("fixed"))),
             z_index: Signal::derive(|| ("z-index", String::from("100000"))),
             top: Signal::derive(move || ("top", format!("{}px", result.get().top))),

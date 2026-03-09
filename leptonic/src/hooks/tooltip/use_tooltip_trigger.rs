@@ -14,7 +14,7 @@ use crate::{
         focus::use_focus_visible::{get_modality, Modality},
         IntoAttrs,
     },
-    utils::EventHandler,
+    utils::{aria::AriaRole, EventHandler},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tooltip/src/useTooltipTrigger.ts
@@ -146,7 +146,7 @@ pub struct UseTooltipTriggerTooltipProps {
     pub id: String,
 
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 /// Provides the behavior and accessibility for a tooltip trigger.
@@ -330,7 +330,7 @@ pub fn use_tooltip_trigger(
         },
         tooltip_props: UseTooltipTriggerTooltipProps {
             id: tooltip_id.clone(),
-            role: "tooltip",
+            role: AriaRole::Tooltip,
         },
         is_open,
         trigger_id,

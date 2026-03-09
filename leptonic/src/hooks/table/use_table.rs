@@ -11,7 +11,7 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable},
+        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
         EventHandler,
     },
 };
@@ -142,7 +142,7 @@ pub struct UseTableReturn {
 #[derive(Debug)]
 pub struct UseTableProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_label: Option<String>,
     pub aria_rowcount: Option<String>,
     pub aria_multiselectable: Option<AriaMultiselectable>,
@@ -169,7 +169,7 @@ impl IntoAttrs for UseTableProps {
 /// Attributes for the table element.
 pub type UseTableAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaRowcount, Option<String>>,
     Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
@@ -343,7 +343,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
     UseTableReturn {
         table_props: UseTableProps {
             id: table_id.clone(),
-            role: "grid",
+            role: AriaRole::Grid,
             aria_label: label,
             aria_rowcount: None, // Set by component based on data
             aria_multiselectable,

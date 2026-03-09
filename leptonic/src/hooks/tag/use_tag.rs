@@ -10,7 +10,7 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaSelected},
+        aria::{AriaDisabled, AriaRole, AriaSelected},
         EventHandler,
     },
 };
@@ -76,7 +76,7 @@ pub struct UseTagReturn {
 /// Props from `use_tag` for the row element that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTagRowProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub tabindex: Signal<&'static str>,
@@ -103,7 +103,7 @@ impl IntoAttrs for UseTagRowProps {
 
 /// Attributes for the tag row element.
 pub type UseTagRowAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, Signal<&'static str>>,
@@ -115,7 +115,7 @@ pub type UseTagRowAttrs = (
 /// Props from `use_tag` for the cell element that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTagCellProps {
-    pub role: &'static str,
+    pub role: AriaRole,
 }
 
 impl IntoAttrs for UseTagCellProps {
@@ -127,7 +127,7 @@ impl IntoAttrs for UseTagCellProps {
 }
 
 /// Attributes for the tag cell element.
-pub type UseTagCellAttrs = (Attr<attr::Role, &'static str>,);
+pub type UseTagCellAttrs = (Attr<attr::Role, AriaRole>,);
 
 /// Props from `use_tag` for the remove button that can be extracted and merged programmatically.
 #[derive(Debug)]
@@ -245,7 +245,7 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
 
     UseTagReturn {
         row_props: UseTagRowProps {
-            role: "row",
+            role: AriaRole::Row,
             aria_selected,
             aria_disabled,
             tabindex,
@@ -253,7 +253,9 @@ pub fn use_tag(input: UseTagInput) -> UseTagReturn {
             on_keydown: EventHandler::new(handle_keydown),
             on_focus: EventHandler::new(handle_focus),
         },
-        cell_props: UseTagCellProps { role: "gridcell" },
+        cell_props: UseTagCellProps {
+            role: AriaRole::Gridcell,
+        },
         remove_button_props: UseTagRemoveButtonProps {
             aria_label: "Remove",
             tabindex: "-1",

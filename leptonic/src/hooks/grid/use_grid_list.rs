@@ -21,7 +21,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable},
+        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
         EventAccessors, EventHandler,
     },
 };
@@ -176,7 +176,7 @@ where
 #[derive(Debug)]
 pub struct UseGridListProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
     pub aria_label: Option<String>,
     pub aria_labelledby: Option<String>,
@@ -211,7 +211,7 @@ impl IntoAttrs for UseGridListProps {
 /// These attributes must be spread onto the target element using the spread syntax `<div {..attrs}/>`.
 pub type UseGridListAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaLabelledby, Option<String>>,
@@ -528,7 +528,7 @@ where
     UseGridListReturn {
         props: UseGridListProps {
             id: list_id,
-            role: "grid",
+            role: AriaRole::Grid,
             tabindex,
             aria_label: label,
             aria_labelledby: labelled_by,

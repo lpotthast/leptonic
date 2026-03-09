@@ -23,7 +23,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaSelected},
+        aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::ElementCaptureAttr,
         EventHandler,
     },
@@ -107,7 +107,7 @@ pub struct UseOptionReturn {
 #[derive(Debug)]
 pub struct UseOptionProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -152,7 +152,7 @@ impl IntoAttrs for UseOptionProps {
 /// These attributes must be spread onto the target element: `<foo {..attrs} />`
 pub type UseOptionAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -356,7 +356,7 @@ where
     UseOptionReturn {
         option_props: UseOptionProps {
             id: option_id,
-            role: "option",
+            role: AriaRole::Option,
             tabindex,
             aria_selected,
             aria_disabled,

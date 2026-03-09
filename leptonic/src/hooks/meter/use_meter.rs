@@ -1,7 +1,10 @@
 use leptos::{attr, attr::Attr, prelude::*};
 use uuid::Uuid;
 
-use crate::{hooks::IntoAttrs, utils::math::percentage_in_range};
+use crate::{
+    hooks::IntoAttrs,
+    utils::{aria::AriaRole, math::percentage_in_range},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/meter/src/useMeter.ts
 
@@ -90,7 +93,7 @@ pub struct UseMeterReturn {
 #[derive(Debug)]
 pub struct UseMeterProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_valuenow: Signal<String>,
     pub aria_valuemin: String,
     pub aria_valuemax: String,
@@ -117,7 +120,7 @@ impl IntoAttrs for UseMeterProps {
 /// Attributes for the meter container element.
 pub type UseMeterAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaValuenow, Signal<String>>,
     Attr<attr::AriaValuemin, String>,
     Attr<attr::AriaValuemax, String>,
@@ -209,7 +212,7 @@ pub fn use_meter(input: UseMeterInput) -> UseMeterReturn {
     UseMeterReturn {
         meter_props: UseMeterProps {
             id: meter_id.clone(),
-            role: "meter",
+            role: AriaRole::Meter,
             aria_valuenow,
             aria_valuemin: min_value.to_string(),
             aria_valuemax: max_value.to_string(),

@@ -14,7 +14,7 @@ use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaExpanded, AriaRequired},
+        aria::{AriaExpanded, AriaRequired, AriaRole},
         EventAccessors, EventHandler,
     },
 };
@@ -202,7 +202,7 @@ where
 pub struct UseComboBoxInputProps {
     pub id: String,
     pub r#type: &'static str,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub value: Signal<String>,
     pub placeholder: Option<&'static str>,
     pub disabled: Signal<bool>,
@@ -283,7 +283,7 @@ impl IntoAttrs for UseComboBoxButtonProps {
 pub type UseComboBoxInputAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Type, &'static str>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::Value, Signal<String>>,
     Attr<attr::Placeholder, Option<&'static str>>,
     Attr<attr::Disabled, Signal<bool>>,
@@ -321,7 +321,7 @@ pub struct UseComboBoxListBoxProps {
     pub id: String,
 
     /// The role attribute.
-    pub role: &'static str,
+    pub role: AriaRole,
 
     /// The aria-labelledby attribute.
     pub aria_labelledby: String,
@@ -676,7 +676,7 @@ where
         input_props: UseComboBoxInputProps {
             id: input_id.clone(),
             r#type: "text",
-            role: "combobox",
+            role: AriaRole::Combobox,
             value: input_value,
             placeholder,
             disabled: is_disabled,
@@ -706,7 +706,7 @@ where
         },
         listbox_props: UseComboBoxListBoxProps {
             id: listbox_id.clone(),
-            role: "listbox",
+            role: AriaRole::Listbox,
             aria_labelledby: input_id.clone(),
             tabindex: "-1",
         },

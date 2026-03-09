@@ -315,7 +315,10 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
         let container_element = cs.container_element;
         let movable_el = movable_element;
         let pixel_position = cs.pixel_position;
-        move |client_x: f64, client_y: f64, drag_offset: (f64, f64)| -> Option<(f64, f64, f64, f64)> {
+        move |client_x: f64,
+              client_y: f64,
+              drag_offset: (f64, f64)|
+              -> Option<(f64, f64, f64, f64)> {
             let container_rect = container_element
                 .get_untracked()
                 .map(|e| e.get_bounding_client_rect())?;
@@ -644,7 +647,8 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
 
             // Clamp using container/movable rects
             let clamped = (|| {
-                let container_rect = cs.container_element
+                let container_rect = cs
+                    .container_element
                     .get_untracked()
                     .map(|e| e.get_bounding_client_rect())?;
                 let movable_rect = movable_element
@@ -663,9 +667,21 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                 let pixel_x = new_px.clamp(0.0, available_width);
                 let pixel_y = new_py.clamp(0.0, available_height);
 
-                let norm_x = if available_width > 0.0 { pixel_x / available_width } else { 0.0 };
-                let norm_y = if available_height > 0.0 { pixel_y / available_height } else { 0.0 };
-                let norm_x = if cs.config.is_rtl { 1.0 - norm_x } else { norm_x };
+                let norm_x = if available_width > 0.0 {
+                    pixel_x / available_width
+                } else {
+                    0.0
+                };
+                let norm_y = if available_height > 0.0 {
+                    pixel_y / available_height
+                } else {
+                    0.0
+                };
+                let norm_x = if cs.config.is_rtl {
+                    1.0 - norm_x
+                } else {
+                    norm_x
+                };
 
                 Some((norm_x, norm_y, pixel_x, pixel_y))
             })();

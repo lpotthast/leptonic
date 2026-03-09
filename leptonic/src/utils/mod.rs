@@ -43,8 +43,8 @@ pub(crate) use dom_ext::{
 };
 pub use element_capture::{CapturedElement, ElementCaptureAttr};
 pub use event_handler::EventHandler;
-pub use event_wrapper::EventWrapper;
 pub use event_listeners::EventListenerOptions;
+pub use event_wrapper::EventWrapper;
 // Re-exports from interaction_rect
 pub use interaction_rect::{is_over, InteractionRect, RectPrecise};
 pub use merge::{MergeWith, MergeWithExt};

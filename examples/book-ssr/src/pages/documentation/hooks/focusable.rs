@@ -1,8 +1,11 @@
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
 use indoc::indoc;
-use leptonic::utils::Propagation;
-use leptonic::{atoms::focus_ring::FocusRing, components::prelude::*, hooks::*, prelude::Size};
+use leptonic::{
+    atoms::focus_ring::FocusRing, components::prelude::*, hooks::*, prelude::Size,
+    utils::Propagation,
+};
 use leptos::prelude::*;
+
+use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
 
 #[component]
 pub fn PageUseFocusable() -> impl IntoView {

@@ -20,7 +20,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaSelected},
+        aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::ElementCaptureAttr,
         EventHandler,
     },
@@ -90,7 +90,7 @@ pub struct UseTabReturn {
 #[derive(Clone)]
 pub struct UseTabProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_controls: String,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -131,7 +131,7 @@ impl IntoAttrs for UseTabProps {
 /// Attributes for the tab button element.
 pub type UseTabAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaControls, String>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -285,7 +285,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
     UseTabReturn {
         props: UseTabProps {
             id: tab_id.clone(),
-            role: "tab",
+            role: AriaRole::Tab,
             aria_selected,
             aria_controls: panel_id.clone(),
             aria_disabled,

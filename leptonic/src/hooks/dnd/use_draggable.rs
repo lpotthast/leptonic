@@ -10,7 +10,10 @@ use web_sys::DragEvent;
 
 use crate::{
     hooks::IntoAttrs,
-    utils::{aria::AriaGrabbed, EventHandler},
+    utils::{
+        aria::{AriaGrabbed, AriaRole},
+        EventHandler,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrag.ts
@@ -186,7 +189,7 @@ pub struct UseDraggableReturn {
 pub struct UseDraggableProps {
     pub id: String,
     pub draggable: Signal<&'static str>,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_grabbed: Signal<Option<AriaGrabbed>>,
     pub on_dragstart: EventHandler<DragEvent>,
     pub on_drag: EventHandler<DragEvent>,
@@ -213,7 +216,7 @@ impl IntoAttrs for UseDraggableProps {
 pub type UseDraggableAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Draggable, Signal<&'static str>>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaGrabbed, Signal<Option<AriaGrabbed>>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::drag, SharedEventCallback<DragEvent>>,
@@ -320,7 +323,7 @@ pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
         drag_props: UseDraggableProps {
             id: draggable_id.clone(),
             draggable: draggable_attr,
-            role: "button",
+            role: AriaRole::Button,
             aria_grabbed,
             on_dragstart: EventHandler::new(handle_drag_start),
             on_drag: EventHandler::new(handle_drag),

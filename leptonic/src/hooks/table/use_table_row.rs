@@ -14,7 +14,7 @@ use crate::{
         IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaSelected},
+        aria::{AriaDisabled, AriaRole, AriaSelected},
         EventHandler,
     },
 };
@@ -84,7 +84,7 @@ pub struct UseTableRowReturn {
 /// Props from `use_table_row` that can be extracted and merged programmatically.
 #[derive(Debug)]
 pub struct UseTableRowProps {
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_rowindex: String,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
@@ -123,7 +123,7 @@ impl IntoAttrs for UseTableRowProps {
 
 /// Attributes for the table row element.
 pub type UseTableRowAttrs = (
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaRowindex, String>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
@@ -280,7 +280,7 @@ pub fn use_table_row(input: UseTableRowInput) -> UseTableRowReturn {
 
     UseTableRowReturn {
         row_props: UseTableRowProps {
-            role: "row",
+            role: AriaRole::Row,
             aria_rowindex,
             aria_selected,
             aria_disabled,

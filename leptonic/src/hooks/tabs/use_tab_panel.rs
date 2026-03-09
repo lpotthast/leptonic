@@ -1,6 +1,9 @@
 use leptos::{attr, attr::Attr, prelude::*};
 
-use crate::{hooks::IntoAttrs, utils::aria::AriaHidden};
+use crate::{
+    hooks::IntoAttrs,
+    utils::aria::{AriaHidden, AriaRole},
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabPanel.ts
 
@@ -44,7 +47,7 @@ pub struct UseTabPanelReturn {
 #[derive(Debug)]
 pub struct UseTabPanelProps {
     pub id: String,
-    pub role: &'static str,
+    pub role: AriaRole,
     pub aria_labelledby: String,
     pub tabindex: &'static str,
     pub aria_hidden: Signal<Option<AriaHidden>>,
@@ -67,7 +70,7 @@ impl IntoAttrs for UseTabPanelProps {
 /// Attributes for the tab panel element.
 pub type UseTabPanelAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::Role, &'static str>,
+    Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, String>,
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaHidden, Signal<Option<AriaHidden>>>,
@@ -109,7 +112,7 @@ pub fn use_tab_panel(input: UseTabPanelInput) -> UseTabPanelReturn {
     UseTabPanelReturn {
         props: UseTabPanelProps {
             id: panel_id.clone(),
-            role: "tabpanel",
+            role: AriaRole::Tabpanel,
             aria_labelledby: tab_id.clone(),
             tabindex: "0",
             aria_hidden,

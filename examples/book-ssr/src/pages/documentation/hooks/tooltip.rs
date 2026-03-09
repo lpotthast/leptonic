@@ -1,8 +1,6 @@
-use std::marker::PhantomData;
-
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*, utils::locale::WritingDirection};
-use leptos::{html, portal::Portal, prelude::*};
+use leptonic::{components::prelude::*, hooks::*, utils::{locale::WritingDirection, CapturedElement}};
+use leptos::{portal::Portal, prelude::*};
 
 use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
 
@@ -106,12 +104,10 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                         use_overlay_position, UseOverlayPositionInput,
                         PlacementX, PlacementY,
                     };
-                    use leptonic::utils::locale::WritingDirection;
+                    use leptonic::utils::{locale::WritingDirection, CapturedElement};
                     use leptos::portal::Portal;
-                    use std::marker::PhantomData;
 
-                    let trigger_ref = NodeRef::<html::Button>::new();
-                    let tooltip_ref = NodeRef::<html::Div>::new();
+                    let target_element = CapturedElement::new();
 
                     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
                         delay: 300,
@@ -126,9 +122,9 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                         on_close: None,
                     });
 
+                    // The overlay element is captured internally by use_overlay_position.
                     let position = use_overlay_position(UseOverlayPositionInput {
-                        overlay: tooltip_ref,
-                        target: trigger_ref,
+                        target: target_element,
                         placement_x: Signal::derive(|| PlacementX::Center),
                         placement_y: Signal::derive(|| PlacementY::Above),
                         writing_direction: Signal::derive(|| WritingDirection::Ltr),
@@ -138,14 +134,14 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                         should_flip: true.into(),
                         max_height: None,
                         is_open: trigger.is_open,
-                        phantom_data: PhantomData,
                     });
 
+                    let target_capture = target_element.attr();
                     let position_attrs = position.props.into_attrs();
 
                     view! {
                         <button
-                            node_ref=trigger_ref
+                            {..target_capture}
                             {..trigger.trigger_props.into_attrs()}
                         >
                             "Hover me"
@@ -155,7 +151,6 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                                 <div
                                     {..position_attrs.clone()}
                                     {..tooltip.props.into_attrs()}
-                                    node_ref=tooltip_ref
                                     id=trigger.tooltip_props.id.clone()
                                     role=trigger.tooltip_props.role
                                 >
@@ -539,8 +534,7 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 /// Simple tooltip demo using all three hooks
 #[component]
 fn TooltipDemo() -> impl IntoView {
-    let trigger_ref = NodeRef::<html::Button>::new();
-    let tooltip_ref = NodeRef::<html::Div>::new();
+    let target_element = CapturedElement::new();
 
     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
         delay: 300,
@@ -556,8 +550,7 @@ fn TooltipDemo() -> impl IntoView {
     });
 
     let position = use_overlay_position(UseOverlayPositionInput {
-        overlay: tooltip_ref,
-        target: trigger_ref,
+        target: target_element,
         placement_x: Signal::derive(|| PlacementX::Center),
         placement_y: Signal::derive(|| PlacementY::Above),
         writing_direction: Signal::derive(|| WritingDirection::Ltr),
@@ -567,18 +560,18 @@ fn TooltipDemo() -> impl IntoView {
         should_flip: true.into(),
         max_height: None,
         is_open: trigger.is_open,
-        phantom_data: PhantomData,
     });
 
     let is_open = trigger.is_open;
     let tooltip_id = trigger.tooltip_props.id.clone();
+    let target_capture = target_element.attr();
     let position_attrs = position.props.into_attrs();
     let tooltip_attrs = tooltip.props.into_attrs();
 
     view! {
         <div style="margin: 3em 0; display: flex; justify-content: center;">
             <button
-                node_ref=trigger_ref
+                {..target_capture}
                 style=demo_button_primary()
                 {..trigger.trigger_props.into_attrs()}
             >
@@ -595,7 +588,6 @@ fn TooltipDemo() -> impl IntoView {
                             <div
                                 {..position_attrs.clone()}
                                 {..tooltip_attrs.clone()}
-                                node_ref=tooltip_ref
                                 id=tooltip_id.clone()
                                 role="tooltip"
                                 class="tooltip-demo"
@@ -630,8 +622,7 @@ fn HoverToKeepOpenDemo() -> impl IntoView {
 /// Tooltip without use_tooltip — closes when moving cursor to tooltip content
 #[component]
 fn WithoutUseTooltipDemo() -> impl IntoView {
-    let trigger_ref = NodeRef::<html::Button>::new();
-    let tooltip_ref = NodeRef::<html::Div>::new();
+    let target_element = CapturedElement::new();
 
     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
         delay: 200,
@@ -641,8 +632,7 @@ fn WithoutUseTooltipDemo() -> impl IntoView {
     let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
 
     let position = use_overlay_position(UseOverlayPositionInput {
-        overlay: tooltip_ref,
-        target: trigger_ref,
+        target: target_element,
         placement_x: Signal::derive(|| PlacementX::Center),
         placement_y: Signal::derive(|| PlacementY::Above),
         writing_direction: Signal::derive(|| WritingDirection::Ltr),
@@ -652,16 +642,16 @@ fn WithoutUseTooltipDemo() -> impl IntoView {
         should_flip: true.into(),
         max_height: None,
         is_open: trigger.is_open,
-        phantom_data: PhantomData,
     });
 
     let is_open = trigger.is_open;
     let tooltip_id = trigger.tooltip_props.id.clone();
+    let target_capture = target_element.attr();
     let position_attrs = position.props.into_attrs();
 
     view! {
         <button
-            node_ref=trigger_ref
+            {..target_capture}
             style=demo_button_dark()
             {..trigger.trigger_props.into_attrs()}
         >
@@ -676,7 +666,6 @@ fn WithoutUseTooltipDemo() -> impl IntoView {
                     <Show when=move || is_open.get()>
                         <div
                             {..position_attrs.clone()}
-                            node_ref=tooltip_ref
                             id=tooltip_id.clone()
                             role="tooltip"
                             class="tooltip-demo"
@@ -693,8 +682,7 @@ fn WithoutUseTooltipDemo() -> impl IntoView {
 /// Tooltip with use_tooltip — stays open when moving cursor to tooltip content
 #[component]
 fn WithUseTooltipDemo() -> impl IntoView {
-    let trigger_ref = NodeRef::<html::Button>::new();
-    let tooltip_ref = NodeRef::<html::Div>::new();
+    let target_element = CapturedElement::new();
 
     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
         delay: 200,
@@ -710,8 +698,7 @@ fn WithUseTooltipDemo() -> impl IntoView {
     });
 
     let position = use_overlay_position(UseOverlayPositionInput {
-        overlay: tooltip_ref,
-        target: trigger_ref,
+        target: target_element,
         placement_x: Signal::derive(|| PlacementX::Center),
         placement_y: Signal::derive(|| PlacementY::Above),
         writing_direction: Signal::derive(|| WritingDirection::Ltr),
@@ -721,17 +708,17 @@ fn WithUseTooltipDemo() -> impl IntoView {
         should_flip: true.into(),
         max_height: None,
         is_open: trigger.is_open,
-        phantom_data: PhantomData,
     });
 
     let is_open = trigger.is_open;
     let tooltip_id = trigger.tooltip_props.id.clone();
+    let target_capture = target_element.attr();
     let position_attrs = position.props.into_attrs();
     let tooltip_attrs = tooltip.props.into_attrs();
 
     view! {
         <button
-            node_ref=trigger_ref
+            {..target_capture}
             style=demo_button_primary()
             {..trigger.trigger_props.into_attrs()}
         >
@@ -748,7 +735,6 @@ fn WithUseTooltipDemo() -> impl IntoView {
                         <div
                             {..position_attrs.clone()}
                             {..tooltip_attrs.clone()}
-                            node_ref=tooltip_ref
                             id=tooltip_id.clone()
                             role="tooltip"
                             class="tooltip-demo"
@@ -798,8 +784,7 @@ fn PositionedTooltip(
     placement_x: PlacementX,
     placement_y: PlacementY,
 ) -> impl IntoView {
-    let trigger_ref = NodeRef::<html::Button>::new();
-    let tooltip_ref = NodeRef::<html::Div>::new();
+    let target_element = CapturedElement::new();
 
     let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
         delay: 200,
@@ -815,8 +800,7 @@ fn PositionedTooltip(
     });
 
     let position = use_overlay_position(UseOverlayPositionInput {
-        overlay: tooltip_ref,
-        target: trigger_ref,
+        target: target_element,
         placement_x: Signal::derive(move || placement_x),
         placement_y: Signal::derive(move || placement_y),
         writing_direction: Signal::derive(|| WritingDirection::Ltr),
@@ -826,18 +810,18 @@ fn PositionedTooltip(
         should_flip: true.into(),
         max_height: None,
         is_open: trigger.is_open,
-        phantom_data: PhantomData,
     });
 
     let is_open = trigger.is_open;
     let tooltip_id = trigger.tooltip_props.id.clone();
+    let target_capture = target_element.attr();
     let position_attrs = position.props.into_attrs();
     let tooltip_attrs = tooltip.props.into_attrs();
 
     view! {
         <div style="display: flex; justify-content: center;">
             <button
-                node_ref=trigger_ref
+                {..target_capture}
                 style="padding: 0.5em 1em; border-radius: 6px; cursor: pointer; background: #555; color: white; border: none; font-size: 0.9em; min-width: 80px;"
                 {..trigger.trigger_props.into_attrs()}
             >
@@ -854,7 +838,6 @@ fn PositionedTooltip(
                             <div
                                 {..position_attrs.clone()}
                                 {..tooltip_attrs.clone()}
-                                node_ref=tooltip_ref
                                 id=tooltip_id.clone()
                                 role="tooltip"
                                 class="positioned-tooltip"
