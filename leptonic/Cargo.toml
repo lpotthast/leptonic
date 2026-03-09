@@ -1,8 +1,8 @@
 [package]
 name = "leptonic"
 version = { workspace = true }
-edition = "2021"
-rust-version = "1.73"
+edition = "2024"
+rust-version = "1.85.0"
 authors = ["Lukas Potthast <privat@lukas-potthast.de>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -59,7 +59,7 @@ indoc = "2.0.7"
 js-sys = "0.3"
 leptos = "0.8.2"
 leptos-tiptap = { version = "0.9.0", optional = true }
-leptos-use = { version = "0.18.0", features = ["math"] }
+leptos-use = { version = "0.18.3", features = ["math"] }
 leptos_meta = { version = "0.8.2", features = [] }
 leptos_reactive = "0.6.6"
 leptos_router = "0.8.2"
@@ -78,9 +78,9 @@ time = { version = "0.3.41", features = [
 ] }
 tracing = "0.1.44"
 uuid = { version = "1.20.0", features = ["v4", "v7", "js", "serde"] }
-wasm-bindgen = "0.2.108"
-wasm-bindgen-futures = "0.4.58"
-web-sys = { version = "0.3.85", features = [
+wasm-bindgen = "0.2.114"
+wasm-bindgen-futures = "0.4.64"
+web-sys = { version = "0.3.91", features = [
     "DomRect",
     "Element",
     "Event",
@@ -107,24 +107,24 @@ web-sys = { version = "0.3.85", features = [
 itertools = "0.14.0"
 
 [build-dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 cargo_toml = "0.22.3"
 lazy_static = "1.5.0"
 leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
 leptos-tiptap-build = { version = "0.2.8", optional = true }
 
 [dev-dependencies]
-anyhow = "1.0.101"
+anyhow = "1.0.102"
 assertr = "0.4.2"
 async-trait = "0.1"
 chrome-for-testing-manager = { version = "0.6.0", features = ["thirtyfour"] }
 thirtyfour = { version = "0.36.1", features = ["component", "reqwest", "rustls-tls"] }
-tokio = { version = "1.49.0", features = ["rt", "rt-multi-thread", "macros"] }
+tokio = { version = "1.50.0", features = ["rt", "rt-multi-thread", "macros"] }
 tokio-process-tools = "0.7.2"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["fmt", "registry", "ansi"] }
-wasm-bindgen = "0.2.108"
-web-sys = "0.3.85"
+wasm-bindgen = "0.2.114"
+web-sys = "0.3.91"
 
 [lints]
 workspace = true

@@ -76,9 +76,9 @@ pub struct DropEnterEvent {
     /// The types of data available.
     pub types: Vec<String>,
     /// The x coordinate.
-    pub x: i32,
+    pub x: f64,
     /// The y coordinate.
-    pub y: i32,
+    pub y: f64,
 }
 
 /// Event fired when drag moves over a drop zone.
@@ -87,9 +87,9 @@ pub struct DropMoveEvent {
     /// The types of data available.
     pub types: Vec<String>,
     /// The x coordinate.
-    pub x: i32,
+    pub x: f64,
     /// The y coordinate.
-    pub y: i32,
+    pub y: f64,
 }
 
 /// Event fired when drag exits a drop zone.
@@ -107,9 +107,9 @@ pub struct DropEvent {
     /// The drop effect that was performed.
     pub drop_effect: DropEffect,
     /// The x coordinate.
-    pub x: i32,
+    pub x: f64,
     /// The y coordinate.
-    pub y: i32,
+    pub y: f64,
 }
 
 /// The return value of the `use_droppable` hook.
@@ -291,8 +291,8 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
             if let Some(on_enter) = on_drop_enter {
                 on_enter.run(DropEnterEvent {
                     types,
-                    x: e.client_x(),
-                    y: e.client_y(),
+                    x: f64::from(e.client_x()),
+                    y: f64::from(e.client_y()),
                 });
             }
         }
@@ -348,8 +348,8 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
         if let Some(on_move) = on_drop_move {
             on_move.run(DropMoveEvent {
                 types,
-                x: e.client_x(),
-                y: e.client_y(),
+                x: f64::from(e.client_x()),
+                y: f64::from(e.client_y()),
             });
         }
     };
@@ -408,8 +408,8 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
             on_drop.run(DropEvent {
                 items,
                 drop_effect,
-                x: e.client_x(),
-                y: e.client_y(),
+                x: f64::from(e.client_x()),
+                y: f64::from(e.client_y()),
             });
         }
     };

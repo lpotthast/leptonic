@@ -5,6 +5,7 @@
 //!
 //! Based on react-aria's `isFocusable.ts` and `isElementVisible.ts`.
 
+use js_sys::Function;
 use wasm_bindgen::{JsCast, JsValue};
 
 /// Selector for focusable elements.
@@ -118,13 +119,13 @@ pub fn is_element_visible(element: &web_sys::Element) -> bool {
     if has_check_visibility() {
         if let Ok(check_visibility) = js_sys::Reflect::get(element, &"checkVisibility".into()) {
             if check_visibility.is_function() {
+                let fun = Function::from(check_visibility);
+
                 let options = js_sys::Object::new();
                 let _ = js_sys::Reflect::set(&options, &"visibilityProperty".into(), &true.into());
-                if let Ok(result) = js_sys::Reflect::apply(
-                    check_visibility.unchecked_ref(),
-                    element,
-                    &js_sys::Array::of1(&options),
-                ) {
+                if let Ok(result) =
+                    js_sys::Reflect::apply(&fun, element, &js_sys::Array::of1(&options))
+                {
                     return result.as_bool().unwrap_or(true);
                 }
             }

@@ -147,27 +147,27 @@ impl DropEffect {
 #[derive(Debug, Clone)]
 pub struct DragStartEvent {
     /// The x coordinate of the drag start.
-    pub x: i32,
+    pub x: f64,
     /// The y coordinate of the drag start.
-    pub y: i32,
+    pub y: f64,
 }
 
 /// Event fired during a drag operation.
 #[derive(Debug, Clone)]
 pub struct DragMoveEvent {
     /// The current x coordinate.
-    pub x: i32,
+    pub x: f64,
     /// The current y coordinate.
-    pub y: i32,
+    pub y: f64,
 }
 
 /// Event fired when a drag ends.
 #[derive(Debug, Clone)]
 pub struct DragEndEvent {
     /// The final x coordinate.
-    pub x: i32,
+    pub x: f64,
     /// The final y coordinate.
-    pub y: i32,
+    pub y: f64,
     /// The drop effect that was performed.
     pub drop_effect: DropEffect,
 }
@@ -283,8 +283,8 @@ pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
 
         if let Some(on_start) = on_drag_start {
             on_start.run(DragStartEvent {
-                x: e.client_x(),
-                y: e.client_y(),
+                x: f64::from(e.client_x()),
+                y: f64::from(e.client_y()),
             });
         }
     };
@@ -292,8 +292,8 @@ pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
     let handle_drag = move |e: DragEvent| {
         if let Some(on_move) = on_drag_move {
             on_move.run(DragMoveEvent {
-                x: e.client_x(),
-                y: e.client_y(),
+                x: f64::from(e.client_x()),
+                y: f64::from(e.client_y()),
             });
         }
     };
@@ -312,8 +312,8 @@ pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
 
         if let Some(on_end) = on_drag_end {
             on_end.run(DragEndEvent {
-                x: e.client_x(),
-                y: e.client_y(),
+                x: f64::from(e.client_x()),
+                y: f64::from(e.client_y()),
                 drop_effect,
             });
         }

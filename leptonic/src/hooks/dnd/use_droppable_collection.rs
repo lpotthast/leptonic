@@ -59,9 +59,9 @@ pub struct CollectionDropEvent {
     /// The target in the collection.
     pub target: Option<DropTarget>,
     /// The x coordinate.
-    pub x: i32,
+    pub x: f64,
     /// The y coordinate.
-    pub y: i32,
+    pub y: f64,
 }
 
 /// The return value of the `use_droppable_collection` hook.
