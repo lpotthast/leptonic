@@ -1,0 +1,68 @@
+// Base: scope classes → CSS variables (applies to all languages)
+.leptonic-code-text {
+  .syn-keyword {
+    color: var(--syntax-keyword);
+  }
+
+  .syn-string {
+    color: var(--syntax-string);
+  }
+
+  .syn-storage {
+    color: var(--syntax-storage);
+  }
+
+  .syn-entity {
+    color: var(--syntax-entity);
+  }
+
+  .syn-variable {
+    color: var(--syntax-variable);
+  }
+
+  .syn-constant {
+    color: var(--syntax-constant);
+  }
+
+  .syn-support {
+    color: var(--syntax-support);
+  }
+
+  .syn-function {
+    color: var(--syntax-function);
+  }
+
+  .syn-punctuation {
+    color: var(--syntax-punctuation);
+  }
+
+  .syn-meta {
+    color: inherit;
+  }
+
+  .syn-source {
+    color: inherit;
+  }
+
+  .syn-comment {
+    color: var(--syntax-comment);
+    font-style: italic;
+  }
+}
+
+// Per-language overrides: redefine --syntax-* variables on the parent <code> element.
+// These cascade into .leptonic-code-text > .syn-* children automatically.
+// Example (not shipped — shows the pattern for adding language-specific colors):
+//
+// .leptonic-code[data-language="html"] {
+//   --syntax-keyword: #78dce8;   // cyan for HTML tags
+//   --syntax-entity: #a9dc76;    // green for attribute names
+//   --syntax-string: #ffd866;    // yellow for attribute values
+// }
+//
+// .leptonic-code[data-language="toml"] {
+//   --syntax-keyword: #78dce8;   // cyan for keys
+// }
+//
+// Only override the variables that differ from the base theme.
+// Unoverridden variables fall through to the theme defaults.

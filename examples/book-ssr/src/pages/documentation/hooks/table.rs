@@ -1,24 +1,13 @@
-use std::collections::HashSet;
-
 use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::table::TableDemo;
 
 #[component]
 pub fn PageUseTableHook() -> impl IntoView {
-    let (selected_rows, set_selected_rows) = signal::<HashSet<String>>(HashSet::new());
-    let (sort_column, set_sort_column) = signal::<Option<String>>(None);
-    let (sort_direction, set_sort_direction) = signal(true); // true = ascending
-
-    let data: &[(&str, &str, &str, &str)] = &[
-        ("1", "Alice", "alice@example.com", "Admin"),
-        ("2", "Bob", "bob@example.com", "User"),
-        ("3", "Charlie", "charlie@example.com", "User"),
-        ("4", "Diana", "diana@example.com", "Moderator"),
-    ];
-
     view! {
         <Article>
             <h1 id="table" class="anchor">
@@ -26,133 +15,34 @@ pub fn PageUseTableHook() -> impl IntoView {
                 <AnchorLink href="#table" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hooks for creating accessible data tables with selection, sorting, and keyboard navigation."</p>
+            <p>
+                "Hooks for creating accessible data tables with selection, sorting, and keyboard navigation. "
+                "See the "<Link href=crate::routes::doc::Table.materialize()>"Table overview"</Link>" for concept guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useTable.html" target=LinkTarget::_Blank>
+                    "useTable"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="demo" class="anchor">
                 "Interactive Demo"
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <div style="overflow-x: auto; margin: 1em 0;">
-                <table
-                    role="grid"
-                    aria-label="Users"
-                    style="width: 100%; border-collapse: collapse; border: 1px solid #ddd;"
-                >
-                    <thead>
-                        <tr>
-                            <th style="padding: 0.75em; text-align: left; border-bottom: 2px solid var(--brand-color); width: 40px;">
-                                <input
-                                    type="checkbox"
-                                    checked=move || selected_rows.get().len() == data.len()
-                                    on:change=move |_| {
-                                        set_selected_rows.update(|s| {
-                                            if s.len() == data.len() {
-                                                s.clear();
-                                            } else {
-                                                for (id, _, _, _) in data {
-                                                    s.insert(id.to_string());
-                                                }
-                                            }
-                                        });
-                                    }
-                                />
-                            </th>
-                            {["Name", "Email", "Role"].into_iter().map(|col| {
-                                let col_key = col.to_lowercase();
-                                let col_for_aria = col_key.clone();
-                                let col_for_click = col_key.clone();
-                                let col_for_check_click = col_key.clone();
-                                let col_for_icon = col_key.clone();
-                                view! {
-                                    <th
-                                        role="columnheader"
-                                        aria-sort=move || {
-                                            if sort_column.get().as_ref() == Some(&col_for_aria) {
-                                                if sort_direction.get() { "ascending" } else { "descending" }
-                                            } else {
-                                                "none"
-                                            }
-                                        }
-                                        on:click=move |_| {
-                                            if sort_column.get().as_ref() == Some(&col_for_check_click) {
-                                                set_sort_direction.update(|d| *d = !*d);
-                                            } else {
-                                                set_sort_column.set(Some(col_for_click.clone()));
-                                                set_sort_direction.set(true);
-                                            }
-                                        }
-                                        style="padding: 0.75em; text-align: left; border-bottom: 2px solid var(--brand-color); cursor: pointer; user-select: none;"
-                                    >
-                                        { col }
-                                        <span style="margin-left: 0.5em;">
-                                            {move || {
-                                                if sort_column.get().as_ref() == Some(&col_for_icon) {
-                                                    if sort_direction.get() { "▲" } else { "▼" }
-                                                } else {
-                                                    "⬍"
-                                                }
-                                            }}
-                                        </span>
-                                    </th>
-                                }
-                            }).collect::<Vec<_>>()}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {data.iter().map(|(id, name, email, role)| {
-                            let id_owned = id.to_string();
-                            let id_for_check = id_owned.clone();
-                            let id_for_style = id_owned.clone();
-                            let id_for_checkbox = id_owned.clone();
-                            let id_for_toggle = id_owned.clone();
-                            view! {
-                                <tr
-                                    role="row"
-                                    aria-selected=move || selected_rows.get().contains(&id_for_check)
-                                    style=move || format!(
-                                        "transition: background 0.15s; {}",
-                                        if selected_rows.get().contains(&id_for_style) {
-                                            "background: var(--brand-color-light, rgba(230, 105, 86, 0.15));"
-                                        } else {
-                                            ""
-                                        }
-                                    )
-                                >
-                                    <td style="padding: 0.75em; border-bottom: 1px solid #ddd;">
-                                        <input
-                                            type="checkbox"
-                                            checked=move || selected_rows.get().contains(&id_for_checkbox)
-                                            on:change=move |_| {
-                                                let id_clone = id_for_toggle.clone();
-                                                set_selected_rows.update(|s| {
-                                                    if s.contains(&id_clone) {
-                                                        s.remove(&id_clone);
-                                                    } else {
-                                                        s.insert(id_clone);
-                                                    }
-                                                });
-                                            }
-                                        />
-                                    </td>
-                                    <td style="padding: 0.75em; border-bottom: 1px solid #ddd;">{ *name }</td>
-                                    <td style="padding: 0.75em; border-bottom: 1px solid #ddd;">{ *email }</td>
-                                    <td style="padding: 0.75em; border-bottom: 1px solid #ddd;">{ *role }</td>
-                                </tr>
-                            }
-                        }).collect::<Vec<_>>()}
-                    </tbody>
-                </table>
-            </div>
-
-            <p>"Selected: " { move || format!("{:?}", selected_rows.get()) }</p>
+            <DemoShell source=include_str!("demos/table.rs")>
+                <TableDemo />
+            </DemoShell>
 
             <h2 id="use_table" class="anchor">
                 "use_table"
                 <AnchorLink href="#use_table" description="Direct link to use_table"/>
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseTableReturn { table_attrs, state } = use_table(UseTableInput {
                         label: Some("Users".into()),
@@ -211,6 +101,17 @@ pub fn PageUseTableHook() -> impl IntoView {
                 <li>"Header rowgroup semantics"</li>
                 <li>"Proper ARIA grid attributes"</li>
             </ul>
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Table.materialize()>"Table overview"</Link></li>
+                <li><Link href=crate::routes::doc::table::Component.materialize()>"Table component"</Link></li>
+                <li><Link href=crate::routes::doc::Grid.materialize()>"Grid concept"</Link></li>
+                <li><Link href=crate::routes::doc::hooks::Selection.materialize()>"Selection hooks"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -221,6 +122,7 @@ pub fn PageUseTableHook() -> impl IntoView {
                 Toc::Leaf { title: "Related Hooks", link: "#related-hooks" },
                 Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

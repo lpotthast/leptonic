@@ -1,123 +1,226 @@
-use leptos::prelude::*;
+use leptos::{attr, attr::Attr, prelude::*};
 
-use super::use_drag_and_drop::{
-    DragAndDropState, DropPosition, DropTarget, InsertEvent, ReorderEvent,
+use super::{
+    drag_manager, droppable_collection_state::DroppableCollectionState, types::DropTarget,
 };
-use crate::hooks::{use_droppable, DragItem, DropEvent, UseDroppableInput, UseDroppableReturn};
+#[cfg(not(feature = "ssr"))]
+use crate::hooks::AllowedDropOperations;
+use crate::hooks::{DragTypes, DropEffect, IntoAttrs};
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
 //
-// =============================================================================
+// - `use_collection_droppable_item` provides per-item DragManager registration,
+//   ARIA hiding, and auto-focus for items within `DroppableCollectionState`-based
+//   collections. React-aria achieves this through `useDroppableItem` combined
+//   with `useVirtualDrop`.
+//
 
-/// Creates droppable props for an item within a drag-and-drop collection.
+/// Input for [`use_collection_droppable_item`].
+pub struct UseCollectionDroppableItemInput {
+    /// The drop target this item represents.
+    pub target: DropTarget,
+    /// The droppable collection state.
+    pub state: DroppableCollectionState,
+    /// Whether this item is disabled.
+    pub is_disabled: Signal<bool>,
+}
+
+/// Return value of [`use_collection_droppable_item`].
+pub struct UseCollectionDroppableItemReturn {
+    /// Props for the droppable item element.
+    pub drop_item_props: UseCollectionDroppableItemProps,
+    /// Whether this item is the current drop target.
+    pub is_drop_target: Signal<bool>,
+}
+
+/// Props for a collection droppable item.
+#[derive(Debug)]
+pub struct UseCollectionDroppableItemProps {
+    /// The `aria-hidden` attribute — hides invalid items during keyboard drag.
+    pub aria_hidden: Signal<Option<&'static str>>,
+}
+
+impl IntoAttrs for UseCollectionDroppableItemProps {
+    type Attrs = UseCollectionDroppableItemAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        (Attr(attr::AriaHidden, self.aria_hidden),)
+    }
+}
+
+/// Attributes for a collection droppable item.
+pub type UseCollectionDroppableItemAttrs = (Attr<attr::AriaHidden, Signal<Option<&'static str>>>,);
+
+/// Provides per-item drop behavior within a `DroppableCollectionState`-based
+/// collection.
 ///
-/// This hook should be called at the component level (not inside a callback)
-/// to ensure event handlers are properly attached during SSR hydration.
-///
-/// # Arguments
-///
-/// * `key` - A unique identifier for this item within the collection.
-/// * `state` - The shared state from `use_drag_and_drop`.
-///
-/// # Returns
-///
-/// Returns `Some(UseDroppableReturn)` if drop options are configured,
-/// or `None` if dropping is not enabled for this collection.
+/// This hook:
+/// - Registers the item with the `DragManager` so it participates in ARIA
+///   hiding during keyboard drag sessions.
+/// - Reactively sets `aria-hidden` on items that are not valid drop targets.
+/// - Auto-focuses the item when it becomes the active drop target during a
+///   keyboard drag session.
 ///
 /// # Example
 ///
 /// ```ignore
-/// #[component]
-/// fn DroppableItem(key: String, state: DragAndDropState) -> impl IntoView {
-///     let drop = use_droppable_item(key, state);
+/// let item = use_collection_droppable_item(UseCollectionDroppableItemInput {
+///     target: DropTarget::Item { key: "item-1".into(), position: DropPosition::On },
+///     state: collection_state.clone(),
+///     is_disabled: Signal::derive(|| false),
+/// });
 ///
-///     if let Some(drop) = drop {
-///         view! {
-///             <div
-///                 {..drop.drop_props}
-///                 class:drop-target=move || drop.is_drop_target.get()
-///             >
-///                 "Drop here"
-///             </div>
-///         }.into_any()
-///     } else {
-///         view! { <div>"Not droppable"</div> }.into_any()
-///     }
+/// view! {
+///     <div
+///         {..item.drop_item_props.into_attrs()}
+///         class:drop-target=move || item.is_drop_target.get()
+///     >
+///         "Item content"
+///     </div>
 /// }
 /// ```
-#[allow(clippy::needless_pass_by_value)]
-pub fn use_droppable_item(key: String, state: DragAndDropState) -> Option<UseDroppableReturn> {
-    let drop_options = state.drop_options.as_ref()?;
-
-    let mut accepted_types = drop_options.accepted_types.clone();
-    // Also accept our internal key type
-    accepted_types.push("application/x-dnd-key".to_string());
-
-    let target_key = key;
-    let user_on_drop = drop_options.on_drop;
-    let collection_keys = state.collection_keys;
-    let internal_reorder_happened = state.internal_reorder_happened;
-    let on_reorder = state.on_reorder;
-    let on_insert = state.on_insert;
-    let is_disabled = state.is_disabled;
-
-    Some(use_droppable(UseDroppableInput {
+#[allow(clippy::too_many_lines)]
+pub fn use_collection_droppable_item(
+    input: UseCollectionDroppableItemInput,
+) -> UseCollectionDroppableItemReturn {
+    let UseCollectionDroppableItemInput {
+        target,
+        state,
         is_disabled,
-        accepted_types,
-        get_drop_operation: drop_options.get_drop_operation,
-        on_drop_enter: drop_options.on_drop_enter,
-        on_drop_move: drop_options.on_drop_move,
-        on_drop_exit: drop_options.on_drop_exit,
-        on_drop: Some(Callback::new(move |e: DropEvent| {
-            // Extract the dragged key from the items
-            let dragged_key = e
-                .items
+    } = input;
+
+    let target_for_active = target.clone();
+    let state_for_active = state.clone();
+
+    // Whether this item is the current drop target.
+    let is_drop_target =
+        Signal::derive(move || state_for_active.is_drop_target(&target_for_active));
+
+    // Subscribe to keyboard drag session state.
+    let session_active = drag_manager::use_drag_session_active();
+
+    // Compute whether this item is a valid drop target in the current session.
+    let target_for_valid = target.clone();
+    let state_for_valid = state.clone();
+    let is_valid_drop_target = Signal::derive(move || {
+        if !session_active.get() || is_disabled.get() {
+            return false;
+        }
+        // Get session drag info to validate against.
+        let items = drag_manager::get_session_drag_items();
+        let allowed = drag_manager::get_session_allowed_operations();
+        let (Some(items), Some(allowed)) = (items, allowed) else {
+            return false;
+        };
+        let types = DragTypes::Known(
+            items
                 .iter()
-                .find(|item| item.kind == "application/x-dnd-key")
-                .map(|item| item.data.clone());
+                .flat_map(|item| item.types().map(String::from).collect::<Vec<_>>())
+                .collect(),
+        );
+        let dragging_keys = super::global_dnd_state::get_dragging_keys();
+        let is_internal = !dragging_keys.is_empty();
+        state_for_valid.get_drop_operation(
+            &target_for_valid,
+            &types,
+            allowed,
+            is_internal,
+            &dragging_keys,
+        ) != DropEffect::None
+    });
 
-            if let Some(dragged_key) = dragged_key {
-                // Check if this is an internal reorder or external insert
-                let is_internal = collection_keys.with(|keys| keys.contains(&dragged_key));
+    // aria-hidden: hide during keyboard drag when this item is not a valid target.
+    let aria_hidden = Signal::derive(move || {
+        if session_active.get() && !is_valid_drop_target.get() {
+            Some("true")
+        } else {
+            None
+        }
+    });
 
-                let target = DropTarget {
-                    key: target_key.clone(),
-                    position: DropPosition::After, // Default to after
-                };
+    // Register with DragManager and set up auto-focus.
+    #[cfg(not(feature = "ssr"))]
+    {
+        let target_for_reg = target.clone();
+        let state_for_reg = state.clone();
 
-                if is_internal {
-                    // Internal reorder - mark that it happened so on_remove won't be called
-                    internal_reorder_happened.set(true);
-                    if let Some(on_reorder) = on_reorder {
-                        on_reorder.run(ReorderEvent {
-                            keys: vec![dragged_key],
-                            target,
-                        });
-                    }
-                } else {
-                    // External insert
-                    if let Some(on_insert) = on_insert {
-                        // Filter out the internal key from items
-                        let items: Vec<DragItem> = e
-                            .items
-                            .iter()
-                            .filter(|item| item.kind != "application/x-dnd-key")
-                            .cloned()
-                            .collect();
+        // Use an effect to register/unregister with DragManager.
+        // The element must be found by data-key attribute since we don't have a NodeRef.
+        Effect::new(move || {
+            if is_disabled.get() {
+                return;
+            }
 
-                        on_insert.run(InsertEvent { items, target });
-                    }
+            let target_key = match &target_for_reg {
+                DropTarget::Root => return,
+                DropTarget::Item { key, .. } => key.clone(),
+            };
+
+            let Some(document) = web_sys::window().and_then(|w| w.document()) else {
+                return;
+            };
+            let selector = format!("[data-key=\"{target_key}\"]");
+            let Ok(Some(element)) = document.query_selector(&selector) else {
+                return;
+            };
+
+            let state_for_cb = state_for_reg.clone();
+            let target_for_cb = target_for_reg.clone();
+            let get_drop_operation = Callback::new(
+                move |(types, allowed): (DragTypes, AllowedDropOperations)| {
+                    let dragging_keys = super::global_dnd_state::get_dragging_keys();
+                    let is_internal = !dragging_keys.is_empty();
+                    state_for_cb.get_drop_operation(
+                        &target_for_cb,
+                        &types,
+                        allowed,
+                        is_internal,
+                        &dragging_keys,
+                    )
+                },
+            );
+
+            drag_manager::register_drop_item(drag_manager::RegisteredDropItem {
+                element: element.clone(),
+                target: target_for_reg.clone(),
+                get_drop_operation: Some(get_drop_operation),
+                activate_button: None,
+            });
+
+            let cleanup_element = element.clone();
+            on_cleanup(move || {
+                drag_manager::unregister_drop_item(&cleanup_element);
+            });
+        });
+
+        // Auto-focus the item when it becomes the active drop target during a
+        // keyboard drag session.
+        Effect::new(move || {
+            if !session_active.get() || !is_drop_target.get() {
+                return;
+            }
+
+            let target_key = match &target {
+                DropTarget::Root => return,
+                DropTarget::Item { key, .. } => key.clone(),
+            };
+
+            let Some(document) = web_sys::window().and_then(|w| w.document()) else {
+                return;
+            };
+            let selector = format!("[data-key=\"{target_key}\"]");
+            if let Ok(Some(el)) = document.query_selector(&selector) {
+                use wasm_bindgen::JsCast;
+                if let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>() {
+                    let _ = html_el.focus();
                 }
             }
+        });
+    }
 
-            // Call the user's on_drop callback if provided
-            if let Some(user_cb) = user_on_drop {
-                user_cb.run(e);
-            }
-        })),
-    }))
+    UseCollectionDroppableItemReturn {
+        drop_item_props: UseCollectionDroppableItemProps { aria_hidden },
+        is_drop_target,
+    }
 }

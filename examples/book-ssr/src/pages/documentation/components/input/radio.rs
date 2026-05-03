@@ -2,15 +2,15 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::radio_basic::RadioBasicDemo;
+use super::demos::radio_disabled::RadioDisabledDemo;
+use super::demos::radio_group::RadioGroupDemo;
+use super::demos::radio_labeled::RadioLabeledDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageRadio() -> impl IntoView {
-    let (checked, set_checked) = signal(false);
-    let (checked2, set_checked2) = signal(false);
-    let (checked3, set_checked3) = signal(false);
-    let (checked_disabled, set_checked_disabled) = signal(false);
-
     view! {
         <Article>
             <h1 id="radio" class="anchor">
@@ -20,37 +20,18 @@ pub fn PageRadio() -> impl IntoView {
 
             <p>"Radio..."</p>
 
-            <Code>
-                {indoc!(r"
-                    let (checked, set_checked) = signal(false);
-                    view! {
-                        <Radio checked=checked set_checked=set_checked />
-                    }
-                ")}
-            </Code>
-
-            <Radio checked=checked set_checked=set_checked />
-
-            <span>"checked: " {move || checked.get()}</span>
+            <DemoShell source=include_str!("demos/radio_basic.rs")>
+                <RadioBasicDemo />
+            </DemoShell>
 
             <h2 id="radio-groups" class="anchor">
                 "Radio groups"
                  <AnchorLink href="#radio-groups" description="Direct link to section: Radio groups"/>
             </h2>
 
-            <Code>
-                {indoc!(r"
-                    <RadioGroup>
-                        <Radio checked=checked2 set_checked=set_checked2 />
-                        <Radio checked=checked3 set_checked=set_checked3 />
-                    </RadioGroup>
-                ")}
-            </Code>
-
-            <RadioGroup>
-                <Radio checked=checked2 set_checked=set_checked2 />
-                <Radio checked=checked3 set_checked=set_checked3 />
-            </RadioGroup>
+            <DemoShell source=include_str!("demos/radio_group.rs")>
+                <RadioGroupDemo />
+            </DemoShell>
 
             <h2 id="labeled" class="anchor">
                 "Labeled"
@@ -59,21 +40,9 @@ pub fn PageRadio() -> impl IntoView {
 
             <p>"Wrap an input and a label to link them together."</p>
 
-            <Code>
-                {indoc!(r#"
-                    <FormControl>
-                        <Radio checked=checked set_checked=set_checked />
-                        <Label>"Label"</Label>
-                    </FormControl>
-                "#)}
-            </Code>
-
-            <FormControl>
-                <Radio checked=checked set_checked=set_checked />
-                <Label>
-                    "Label"
-                </Label>
-            </FormControl>
+            <DemoShell source=include_str!("demos/radio_labeled.rs")>
+                <RadioLabeledDemo />
+            </DemoShell>
 
             <h2 id="disabled" class="anchor">
                 "Disabled"
@@ -82,14 +51,9 @@ pub fn PageRadio() -> impl IntoView {
 
             <p>"Radio buttons support the " <Code inline=true>"disabled"</Code> " property, making them unmodifiable if set true."</p>
 
-            <Code>
-                {indoc!(r"
-                    <Radio disabled=true checked=checked set_checked=set_checked />
-                ")}
-            </Code>
-
-            <Radio disabled=true checked=checked_disabled set_checked=set_checked_disabled />
-            <Button variant=ButtonVariant::Flat color=ButtonColor::Secondary size=ButtonSize::Small on_press=move |_| set_checked_disabled.set(!checked_disabled.get_untracked())>"TOGGLE"</Button>
+            <DemoShell source=include_str!("demos/radio_disabled.rs")>
+                <RadioDisabledDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -98,7 +62,7 @@ pub fn PageRadio() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --radio-size
                     --radio-fill-size

@@ -2,13 +2,9 @@ use leptos::prelude::*;
 
 use super::use_time_field::TimeValue;
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// State for managing time field.
 #[derive(Clone, Copy)]

@@ -1,4 +1,4 @@
-use leptonic::prelude::*;
+use leptonic::{prelude::*, utils::css::{em, pct}};
 use leptos::prelude::*;
 
 use crate::pages::documentation::article::Article;
@@ -19,7 +19,7 @@ pub fn PageTransition() -> impl IntoView {
             <h2>"Transition - Collapse - horizontally"</h2>
             <Toggle state=transition_collapse_h set_state=set_transition_collapse_h/>
             <Collapse show=transition_collapse_h axis=CollapseAxis::X>
-                <Skeleton height=Size::Em(5.0) width=Size::Percent(100.0)>"Collapse"</Skeleton>
+                <Skeleton height=em(5.0) width=pct(100.0)>"Collapse"</Skeleton>
             </Collapse>
 
             <Separator />
@@ -27,7 +27,7 @@ pub fn PageTransition() -> impl IntoView {
             <h2>"Transition - Collapse - vertically"</h2>
             <Toggle state=transition_collapse_v set_state=set_transition_collapse_v/>
             <Collapse show=transition_collapse_v axis=CollapseAxis::Y>
-                <Skeleton height=Size::Em(5.0)>"Collapse"</Skeleton>
+                <Skeleton height=em(5.0)>"Collapse"</Skeleton>
             </Collapse>
 
             <Separator />

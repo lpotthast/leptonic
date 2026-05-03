@@ -1,5 +1,3 @@
-use std::hash::Hash;
-
 use leptos::{
     attr,
     attr::Attr,
@@ -13,27 +11,25 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use super::use_grid::UseGridState;
 use crate::{
     hooks::{
+        IntoAttrs, PropsWithStyles,
         focus::use_focus_manager::{FocusManager, FocusManagerOptions},
         selection::{
-            use_selectable_item::{use_selectable_item, UseSelectableItemInput},
+            SelectionKey,
+            use_selectable_item::{UseSelectableItemInput, use_selectable_item},
             use_selection_state::SelectionMode,
         },
-        IntoAttrs,
     },
     utils::{
+        EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::{CapturedElement, ElementCaptureAttr},
         focus::focus_element,
-        EventAccessors, EventHandler,
+        scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridCell.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## OMITTED FEATURES
 // - `isVirtualized`, `colSpan`, `keyWhenFocused` — no virtualization support.
 // - `onPointerDown` tabindex workaround — no drag support.
@@ -44,28 +40,31 @@ use crate::{
 // - Bubble-phase keydown instead of capture-phase + re-dispatch. ArrowUp/Down
 //   bubble naturally to the grid handler.
 // - Shared state struct (`UseGridState<K>`) instead of `gridMap` `WeakMap`.
+// - `CellFocusMode` default is `Child`, matching react-aria's default behavior
+//   for grids with interactive content.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - `ElementCaptureAttr` instead of React refs for DOM element access.
 // - `FocusManager` from `use_focus_manager` instead of `getFocusableTreeWalker`.
 // - `EventHandler<E>` for composable event handler chaining.
-//
-// =============================================================================
 
 /// Controls how focus behaves when a grid cell receives focus.
+///
+/// Default is `Child`, matching react-aria's default. This is appropriate for
+/// grids with interactive content (inputs, buttons) inside cells.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum CellFocusMode {
     /// Focus the cell element itself.
-    #[default]
     Cell,
     /// Focus the first focusable child within the cell.
+    #[default]
     Child,
 }
 
 /// Input for a grid cell.
 pub struct UseGridCellInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Shared grid state from `use_grid`.
     pub state: UseGridState<K>,
@@ -85,8 +84,8 @@ where
 
 /// Return value for a grid cell.
 pub struct UseGridCellReturn {
-    /// Props for the cell element.
-    pub props: UseGridCellProps,
+    /// Props for the cell element. Call `.into_parts()` for view spreading and styles.
+    pub props: PropsWithStyles<UseGridCellProps>,
 
     /// Whether the cell is selected.
     pub is_selected: Signal<bool>,
@@ -99,7 +98,7 @@ pub struct UseGridCellReturn {
 }
 
 /// Props from `use_grid_cell` that can be extracted and merged programmatically.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseGridCellProps {
     pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
@@ -179,7 +178,7 @@ pub type UseGridCellAttrs = (
 #[allow(clippy::needless_pass_by_value, clippy::too_many_lines)]
 pub fn use_grid_cell<K>(input: UseGridCellInput<K>) -> UseGridCellReturn
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseGridCellInput {
         state,
@@ -212,6 +211,12 @@ where
                 }
             }
             focus_element(&el, true);
+            scroll_into_viewport(
+                Some(&el),
+                &ScrollIntoViewportOpts {
+                    containing_element: Some(get_scroll_parent(&el, true)),
+                },
+            );
         }
     });
 
@@ -222,14 +227,23 @@ where
         selection_behavior: state.selection_behavior,
         selected_keys: state.selection.selected_keys,
         focused_key: state.focused_key,
+        is_collection_focused: Signal::derive(|| true), // Grid manages focus externally
         is_disabled: state.is_disabled,
+        disabled_behavior: state.selection.disabled_behavior,
+        disallow_empty_selection: false,
         on_toggle: state.selection.toggle,
-        on_select: state.selection.select,
+        on_replace: state.selection.select,
+        on_extend: None, // Grid handles range selection separately
         on_focus: state.set_focused_key,
         should_select_on_press_up: false,
+        should_focus_on_hover: false,
         allow_drag: false,
+        allows_different_press_origin: false,
+        on_action: None,
         on_double_click: state.on_cell_action,
+        on_selection_behavior_change: None,
         focus: Some(focus_fn),
+        data_key: None,
     });
 
     let is_selected = selectable.is_selected;
@@ -315,27 +329,29 @@ where
     });
 
     // --- Compose handlers: chain selectable_item handlers with cell-specific handlers ---
-    let on_click = selectable.props.on_click;
-    // Keydown: cell-specific handler only (selectable_item has no keydown handler).
-    // Within-cell navigation may stop_propagation; remaining events bubble to the grid handler.
-    let on_keydown = cell_keydown;
-    let on_focus = selectable.props.on_focus.chain(cell_focus);
-    let on_mouseenter = selectable.props.on_mouseenter;
+    let (selectable_props, selectable_styles) = selectable.props.into_inner();
+    let on_click = selectable_props.press.on_click;
+    // Keydown: chain cell-specific handler with press handler (for Enter/Space selection).
+    let on_keydown = cell_keydown.chain(selectable_props.press.on_keydown);
+    let on_focus = selectable_props.on_focus.chain(cell_focus);
+    let on_mouseenter = selectable_props.on_mouseenter;
+
+    let props = UseGridCellProps {
+        role: AriaRole::Gridcell,
+        tabindex,
+        aria_rowindex,
+        aria_colindex,
+        aria_selected,
+        aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
+        element_capture: scope_element.attr(),
+        on_click,
+        on_keydown,
+        on_focus,
+        on_mouseenter,
+    };
 
     UseGridCellReturn {
-        props: UseGridCellProps {
-            role: AriaRole::Gridcell,
-            tabindex,
-            aria_rowindex,
-            aria_colindex,
-            aria_selected,
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-            element_capture: scope_element.attr(),
-            on_click,
-            on_keydown,
-            on_focus,
-            on_mouseenter,
-        },
+        props: PropsWithStyles::new(props, selectable_styles),
         is_selected,
         is_focused,
         is_disabled,

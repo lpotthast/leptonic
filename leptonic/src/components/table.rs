@@ -1,23 +1,33 @@
 use leptos::prelude::*;
 
-use crate::hooks::{use_press, IntoAttrs, PressEvent, UsePressInput, UsePressReturn};
+use crate::{
+    hooks::{PressEvent, UsePressInput, UsePressReturn, use_press},
+    utils::{classes::Classes, styles::Styles},
+};
 
 #[component]
-pub fn TableContainer(children: Children) -> impl IntoView {
-    view! { <div class="leptonic-table-container">{children()}</div> }
+pub fn TableContainer(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <div class=classes.add("leptonic-table-container") style=styles>{children()}</div> }
 }
 
 #[component]
 pub fn Table(
     #[prop(optional)] bordered: Option<bool>,
     #[prop(optional)] hoverable: Option<bool>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     view! {
         <table
-            class="leptonic-table"
+            class=classes.add("leptonic-table")
             class:leptonic-table-bordered=bordered.unwrap_or(false)
             class:leptonic-table-hoverable=hoverable.unwrap_or(false)
+            style=styles
         >
             {children()}
         </table>
@@ -25,32 +35,52 @@ pub fn Table(
 }
 
 #[component]
-pub fn TableHeader(children: Children) -> impl IntoView {
-    view! { <thead class="leptonic-table-header">{children()}</thead> }
+pub fn TableHeader(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <thead class=classes.add("leptonic-table-header") style=styles>{children()}</thead> }
 }
 
 #[component]
-pub fn TableBody(children: Children) -> impl IntoView {
-    view! { <tbody class="leptonic-table-body">{children()}</tbody> }
+pub fn TableBody(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <tbody class=classes.add("leptonic-table-body") style=styles>{children()}</tbody> }
 }
 
 #[component]
-pub fn TableFooter(children: Children) -> impl IntoView {
-    view! { <tfoot class="leptonic-table-footer">{children()}</tfoot> }
+pub fn TableFooter(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <tfoot class=classes.add("leptonic-table-footer") style=styles>{children()}</tfoot> }
 }
 
 #[component]
-pub fn TableRow(children: Children) -> impl IntoView {
-    view! { <tr class="leptonic-table-row">{children()}</tr> }
+pub fn TableRow(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <tr class=classes.add("leptonic-table-row") style=styles>{children()}</tr> }
 }
 
 #[component]
 pub fn TableHeaderCell(
     #[prop(optional)] min_width: Option<bool>,
     #[prop(optional, into)] on_press: Option<Callback<PressEvent>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
-    let UsePressReturn { props, .. } = use_press(UsePressInput {
+    let UsePressReturn {
+        props: press_props, ..
+    } = use_press(UsePressInput {
         disabled: false.into(),
         force_prevent_default: false,
         force_propagation: false,
@@ -75,11 +105,14 @@ pub fn TableHeaderCell(
         long_press_accessibility_description: None,
     });
 
+    let (press_attrs, press_styles) = press_props.into_parts();
+    let styles = press_styles.merge(styles);
+
     view! {
         <th
-            class="leptonic-table-header-cell"
-            class:min-width=min_width.unwrap_or(false)
-            {..props.into_attrs()}
+            {..press_attrs}
+            class=classes.add("leptonic-table-header-cell").add(("min-width", min_width.unwrap_or(true)))
+            style=styles
         >
             {children()}
         </th>
@@ -87,6 +120,10 @@ pub fn TableHeaderCell(
 }
 
 #[component]
-pub fn TableCell(children: Children) -> impl IntoView {
-    view! { <td class="leptonic-table-cell">{children()}</td> }
+pub fn TableCell(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <td class=classes.add("leptonic-table-cell") style=styles>{children()}</td> }
 }

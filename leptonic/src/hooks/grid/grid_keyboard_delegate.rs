@@ -1,16 +1,12 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use leptos::prelude::*;
 
 use super::grid_collection::GridCollection;
-use crate::hooks::selection::keyboard_delegate::KeyboardDelegate;
+use crate::hooks::selection::{SelectionKey, keyboard_delegate::KeyboardDelegate};
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/GridKeyboardDelegate.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## DIFFERENT BEHAVIOR
 // - Reads signals lazily via `get_untracked()` instead of react-aria's `useMemo`
 //   recreation pattern. This is always up-to-date but uses untracked reads in
@@ -19,9 +15,9 @@ use crate::hooks::selection::keyboard_delegate::KeyboardDelegate;
 // ## OMITTED FEATURES
 // - No RTL support — `get_key_left_of`/`get_key_right_of` don't swap direction
 //   based on locale. Can be added later.
-// - No `ref` / scrollable element for page-up/page-down calculation.
-//
-// =============================================================================
+// - Page Up/Down navigation: requires layout measurement (element rects) to
+//   calculate how many rows fit in the visible area. Not yet implemented;
+//   `get_key_page_above`/`get_key_page_below` return `None`.
 
 /// Controls how focus moves within a grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -40,7 +36,7 @@ pub enum GridFocusMode {
 /// delegate does not need to be recreated when the collection changes.
 pub struct GridKeyboardDelegate<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     collection: Signal<GridCollection<K>>,
     disabled_keys: Signal<HashSet<K>>,
@@ -50,15 +46,15 @@ where
 // Manual impls avoid requiring K: Copy/Clone for these traits,
 // since Signal<T> is Copy regardless of T.
 #[allow(clippy::expl_impl_clone_on_copy)]
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Clone for GridKeyboardDelegate<K> {
+impl<K: SelectionKey> Clone for GridKeyboardDelegate<K> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Copy for GridKeyboardDelegate<K> {}
+impl<K: SelectionKey> Copy for GridKeyboardDelegate<K> {}
 
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> std::fmt::Debug for GridKeyboardDelegate<K> {
+impl<K: SelectionKey> std::fmt::Debug for GridKeyboardDelegate<K> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("GridKeyboardDelegate")
             .field("focus_mode", &self.focus_mode)
@@ -68,7 +64,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> std::fmt::Debug for GridKeybo
 
 impl<K> GridKeyboardDelegate<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Create a new grid keyboard delegate.
     #[must_use]
@@ -115,7 +111,7 @@ where
 
 impl<K> KeyboardDelegate<K> for GridKeyboardDelegate<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     fn get_key_below(&self, key: &K) -> Option<K> {
         let collection = self.collection.get_untracked();

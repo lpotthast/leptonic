@@ -1,14 +1,14 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::drawer_left::DrawerLeftDemo;
+use super::demos::drawer_right_overlay::DrawerRightOverlayDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageDrawer() -> impl IntoView {
-    let (shown, set_shown) = signal(true);
-    let (shown2, set_shown2) = signal(true);
-
     view! {
         <Article>
             <h1 id="drawer" class="anchor">
@@ -21,39 +21,9 @@ pub fn PageDrawer() -> impl IntoView {
                 "The required "<Code inline=true>"side"</Code>" prop controls to which side the drawer should move when hiding."
             </p>
 
-            <Toggle state=shown set_state=set_shown/>
-
-            <div style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
-                <Drawer side=DrawerSide::Left shown=shown attr:style="overflow-y: scroll; padding: 0.5em; background-color: var(--brand-color); border-right: 1px solid gray; z-index: 1;">
-                    <Stack spacing=Size::Em(0.5)>
-                        {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                    </Stack>
-                </Drawer>
-                <div style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                    <p>"Scroll ↓"</p>
-                    <Stack spacing=Size::Em(0.5)>
-                        {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                    </Stack>
-                </div>
-            </div>
-
-            <Code>
-                {indoc!(r#"
-                    <Box style="display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
-                        <Drawer side=DrawerSide::Left shown=shown style="overflow-y: scroll; padding: 0.5em; background-color: var(--brand-color); border-right: 1px solid gray;">
-                            <Stack spacing=Size::Em(0.5)>
-                                {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                            </Stack>
-                        </Drawer>
-                        <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                            <p>"Scroll ↓"</p>
-                            <Stack spacing=Size::Em(0.5)>
-                                {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                            </Stack>
-                        </Box>
-                    </Box>
-                "#)}
-            </Code>
+            <DemoShell source=include_str!("demos/drawer_left.rs")>
+                <DrawerLeftDemo />
+            </DemoShell>
 
             <h2 id="layout-shifts" class="anchor">
                 "Layout shifts"
@@ -66,39 +36,9 @@ pub fn PageDrawer() -> impl IntoView {
                 "When viewing this documentation on a small device, the open- and closeable main and documentation menus are created this way."
             </p>
 
-            <Toggle state=shown2 set_state=set_shown2/>
-
-            <div style="position: relative; display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
-                <div style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                    <p>"Scroll ↓"</p>
-                    <Stack spacing=Size::Em(0.5)>
-                        {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                    </Stack>
-                </div>
-                <Drawer side=DrawerSide::Right shown=shown2 attr:style="padding: 0.5em; height: 19.5em; overflow: scroll; position: absolute; top: 0; right: 0; background-color: var(--brand-color); border-left: 1px solid gray; z-index: 1;">
-                    <Stack spacing=Size::Em(0.5)>
-                        {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                    </Stack>
-                </Drawer>
-            </div>
-
-            <Code>
-                {indoc!(r#"
-                    <Box style="position: relative; display: flex; flex-direction: row; justify-content: flex-start; align-items: flex-start; border: 4px solid gray; width: 100%; height: 20em; overflow: hidden;">
-                        <Box style="padding: 0.5em; display: flex; flex-direction: column; overflow-y: scroll; width: 100%; height: 100%;">
-                            <p>"Scroll ↓"</p>
-                            <Stack spacing=Size::Em(0.5)>
-                                {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                            </Stack>
-                        </Box>
-                        <Drawer side=DrawerSide::Right shown=shown2 style="padding: 0.5em; height: 19.5em; overflow: scroll; position: absolute; top: 0; right: 0; background-color: var(--brand-color); border-left: 1px solid gray;">
-                            <Stack spacing=Size::Em(0.5)>
-                                {(0..8).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                            </Stack>
-                        </Drawer>
-                    </Box>
-                "#)}
-            </Code>
+            <DemoShell source=include_str!("demos/drawer_right_overlay.rs")>
+                <DrawerRightOverlayDemo />
+            </DemoShell>
 
             <h2 id="styling">
                 "Styling"
@@ -107,7 +47,7 @@ pub fn PageDrawer() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --drawer-background-color
                     --drawer-box-shadow

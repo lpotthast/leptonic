@@ -1,11 +1,7 @@
 use leptos::prelude::*;
 
-use crate::hooks::selection::use_selectable_collection::FocusStrategy;
+use crate::hooks::selection::use_selection_state::FocusStrategy;
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## OMITTED FEATURES
 // - `useControlledState` / controlled `isOpen` prop: React Aria supports both
 //   controlled (`isOpen` from parent) and uncontrolled (`defaultOpen`) patterns
@@ -18,8 +14,6 @@ use crate::hooks::selection::use_selectable_collection::FocusStrategy;
 // - Submenu state (`RootMenuTriggerState` with `expandedKeysStack`,
 //   `openSubmenu`, `closeSubmenu`): Deferred until leptonic adds submenu
 //   support.
-//
-// =============================================================================
 
 /// Input for `use_menu_trigger_state` hook.
 #[derive(Debug, Clone, Default)]

@@ -10,19 +10,13 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        propagation_control::{PropagationControl, Sealed},
         EventHandler, EventWrapper, Propagation,
+        propagation_control::{PropagationControl, Sealed},
     },
 };
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useKeyboard.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// A keyboard event with additional functionality.
 ///
@@ -71,8 +65,6 @@ impl KeyboardEventWrapper {
     pub fn current_target(&self) -> Option<web_sys::EventTarget> {
         self.inner.current_target()
     }
-
-    // -- Keyboard-specific accessors ------------------------------------------
 
     /// Get the key that was pressed.
     pub fn key(&self) -> String {

@@ -1,6 +1,8 @@
 use std::fmt::Debug;
 
 use leptos::{context::Provider, prelude::*};
+use leptos_classes::Classes;
+use leptos_styles::Styles;
 
 pub trait FormInput: Debug + Send + Sync {
     fn on_label_press(&self);
@@ -12,13 +14,17 @@ pub struct FormControlContext {
 }
 
 #[component]
-pub fn FormControl(children: Children) -> impl IntoView {
+pub fn FormControl(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
     let input = RwSignal::new(None);
 
     let ctx = FormControlContext { input };
 
     view! {
-        <div class="leptonic-form-control">
+        <div class=classes.add("leptonic-form-control") style=styles>
             <Provider value=ctx>{children()}</Provider>
         </div>
     }

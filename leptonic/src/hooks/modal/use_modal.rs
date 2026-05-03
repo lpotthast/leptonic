@@ -4,9 +4,6 @@ use crate::{hooks::IntoAttrs, utils::aria::AriaModal};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModal.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## DIFFERENT BEHAVIOR
 //
@@ -19,15 +16,18 @@ use crate::{hooks::IntoAttrs, utils::aria::AriaModal};
 //   Leptonic instead sets `aria-modal="true"` on the modal element itself.
 //   Modern browsers/AT already honour `aria-modal` and hide outside content,
 //   so the `aria-hidden` approach is unnecessary for our target environments.
-//   This simplification means we do not need `ModalProvider` or
-//   `ariaHideOutside()`.
+//   Combined with `aria_hide_outside` (called by `use_modal_backdrop` for
+//   defense in depth), this replaces React-aria's `ModalProvider` system.
 //
 // ## OMITTED FEATURES
 //
-// - `ariaHideOutside()`: Not implemented. Covered by `aria-modal="true"`.
-// - `ModalProvider` / `ModalContext`: Not needed without `ariaHideOutside()`.
+// - `ModalProvider` / `ModalContext`: Not needed. `aria-modal="true"` (this
+//   hook) plus `aria_hide_outside` (in `use_modal_backdrop`) together replace
+//   the provider-based aria-hidden propagation.
 //
-// =============================================================================
+// Note: `ariaHideOutside()` IS implemented — it lives in `use_modal_backdrop`,
+// not in this hook. See `use_modal_backdrop.rs` for details.
+//
 
 /// Input parameters for the `use_modal` hook.
 ///

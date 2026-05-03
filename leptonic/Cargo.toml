@@ -2,7 +2,7 @@
 name = "leptonic"
 version = { workspace = true }
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.89.0"
 authors = ["Lukas Potthast <privat@lukas-potthast.de>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -20,8 +20,13 @@ features = ["docsrs"]
 [features]
 default = ["hooks"]
 
-ssr = ["leptos/ssr", "leptos-use/ssr", "leptos-tiptap?/ssr"]
-hydrate = ["leptos/hydrate"]
+ssr = [
+    "leptos/ssr",
+    "leptos-use/ssr",
+    "leptos-tiptap?/ssr",
+    "leptos-element-capture/ssr",
+]
+hydrate = ["leptos/hydrate", "leptos-element-capture/hydrate"]
 
 # Core functionality. Hooks provide low level functions like `usePress` which hande interactions, aria attributes and more.
 # Use hooks to build your own set of components.
@@ -43,7 +48,11 @@ clipboard = ["components", "web-sys/Clipboard"]
 # Enables tiptap editor support. Tiptap related JS files will be copied to your proect directory when running a build.
 tiptap = ["components", "dep:leptos-tiptap", "dep:leptos-tiptap-build"]
 
-full = ["hooks", "atoms", "components", "clipboard", "tiptap"]
+syntax-highlight = ["components", "dep:syntect"]
+
+sanitize = ["components", "dep:ammonia"]
+
+full = ["hooks", "atoms", "components", "clipboard", "tiptap", "syntax-highlight", "sanitize"]
 
 nightly = ["leptos/nightly"]
 
@@ -58,6 +67,9 @@ icondata = { version = "0.7.0" }
 indoc = "2.0.7"
 js-sys = "0.3"
 leptos = "0.8.2"
+leptos-classes = { path = "../../leptos-classes" }
+leptos-element-capture = "0.1.0"
+leptos-styles = { path = "../../leptos-styles" }
 leptos-tiptap = { version = "0.9.0", optional = true }
 leptos-use = { version = "0.18.3", features = ["math"] }
 leptos_meta = { version = "0.8.2", features = [] }
@@ -72,19 +84,23 @@ smallvec = "1"
 strum = { version = "0.27.2", features = ["derive"] }
 time = { version = "0.3.41", features = [
     "wasm-bindgen",
+    "local-offset",
     "macros",
     "serde",
     "serde-well-known",
 ] }
 tracing = "0.1.44"
 uuid = { version = "1.20.0", features = ["v4", "v7", "js", "serde"] }
-wasm-bindgen = "0.2.114"
+wasm-bindgen = "0.2.117"
 wasm-bindgen-futures = "0.4.64"
 web-sys = { version = "0.3.91", features = [
+    "Animation",
+    "CssTransition",
     "DomRect",
     "Element",
     "Event",
     "EventTarget",
+    "FocusEvent",
     "FocusEventInit",
     "FocusOptions",
     "HtmlCollection",
@@ -92,6 +108,7 @@ web-sys = { version = "0.3.91", features = [
     "HtmlFormElement",
     "HtmlInputElement",
     "HtmlSlotElement",
+    "HtmlStyleElement",
     "HtmlTextAreaElement",
     "KeyboardEventInit",
     "MouseEvent",
@@ -99,17 +116,36 @@ web-sys = { version = "0.3.91", features = [
     "NodeList",
     "RadioNodeList",
     "ScrollIntoViewOptions",
+    "ScrollLogicalPosition",
+    "ScrollToOptions",
+    "Selection",
     "ShadowRoot",
     "Storage",
     "SvgElement",
+    "Touch",
+    "TouchEvent",
+    "TouchList",
     "TreeWalker",
+    "ValidityState",
+    "VisualViewport",
+    "HtmlSelectElement",
 ] }
+icu_calendar = "2"
+icu_collator = "2"
+icu_datetime = "2"
+icu_decimal = "2"
+icu_list = "2"
+icu_locale = "2"
+icu_normalizer = "2"
+icu_plurals = "2"
+icu_time = "2"
 itertools = "0.14.0"
+ammonia = { version = "4", optional = true }
+syntect = { version = "5", optional = true, default-features = false, features = ["default-fancy"] }
 
 [build-dependencies]
 anyhow = "1.0.102"
 cargo_toml = "0.22.3"
-lazy_static = "1.5.0"
 leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
 leptos-tiptap-build = { version = "0.2.8", optional = true }
 
@@ -117,13 +153,13 @@ leptos-tiptap-build = { version = "0.2.8", optional = true }
 anyhow = "1.0.102"
 assertr = "0.4.2"
 async-trait = "0.1"
-chrome-for-testing-manager = { version = "0.6.0", features = ["thirtyfour"] }
+chrome-for-testing-manager = { version = "0.7.1", features = ["thirtyfour"] }
 thirtyfour = { version = "0.36.1", features = ["component", "reqwest", "rustls-tls"] }
-tokio = { version = "1.50.0", features = ["rt", "rt-multi-thread", "macros"] }
-tokio-process-tools = "0.7.2"
+tokio = { version = "1.51.1", features = ["rt", "rt-multi-thread", "macros"] }
+tokio-process-tools = "0.8.0"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["fmt", "registry", "ansi"] }
-wasm-bindgen = "0.2.114"
+wasm-bindgen = "0.2.117"
 web-sys = "0.3.91"
 
 [lints]

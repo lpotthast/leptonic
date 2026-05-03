@@ -1,7 +1,7 @@
 [package]
 name = "leptonic-test-app"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
 
 [package.metadata.leptonic]
 # REQUIRED: Leptonic's build-script will copy the Leptonic themes to this directory.
@@ -19,8 +19,6 @@ assets-dir = "public"
 site-addr = "127.0.0.1:4200"
 reload-port = 4201
 browserquery = "defaults"
-watch = false
-env = "DEV"
 bin-features = ["ssr"]
 bin-default-features = false
 lib-features = ["hydrate"]

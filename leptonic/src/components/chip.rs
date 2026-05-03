@@ -3,7 +3,11 @@ use std::fmt::{Display, Formatter};
 use leptos::prelude::*;
 use web_sys::MouseEvent;
 
-use crate::{components::icon::Icon, Out};
+use crate::{
+    Out,
+    components::icon::Icon,
+    utils::{classes::Classes, styles::Styles},
+};
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
 pub enum ChipColor {
@@ -39,13 +43,15 @@ impl Display for ChipColor {
 pub fn Chip(
     #[prop(into, optional)] color: Option<Signal<ChipColor>>,
     #[prop(into, optional)] dismissible: Option<Out<MouseEvent, LocalStorage>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     let color = color.unwrap_or_default();
 
     // TODO: use use_press instead of on:click.
     view! {
-        <div class="leptonic-chip" data-color=move || { color.get().as_str() }>
+        <div class=classes.add("leptonic-chip") style=styles data-color=move || { color.get().as_str() }>
             {children()}
             {match dismissible {
                 Some(callback) => {

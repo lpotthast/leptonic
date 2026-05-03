@@ -9,24 +9,18 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
     hooks::{
-        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
+        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
     },
     utils::{
-        aria::{AriaDisabled, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableCell.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_table_cell` hook.
 #[derive(Debug, Clone)]

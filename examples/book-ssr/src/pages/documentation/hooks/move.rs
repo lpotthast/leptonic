@@ -1,23 +1,122 @@
-use leptonic::{components::prelude::*, hooks::*};
-use leptos::{html, prelude::*};
-use leptos_use::use_element_bounding;
-use ringbuf::{
-    traits::{Consumer, Observer, RingBuffer},
-    HeapRb,
-};
+use leptonic::components::prelude::*;
+use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::{
+    move_axis::AxisExample, move_basic::BasicMovementExample,
+    move_constrain_center::ConstrainCenterExample, move_constrained::ConstrainedBasicExample,
+    move_container_click::ContainerClickExample, move_programmatic::ProgrammaticExample,
+};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageUseMove() -> impl IntoView {
     view! {
         <Article>
-            <h1 id="use_move" class="anchor">
+            <h1 id="use-move" class="anchor">
                 "use_move"
-                <AnchorLink href="#use_move" description="Direct link to article header"/>
+                <AnchorLink href="#use-move" description="Direct link to section: use_move"/>
             </h1>
 
-            <p>"Track pointer and keyboard movement. Supports arrow key navigation, text selection management, and optional area-constrained movement via " <code>"MoveConstraint"</code> "."</p>
+            <p>
+                "The "<Code inline=true>"use_move"</Code>" hook tracks pointer and keyboard movement. "
+                "Supports arrow key navigation, text selection management, and optional area-constrained movement via "<Code inline=true>"MoveConstraint"</Code>". "
+                "See the "<Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useMove.html" target=LinkTarget::_Blank>
+                    "useMove"
+                </LinkExt>
+                "."
+            </p>
+
+            <h2 id="input" class="anchor">
+                "Input"
+                <AnchorLink href="#input" description="Direct link to section: Input"/>
+            </h2>
+
+            <p><Code inline=true>"UseMoveInput"</Code>" fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"disabled"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Disables movement when true."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"axis"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<Option<MoveAxis>>"</Code></TableCell>
+                            <TableCell>"Optional axis constraint: Horizontal, Vertical, or Both (default when None)."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"on_move_start"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Callback<MoveStartEvent>>"</Code></TableCell>
+                            <TableCell>"Called when movement starts. Provides pointer_type, modifiers, page_x, page_y."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"on_move"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Callback<MoveEvent>>"</Code></TableCell>
+                            <TableCell>"Called during movement. Provides delta_x, delta_y, pointer_type, modifiers."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"on_move_end"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Callback<MoveEndEvent>>"</Code></TableCell>
+                            <TableCell>"Called when movement ends."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"constraint"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<MoveConstraint>"</Code></TableCell>
+                            <TableCell>"Optional area-bounded movement configuration (is_rtl, constrain_center, allow_container_click, initial_position)."</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            <h2 id="return" class="anchor">
+                "Return"
+                <AnchorLink href="#return" description="Direct link to section: Return"/>
+            </h2>
+
+            <p><Code inline=true>"UseMoveReturn"</Code>" fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"props"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseMoveProps"</Code></TableCell>
+                            <TableCell>"Spread onto the movable element."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_moving"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the element is currently being moved."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"constraint"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<UseMoveConstraintReturn>"</Code></TableCell>
+                            <TableCell>"Present when constraint was configured. Provides container_props, normalized_position, pixel_position, set_position."</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
 
             <h2 id="basic-movement" class="anchor">
                 "Basic Movement"
@@ -26,7 +125,9 @@ pub fn PageUseMove() -> impl IntoView {
 
             <p>"Unconstrained drag and keyboard movement with event logging."</p>
 
-            <BasicMovementExample/>
+            <DemoShell source=include_str!("demos/move_basic.rs")>
+                <BasicMovementExample />
+            </DemoShell>
 
             <h2 id="constrained" class="anchor">
                 "Constrained Movement"
@@ -35,7 +136,9 @@ pub fn PageUseMove() -> impl IntoView {
 
             <p>"Constrain element movement within a container boundary using a " <code>"MoveConstraint"</code> " configuration."</p>
 
-            <ConstrainedBasicExample/>
+            <DemoShell source=include_str!("demos/move_constrained.rs")>
+                <ConstrainedBasicExample />
+            </DemoShell>
 
             <h2 id="axis-constraint" class="anchor">
                 "Axis Constraint"
@@ -44,7 +147,9 @@ pub fn PageUseMove() -> impl IntoView {
 
             <p>"Constrain movement to horizontal or vertical axis only."</p>
 
-            <AxisExample/>
+            <DemoShell source=include_str!("demos/move_axis.rs")>
+                <AxisExample />
+            </DemoShell>
 
             <h2 id="container-click" class="anchor">
                 "Container Click"
@@ -53,7 +158,9 @@ pub fn PageUseMove() -> impl IntoView {
 
             <p>"When enabled, clicking the container moves the element to that position."</p>
 
-            <ContainerClickExample/>
+            <DemoShell source=include_str!("demos/move_container_click.rs")>
+                <ContainerClickExample />
+            </DemoShell>
 
             <h2 id="constrain-center" class="anchor">
                 "Constrain Center"
@@ -62,7 +169,9 @@ pub fn PageUseMove() -> impl IntoView {
 
             <p>"Compare constraining element bounds vs element center."</p>
 
-            <ConstrainCenterExample/>
+            <DemoShell source=include_str!("demos/move_constrain_center.rs")>
+                <ConstrainCenterExample />
+            </DemoShell>
 
             <h2 id="programmatic" class="anchor">
                 "Programmatic Control"
@@ -71,667 +180,48 @@ pub fn PageUseMove() -> impl IntoView {
 
             <p>"Use set_position to programmatically move the element."</p>
 
-            <ProgrammaticExample/>
+            <DemoShell source=include_str!("demos/move_programmatic.rs")>
+                <ProgrammaticExample />
+            </DemoShell>
+
+            <h2 id="deviations" class="anchor">
+                "Deviations"
+                <AnchorLink href="#deviations" description="Direct link to section: Deviations"/>
+            </h2>
+
+            <ul>
+                <li><Code inline=true>"axis"</Code>" constraint as "<Code inline=true>"Signal<Option<MoveAxis>>"</Code>" (not in react-aria)"</li>
+                <li><Code inline=true>"page_x"</Code>"/"<Code inline=true>"page_y"</Code>" on MoveStartEvent (not in react-aria)"</li>
+                <li><Code inline=true>"MoveConstraint"</Code>" system for area-bounded movement (leptonic-specific)"</li>
+            </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
+                <li><Link href=crate::routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
+                <li><Link href=crate::routes::doc::interactions::Dnd.materialize()>"Drag & Drop"</Link></li>
+                <li><Link href=crate::routes::doc::slider::Hook.materialize()>"use_slider"</Link>" (uses use_move internally)"</li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_move", link: "#use_move" },
+                Toc::Leaf { title: "use_move", link: "#use-move" },
+                Toc::Leaf { title: "Input", link: "#input" },
+                Toc::Leaf { title: "Return", link: "#return" },
                 Toc::Leaf { title: "Basic Movement", link: "#basic-movement" },
                 Toc::Leaf { title: "Constrained Movement", link: "#constrained" },
                 Toc::Leaf { title: "Axis Constraint", link: "#axis-constraint" },
                 Toc::Leaf { title: "Container Click", link: "#container-click" },
                 Toc::Leaf { title: "Constrain Center", link: "#constrain-center" },
                 Toc::Leaf { title: "Programmatic Control", link: "#programmatic" },
+                Toc::Leaf { title: "Deviations", link: "#deviations" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
-    }
-}
-
-#[component]
-fn BasicMovementExample() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
-    let (left, set_left) = signal(0.0);
-    let (top, set_top) = signal(0.0);
-
-    let container: NodeRef<html::Div> = NodeRef::new();
-    let container_bounding = use_element_bounding(container);
-
-    let draggable: NodeRef<html::Div> = NodeRef::new();
-    let draggable_bounding = use_element_bounding(draggable);
-
-    let UseMoveReturn { props, .. } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: None.into(),
-        on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "MoveStart {{ pointer: {}, page: ({}, {}) }}",
-                    e.pointer_type, e.page_x, e.page_y
-                )));
-            });
-        })),
-        on_move: Some(Callback::new(move |e: MoveEvent| {
-            set_left.update(move |l| *l += e.delta_x);
-            set_top.update(move |l| *l += e.delta_y);
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Move {{ dx: {}, dy: {}, pointer: {} }}",
-                    e.delta_x, e.delta_y, e.pointer_type
-                )));
-            });
-        })),
-        on_move_end: Some(Callback::new(move |e: MoveEndEvent| {
-            set_left.update(move |l| {
-                *l = (*l).clamp(
-                    0.0,
-                    container_bounding.width.get_untracked()
-                        - draggable_bounding.width.get_untracked(),
-                )
-            });
-            set_top.update(move |t| {
-                *t = (*t).clamp(
-                    0.0,
-                    container_bounding.height.get_untracked()
-                        - draggable_bounding.height.get_untracked(),
-                )
-            });
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "MoveEnd {{ pointer: {} }}",
-                    e.pointer_type
-                )));
-            });
-        })),
-        constraint: None,
-    });
-
-    let string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
-
-    view! {
-        <Code>
-            "..."
-        </Code>
-
-        // The `touch-action: none` is important. Browsers would otherwise interrupt touchmove events after a small delay!
-        <div node_ref=container style="
-            width: 100%;
-            height: 10em;
-            touch-action: none;
-            border: none;
-            border-radius: var(--typography-code-border-radius);
-            background-color: var(--typography-code-background-color);
-            color: var(--typography-code-color);
-        ">
-            <div
-                {..props.into_attrs()}
-                node_ref=draggable
-                tabindex="0"
-                style=move || format!("
-                    border: 0.1em solid green;
-                    padding: 0.5em 1em;
-                    transition: none;
-                    position: relative;
-                    width: fit-content;
-                    cursor: pointer;
-                ")
-                style:left=move || format!("{}px", left.get().clamp(
-                    0.0,
-                    container_bounding.width.get_untracked()
-                        - draggable_bounding.width.get_untracked(),
-                ))
-                style:top=move || format!("{}px", top.get().clamp(
-                    0.0,
-                    container_bounding.height.get_untracked()
-                        - draggable_bounding.height.get_untracked(),
-                ))
-            >
-                "Drag me (or use arrow keys)"
-            </div>
-        </div>
-
-        <p>"Last " { move || events.with(|events| events.occupied_len()) } " events: "</p>
-
-        <pre style="
-            width: 100%;
-            height: 15em;
-            overflow: auto;
-            padding: var(--typography-code-padding);
-            border: none;
-            border-radius: var(--typography-code-border-radius);
-            background-color: var(--typography-code-background-color);
-            color: var(--typography-code-color);
-        ">
-            { move || string.get() }
-        </pre>
-    }
-}
-
-#[component]
-fn ConstrainedBasicExample() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(20));
-
-    let UseMoveReturn {
-        props,
-        is_moving,
-        constraint,
-    } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| None),
-        on_move_start: Some(Callback::new(move |e: MoveStartEvent| {
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!("Start: pointer={}", e.pointer_type)));
-            });
-        })),
-        on_move: Some(Callback::new(move |e: MoveEvent| {
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Move: delta=({:.1}, {:.1})",
-                    e.delta_x, e.delta_y
-                )));
-            });
-        })),
-        on_move_end: Some(Callback::new(move |e: MoveEndEvent| {
-            set_events.update(move |events| {
-                events.push_overwrite(Oco::Owned(format!("End: pointer={}", e.pointer_type)));
-            });
-        })),
-        constraint: Some(MoveConstraint {
-            is_rtl: false,
-            constrain_center: false,
-            allow_container_click: false,
-            initial_position: None,
-        }),
-    });
-    let c = constraint.unwrap();
-    let normalized_position = c.normalized_position;
-    let pixel_position = c.pixel_position;
-    let container_attrs = c.container_props.into_attrs();
-    let movable_attrs = props.into_attrs();
-
-    let event_string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
-
-    view! {
-        <div
-            {..container_attrs}
-            style="
-                width: 100%;
-                height: 12em;
-                touch-action: none;
-                border: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                color: var(--typography-code-color);
-                position: relative;
-            "
-        >
-            <div
-                {..movable_attrs}
-                tabindex="0"
-                style=move || format!("
-                    border: 0.15em solid {};
-                    padding: 0.5em 1em;
-                    position: absolute;
-                    width: fit-content;
-                    cursor: grab;
-                    user-select: none;
-                    left: {}px;
-                    top: {}px;
-                ",
-                    if is_moving.get() { "var(--brand-color)" } else { "green" },
-                    pixel_position.get().0,
-                    pixel_position.get().1
-                )
-            >
-                "Drag me"
-            </div>
-        </div>
-
-        <p style="font-size: 0.9em;">
-            "Position: ("
-            { move || format!("{:.2}", normalized_position.get().0) }
-            ", "
-            { move || format!("{:.2}", normalized_position.get().1) }
-            ") | Moving: "
-            { move || if is_moving.get() { "Yes" } else { "No" } }
-        </p>
-
-        <pre style="
-            width: 100%;
-            height: 8em;
-            overflow: auto;
-            padding: var(--typography-code-padding);
-            border: none;
-            border-radius: var(--typography-code-border-radius);
-            background-color: var(--typography-code-background-color);
-            color: var(--typography-code-color);
-        ">
-            { move || event_string.get() }
-        </pre>
-    }
-}
-
-#[component]
-fn AxisExample() -> impl IntoView {
-    let UseMoveReturn {
-        props: h_props,
-        constraint: h_constraint,
-        ..
-    } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| Some(MoveAxis::Horizontal)),
-        on_move_start: None,
-        on_move: None,
-        on_move_end: None,
-        constraint: Some(MoveConstraint {
-            is_rtl: false,
-            constrain_center: false,
-            allow_container_click: false,
-            initial_position: None,
-        }),
-    });
-    let h_c = h_constraint.unwrap();
-    let h_pixel_position = h_c.pixel_position;
-    let h_container_attrs = h_c.container_props.into_attrs();
-    let h_movable_attrs = h_props.into_attrs();
-
-    let UseMoveReturn {
-        props: v_props,
-        constraint: v_constraint,
-        ..
-    } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| Some(MoveAxis::Vertical)),
-        on_move_start: None,
-        on_move: None,
-        on_move_end: None,
-        constraint: Some(MoveConstraint {
-            is_rtl: false,
-            constrain_center: false,
-            allow_container_click: false,
-            initial_position: None,
-        }),
-    });
-    let v_c = v_constraint.unwrap();
-    let v_pixel_position = v_c.pixel_position;
-    let v_container_attrs = v_c.container_props.into_attrs();
-    let v_movable_attrs = v_props.into_attrs();
-
-    view! {
-        <div style="display: flex; gap: 1em; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;">
-                <p><strong>"Horizontal Only"</strong></p>
-                <div
-                    {..h_container_attrs}
-                    style="
-                        width: 100%;
-                        height: 4em;
-                        touch-action: none;
-                        border-radius: var(--typography-code-border-radius);
-                        background-color: var(--typography-code-background-color);
-                        position: relative;
-                    "
-                >
-                    <div
-                        {..h_movable_attrs}
-                        tabindex="0"
-                        style=move || format!("
-                            border: 0.15em solid orange;
-                            padding: 0.3em 0.6em;
-                            position: absolute;
-                            cursor: ew-resize;
-                            user-select: none;
-                            left: {}px;
-                            top: {}px;
-                        ",
-                            h_pixel_position.get().0,
-                            h_pixel_position.get().1
-                        )
-                    >
-                        "H"
-                    </div>
-                </div>
-            </div>
-
-            <div style="flex: 1; min-width: 200px;">
-                <p><strong>"Vertical Only"</strong></p>
-                <div
-                    {..v_container_attrs}
-                    style="
-                        width: 100%;
-                        height: 8em;
-                        touch-action: none;
-                        border-radius: var(--typography-code-border-radius);
-                        background-color: var(--typography-code-background-color);
-                        position: relative;
-                    "
-                >
-                    <div
-                        {..v_movable_attrs}
-                        tabindex="0"
-                        style=move || format!("
-                            border: 0.15em solid purple;
-                            padding: 0.3em 0.6em;
-                            position: absolute;
-                            cursor: ns-resize;
-                            user-select: none;
-                            left: {}px;
-                            top: {}px;
-                        ",
-                            v_pixel_position.get().0,
-                            v_pixel_position.get().1
-                        )
-                    >
-                        "V"
-                    </div>
-                </div>
-            </div>
-        </div>
-    }
-}
-
-#[component]
-fn ContainerClickExample() -> impl IntoView {
-    let UseMoveReturn {
-        props, constraint, ..
-    } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| None),
-        on_move_start: None,
-        on_move: None,
-        on_move_end: None,
-        constraint: Some(MoveConstraint {
-            is_rtl: false,
-            constrain_center: false,
-            allow_container_click: true,
-            initial_position: None,
-        }),
-    });
-    let c = constraint.unwrap();
-    let pixel_position = c.pixel_position;
-    let container_attrs = c.container_props.into_attrs();
-    let movable_attrs = props.into_attrs();
-
-    view! {
-        <div
-            {..container_attrs}
-            style="
-                width: 100%;
-                height: 10em;
-                touch-action: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                position: relative;
-                cursor: crosshair;
-            "
-        >
-            <div
-                {..movable_attrs}
-                tabindex="0"
-                style=move || format!("
-                    border: 0.15em solid cyan;
-                    padding: 0.5em 1em;
-                    position: absolute;
-                    cursor: grab;
-                    user-select: none;
-                    left: {}px;
-                    top: {}px;
-                ",
-                    pixel_position.get().0,
-                    pixel_position.get().1
-                )
-            >
-                "Click anywhere!"
-            </div>
-        </div>
-
-        <p style="font-size: 0.9em; font-style: italic;">
-            "Click anywhere in the container to move the element there, or drag it directly."
-        </p>
-    }
-}
-
-#[component]
-fn ConstrainCenterExample() -> impl IntoView {
-    let UseMoveReturn {
-        props: bounds_props,
-        constraint: bounds_constraint,
-        ..
-    } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| None),
-        on_move_start: None,
-        on_move: None,
-        on_move_end: None,
-        constraint: Some(MoveConstraint {
-            is_rtl: false,
-            constrain_center: false,
-            allow_container_click: false,
-            initial_position: None,
-        }),
-    });
-    let bounds_c = bounds_constraint.unwrap();
-    let bounds_pixel_position = bounds_c.pixel_position;
-    let bounds_container_attrs = bounds_c.container_props.into_attrs();
-    let bounds_movable_attrs = bounds_props.into_attrs();
-
-    let UseMoveReturn {
-        props: center_props,
-        constraint: center_constraint,
-        ..
-    } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| None),
-        on_move_start: None,
-        on_move: None,
-        on_move_end: None,
-        constraint: Some(MoveConstraint {
-            is_rtl: false,
-            constrain_center: true,
-            allow_container_click: false,
-            initial_position: None,
-        }),
-    });
-    let center_c = center_constraint.unwrap();
-    let center_pixel_position = center_c.pixel_position;
-    let center_container_attrs = center_c.container_props.into_attrs();
-    let center_movable_attrs = center_props.into_attrs();
-
-    view! {
-        <div style="display: flex; gap: 1em; flex-wrap: wrap;">
-            <div style="flex: 1; min-width: 200px;">
-                <p><strong>"Constrain Bounds (default)"</strong></p>
-                <div
-                    {..bounds_container_attrs}
-                    style="
-                        width: 100%;
-                        height: 8em;
-                        touch-action: none;
-                        border-radius: var(--typography-code-border-radius);
-                        background-color: var(--typography-code-background-color);
-                        position: relative;
-                    "
-                >
-                    <div
-                        {..bounds_movable_attrs}
-                        tabindex="0"
-                        style=move || format!("
-                            border: 0.15em solid green;
-                            padding: 0.5em 1em;
-                            position: absolute;
-                            cursor: grab;
-                            user-select: none;
-                            left: {}px;
-                            top: {}px;
-                        ",
-                            bounds_pixel_position.get().0,
-                            bounds_pixel_position.get().1
-                        )
-                    >
-                        "Bounds"
-                    </div>
-                </div>
-                <p style="font-size: 0.85em;">"Element stays fully inside"</p>
-            </div>
-
-            <div style="flex: 1; min-width: 200px;">
-                <p><strong>"Constrain Center"</strong></p>
-                <div
-                    {..center_container_attrs}
-                    style="
-                        width: 100%;
-                        height: 8em;
-                        touch-action: none;
-                        border-radius: var(--typography-code-border-radius);
-                        background-color: var(--typography-code-background-color);
-                        position: relative;
-                        overflow: visible;
-                    "
-                >
-                    <div
-                        {..center_movable_attrs}
-                        tabindex="0"
-                        style=move || format!("
-                            border: 0.15em solid red;
-                            padding: 0.5em 1em;
-                            position: absolute;
-                            cursor: grab;
-                            user-select: none;
-                            left: {}px;
-                            top: {}px;
-                        ",
-                            center_pixel_position.get().0,
-                            center_pixel_position.get().1
-                        )
-                    >
-                        "Center"
-                    </div>
-                </div>
-                <p style="font-size: 0.85em;">"Element center stays inside"</p>
-            </div>
-        </div>
-    }
-}
-
-#[component]
-fn ProgrammaticExample() -> impl IntoView {
-    let UseMoveReturn {
-        props, constraint, ..
-    } = use_move(UseMoveInput {
-        disabled: false.into(),
-        axis: Signal::derive(|| None),
-        on_move_start: None,
-        on_move: None,
-        on_move_end: None,
-        constraint: Some(MoveConstraint {
-            is_rtl: false,
-            constrain_center: false,
-            allow_container_click: false,
-            initial_position: None,
-        }),
-    });
-    let c = constraint.unwrap();
-    let normalized_position = c.normalized_position;
-    let pixel_position = c.pixel_position;
-    let set_position = c.set_position;
-    let container_attrs = c.container_props.into_attrs();
-    let movable_attrs = props.into_attrs();
-
-    view! {
-        <div
-            {..container_attrs}
-            style="
-                width: 100%;
-                height: 10em;
-                touch-action: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                position: relative;
-            "
-        >
-            <div
-                {..movable_attrs}
-                tabindex="0"
-                style=move || format!("
-                    border: 0.15em solid yellow;
-                    padding: 0.5em 1em;
-                    position: absolute;
-                    cursor: grab;
-                    user-select: none;
-                    left: {}px;
-                    top: {}px;
-                ",
-                    pixel_position.get().0,
-                    pixel_position.get().1
-                )
-            >
-                "Programmable"
-            </div>
-        </div>
-
-        <div style="display: flex; gap: 0.5em; flex-wrap: wrap; margin-top: 0.5em;">
-            <button
-                on:click=move |_| set_position.run((0.0, 0.0))
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Top-Left"
-            </button>
-            <button
-                on:click=move |_| set_position.run((0.5, 0.0))
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Top-Center"
-            </button>
-            <button
-                on:click=move |_| set_position.run((1.0, 0.0))
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Top-Right"
-            </button>
-            <button
-                on:click=move |_| set_position.run((0.5, 0.5))
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Center"
-            </button>
-            <button
-                on:click=move |_| set_position.run((0.0, 1.0))
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Bottom-Left"
-            </button>
-            <button
-                on:click=move |_| set_position.run((1.0, 1.0))
-                style="padding: 0.3em 0.6em; cursor: pointer;"
-            >
-                "Bottom-Right"
-            </button>
-        </div>
-
-        <p style="font-size: 0.9em;">
-            "Normalized: ("
-            { move || format!("{:.2}", normalized_position.get().0) }
-            ", "
-            { move || format!("{:.2}", normalized_position.get().1) }
-            ")"
-        </p>
     }
 }

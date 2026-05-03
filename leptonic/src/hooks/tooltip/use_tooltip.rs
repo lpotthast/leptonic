@@ -8,17 +8,14 @@ use web_sys::PointerEvent;
 use super::use_tooltip_trigger_state::UseTooltipTriggerStateReturn;
 use crate::{
     hooks::{
-        interactions::use_hover::{use_hover, UseHoverInput},
         IntoAttrs,
+        interactions::use_hover::{UseHoverInput, use_hover},
     },
     utils::EventHandler,
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/tooltip/src/useTooltip.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //
@@ -26,7 +23,6 @@ use crate::{
 //   `on_open`/`on_close` callbacks, enabling the tooltip to participate in
 //   the warmup/cooldown system when hovered.
 //
-// =============================================================================
 
 /// Input parameters for the `use_tooltip` hook.
 #[derive(Clone, Copy)]

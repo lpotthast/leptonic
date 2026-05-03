@@ -5,13 +5,7 @@ use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useLabel.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_label` hook.
 #[derive(Debug, Clone, Default)]

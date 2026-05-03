@@ -1,18 +1,12 @@
-use leptos::{
-    prelude::*,
-    tachys::html::style::{style, Style},
-};
-use leptos_use::{use_document, use_element_bounding};
+use leptos::prelude::*;
+use leptos_use::{use_document, use_element_bounding, use_window};
 
-use super::calculate_position::{calculate_position, CalculatePositionInput, Rect};
+use super::calculate_position::{CalculatePositionInput, Rect, calculate_position};
 use crate::{
-    hooks::IntoAttrs,
-    utils::{locale::WritingDirection, CapturedElement, ElementCaptureAttr},
+    hooks::{IntoAttrs, PropsWithStyles},
+    utils::{CapturedElement, ElementCaptureAttr, locale::WritingDirection, styles::Styles},
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // This hook is based on React Aria's `useOverlayPosition` and `calculatePosition`:
 // https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useOverlayPosition.ts
@@ -33,8 +27,10 @@ use crate::{
 //   on the trigger for different physical placements) is not needed because we use
 //   separate `PlacementX`/`PlacementY` enums that already encode this.
 //
-// - **Visual viewport handling**: React Aria handles iOS virtual keyboard pushing
-//   the visual viewport. Not yet implemented.
+// - **Visual viewport advanced features**: React Aria freezes overlay positioning
+//   during pinch-zoom (scale detection) and tracks `visualViewport.offsetTop/Left`
+//   for coordinate transformation on iOS. Not implemented. Basic `visualViewport`
+//   support (width/height for boundary dimensions, resize event) IS implemented.
 //
 // ## DIFFERENT BEHAVIOR
 //
@@ -47,9 +43,10 @@ use crate::{
 //   `position: fixed` (relative to the viewport) correct and avoiding ~200 lines
 //   of containing-block detection logic.
 //
-// - **Close-on-scroll in `use_overlay`**: React Aria puts close-on-scroll in
-//   `useOverlayPosition` for historical reasons. We keep it in `use_overlay`
-//   where other dismiss logic lives.
+// - **Close-on-scroll in `use_close_on_scroll`**: React Aria puts close-on-scroll
+//   in `useOverlayPosition` for historical reasons. Leptonic provides it as a
+//   separate `use_close_on_scroll` hook for composability. The `Popover` atom
+//   calls it from `PopoverContent`.
 //
 // ## LEPTOS ADAPTATIONS
 //
@@ -65,7 +62,6 @@ use crate::{
 //   from the caller because the overlay position props are spread onto the overlay
 //   element, not the target.
 //
-// =============================================================================
 
 // TODO: Serialize, Deserialize, Display, FormStr ???
 
@@ -128,7 +124,7 @@ impl PlacementX {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct UseOverlayPositionInput {
     /// Element to which the overlay should be positioned relative to.
     /// This is a `CapturedElement` from the caller because the overlay position
@@ -165,8 +161,8 @@ pub struct UseOverlayPositionInput {
 
 #[derive(Debug)]
 pub struct UseOverlayPositionReturn {
-    /// Props for the overlay element. Call `.into_attrs()` for view spreading.
-    pub props: UseOverlayPositionProps,
+    /// Props for the overlay element. Call `.into_parts()` for view spreading and styles.
+    pub props: PropsWithStyles<UseOverlayPositionProps>,
 
     /// Resolved horizontal placement after flipping.
     pub resolved_placement_x: Memo<PhysicalPlacementX>,
@@ -179,36 +175,17 @@ pub struct UseOverlayPositionReturn {
 #[derive(Debug)]
 pub struct UseOverlayPositionProps {
     pub element_capture: ElementCaptureAttr,
-    pub position: Signal<(&'static str, String)>,
-    pub z_index: Signal<(&'static str, String)>,
-    pub top: Signal<(&'static str, String)>,
-    pub left: Signal<(&'static str, String)>,
-    pub max_height: Signal<(&'static str, String)>,
 }
 
 impl IntoAttrs for UseOverlayPositionProps {
     type Attrs = UseOverlayPositionAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            self.element_capture,
-            style(self.position),
-            style(self.z_index),
-            style(self.top),
-            style(self.left),
-            style(self.max_height),
-        )
+        (self.element_capture,)
     }
 }
 
-pub type UseOverlayPositionAttrs = (
-    ElementCaptureAttr,
-    Style<Signal<(&'static str, String)>>, // position: fixed
-    Style<Signal<(&'static str, String)>>, // z-index: 100000
-    Style<Signal<(&'static str, String)>>, // top: Xpx
-    Style<Signal<(&'static str, String)>>, // left: Xpx
-    Style<Signal<(&'static str, String)>>, // max-height: Xpx
-);
+pub type UseOverlayPositionAttrs = (ElementCaptureAttr,);
 
 pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositionReturn {
     let UseOverlayPositionInput {
@@ -236,20 +213,100 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
     let overlay_bounding = use_element_bounding(overlay_signal);
     let target_bounding = use_element_bounding(target_signal);
 
-    let container_width = move || match use_document().as_ref() {
-        Some(document) => match document.body() {
-            Some(body) => f64::from(body.client_width()),
+    // Recompute positioning when the viewport resizes.
+    // `use_element_bounding` handles overlay/target resize via ResizeObserver, but
+    // viewport size changes (window resize, virtual keyboard) are not tracked by it.
+    let viewport_resize = Trigger::new();
+    #[cfg(not(feature = "ssr"))]
+    {
+        use send_wrapper::SendWrapper;
+        use wasm_bindgen::{JsCast, prelude::Closure};
+
+        let cleanup: StoredValue<Option<SendWrapper<Box<dyn FnOnce()>>>, LocalStorage> =
+            StoredValue::new_local(None);
+
+        if let Some(window) = use_window().as_ref().cloned() {
+            let resize_handler = Closure::<dyn Fn()>::new(move || viewport_resize.notify());
+            let _ = window.add_event_listener_with_callback(
+                "resize",
+                resize_handler.as_ref().unchecked_ref(),
+            );
+
+            // Also listen to visualViewport resize events (virtual keyboard, zoom).
+            #[cfg(web_sys_unstable_apis)]
+            let vv_state = window.visual_viewport().map(|vv| {
+                let vv_handler = Closure::<dyn Fn()>::new(move || viewport_resize.notify());
+                let _ = vv.add_event_listener_with_callback(
+                    "resize",
+                    vv_handler.as_ref().unchecked_ref(),
+                );
+                (vv, vv_handler)
+            });
+
+            let cleanup_fn: Box<dyn FnOnce()> = Box::new(move || {
+                let _ = window.remove_event_listener_with_callback(
+                    "resize",
+                    resize_handler.as_ref().unchecked_ref(),
+                );
+                #[cfg(web_sys_unstable_apis)]
+                if let Some((vv, vv_handler)) = vv_state {
+                    let _ = vv.remove_event_listener_with_callback(
+                        "resize",
+                        vv_handler.as_ref().unchecked_ref(),
+                    );
+                }
+            });
+            cleanup.set_value(Some(SendWrapper::new(cleanup_fn)));
+        }
+
+        on_cleanup(move || {
+            cleanup.update_value(|opt| {
+                if let Some(f) = opt.take() {
+                    f.take()();
+                }
+            });
+        });
+    }
+
+    // Viewport dimensions for the boundary rect.
+    //
+    // Uses `visualViewport` when available (accounts for pinch-zoom and virtual
+    // keyboards), falling back to `documentElement.clientWidth/clientHeight`
+    // (viewport dimensions excluding scrollbar). Never uses `body` dimensions,
+    // which return the content size and can be much larger than the viewport on
+    // scrollable pages.
+    let viewport_width = move || {
+        viewport_resize.track();
+        #[cfg(web_sys_unstable_apis)]
+        if let Some(window) = use_window().as_ref() {
+            if let Some(vv) = window.visual_viewport() {
+                return vv.width();
+            }
+        }
+        match use_document().as_ref() {
+            Some(document) => match document.document_element() {
+                Some(root) => f64::from(root.client_width()),
+                None => 0.0,
+            },
             None => 0.0,
-        },
-        None => 0.0,
+        }
     };
 
-    let container_height = move || match use_document().as_ref() {
-        Some(document) => match document.body() {
-            Some(body) => f64::from(body.client_height()),
+    let viewport_height = move || {
+        viewport_resize.track();
+        #[cfg(web_sys_unstable_apis)]
+        if let Some(window) = use_window().as_ref() {
+            if let Some(vv) = window.visual_viewport() {
+                return vv.height();
+            }
+        }
+        match use_document().as_ref() {
+            Some(document) => match document.document_element() {
+                Some(root) => f64::from(root.client_height()),
+                None => 0.0,
+            },
             None => 0.0,
-        },
-        None => 0.0,
+        }
     };
 
     let result = Memo::new(move |_| {
@@ -275,8 +332,8 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
             boundary: Rect {
                 top: 0.0,
                 left: 0.0,
-                width: container_width(),
-                height: container_height(),
+                width: viewport_width(),
+                height: viewport_height(),
             },
             placement_x: phys_x,
             placement_y: placement_y.get(),
@@ -292,22 +349,25 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
     let resolved_placement_y = Memo::new(move |_| result.get().placement_y);
 
     UseOverlayPositionReturn {
-        props: UseOverlayPositionProps {
-            element_capture: overlay_element.attr(),
-            position: Signal::derive(|| ("position", String::from("fixed"))),
-            z_index: Signal::derive(|| ("z-index", String::from("100000"))),
-            top: Signal::derive(move || ("top", format!("{}px", result.get().top))),
-            left: Signal::derive(move || ("left", format!("{}px", result.get().left))),
-            max_height: Signal::derive(move || {
-                let mh = result.get().max_height;
-                if mh >= f64::MAX / 2.0 {
-                    // No effective constraint — don't set max-height
-                    ("max-height", String::new())
-                } else {
-                    ("max-height", format!("{mh}px"))
-                }
-            }),
-        },
+        props: PropsWithStyles::new(
+            UseOverlayPositionProps {
+                element_capture: overlay_element.attr(),
+            },
+            Styles::builder()
+                .with("position", "fixed")
+                .with("z-index", "100000")
+                .with("top", move || format!("{}px", result.get().top))
+                .with("left", move || format!("{}px", result.get().left))
+                .with_optional("max-height", move || {
+                    let mh = result.get().max_height;
+                    if mh >= f64::MAX / 2.0 {
+                        None
+                    } else {
+                        Some(format!("{mh}px"))
+                    }
+                })
+                .build(),
+        ),
         resolved_placement_x,
         resolved_placement_y,
     }

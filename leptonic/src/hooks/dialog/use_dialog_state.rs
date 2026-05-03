@@ -2,9 +2,6 @@ use leptos::prelude::*;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/overlays/src/useOverlayTriggerState.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## OMITTED FEATURES
 // - `useControlledState` / controlled `isOpen` prop: React Aria supports both
@@ -16,7 +13,6 @@ use leptos::prelude::*;
 //   can enforce invariants. See documentation/hooks-implementation.md for the
 //   full rationale.
 //
-// =============================================================================
 
 /// Input for [`use_dialog_state`].
 #[derive(Debug, Default, Clone, Copy)]

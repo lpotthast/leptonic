@@ -3,7 +3,11 @@ use std::{fmt::Debug, sync::Arc};
 use leptos::prelude::*;
 use uuid::Uuid;
 
-use crate::{components::tabs::use_tabs, Mount, Out};
+use crate::{
+    Mount, Out,
+    components::tabs::use_tabs,
+    utils::{classes::Classes, styles::Styles},
+};
 
 #[derive(Clone)]
 pub struct TabData {
@@ -45,6 +49,10 @@ pub fn Tab(
     /// Called whenever the tab gets hidden.
     #[prop(into, optional)]
     on_hide: Option<Out<()>>,
+
+    #[prop(into, optional)] classes: Classes,
+
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let id = id.unwrap_or_else(Uuid::new_v4);
     let tabs = use_tabs();
@@ -84,11 +92,14 @@ pub fn Tab(
     }
 
     let is_active = move || tabs.history.get().get_active() == Some(&name.get_value());
+    let classes = StoredValue::new(classes);
+    let styles = StoredValue::new(styles);
 
     match mount {
         Mount::Once => view! {
             <div
-                class="leptonic-tab"
+                class=classes.get_value().add("leptonic-tab")
+                style=styles.get_value()
                 id=id.to_string()
                 data-name=name.get_value()
                 role="tabpanel"
@@ -101,7 +112,8 @@ pub fn Tab(
         Mount::WhenShown => view! {
             <Show when=is_active fallback=|| ()>
                 <div
-                    class="leptonic-tab"
+                    class=classes.get_value().add("leptonic-tab")
+                    style=styles.get_value()
                     id=id.to_string()
                     data-name=name.get_value()
                     role="tabpanel"

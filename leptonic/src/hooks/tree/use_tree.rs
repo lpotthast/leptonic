@@ -11,20 +11,16 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tree/src/useTree.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// The selection mode for a tree.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -224,6 +220,9 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
         if disabled.get_untracked() {
             return;
         }
+        if e.is_composing() {
+            return;
+        }
 
         let key = e.key();
         match key.as_str() {
@@ -239,21 +238,10 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
                 if let Some(focused) = focused_key.get_untracked() {
                     if selection_mode != TreeSelectionMode::None {
                         e.prevent_default();
-                        let mut current = selected_keys.get_untracked();
-                        if let Some(pos) = current.iter().position(|k| k == &focused) {
-                            current.remove(pos);
-                        } else if selection_mode == TreeSelectionMode::Single {
-                            current = vec![focused];
-                        } else {
-                            current.push(focused);
-                        }
-                        if let Some(on_change) = on_selection_change {
-                            on_change.run(current);
-                        }
+                        toggle_selected.run(focused);
                     }
                 }
             }
-            // "*" - Expand all siblings at this level (not implemented - needs tree structure)
             _ => {}
         }
     };

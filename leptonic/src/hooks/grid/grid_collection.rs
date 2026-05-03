@@ -1,12 +1,10 @@
-use std::{collections::HashMap, hash::Hash};
+use std::collections::HashMap;
+
+use crate::hooks::selection::SelectionKey;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-types/grid/src/index.d.ts
 // Specifically the `GridCollection<T>` interface.
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## API DIFFERENCES
 // - Standalone struct wrapping `Vec<GridRow<K>>` instead of extending a generic
 //   `Collection` trait with node-tree traversal.
@@ -14,8 +12,6 @@ use std::{collections::HashMap, hash::Hash};
 // ## OMITTED FEATURES
 // - No column span support yet.
 // - No virtualization support.
-//
-// =============================================================================
 
 /// A row in the grid, containing a key and its child cell keys.
 #[derive(Debug, Clone)]
@@ -30,7 +26,7 @@ pub struct GridRow<K> {
 ///
 /// Wraps `Vec<GridRow<K>>` with pre-computed indexes for fast key resolution.
 #[derive(Debug, Clone)]
-pub struct GridCollection<K: Hash + Eq> {
+pub struct GridCollection<K: SelectionKey> {
     rows: Vec<GridRow<K>>,
     /// Maps row key to its index in `rows`.
     row_index: HashMap<K, usize>,
@@ -38,7 +34,7 @@ pub struct GridCollection<K: Hash + Eq> {
     cell_index: HashMap<K, (usize, usize)>,
 }
 
-impl<K: Hash + Eq + Clone> GridCollection<K> {
+impl<K: SelectionKey> GridCollection<K> {
     /// Build a collection from rows, pre-computing indexes.
     #[must_use]
     pub fn new(rows: Vec<GridRow<K>>) -> Self {
@@ -138,7 +134,7 @@ impl<K: Hash + Eq + Clone> GridCollection<K> {
     }
 }
 
-impl<K: Hash + Eq + Clone> Default for GridCollection<K> {
+impl<K: SelectionKey> Default for GridCollection<K> {
     fn default() -> Self {
         Self::new(Vec::new())
     }

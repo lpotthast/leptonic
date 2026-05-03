@@ -11,17 +11,14 @@ use web_sys::FocusEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
+        EventHandler,
         aria::AriaRole,
         element_capture::{CapturedElement, ElementCaptureAttr},
-        EventHandler,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dialog/src/useDialog.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## DIFFERENT BEHAVIOR
 //
@@ -52,7 +49,6 @@ use crate::{
 //   `CapturedElement` / `ElementCaptureAttr` pattern instead, which captures
 //   the element automatically when `dialog_props` are spread onto the element.
 //
-// =============================================================================
 
 /// Input parameters for the `use_dialog` hook.
 ///

@@ -1,8 +1,8 @@
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
@@ -13,24 +13,20 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::{
     hooks::{
-        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
+        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
     },
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaHidden, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaExpanded, AriaHidden, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/disclosure/src/useDisclosure.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_disclosure` hook.
 #[derive(Debug, Clone, Copy)]

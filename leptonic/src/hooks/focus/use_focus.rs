@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "ssr", allow(unused_imports))]
+
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
@@ -8,15 +10,11 @@ use web_sys::FocusEvent;
 
 use crate::{
     hooks::IntoAttrs,
-    utils::{shadow_dom, synthetic_blur, EventAccessors, EventHandler, EventTargetExt},
+    utils::{EventAccessors, EventHandler, EventTargetExt, shadow_dom, synthetic_blur},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocus.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## DIFFERENT BEHAVIOR
 //
 // - Defensive `try_get_untracked` in blur handler
@@ -31,8 +29,6 @@ use crate::{
 //   relying on React's reconciliation to avoid attaching empty listeners.
 //   Our `EventHandler` always attaches a listener but checks the disabled
 //   state inside the handler. The overhead is negligible.
-//
-// =============================================================================
 
 #[derive(Debug, Clone, Copy)]
 pub struct UseFocusInput {
@@ -79,90 +75,104 @@ pub type UseFocusAttrs = (
 
 /// Track focus of an element.
 pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
-    let UseFocusInput {
-        disabled,
-        on_focus,
-        on_blur,
-        on_focus_change,
-    } = input;
+    #[cfg(feature = "ssr")]
+    {
+        let _ = input;
+        return UseFocusReturn {
+            props: UseFocusProps {
+                on_focus: EventHandler::new(|_: FocusEvent| {}),
+                on_blur: EventHandler::new(|_: FocusEvent| {}),
+            },
+        };
+    }
 
-    // Cleanup handle for the synthetic blur MutationObserver (Firefox workaround).
-    // Set up on focus, disconnected on blur or unmount.
-    let blur_observer_cleanup: StoredValue<Option<Box<dyn Fn()>>, LocalStorage> =
-        StoredValue::new_local(None);
+    #[cfg(not(feature = "ssr"))]
+    {
+        let UseFocusInput {
+            disabled,
+            on_focus,
+            on_blur,
+            on_focus_change,
+        } = input;
 
-    let handle_focus = move |e: FocusEvent| {
-        // Double check that document.activeElement actually matches e.target in case a previously chained
-        // focus handler already moved focus somewhere else.
-        // Use owner document from target to correctly handle iframes/shadow DOM.
-        // Use shadow-DOM-aware get_active_element to pierce shadow roots.
-        let target = shadow_dom::get_event_target(&e).unwrap_or_else(|| e.expect_target());
-        let owner_doc = target
-            .dyn_ref::<web_sys::Node>()
-            .and_then(web_sys::Node::owner_document);
-        let active = owner_doc.as_ref().and_then(shadow_dom::get_active_element);
+        // Cleanup handle for the synthetic blur MutationObserver (Firefox workaround).
+        // Set up on focus, disconnected on blur or unmount.
+        let blur_observer_cleanup: StoredValue<Option<Box<dyn Fn()>>, LocalStorage> =
+            StoredValue::new_local(None);
 
-        if target == e.expect_current_target()
-            && active == target.to_element()
-            && !disabled.get_untracked()
-        {
-            // Set up synthetic blur observer for form elements (Firefox workaround:
-            // Firefox does not fire blur when a form element becomes disabled while focused).
-            if let Some(el) = e
-                .target()
-                .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+        let handle_focus = move |e: FocusEvent| {
+            // Double check that document.activeElement actually matches e.target in case a previously chained
+            // focus handler already moved focus somewhere else.
+            // Use owner document from target to correctly handle iframes/shadow DOM.
+            // Use shadow-DOM-aware get_active_element to pierce shadow roots.
+            let target = shadow_dom::get_event_target(&e).unwrap_or_else(|| e.expect_target());
+            let owner_doc = target
+                .dyn_ref::<web_sys::Node>()
+                .and_then(web_sys::Node::owner_document);
+            let active = owner_doc.as_ref().and_then(shadow_dom::get_active_element);
+
+            if target == e.expect_current_target()
+                && active == target.to_element()
+                && !disabled.get_untracked()
             {
-                let cleanup = synthetic_blur::setup_synthetic_blur_observer(&el);
-                blur_observer_cleanup.set_value(Some(cleanup));
-            }
+                // Set up synthetic blur observer for form elements (Firefox workaround:
+                // Firefox does not fire blur when a form element becomes disabled while focused).
+                if let Some(el) = e
+                    .target()
+                    .and_then(|t| t.dyn_into::<web_sys::Element>().ok())
+                {
+                    let cleanup = synthetic_blur::setup_synthetic_blur_observer(&el);
+                    blur_observer_cleanup.set_value(Some(cleanup));
+                }
 
-            if let Some(on_focus) = on_focus {
-                on_focus.run(e);
-            }
+                if let Some(on_focus) = on_focus {
+                    on_focus.run(e);
+                }
 
-            if let Some(on_focus_change) = on_focus_change {
-                on_focus_change.run(true);
+                if let Some(on_focus_change) = on_focus_change {
+                    on_focus_change.run(true);
+                }
             }
-        }
-    };
+        };
 
-    let handle_blur = move |e: FocusEvent| {
-        // In certain situations, we saw this blur handler being called after the disabled signal
-        // was disposed. Mostly when interaction with this use_focus enabled element
-        // lead to removal from said element from the DOM.
-        let is_disabled = disabled.try_get_untracked().unwrap_or(true);
+        let handle_blur = move |e: FocusEvent| {
+            // In certain situations, we saw this blur handler being called after the disabled signal
+            // was disposed. Mostly when interaction with this use_focus enabled element
+            // lead to removal from said element from the DOM.
+            let is_disabled = disabled.try_get_untracked().unwrap_or(true);
 
-        // Disconnect synthetic blur observer (no longer needed once blur fires).
-        blur_observer_cleanup.update_value(|cleanup| {
-            if let Some(cleanup_fn) = cleanup.take() {
-                cleanup_fn();
+            // Disconnect synthetic blur observer (no longer needed once blur fires).
+            blur_observer_cleanup.update_value(|cleanup| {
+                if let Some(cleanup_fn) = cleanup.take() {
+                    cleanup_fn();
+                }
+            });
+
+            if e.expect_target() == e.expect_current_target() && !is_disabled {
+                if let Some(on_blur) = on_blur {
+                    on_blur.run(e);
+                }
+
+                if let Some(on_focus_change) = on_focus_change {
+                    on_focus_change.run(false);
+                }
             }
+        };
+
+        // Cleanup observer on unmount.
+        on_cleanup(move || {
+            blur_observer_cleanup.update_value(|cleanup| {
+                if let Some(cleanup_fn) = cleanup.take() {
+                    cleanup_fn();
+                }
+            });
         });
 
-        if e.expect_target() == e.expect_current_target() && !is_disabled {
-            if let Some(on_blur) = on_blur {
-                on_blur.run(e);
-            }
-
-            if let Some(on_focus_change) = on_focus_change {
-                on_focus_change.run(false);
-            }
+        UseFocusReturn {
+            props: UseFocusProps {
+                on_focus: EventHandler::new(handle_focus),
+                on_blur: EventHandler::new(handle_blur),
+            },
         }
-    };
-
-    // Cleanup observer on unmount.
-    on_cleanup(move || {
-        blur_observer_cleanup.update_value(|cleanup| {
-            if let Some(cleanup_fn) = cleanup.take() {
-                cleanup_fn();
-            }
-        });
-    });
-
-    UseFocusReturn {
-        props: UseFocusProps {
-            on_focus: EventHandler::new(handle_focus),
-            on_blur: EventHandler::new(handle_blur),
-        },
     }
 }

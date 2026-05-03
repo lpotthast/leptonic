@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use leptos::{
     attr,
@@ -12,37 +12,37 @@ use web_sys::KeyboardEvent;
 
 use crate::{
     hooks::{
-        selection::{
-            use_selectable_collection::FocusStrategy,
-            use_selectable_list::{
-                use_selectable_list, UseSelectableListInput, UseSelectableListReturn,
-            },
-            use_selection_state::{Selection, SelectionBehavior, SelectionMode},
-        },
         IntoAttrs,
+        form::use_checkbox_group::Orientation,
+        selection::{
+            SelectionKey,
+            use_selectable_collection::EscapeKeyBehavior,
+            use_selectable_list::{
+                UseSelectableListInput, UseSelectableListReturn, use_selectable_list,
+            },
+            use_selection_state::FocusStrategy,
+            use_selection_state::{DisabledBehavior, Selection, SelectionBehavior, SelectionMode},
+        },
     },
     utils::{
+        CapturedElement, EventHandler,
         aria::{AriaDisabled, AriaMultiselectable, AriaOrientation, AriaRole},
-        EventHandler,
+        locale::WritingDirection,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useListBox.ts
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_listbox` hook.
 #[allow(clippy::struct_excessive_bools)]
 #[derive(Clone)]
 pub struct UseListBoxInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// The selection mode.
     pub selection_mode: SelectionMode,
@@ -74,8 +74,8 @@ where
     /// Whether keyboard navigation should wrap.
     pub should_focus_wrap: bool,
 
-    /// Whether to auto-focus the first item.
-    pub auto_focus: bool,
+    /// Auto-focus strategy. When `Some`, focuses the first or last item on mount.
+    pub auto_focus: Signal<Option<FocusStrategy>>,
 
     /// Whether to select items on focus.
     pub select_on_focus: bool,
@@ -94,6 +94,15 @@ where
 
     /// Orientation of the listbox.
     pub orientation: ListBoxOrientation,
+
+    /// Element ref for the listbox container.
+    pub collection_ref: CapturedElement,
+
+    /// Optional callback invoked when Escape is pressed (e.g. to close a select dropdown).
+    pub on_close: Option<Callback<()>>,
+
+    /// Behavior when Escape is pressed.
+    pub escape_key_behavior: EscapeKeyBehavior,
 }
 
 /// The orientation of a listbox.
@@ -115,7 +124,7 @@ impl From<ListBoxOrientation> for AriaOrientation {
     }
 }
 
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseListBoxInput<K> {
+impl<K: SelectionKey> Default for UseListBoxInput<K> {
     fn default() -> Self {
         Self {
             selection_mode: SelectionMode::Single,
@@ -128,13 +137,16 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseListBoxInput<K
             disallow_empty_selection: false,
             items: Signal::derive(Vec::new),
             should_focus_wrap: true,
-            auto_focus: false,
+            auto_focus: Signal::derive(|| None),
             select_on_focus: false,
             aria_label: None,
             aria_labelledby: None,
             get_text_value: None,
             is_virtualized: false,
             orientation: ListBoxOrientation::Vertical,
+            collection_ref: CapturedElement::new(),
+            on_close: None,
+            escape_key_behavior: EscapeKeyBehavior::default(),
         }
     }
 }
@@ -142,7 +154,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseListBoxInput<K
 /// The return value of the `use_listbox` hook.
 pub struct UseListBoxReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Props for the listbox container element. Call `.into_attrs()` for view spreading.
     pub listbox_props: UseListBoxProps,
@@ -237,7 +249,7 @@ pub type UseListBoxAttrs = (
 #[allow(clippy::too_many_lines)]
 pub fn use_listbox<K>(input: UseListBoxInput<K>) -> UseListBoxReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseListBoxInput {
         selection_mode,
@@ -254,22 +266,24 @@ where
         select_on_focus,
         aria_label,
         aria_labelledby,
-        get_text_value,
-        is_virtualized,
+        get_text_value: _get_text_value,
+        is_virtualized: _is_virtualized,
         orientation,
+        collection_ref,
+        on_close,
+        escape_key_behavior,
     } = input;
 
     let listbox_id = format!("listbox-{}", Uuid::new_v4());
 
-    // Convert auto_focus bool to Signal<Option<FocusStrategy>>
-    // For listbox, auto_focus means focus first item on mount
-    let auto_focus_signal = if auto_focus {
-        Signal::derive(|| Some(FocusStrategy::First))
-    } else {
-        Signal::derive(|| None)
+    // Convert ListBoxOrientation to Orientation for the delegate
+    let list_orientation = match orientation {
+        ListBoxOrientation::Vertical => Orientation::Vertical,
+        ListBoxOrientation::Horizontal => Orientation::Horizontal,
     };
 
-    // Use selectable list for selection and navigation
+    // Use selectable list for selection, navigation, and keyboard handling.
+    // The collection hook now handles all keyboard events, focus, blur, and scroll.
     let state = use_selectable_list(UseSelectableListInput {
         selection_mode,
         selection_behavior,
@@ -279,118 +293,24 @@ where
         on_selection_change,
         disabled_keys,
         disallow_empty_selection,
+        disabled_behavior: DisabledBehavior::default(),
         all_keys: items,
         should_focus_wrap,
-        auto_focus: auto_focus_signal,
-        select_on_focus,
+        auto_focus,
+        select_on_focus: Some(select_on_focus),
+        orientation: list_orientation,
+        direction: Signal::derive(|| WritingDirection::Ltr), // TODO: get from i18n context
+        collection_ref,
+        escape_key_behavior,
+        disallow_select_all: false,
+        on_close,
+        disallow_type_ahead: false,
+        get_key_label: None,
+        allows_tab_navigation: false,
     });
 
-    // Extract navigation callbacks for keyboard handler
-    let focus_next = state.collection.focus_next;
-    let focus_previous = state.collection.focus_previous;
-    let focus_first = state.collection.focus_first;
-    let focus_last = state.collection.focus_last;
-    let focused_key = state.collection.focused_key;
-    let select_cb = state.collection.selection_state.select;
-    let toggle_cb = state.collection.selection_state.toggle;
-    let select_all_cb = state.collection.selection_state.select_all;
-    let clear_selection_cb = state.collection.selection_state.clear_selection;
-
-    // Type-ahead state
-    let (search_string, set_search_string) = signal(String::new());
-
-    // Handle keyboard events
-    let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() {
-            return;
-        }
-
-        let key = e.key();
-
-        match key.as_str() {
-            "ArrowDown" | "ArrowRight" => {
-                e.prevent_default();
-                focus_next.run(());
-                if select_on_focus && selection_mode == SelectionMode::Single {
-                    if let Some(focused) = focused_key.get_untracked() {
-                        select_cb.run(focused);
-                    }
-                }
-            }
-            "ArrowUp" | "ArrowLeft" => {
-                e.prevent_default();
-                focus_previous.run(());
-                if select_on_focus && selection_mode == SelectionMode::Single {
-                    if let Some(focused) = focused_key.get_untracked() {
-                        select_cb.run(focused);
-                    }
-                }
-            }
-            "Home" => {
-                e.prevent_default();
-                focus_first.run(());
-                if select_on_focus && selection_mode == SelectionMode::Single {
-                    if let Some(focused) = focused_key.get_untracked() {
-                        select_cb.run(focused);
-                    }
-                }
-            }
-            "End" => {
-                e.prevent_default();
-                focus_last.run(());
-                if select_on_focus && selection_mode == SelectionMode::Single {
-                    if let Some(focused) = focused_key.get_untracked() {
-                        select_cb.run(focused);
-                    }
-                }
-            }
-            " " | "Enter" => {
-                e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked() {
-                    match selection_behavior {
-                        SelectionBehavior::Toggle => toggle_cb.run(focused),
-                        SelectionBehavior::Replace => select_cb.run(focused),
-                    }
-                }
-            }
-            "a" if e.ctrl_key() || e.meta_key() => {
-                if selection_mode == SelectionMode::Multiple {
-                    e.prevent_default();
-                    select_all_cb.run(Vec::new());
-                }
-            }
-            "Escape" => {
-                e.prevent_default();
-                clear_selection_cb.run(());
-            }
-            _ => {
-                // Type-ahead: if it's a printable character
-                if key.len() == 1 && !e.ctrl_key() && !e.alt_key() && !e.meta_key() {
-                    if let Some(get_text) = get_text_value {
-                        let current_search = search_string.get_untracked();
-                        let new_search = format!("{}{}", current_search, key.to_lowercase());
-                        set_search_string.set(new_search.clone());
-
-                        // Find matching item
-                        let items_list = items.get_untracked();
-                        for item_key in &items_list {
-                            let text = get_text.run(item_key.clone());
-                            if text.to_lowercase().starts_with(&new_search) {
-                                // Focus this item
-                                state.collection.set_focused_key.run(Some(item_key.clone()));
-                                break;
-                            }
-                        }
-
-                        // Reset search after timeout (simplified - just clear on next non-char key)
-                    }
-                } else {
-                    // Clear search on non-printable key
-                    set_search_string.set(String::new());
-                }
-            }
-        }
-    };
+    // Use the collection's keyboard handler (no more duplicated keyboard handling)
+    let on_keydown = state.list_props.on_keydown.clone();
 
     // Compute aria-multiselectable
     let aria_multiselectable = match selection_mode {
@@ -415,7 +335,7 @@ where
             aria_multiselectable,
             aria_orientation,
             aria_disabled,
-            on_keydown: EventHandler::new(handle_keydown),
+            on_keydown,
         },
         state,
         id: listbox_id,

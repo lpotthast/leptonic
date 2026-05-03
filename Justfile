@@ -51,6 +51,9 @@ msrv:
     cargo msrv --min "2021" --path leptonic
     cargo msrv --min "2021" --path leptonic-theme
 
+serve-ts:
+  tailscale serve https+insecure://localhost:4100
+
 # Serve the Book example (https://127.0.0.1:4100)
 serve:
   cd ./examples/book-ssr && cargo leptos serve
@@ -164,12 +167,12 @@ upgrade: # "-" prefixes allow for non-zero status codes!
   -cargo upgrade --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
   -cargo upgrade --manifest-path ./examples/leptonic-template-tauri/Cargo.toml
 
-# Run `cargo clippy --tests -- -Dclippy::all -Dclippy::pedantic` for every crate.
+# Run `cargo clippy --tests` for every crate. Lint levels are configured in each crate's [lints.clippy] section.
 clippy: # "-" prefixes allow for non-zero status codes!
-  -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
-  -cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
-  -cargo clippy --tests --manifest-path ./testing/test-app/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
-  -cargo clippy --tests --manifest-path ./examples/book-ssr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
-  -cargo clippy --tests --manifest-path ./examples/leptonic-template-csr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
-  -cargo clippy --tests --manifest-path ./examples/leptonic-template-ssr/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
-  -cargo clippy --tests --manifest-path ./examples/leptonic-template-tauri/Cargo.toml -- -Dclippy::all -Dclippy::pedantic
+  -cargo clippy --tests --manifest-path ./leptonic/Cargo.toml
+  -cargo clippy --tests --manifest-path ./leptonic-theme/Cargo.toml
+  -cargo clippy --tests --manifest-path ./testing/test-app/Cargo.toml
+  -cargo clippy --tests --manifest-path ./examples/book-ssr/Cargo.toml
+  -cargo clippy --tests --manifest-path ./examples/leptonic-template-csr/Cargo.toml
+  -cargo clippy --tests --manifest-path ./examples/leptonic-template-ssr/Cargo.toml
+  -cargo clippy --tests --manifest-path ./examples/leptonic-template-tauri/Cargo.toml

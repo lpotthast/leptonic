@@ -5,10 +5,13 @@ use super::locale::WritingDirection;
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/i18n/src/context.tsx
 
 /// Locale information for internationalization.
+///
+/// Wraps an `icu_locale::Locale` internally for proper locale-aware operations
+/// while maintaining a simple string-based public API.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Locale {
-    /// The BCP 47 language tag (e.g., "en-US", "de-DE", "ja-JP").
-    pub locale: String,
+    /// The parsed ICU locale.
+    inner: icu_locale::Locale,
 
     /// The writing direction for the locale.
     pub direction: WritingDirection,
@@ -17,7 +20,7 @@ pub struct Locale {
 impl Default for Locale {
     fn default() -> Self {
         Self {
-            locale: "en-US".to_string(),
+            inner: icu_locale::locale!("en-US"),
             direction: WritingDirection::Ltr,
         }
     }
@@ -26,39 +29,55 @@ impl Default for Locale {
 impl Locale {
     /// Creates a new Locale with the given locale string.
     /// Automatically determines the writing direction based on the locale.
+    /// Falls back to en-US if the locale string cannot be parsed.
     #[must_use]
-    pub fn new(locale: impl Into<String>) -> Self {
-        let locale = locale.into();
-        let direction = Self::direction_for_locale(&locale);
-        Self { locale, direction }
+    pub fn new(locale: impl AsRef<str>) -> Self {
+        let locale_str = locale.as_ref();
+        let inner = locale_str
+            .parse::<icu_locale::Locale>()
+            .unwrap_or(icu_locale::locale!("en-US"));
+        let direction = Self::direction_for_icu_locale(&inner);
+        Self { inner, direction }
     }
 
-    /// Determines the writing direction for a locale.
+    /// Returns the BCP 47 locale string (e.g., "en-US", "de-DE").
+    #[must_use]
+    pub fn locale_str(&self) -> String {
+        self.inner.to_string()
+    }
+
+    /// Determines the writing direction for a locale string.
     #[must_use]
     pub fn direction_for_locale(locale: &str) -> WritingDirection {
-        // RTL languages based on their ISO 639-1 codes
-        let rtl_languages = [
-            "ar", // Arabic
-            "he", // Hebrew
-            "fa", // Persian/Farsi
-            "ur", // Urdu
-            "yi", // Yiddish
-            "ps", // Pashto
-            "sd", // Sindhi
-            "ug", // Uyghur
-            "ku", // Kurdish (some variants)
-            "dv", // Divehi
-        ];
-
-        // Extract the language code from the locale (e.g., "ar-SA" -> "ar")
-        let language = locale.split('-').next().unwrap_or(locale);
-        let language = language.split('_').next().unwrap_or(language);
-
-        if rtl_languages.contains(&language.to_lowercase().as_str()) {
-            WritingDirection::Rtl
-        } else {
-            WritingDirection::Ltr
+        match locale.parse::<icu_locale::Locale>() {
+            Ok(parsed) => Self::direction_for_icu_locale(&parsed),
+            Err(_) => WritingDirection::Ltr,
         }
+    }
+
+    /// Determines the writing direction from a parsed ICU locale.
+    ///
+    /// Uses the likely-subtags algorithm to determine the script, then
+    /// checks if the script is inherently RTL.
+    fn direction_for_icu_locale(locale: &icu_locale::Locale) -> WritingDirection {
+        // Use likely subtags to maximize the language identifier — this fills in the script subtag.
+        let mut langid = locale.id.clone();
+        let expander = icu_locale::LocaleExpander::new_extended();
+        expander.maximize(&mut langid);
+
+        // Check the script for RTL direction.
+        if let Some(script) = langid.script {
+            let script_str = script.as_str();
+            // Scripts that are written right-to-left.
+            if matches!(
+                script_str,
+                "Arab" | "Hebr" | "Thaa" | "Syrc" | "Mand" | "Nkoo" | "Adlm" | "Samr"
+            ) {
+                return WritingDirection::Rtl;
+            }
+        }
+
+        WritingDirection::Ltr
     }
 
     /// Returns true if the locale is right-to-left.
@@ -69,14 +88,20 @@ impl Locale {
 
     /// Returns the language code from the locale (e.g., "en" from "en-US").
     #[must_use]
-    pub fn language(&self) -> &str {
-        self.locale.split('-').next().unwrap_or(&self.locale)
+    pub fn language(&self) -> String {
+        self.inner.id.language.to_string()
     }
 
     /// Returns the region code from the locale if present (e.g., "US" from "en-US").
     #[must_use]
-    pub fn region(&self) -> Option<&str> {
-        self.locale.split('-').nth(1)
+    pub fn region(&self) -> Option<String> {
+        self.inner.id.region.map(|r| r.to_string())
+    }
+
+    /// Returns a reference to the inner `icu_locale::Locale`.
+    #[must_use]
+    pub fn icu_locale(&self) -> &icu_locale::Locale {
+        &self.inner
     }
 }
 
@@ -177,14 +202,14 @@ mod tests {
     #[test]
     fn test_locale_default() {
         let locale = Locale::default();
-        assert_that(locale.locale).is_equal_to("en-US");
+        assert_that(locale.locale_str()).is_equal_to("en-US".to_string());
         assert_that(locale.direction).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_new() {
         let locale = Locale::new("de-DE");
-        assert_that(locale.locale).is_equal_to("de-DE");
+        assert_that(locale.locale_str()).is_equal_to("de-DE".to_string());
         assert_that(locale.direction).is_equal_to(WritingDirection::Ltr);
     }
 
@@ -198,8 +223,10 @@ mod tests {
     #[test]
     fn test_locale_language() {
         let locale = Locale::new("en-US");
-        assert_that(locale.language()).is_equal_to("en");
-        assert_that(locale.region()).is_some().is_equal_to("US");
+        assert_that(locale.language()).is_equal_to("en".to_string());
+        assert_that(locale.region())
+            .is_some()
+            .is_equal_to("US".to_string());
     }
 
     #[test]
@@ -208,5 +235,37 @@ mod tests {
         assert_that(Locale::direction_for_locale("he-IL")).is_equal_to(WritingDirection::Rtl);
         assert_that(Locale::direction_for_locale("en")).is_equal_to(WritingDirection::Ltr);
         assert_that(Locale::direction_for_locale("ja-JP")).is_equal_to(WritingDirection::Ltr);
+    }
+
+    #[test]
+    fn test_locale_rtl_via_script_detection() {
+        // These should all be detected as RTL via script-based detection
+        assert_that(Locale::new("fa").is_rtl()).is_true(); // Persian/Farsi (Arab script)
+        assert_that(Locale::new("ur").is_rtl()).is_true(); // Urdu (Arab script)
+        assert_that(Locale::new("he").is_rtl()).is_true(); // Hebrew (Hebr script)
+        assert_that(Locale::new("ps").is_rtl()).is_true(); // Pashto (Arab script)
+        assert_that(Locale::new("yi").is_rtl()).is_true(); // Yiddish (Hebr script)
+    }
+
+    #[test]
+    fn test_locale_ltr_scripts() {
+        assert_that(Locale::new("zh-CN").is_rtl()).is_false(); // Chinese
+        assert_that(Locale::new("ko-KR").is_rtl()).is_false(); // Korean
+        assert_that(Locale::new("hi-IN").is_rtl()).is_false(); // Hindi (Devanagari)
+        assert_that(Locale::new("th").is_rtl()).is_false(); // Thai
+    }
+
+    #[test]
+    fn test_invalid_locale_falls_back() {
+        let locale = Locale::new("not-a-real-locale");
+        // Should fall back to en-US
+        assert_that(locale.direction).is_equal_to(WritingDirection::Ltr);
+    }
+
+    #[test]
+    fn test_icu_locale_accessor() {
+        let locale = Locale::new("de-DE");
+        let icu = locale.icu_locale();
+        assert_that(icu.to_string()).is_equal_to("de-DE".to_string());
     }
 }

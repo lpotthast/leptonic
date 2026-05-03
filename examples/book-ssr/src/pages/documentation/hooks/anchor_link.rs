@@ -1,29 +1,12 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*, ScrollBehavior};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::anchor_link::AnchorLinkDemo;
 
 #[component]
 pub fn PageUseAnchorLink() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
-
-    let UseAnchorLinkReturn {
-        props,
-        is_pressed: _,
-        ..
-    } = use_anchor_link(UseAnchorLinkInput {
-        href: Href::from_str(Oco::Borrowed("#my-anchor-element")).expect("valid href"),
-        scroll_behavior: Some(ScrollBehavior::Smooth),
-        disabled: disabled.into(),
-        element_type: Default::default(),
-        description: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
-    });
-    let attrs = props.into_attrs();
-
     view! {
         <Article>
             <h1 id="use-anchor-link" class="anchor">
@@ -31,7 +14,10 @@ pub fn PageUseAnchorLink() -> impl IntoView {
                 <AnchorLink href="#use-anchor-link" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hook for creating accessible in-page anchor links with smooth scrolling and URL hash updates."</p>
+            <p>
+                "The "<code>"use_anchor_link"</code>" hook creates accessible in-page anchor links with smooth scrolling and URL hash updates. "
+                "See the "<Link href=crate::routes::doc::Link.materialize()>"Link overview"</Link>" for concept guidance."
+            </p>
 
             <p>
                 "Composes " <code>"use_focusable"</code> ", " <code>"use_press"</code> ", and " <code>"use_focus_ring"</code>
@@ -43,43 +29,12 @@ pub fn PageUseAnchorLink() -> impl IntoView {
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <Code>
-                {indoc!(r##"
-                    let UseAnchorLinkReturn { props, .. } = use_anchor_link(UseAnchorLinkInput {
-                        href: Href::from_str(Oco::Borrowed("#my-anchor-element")).expect("valid href"),
-                        scroll_behavior: Some(ScrollBehavior::Smooth),
-                        disabled: disabled.into(),
-                        element_type: Default::default(),
-                        description: None,
-                        on_press: None,
-                        on_press_start: None,
-                        on_press_end: None,
-                    });
-
-                    view! {
-                        <a {..props.into_attrs()} class="leptonic-anchor-link" target="_self">
-                            "#"
-                        </a>
-                    }
-                "##)}
-            </Code>
-
-            <a
-                {..attrs}
-                class="leptonic-anchor-link"
-                target="_self"
+            <DemoShell
+                source=include_str!("demos/anchor_link.rs")
+                description="Anchor link with smooth scrolling"
             >
-                "#"
-            </a>
-
-            <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em;">
-                <Checkbox checked=disabled set_checked=set_disabled />
-                <Label>"Disabled"</Label>
-            </FormControl>
-
-            <div id="my-anchor-element" style="margin-top: 1em; padding: 1em; border: 1px solid var(--brand-color); border-radius: 4px;">
-                "This is the anchor target element."
-            </div>
+                <AnchorLinkDemo />
+            </DemoShell>
 
             <h2 id="features" class="anchor">
                 "Features"

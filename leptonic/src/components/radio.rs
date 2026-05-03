@@ -1,8 +1,9 @@
 use leptos::{context::Provider, prelude::*};
 
 use crate::{
-    components::form_control::{FormControlContext, FormInput},
     Out,
+    components::form_control::{FormControlContext, FormInput},
+    utils::{classes::Classes, styles::Styles},
 };
 
 #[allow(clippy::type_complexity)]
@@ -67,12 +68,16 @@ impl RadioGroupContext {
 }
 
 #[component]
-pub fn RadioGroup(children: Children) -> impl IntoView {
+pub fn RadioGroup(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
     let ctx = RadioGroupContext {
         states: StoredValue::new(Vec::new()),
     };
     view! {
-        <div class="leptonic-radio-group" role="radiogroup">
+        <div class=classes.add("leptonic-radio-group") style=styles role="radiogroup">
             <Provider value=ctx>{children()}</Provider>
         </div>
     }
@@ -101,6 +106,8 @@ pub fn Radio(
     #[prop(into)] checked: Signal<bool>,
     #[prop(into)] set_checked: Out<bool>,
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let ctx = RadioContext {
         checked,
@@ -130,7 +137,8 @@ pub fn Radio(
 
     view! {
         <div
-            class="leptonic-radio"
+            class=classes.add("leptonic-radio")
+            style=styles
             role="radio"
             aria-disabled=move || if disabled() { "true" } else { "false" }
             aria-checked=move || if checked.get() { "true" } else { "false" }

@@ -11,20 +11,14 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTable.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// The selection mode for table rows.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -209,10 +203,10 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         selection_mode,
         is_disabled: disabled,
         selected_keys,
-        sorted_column,
-        sort_direction,
+        sorted_column: _sorted_column,
+        sort_direction: _sort_direction,
         on_selection_change,
-        on_sort_change,
+        on_sort_change: _on_sort_change,
         on_row_action,
     } = input;
 

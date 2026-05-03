@@ -1,8 +1,8 @@
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
@@ -13,28 +13,25 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use super::use_tabs::TabsActivationMode;
 use crate::{
     hooks::{
-        focus::{
-            use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
-            use_focusable::{use_focusable, UseFocusableInput},
-        },
         IntoAttrs,
+        focus::{
+            use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+            use_focusable::{UseFocusableInput, use_focusable},
+        },
     },
     utils::{
+        EventHandler,
         aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::ElementCaptureAttr,
-        EventHandler,
+        scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTab.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_tab` hook.
 #[derive(Debug, Clone)]
@@ -87,7 +84,7 @@ pub struct UseTabReturn {
 }
 
 /// Props from `use_tab` that can be extracted and merged programmatically.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseTabProps {
     pub id: String,
     pub role: AriaRole,
@@ -207,6 +204,15 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         // Only focus if we just became focused (transition from false to true)
         if currently_focused && !was_focused {
             focus_handle.focus();
+            if let Some(el) = focus_handle.get_element() {
+                let el: &web_sys::Element = &el;
+                scroll_into_viewport(
+                    Some(el),
+                    &ScrollIntoViewportOpts {
+                        containing_element: Some(get_scroll_parent(el, true)),
+                    },
+                );
+            }
         }
 
         currently_focused

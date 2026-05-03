@@ -1,11 +1,11 @@
 use leptos::prelude::*;
-use leptos_router::components::{ToHref, A};
+use leptos_router::components::{A, ToHref};
 
 pub use crate::hooks::LinkRel;
 use crate::{
-    hooks::{use_anchor_link, Href, UseAnchorLinkInput, UseAnchorLinkReturn, *},
-    utils::{classes::Classes, styles::Styles},
     ScrollBehavior,
+    hooks::{Href, UseAnchorLinkInput, UseAnchorLinkReturn, use_anchor_link, *},
+    utils::{classes::Classes, styles::Styles},
 };
 
 #[component]
@@ -31,7 +31,7 @@ pub fn AnchorLink(
     // We make links "use_press", so that optional PressResponder's higher up the component tree can react on link interactions
     // and so that a custom `on_press` handler can immediately work with the underlying link element.
     let UseAnchorLinkReturn {
-        props,
+        props: anchor_link_props,
         is_pressed: _,
         is_focus_visible: _,
         focus_handle: _,
@@ -46,8 +46,11 @@ pub fn AnchorLink(
         on_press_end: None,
     });
 
+    let (anchor_link_props, anchor_link_styles) = anchor_link_props.into_inner();
+    let styles = anchor_link_styles.merge(styles);
+
     view! {
-        <a {..props.into_attrs()} class=classes style=styles>
+        <a {..anchor_link_props.into_attrs()} class=classes style=styles>
             {children()}
         </a>
     }
@@ -78,7 +81,7 @@ where
     H: ToHref + Send + Sync + 'static,
 {
     let UseLinkReturn {
-        props,
+        props: link_props,
         is_disabled: _,
         is_pressed: _,
         is_focus_visible: _,
@@ -96,6 +99,9 @@ where
         on_press_end: None,
     });
 
+    let (link_props, link_styles) = link_props.into_inner();
+    let styles = link_styles.merge(styles);
+
     // Spread only the interaction/ARIA/focus attrs from use_link.
     // href, target, rel, and exact are handled by <A> itself.
     // TODO: This uses an inefficient `attr:class=move || classes.to_class_string()`, because
@@ -104,7 +110,7 @@ where
     // TODO: Uses inefficient `move || styles.to_style_string()`.
     view! {
         <A
-            {..props.into_attrs()}
+            {..link_props.into_attrs()}
             href=href
             exact=exact
             attr:class=move || classes.to_class_string()
@@ -148,7 +154,7 @@ where
     }
 
     let UseLinkReturn {
-        props,
+        props: link_props,
         is_disabled: _,
         is_pressed: _,
         is_focus_visible: _,
@@ -166,8 +172,16 @@ where
         on_press_end: None,
     });
 
+    let (link_props, link_styles) = link_props.into_inner();
+    let styles = link_styles.merge(styles);
+
     view! {
-        <a {..props.into_attrs()} class=classes style=styles href=move || href.to_href()()>
+        <a
+            {..link_props.into_attrs()}
+            class=classes
+            style=styles
+            href=move || href.to_href()()
+        >
             {children()}
         </a>
     }

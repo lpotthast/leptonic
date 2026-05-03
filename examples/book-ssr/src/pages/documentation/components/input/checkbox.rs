@@ -2,13 +2,13 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::checkbox_basic::CheckboxBasicDemo;
+use super::demos::checkbox_disabled::CheckboxDisabledDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageCheckbox() -> impl IntoView {
-    let (checked, set_checked) = signal(false);
-    let (checked_disabled, set_checked_disabled) = signal(false);
-
     view! {
         <Article>
             <h1 id="checkbox" class="anchor">
@@ -18,18 +18,9 @@ pub fn PageCheckbox() -> impl IntoView {
 
             <p>"Checkbox..."</p>
 
-            <Code>
-                {indoc!(r"
-                    let (checked, set_checked) = signal(false);
-                    view! {
-                        <Checkbox checked=checked set_checked=set_checked />
-                    }
-                ")}
-            </Code>
-
-            <Checkbox checked=checked set_checked=set_checked />
-
-            <span>"checked: " {move || checked.get()}</span>
+            <DemoShell source=include_str!("demos/checkbox_basic.rs")>
+                <CheckboxBasicDemo />
+            </DemoShell>
 
             <h2 id="disabled" class="anchor">
                 "Disabled"
@@ -38,14 +29,9 @@ pub fn PageCheckbox() -> impl IntoView {
 
             <p>"Checkboxes support the " <Code inline=true>"disabled"</Code> " property, making them unmodifiable if set true."</p>
 
-            <Code>
-                {indoc!(r"
-                    <Checkbox disabled=true checked=checked set_checked=set_checked />
-                ")}
-            </Code>
-
-            <Checkbox disabled=true checked=checked_disabled set_checked=set_checked_disabled />
-            <Button variant=ButtonVariant::Flat color=ButtonColor::Secondary size=ButtonSize::Small on_press=move |_| set_checked_disabled.set(!checked_disabled.get_untracked())>"TOGGLE"</Button>
+            <DemoShell source=include_str!("demos/checkbox_disabled.rs")>
+                <CheckboxDisabledDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -54,7 +40,7 @@ pub fn PageCheckbox() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --checkbox-size
                     --checkbox-padding

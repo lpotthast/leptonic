@@ -10,7 +10,7 @@ pub fn PageCallback() -> impl IntoView {
         <Article>
             <h1>"Callbacks (deprecated) ..TODO"</h1>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     #[prop(into)] set_value: Callback<u32>,
                     #[prop(into, optional)] maybe_render: Option<Callback<(Scope, String), View>>
@@ -71,7 +71,7 @@ pub fn PageCallback() -> impl IntoView {
                 "Leptonic provides an easy to use "<Code inline=true>"Callback"</Code>" type, which is defined as"
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 "pub struct Callback<T: 'static, R: 'static = ()>(leptos::StoredValue<Box<dyn Fn(T) -> R>>);"
             </Code>
 
@@ -85,7 +85,7 @@ pub fn PageCallback() -> impl IntoView {
                 "You can also use the Callback type in your own components props. For example:"
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     #[prop(into, optional)] set_value: Option<Callback<String>>
                 ")}
@@ -96,7 +96,7 @@ pub fn PageCallback() -> impl IntoView {
                 "Provide the second type, otherwise defaulting to (), when the callback should return a value. "
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     #[prop(into, optional)] render: Option<Callback<(Scope, MyType), View>>
                 ")}
@@ -104,7 +104,7 @@ pub fn PageCallback() -> impl IntoView {
 
             <p>"Create it when instantiating your component using the "<Code inline=true>"create_callback"</Code>" convenience function."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     view! {
                         <MyComponent set_value=create_callback(move |v| {}) />
@@ -116,7 +116,7 @@ pub fn PageCallback() -> impl IntoView {
                 "Calling a callback in a component is as simple as this:"
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     set_value.call("foo".to_owned())
                 "#)}

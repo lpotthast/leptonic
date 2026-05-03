@@ -2,12 +2,12 @@ use leptos::prelude::*;
 use leptos_tiptap::*;
 
 use crate::{
+    Out,
     components::{
         button::{Button, ButtonSize},
         icon::Icon,
     },
-    utils::classes::Classes,
-    Out,
+    utils::{classes::Classes, styles::Styles},
 };
 
 #[component]
@@ -15,6 +15,8 @@ pub fn TiptapEditor(
     #[prop(into)] value: Signal<String>,
     #[prop(into, optional)] set_value: Option<Out<TiptapContent>>,
     #[prop(into, optional)] disabled: Signal<bool>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let (msg, set_msg) = signal(TiptapInstanceMsg::Noop);
 
@@ -23,7 +25,7 @@ pub fn TiptapEditor(
     let instance_id = uuid::Uuid::now_v7();
 
     view! {
-        <div class="leptonic-tiptap-editor">
+        <div class=classes.add("leptonic-tiptap-editor") style=styles>
             {move || match disabled.get() {
                 false => {
                     view! {

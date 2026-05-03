@@ -4,15 +4,12 @@ use leptos::{
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
-    tachys::html::style::Style,
 };
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
     hooks::{IntoAttrs, UseFocusableProps, UsePressProps},
-    utils::{
-        aria::AriaDescribedby, style::TouchActionStyle, ElementCaptureAttr, EventHandler, MergeWith,
-    },
+    utils::{ElementCaptureAttr, EventHandler, MergeWith, aria::AriaDescribedby},
 };
 
 /// Combined props from `use_focusable` and `use_press` hooks.
@@ -66,7 +63,6 @@ pub type MergedFocusablePressAttrs = (
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
     On<ev::pointerup, SharedEventCallback<PointerEvent>>,
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
-    Style<(TouchActionStyle, &'static str)>,
 );
 
 impl IntoAttrs for MergedFocusablePressProps {
@@ -87,7 +83,6 @@ impl IntoAttrs for MergedFocusablePressProps {
             self.on_mousedown.into_on(ev::mousedown),
             self.on_pointerup.into_on(ev::pointerup),
             self.on_dragstart.into_on(ev::dragstart),
-            TouchActionStyle::with_value("pan-x pan-y pinch-zoom"),
         )
     }
 }

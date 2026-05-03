@@ -285,11 +285,7 @@ pub fn get_radio_group_name(element: &web_sys::Element) -> Option<String> {
         return None;
     }
     let name = input.name();
-    if name.is_empty() {
-        None
-    } else {
-        Some(name)
-    }
+    if name.is_empty() { None } else { Some(name) }
 }
 
 /// Get all radio buttons in the same group as `element`.
@@ -451,6 +447,7 @@ const NON_TEXT_INPUT_TYPES: &[&str] = &[
 /// Matches react-aria's `isKeyboardFocusEvent` behavior.
 ///
 /// Uses shadow-DOM-aware `get_active_element` to pierce shadow roots.
+#[cfg(not(feature = "ssr"))]
 pub(crate) fn is_text_input_or_active_text_input(
     element: &web_sys::Element,
     document: &web_sys::Document,
@@ -462,4 +459,16 @@ pub(crate) fn is_text_input_or_active_text_input(
         return is_text_input(&active);
     }
     false
+}
+
+/// Returns `true` if focusing the given element will open a software/virtual keyboard
+/// on mobile devices.
+///
+/// Detects text-accepting elements: text-like `<input>` types, `<textarea>`,
+/// and `contenteditable` elements. Non-text input types (checkbox, radio, range,
+/// color, file, image, button, submit, reset) do not trigger a keyboard.
+///
+/// Based on react-aria's `willOpenKeyboard` from `keyboard.tsx`.
+pub fn will_open_keyboard(target: &web_sys::Element) -> bool {
+    is_text_input(target)
 }

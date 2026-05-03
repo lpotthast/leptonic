@@ -10,18 +10,14 @@ use web_sys::{KeyboardEvent, MouseEvent};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaCurrent, AriaDisabled},
         EventHandler,
+        aria::{AriaCurrent, AriaDisabled},
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_breadcrumb_item` hook.
 #[derive(Debug, Clone)]

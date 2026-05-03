@@ -1,8 +1,9 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, utils::time::GuideMode};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
-use time::OffsetDateTime;
 
+use super::demos::date_selector_calendar::DateSelectorCalendarDemo;
+use super::demos::date_selector_year_first::DateSelectorYearFirstDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
@@ -16,23 +17,15 @@ pub fn PageDateTime() -> impl IntoView {
 
             <p>"Select dates using the calendar-like "<Code inline=true>"<DateSelector>"</Code>" component."</p>
 
-            <Code>
-                {indoc!(r"
-                    <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
-                ")}
-            </Code>
-
-            <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {}/>
+            <DemoShell source=include_str!("demos/date_selector_calendar.rs")>
+                <DateSelectorCalendarDemo />
+            </DemoShell>
 
             <p>"The date selector can also start with the year selection."</p>
 
-            <Code>
-                {indoc!(r"
-                    <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>
-                ")}
-            </Code>
-
-            <DateSelector value=OffsetDateTime::now_utc() on_change=move |_v| {} guide_mode=GuideMode::YearFirst/>
+            <DemoShell source=include_str!("demos/date_selector_year_first.rs")>
+                <DateSelectorYearFirstDemo />
+            </DemoShell>
 
             <h2 id="input-fields" class="anchor">
                 "Input fields"

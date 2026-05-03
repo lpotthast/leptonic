@@ -21,6 +21,9 @@ components with theming capabilities, built on a layered architecture of hooks, 
   `Some`. Use the `EventAccessors` extension trait (`expect_target()`, `expect_current_target()`) from `utils/mod.rs`
   instead of `.unwrap()`, `.expect()`, or `.and_then()`. **Exception:** `current_target` becomes `null` after the
   handler returns (per DOM spec), so stored/deferred events must use `if let Some(...)` for `.current_target()`.
+- **Event propagation**: Leptonic events stop propagation by default. User handlers call `continue_propagation()` to
+  opt in to bubbling. Implemented via the sealed `Propagation` trait and `PropagationControl` from
+  `utils/propagation_control.rs`. All user-facing event types must implement `Propagation`.
 
 ## Build Commands
 
@@ -36,7 +39,7 @@ just once              # One-time dev environment setup (enables WASM target, in
 
 ```bash
 just fmt               # Format all crates with cargo fmt
-just clippy            # Run clippy with strict flags (-Dclippy::all -Dclippy::pedantic)
+just clippy            # Run clippy (lint levels configured in Cargo.toml [lints.clippy])
 just test              # Run tests for all crates
 just sort              # Sort dependencies in Cargo.toml files
 just leptosfmt         # Format Leptos view macros
@@ -49,7 +52,7 @@ just serve             # Run the book-ssr documentation app for manual testing
 cargo check -p leptonic                    # Quick compilation check
 cargo test -p leptonic                     # Run tests for leptonic crate only
 cargo test -p leptonic test_name           # Run a specific test
-cargo clippy -p leptonic -- -Dclippy::all -Dclippy::pedantic  # Clippy on leptonic only
+cargo clippy -p leptonic                   # Clippy on leptonic only
 ```
 
 **Running the documentation app (primary manual testing target):**
@@ -76,12 +79,40 @@ The library follows a three-layer hierarchy:
    complex behavior (Modal, Select, DateSelector, Table, Toast, Tabs, etc.).
 
 For more details, see: [documentation/architecture.md](documentation/architecture.md).
+For implementation patterns, see: [documentation/hooks-implementation.md](documentation/hooks-implementation.md),
+[documentation/atoms-implementation.md](documentation/atoms-implementation.md),
+[documentation/components-implementation.md](documentation/components-implementation.md).
+For book-ssr page structure and content guidelines,
+see: [documentation/documentation-strategy.md](documentation/documentation-strategy.md).
 
 **Other key directories:**
 
 - `leptonic/src/contexts/` - Global event contexts (click, keyboard, pointer, scroll, resize)
-- `leptonic/src/utils/` - Utility functions (ARIA, color, time, signals)
+- `leptonic/src/utils/` - Typed ARIA types (`AriaRole`, etc.), event propagation control, focus/scroll utilities,
+  i18n/locale, platform detection, color types.
 - `leptonic-theme/` - Theme system with SCSS stylesheets and light/dark themes
+
+### ICU4X for Internationalization
+
+The i18n layer uses [ICU4X](https://github.com/unicode-org/icu4x) (`icu_*` crates, v2) — the Rust-native equivalent
+of react-aria's `@internationalized` packages. ICU4X is maintained by the Unicode Consortium, is pure Rust,
+WASM-compatible, and SSR-safe (no JS runtime needed on the server).
+
+**Why ICU4X over `js_sys::Intl`:** The browser `Intl` APIs panic during SSR because there is no JS runtime. ICU4X
+provides the same locale-aware functionality as compiled Rust with baked-in CLDR data.
+
+**Modules using ICU4X:**
+
+| Module                         | ICU4X crate                      | Purpose                                                         |
+|--------------------------------|----------------------------------|-----------------------------------------------------------------|
+| `utils/i18n.rs`                | `icu_locale`                     | Locale parsing, script-based RTL detection via `LocaleExpander` |
+| `utils/filter.rs`              | `icu_collator`, `icu_normalizer` | Locale-aware string collation and filtering (SSR-safe)          |
+| `utils/number_formatter.rs`    | `icu_decimal`                    | Locale-aware number formatting                                  |
+| `utils/date_time_formatter.rs` | `icu_datetime`                   | Locale-aware date/time formatting                               |
+| `utils/list_formatter.rs`      | `icu_list`                       | Locale-aware list formatting ("A, B, and C")                    |
+| `utils/plurals.rs`             | `icu_plurals`                    | Plural category lookup for ARIA labels                          |
+
+All ICU4X crates use the default compiled-data mode (CLDR baked into each sub-crate). No datagen step is needed.
 
 ### Hook Implementation
 
@@ -103,11 +134,14 @@ The `examples/book-ssr/` directory contains the primary documentation site for l
 manual testing during development. It is named "book" following Rust ecosystem convention (like "The Rust Book").
 
 - **Running**: `just serve` (or `cd examples/book-ssr && cargo leptos serve`). Available at `https://127.0.0.1:4100`.
-- **Quality bar**: Must always compile and have zero clippy lints.
+- **Quality bar**: Must always compile and have zero clippy lints (checked with `clippy::all` and `clippy::pedantic` via
+  `[lints.clippy]` in its `Cargo.toml`).
 - **Dependency**: Uses `leptonic` via path dependency with `features = ["full"]`.
 - **Not a workspace member**: Excluded from the root workspace; managed via the root Justfile.
-- **Page structure**: Pages live in `src/pages/documentation/`, organized by layer — `hooks/`, `atoms/`, `components/`
-  (components further split into `input/`, `layout/`, `feedback/`, `general/`, `animation/`).
+- **Page structure**: Pages live in `src/pages/documentation/`, organized by layer (`hooks/`, `atoms/`, `components/`)
+  and by concept (`concepts/`, `domains/`). The concept-based organization groups related hooks/atoms/components under
+  a single concept page (e.g., Button, Slider) while domain pages group behavioral hook families (e.g., Interactions,
+  Focus). See `documentation/documentation-strategy.md` for the full page type taxonomy.
 - **When adding or modifying hooks, atoms, or components**: The corresponding book-ssr documentation page should be
   updated or created to demonstrate the change.
 
@@ -172,3 +206,7 @@ Browser tests live in `leptonic/tests/` and use **thirtyfour** (Selenium WebDriv
 
 These lints are allowed in workspace: `option_if_let_else`, `module_name_repetitions`, `must_use_candidate`,
 `wildcard_imports`
+
+Book-ssr is not a workspace member and has its own `[lints.clippy]` section in `Cargo.toml` that sets `all` and
+`pedantic` to deny, with additional allows: `must_use_candidate`, `wildcard_imports`, `module_name_repetitions`, and
+`let_unit_value` (Leptos view macros generate unit-value let-bindings).

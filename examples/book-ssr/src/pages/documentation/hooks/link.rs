@@ -1,88 +1,18 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*, prelude::Size};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::link_disabled::LinkDisabledDemo;
+use super::demos::link_external::LinkExternalDemo;
+use super::demos::link_internal::LinkInternalDemo;
+use super::demos::link_pressed::LinkPressedDemo;
+use super::demos::link_programmatic_focus::LinkProgrammaticFocusDemo;
+use super::demos::link_span::LinkSpanDemo;
 
 #[component]
 pub fn PageUseLink() -> impl IntoView {
-    let internal_link = use_link(UseLinkInput {
-        href: Some("#demo".to_string()),
-        target: None,
-        rel: vec![],
-        is_disabled: Default::default(),
-        element_type: Default::default(),
-        aria_current: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
-    });
-
-    let external_link = use_link(UseLinkInput {
-        href: Some("https://leptos.dev".to_string()),
-        target: Some(LinkTarget::_Blank),
-        rel: vec![LinkRel::NoOpener, LinkRel::NoReferrer],
-        is_disabled: Default::default(),
-        element_type: Default::default(),
-        aria_current: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
-    });
-
-    let (is_disabled, set_is_disabled) = signal(false);
-    let disabled_link = use_link(UseLinkInput {
-        href: Some("#".to_string()),
-        target: None,
-        rel: vec![],
-        is_disabled: is_disabled.into(),
-        element_type: Default::default(),
-        aria_current: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
-    });
-
-    let pressed_link = use_link(UseLinkInput {
-        href: Some("#pressed-state".to_string()),
-        target: None,
-        rel: vec![],
-        is_disabled: Default::default(),
-        element_type: Default::default(),
-        aria_current: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
-    });
-    let pressed_link_is_pressed = pressed_link.is_pressed;
-
-    let span_link = use_link(UseLinkInput {
-        href: None,
-        target: None,
-        rel: vec![],
-        is_disabled: Default::default(),
-        element_type: LinkElementType::Span,
-        aria_current: None,
-        on_press: Some(Callback::new(|_| {
-            leptos::logging::log!("Span link pressed!");
-        })),
-        on_press_start: None,
-        on_press_end: None,
-    });
-
-    let focus_link = use_link(UseLinkInput {
-        href: Some("#focus-handle".to_string()),
-        target: None,
-        rel: vec![],
-        is_disabled: Default::default(),
-        element_type: Default::default(),
-        aria_current: None,
-        on_press: None,
-        on_press_start: None,
-        on_press_end: None,
-    });
-    let focus_handle = focus_link.focus_handle;
-
     view! {
         <Article>
             <h1 id="use_link" class="anchor">
@@ -90,7 +20,18 @@ pub fn PageUseLink() -> impl IntoView {
                 <AnchorLink href="#use_link" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hook for creating accessible links with robust press handling, focus management, and keyboard navigation."</p>
+            <p>
+                "The "<code>"use_link"</code>" hook creates accessible links with robust press handling, focus management, and keyboard navigation. "
+                "See the "<Link href=crate::routes::doc::link::UseLink.materialize()>"Link overview"</Link>" for concept guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useLink.html" target=LinkTarget::_Blank>
+                    "useLink"
+                </LinkExt>
+                "."
+            </p>
 
             <p>
                 "Composes " <code>"use_focusable"</code> ", " <code>"use_press"</code> ", and " <code>"use_focus_ring"</code>
@@ -102,50 +43,19 @@ pub fn PageUseLink() -> impl IntoView {
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.0)>
-                <div>
-                    <strong>"Internal Link: "</strong>
-                    <a {..internal_link.props.into_attrs()} style="color: var(--brand-color);">
-                        "Jump to demo section"
-                    </a>
-                </div>
+            <DemoShell source=include_str!("demos/link_internal.rs")>
+                <LinkInternalDemo />
+            </DemoShell>
 
-                <div>
-                    <strong>"External Link: "</strong>
-                    <a {..external_link.props.into_attrs()} style="color: var(--brand-color);">
-                        "Visit Leptos"
-                        <span style="margin-left: 0.25em;">"↗"</span>
-                    </a>
-                    <span style="margin-left: 0.5em; font-size: 0.875em; opacity: 0.7;">
-                        "(opens in new tab)"
-                    </span>
-                </div>
+            <DemoShell source=include_str!("demos/link_external.rs")>
+                <LinkExternalDemo />
+            </DemoShell>
 
-                <div>
-                    <strong>"Disabled Link: "</strong>
-                    <a
-                        {..disabled_link.props.into_attrs()}
-                        style=move || format!(
-                            "color: {}; cursor: {};",
-                            if is_disabled.get() { "#999" } else { "var(--brand-color)" },
-                            if is_disabled.get() { "not-allowed" } else { "pointer" }
-                        )
-                    >
-                        "This link can be disabled"
-                    </a>
-                </div>
+            <DemoShell source=include_str!("demos/link_disabled.rs")>
+                <LinkDisabledDemo />
+            </DemoShell>
 
-                <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer;">
-                    <input
-                        type="checkbox"
-                        prop:checked=is_disabled
-                        on:change=move |e| set_is_disabled.set(event_target_checked(&e))
-                    />
-                    "Disable link"
-                </label>
-            </Stack>
-
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let link = use_link(UseLinkInput {
                         href: Some("https://example.com".to_string()),
@@ -170,22 +80,9 @@ pub fn PageUseLink() -> impl IntoView {
                 ") for visual feedback during interactions. Press and hold the link below to see the effect."
             </p>
 
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.0)>
-                <div>
-                    <a
-                        {..pressed_link.props.into_attrs()}
-                        style=move || format!(
-                            "color: var(--brand-color); transition: transform 100ms; transform: {};",
-                            if pressed_link_is_pressed.get() { "scale(0.95)" } else { "scale(1)" }
-                        )
-                    >
-                        "Press and hold me"
-                    </a>
-                    <span style="margin-left: 0.5em; font-size: 0.875em; opacity: 0.7;">
-                        {move || if pressed_link_is_pressed.get() { "(pressed!)" } else { "" }}
-                    </span>
-                </div>
-            </Stack>
+            <DemoShell source=include_str!("demos/link_pressed.rs")>
+                <LinkPressedDemo />
+            </DemoShell>
 
             <h2 id="non-anchor-elements" class="anchor">
                 "Non-Anchor Elements"
@@ -198,17 +95,9 @@ pub fn PageUseLink() -> impl IntoView {
                 " and keyboard handling (Enter via " <code>"use_press"</code> ")."
             </p>
 
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.0)>
-                <div>
-                    <strong>"Span as Link: "</strong>
-                    <span
-                        {..span_link.props.into_attrs()}
-                        style="color: var(--brand-color); cursor: pointer; text-decoration: underline;"
-                    >
-                        "Click or press Enter (check console)"
-                    </span>
-                </div>
-            </Stack>
+            <DemoShell source=include_str!("demos/link_span.rs")>
+                <LinkSpanDemo />
+            </DemoShell>
 
             <h2 id="focus-handle" class="anchor">
                 "Programmatic Focus"
@@ -220,16 +109,9 @@ pub fn PageUseLink() -> impl IntoView {
                 " for programmatic focus control."
             </p>
 
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.0)>
-                <div>
-                    <a {..focus_link.props.into_attrs()} style="color: var(--brand-color);">
-                        "Target link"
-                    </a>
-                </div>
-                <button on:click=move |_| focus_handle.focus()>
-                    "Focus the link above"
-                </button>
-            </Stack>
+            <DemoShell source=include_str!("demos/link_programmatic_focus.rs")>
+                <LinkProgrammaticFocusDemo />
+            </DemoShell>
 
             <h2 id="element-types" class="anchor">
                 "Element Types"

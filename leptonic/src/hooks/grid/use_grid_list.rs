@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use leptos::{
     attr,
@@ -14,25 +14,24 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use super::use_grid::EscapeKeyBehavior;
 use crate::{
     hooks::{
-        selection::use_selection_state::{
-            use_selection_state, Selection, SelectionBehavior, SelectionMode,
-            UseSelectionStateInput, UseSelectionStateReturn,
-        },
         IntoAttrs,
+        selection::{
+            SelectionKey,
+            use_selection_state::{
+                DisabledBehavior, Selection, SelectionBehavior, SelectionMode,
+                UseSelectionStateInput, UseSelectionStateReturn, use_selection_state,
+            },
+        },
     },
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
         EventAccessors, EventHandler,
+        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridList.ts
 // and: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridListItem.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## OMITTED FEATURES
 // - Virtualization (`isVirtualized`, `aria-rowcount`, `aria-colcount`).
 // - Tree support (`hasChildItems`, `expandedKeys`, `aria-expanded`, `aria-level`,
@@ -58,14 +57,12 @@ use crate::{
 // - `FocusManager` from `use_focus_manager` instead of `getFocusableTreeWalker`.
 // - `EventHandler<E>` for composable event handler chaining.
 // - Generic `K` key type instead of React Aria's `Key`.
-//
-// =============================================================================
 
 /// Input parameters for the `use_grid_list` hook.
 #[derive(Clone)]
 pub struct UseGridListInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     // --- ARIA ---
     /// An accessible label for the grid list.
@@ -104,7 +101,7 @@ where
     pub on_action: Option<Callback<K>>,
 }
 
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseGridListInput<K> {
+impl<K: SelectionKey> Default for UseGridListInput<K> {
     fn default() -> Self {
         Self {
             label: None,
@@ -132,7 +129,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseGridListInput<
 #[derive(Clone)]
 pub struct UseGridListState<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// The selection state.
     pub selection: UseSelectionStateReturn<K>,
@@ -144,19 +141,19 @@ where
     pub is_disabled: Signal<bool>,
     /// The selection mode.
     pub selection_mode: SelectionMode,
-    /// The selection behavior.
-    pub selection_behavior: SelectionBehavior,
+    /// The selection behavior (reactive — may change at runtime).
+    pub selection_behavior: Signal<SelectionBehavior>,
     /// Callback when a row is activated (Enter key or double-click).
     pub on_action: Option<Callback<K>>,
 }
 
 // Manual Copy impl to avoid the derive macro adding an unnecessary `K: Copy` bound.
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Copy for UseGridListState<K> {}
+impl<K: SelectionKey> Copy for UseGridListState<K> {}
 
 /// The return value of the `use_grid_list` hook.
 pub struct UseGridListReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Props for the grid list container element. Call `.into_attrs()` for view spreading.
     pub props: UseGridListProps,
@@ -234,7 +231,7 @@ fn get_next_key<K>(
     wrap: bool,
 ) -> Option<K>
 where
-    K: Hash + Eq + Clone,
+    K: SelectionKey,
 {
     let len = all_keys.len();
     if len == 0 {
@@ -282,7 +279,7 @@ where
 /// Get the first non-disabled key.
 fn get_first_key<K>(all_keys: &[K], disabled_keys: &HashSet<K>) -> Option<K>
 where
-    K: Hash + Eq + Clone,
+    K: SelectionKey,
 {
     all_keys
         .iter()
@@ -293,7 +290,7 @@ where
 /// Get the last non-disabled key.
 fn get_last_key<K>(all_keys: &[K], disabled_keys: &HashSet<K>) -> Option<K>
 where
-    K: Hash + Eq + Clone,
+    K: SelectionKey,
 {
     all_keys
         .iter()
@@ -332,7 +329,7 @@ where
 #[allow(clippy::too_many_lines)]
 pub fn use_grid_list<K>(input: UseGridListInput<K>) -> UseGridListReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseGridListInput {
         label,
@@ -363,6 +360,7 @@ where
         on_selection_change,
         disabled_keys,
         disallow_empty_selection,
+        disabled_behavior: DisabledBehavior::default(),
     });
 
     // --- Focus tracking ---
@@ -521,7 +519,7 @@ where
         set_focused_key,
         is_disabled,
         selection_mode,
-        selection_behavior,
+        selection_behavior: selection.selection_behavior,
         on_action,
     };
 

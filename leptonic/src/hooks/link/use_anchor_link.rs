@@ -1,28 +1,25 @@
 use educe::Educe;
 use leptos::{attr, attr::Attr, oco::Oco, prelude::*};
+use leptos_element_capture::ElementCaptureAttr;
 use leptos_use::{use_document, use_window};
 use reactive_graph::callback::{Callable, Callback};
 use wasm_bindgen::JsValue;
 use web_sys::ScrollIntoViewOptions;
 
 use super::LinkElementType;
+use crate::hooks::PropsWithStyles;
 use crate::{
     hooks::{
-        use_focus_ring, use_focusable, use_press, FocusHandle, IntoAttrs,
-        MergedFocusablePressFocusRingAttrs, MergedFocusablePressFocusRingProps, PressEvent,
-        UseFocusRingInput, UseFocusRingReturn, UseFocusableInput, UseFocusableReturn,
-        UsePressInput, UsePressReturn,
+        FocusHandle, IntoAttrs, MergedFocusablePressFocusRingAttrs,
+        MergedFocusablePressFocusRingProps, PressEvent, UseFocusRingInput, UseFocusRingReturn,
+        UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn, use_focus_ring,
+        use_focusable, use_press,
     },
-    utils::{aria::*, scroll_behavior::ScrollBehavior, ElementCaptureAttr, MergeWith},
+    utils::{MergeWith, aria::*, scroll_behavior::ScrollBehavior},
 };
-
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Href(Oco<'static, str>);
@@ -77,7 +74,7 @@ pub struct UseAnchorLinkInput {
 #[derive(Debug)]
 pub struct UseAnchorLinkReturn {
     /// Props for programmatic merging. Call `.into_attrs()` for view spreading.
-    pub props: UseAnchorLinkProps,
+    pub props: PropsWithStyles<UseAnchorLinkProps>,
 
     pub is_pressed: Signal<bool>,
 
@@ -235,6 +232,9 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
         ..UseFocusRingInput::default()
     });
 
+    let press_styles = press_props.styles;
+    let press_props = press_props.props;
+
     let merged = focusable_props
         .merge_with(press_props)
         .merge_with(focus_ring_props);
@@ -251,12 +251,15 @@ pub fn use_anchor_link(input: UseAnchorLinkInput) -> UseAnchorLinkReturn {
     };
 
     UseAnchorLinkReturn {
-        props: UseAnchorLinkProps {
-            href: href.0,
-            role,
-            aria_label: description,
-            aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
-            merged,
+        props: PropsWithStyles {
+            props: UseAnchorLinkProps {
+                href: href.0,
+                role,
+                aria_label: description,
+                aria_disabled: Signal::derive(move || disabled.get().then_some(AriaDisabled::True)),
+                merged,
+            },
+            styles: press_styles,
         },
         is_pressed,
         is_focus_visible,

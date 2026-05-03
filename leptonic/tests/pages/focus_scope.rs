@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use thirtyfour::{prelude::*, WebDriver};
+use thirtyfour::{WebDriver, prelude::*};
 
 use crate::pages::BaseActions;
 

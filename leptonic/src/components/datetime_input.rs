@@ -3,9 +3,13 @@ use time::format_description::well_known::Rfc3339;
 use web_sys::KeyboardEvent;
 
 use crate::{
-    components::date_selector::{DateSelector, DateSelectorProps},
-    utils::time::{GuideMode, Type},
     Margin, Out,
+    components::date_selector::{DateSelector, DateSelectorProps},
+    utils::{
+        classes::Classes,
+        styles::Styles,
+        time::{GuideMode, Type},
+    },
 };
 
 #[component]
@@ -18,9 +22,10 @@ pub fn DateTimeInput(
     #[prop(into)] set: Out<Option<time::OffsetDateTime>>,
     #[prop(into, optional)] prepend: ViewFn,
     #[prop(into, optional)] id: Option<Oco<'static, str>>,
-    #[prop(into, optional)] class: Option<Oco<'static, str>>,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(optional)] margin: Option<Margin>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 
     #[prop(optional)] min: Option<time::OffsetDateTime>,
     #[prop(optional)] max: Option<time::OffsetDateTime>,
@@ -31,12 +36,10 @@ pub fn DateTimeInput(
 ) -> impl IntoView {
     let id = id.map(Oco::into_owned);
 
-    let class = class.map_or_else(
-        || Oco::from("leptonic-input datetime-selected "),
-        |it| Oco::from(format!("leptonic-input datetime-selected {it}")),
-    );
-
-    let style = margin.map(|it| format!("--margin: {it}"));
+    let styles = match margin {
+        Some(m) => styles.add("--margin", leptos_styles::css::CssValue::from(m)),
+        None => styles,
+    };
 
     let (open, set_open) = signal(false);
     let (in_focus, set_in_focus) = signal(false);
@@ -79,6 +82,8 @@ pub fn DateTimeInput(
             min,
             max,
             guide_mode: guide_mode.into(),
+            classes: Classes::default(),
+            styles: Styles::default(),
         })
     };
 
@@ -87,11 +92,11 @@ pub fn DateTimeInput(
     };
 
     view! {
-        <div class="leptonic-input-field" style=style>
+        <div class=classes.add("leptonic-input-field") style=styles>
             {prepend.run()}
             <input
                 id=id
-                class=class
+                class="leptonic-input datetime-selected"
                 placeholder=label
                 tabindex="0"
                 type="text"

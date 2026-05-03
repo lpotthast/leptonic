@@ -3,15 +3,13 @@ use leptos::{
     attr::Attr,
     ev,
     ev::{On, SharedEventCallback},
-    prelude::*,
-    tachys::html::style::{style, Style},
 };
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
     hooks::{
-        overlay::{use_overlay::UseOverlayProps, use_overlay_position::UseOverlayPositionProps},
         IntoAttrs,
+        overlay::{use_overlay::UseOverlayProps, use_overlay_position::UseOverlayPositionProps},
     },
     utils::{ElementCaptureAttr, EventHandler, MergeWith},
 };
@@ -48,12 +46,6 @@ pub struct MergedOverlayOverlayPositionProps {
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
-    // From use_overlay_position.
-    pub position: Signal<(&'static str, String)>,
-    pub z_index: Signal<(&'static str, String)>,
-    pub top: Signal<(&'static str, String)>,
-    pub left: Signal<(&'static str, String)>,
-    pub max_height: Signal<(&'static str, String)>,
 }
 
 /// Attribute tuple type for [`MergedOverlayOverlayPositionProps`].
@@ -66,12 +58,6 @@ pub type MergedOverlayOverlayPositionAttrs = (
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
-    // From use_overlay_position.
-    Style<Signal<(&'static str, String)>>,
-    Style<Signal<(&'static str, String)>>,
-    Style<Signal<(&'static str, String)>>,
-    Style<Signal<(&'static str, String)>>,
-    Style<Signal<(&'static str, String)>>,
 );
 
 impl IntoAttrs for MergedOverlayOverlayPositionProps {
@@ -79,18 +65,11 @@ impl IntoAttrs for MergedOverlayOverlayPositionProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
-            // Overlay attrs.
             Attr(attr::Id, self.id),
             self.element_capture,
             self.on_keydown.into_on(ev::keydown),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
-            // Position attrs.
-            style(self.position),
-            style(self.z_index),
-            style(self.top),
-            style(self.left),
-            style(self.max_height),
         )
     }
 }
@@ -109,11 +88,6 @@ impl MergeWith<UseOverlayPositionProps> for UseOverlayProps {
 
         let UseOverlayPositionProps {
             element_capture: position_element_capture,
-            position: position_position,
-            z_index: position_z_index,
-            top: position_top,
-            left: position_left,
-            max_height: position_max_height,
         } = position;
 
         MergedOverlayOverlayPositionProps {
@@ -123,12 +97,6 @@ impl MergeWith<UseOverlayPositionProps> for UseOverlayProps {
             on_keydown: overlay_on_keydown,
             on_focusin: overlay_on_focusin,
             on_focusout: overlay_on_focusout,
-            // From position (distinct).
-            position: position_position,
-            z_index: position_z_index,
-            top: position_top,
-            left: position_left,
-            max_height: position_max_height,
         }
     }
 }

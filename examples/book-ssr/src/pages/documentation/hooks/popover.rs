@@ -1,13 +1,12 @@
 use indoc::indoc;
-use leptonic::{
-    components::prelude::*,
-    hooks::{PlacementX, PlacementY, *},
-    prelude::Size,
-    utils::locale::WritingDirection,
-};
-use leptos::{portal::Portal, prelude::*};
+use leptonic::components::prelude::*;
+use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
+use super::demos::{
+    popover_basic::BasicPopoverDemo, popover_non_modal::NonModalPopoverDemo,
+    popover_placement::PlacementPopoverDemo,
+};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageUsePopoverHook() -> impl IntoView {
@@ -19,7 +18,16 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             </h1>
 
             <p>"A composition hook that provides behavior and accessibility implementation for a popover component. "
-               "A popover is an overlay element positioned relative to a trigger."</p>
+               "A popover is an overlay element positioned relative to a trigger. "
+               "See the "<Link href=crate::routes::doc::Popover.materialize()>"Popover overview"</Link>" for concept guidance."</p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/usePopover.html" target=LinkTarget::_Blank>
+                    "usePopover"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="hook-composition" class="anchor">
                 "Hook Composition"
@@ -83,7 +91,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                 <AnchorLink href="#usage" description="Direct link to usage"/>
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     use leptonic::hooks::{
                         use_popover, UsePopoverInput, UsePopoverReturn,
@@ -155,7 +163,9 @@ pub fn PageUsePopoverHook() -> impl IntoView {
 
             <p>"Click the button to show a popover positioned below it:"</p>
 
-            <BasicPopoverDemo />
+            <DemoShell source=include_str!("demos/popover_basic.rs")>
+                <BasicPopoverDemo />
+            </DemoShell>
 
             <h2 id="positioning" class="anchor">
                 "Positioning"
@@ -222,7 +232,9 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                <code>"Start"</code>", "<code>"End"</code>", "<code>"OuterStart"</code>", "<code>"OuterEnd"</code>
                ") are also available for RTL support but not shown here:"</p>
 
-            <PlacementPopoverDemo />
+            <DemoShell source=include_str!("demos/popover_placement.rs")>
+                <PlacementPopoverDemo />
+            </DemoShell>
 
             <h2 id="dismiss-behavior" class="anchor">
                 "Dismiss Behavior"
@@ -296,7 +308,9 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             <p>"A non-modal popover allows interaction with elements outside while open, "
                "and does not prevent page scrolling:"</p>
 
-            <NonModalPopoverDemo />
+            <DemoShell source=include_str!("demos/popover_non_modal.rs")>
+                <NonModalPopoverDemo />
+            </DemoShell>
 
             <h2 id="underlay" class="anchor">
                 "Underlay Element"
@@ -310,7 +324,7 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                "behind the popover could interfere with interactions. For modal popovers, include the underlay element. "
                "For non-modal popovers, skip it."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     // Modal popover: include underlay
                     <Show when=move || is_open.get()>
@@ -549,6 +563,19 @@ pub fn PageUsePopoverHook() -> impl IntoView {
             <ul>
                 <li><code>"underlayProps"</code>" renamed to "<code>"underlay_props"</code>" following Rust naming conventions"</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Popover.materialize()>"Popover overview"</Link></li>
+                <li><Link href=crate::routes::doc::popover::Atom.materialize()>"Popover atom"</Link></li>
+                <li><Link href=crate::routes::doc::popover::Component.materialize()>"Popover component"</Link></li>
+                <li><Link href=crate::routes::doc::Overlays.materialize()>"Overlays overview"</Link></li>
+                <li><Link href=crate::routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -569,311 +596,8 @@ pub fn PageUsePopoverHook() -> impl IntoView {
                 Toc::Leaf { title: "Features", link: "#features" },
                 Toc::Leaf { title: "Related Hooks", link: "#related-hooks" },
                 Toc::Leaf { title: "React Aria Deviations", link: "#deviations" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
-    }
-}
-
-/// Basic popover demo
-#[component]
-fn BasicPopoverDemo() -> impl IntoView {
-    let (is_open, set_is_open) = signal(false);
-
-    let UsePopoverReturn {
-        props,
-        trigger_props,
-        underlay_props,
-        id: _,
-        resolved_placement_x: _,
-        resolved_placement_y: _,
-    } = use_popover(UsePopoverInput {
-        is_open: is_open.into(),
-        on_close: Callback::new(move |_| set_is_open.set(false)),
-        placement_x: Signal::derive(|| PlacementX::Center),
-        placement_y: Signal::derive(|| PlacementY::Below),
-        writing_direction: Signal::derive(|| WritingDirection::Ltr),
-        offset: 0.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        is_non_modal: false,
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
-    });
-
-    let trigger_attrs = StoredValue::new(trigger_props.into_attrs());
-    let popover_props = StoredValue::new(props.into_attrs());
-    let underlay_props = StoredValue::new(underlay_props.into_attrs());
-
-    view! {
-        <div style=demo_flex_center()>
-            <button
-                {..trigger_attrs.get_value()}
-                on:click=move |_| set_is_open.set(!is_open.get())
-                style=demo_button_primary()
-            >
-                {move || if is_open.get() { "Close Popover" } else { "Open Popover" }}
-            </button>
-        </div>
-
-        <Portal>
-            <Show when=move || is_open.get()>
-                // Optional underlay - captures pointer events to close
-                <div
-                    {..underlay_props.get_value()}
-                    style="position: fixed; inset: 0; z-index: 999;"
-                />
-                // Popover content
-                <div
-                    {..popover_props.get_value()}
-                    style=popover_panel()
-                >
-                    <h4 style="margin: 0 0 0.5em 0; color: #333;">"Popover Title"</h4>
-                    <p style="margin: 0; color: #666;">
-                        "This is popover content. Press Escape or click outside to close."
-                    </p>
-                </div>
-            </Show>
-        </Portal>
-    }
-}
-
-/// Placement demo showing different positions
-#[component]
-fn PlacementPopoverDemo() -> impl IntoView {
-    let (is_open, set_is_open) = signal(false);
-    let (placement_x, set_placement_x) = signal(PlacementX::Center);
-    let (placement_y, set_placement_y) = signal(PlacementY::Below);
-
-    let UsePopoverReturn {
-        props,
-        trigger_props,
-        underlay_props,
-        id: _,
-        resolved_placement_x: _,
-        resolved_placement_y: _,
-    } = use_popover(UsePopoverInput {
-        is_open: is_open.into(),
-        on_close: Callback::new(move |_| set_is_open.set(false)),
-        placement_x: placement_x.into(),
-        placement_y: placement_y.into(),
-        writing_direction: Signal::derive(|| WritingDirection::Ltr),
-        offset: 0.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        is_non_modal: false,
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
-    });
-
-    let trigger_attrs = StoredValue::new(trigger_props.into_attrs());
-    let popover_props = StoredValue::new(props.into_attrs());
-    let underlay_props = StoredValue::new(underlay_props.into_attrs());
-
-    view! {
-        <Grid gap=Size::Em(0.5) attr:style="margin-bottom: 1em;">
-            <Row>
-                <Col xs=6 attr:style="
-                    border: 0.1em solid lightgrey;
-                    border-radius: 0.25em;
-                    padding: 0.5em;
-                ">
-                    <strong>"Horizontal"</strong>
-                    <RadioGroup attr:style="display: flex; flex-direction: column; gap: 0.2em; width: 100%; margin-top: 0.5em;">
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_x.get() == PlacementX::OuterLeft)
-                                set_checked=move |checked| { if checked { set_placement_x.set(PlacementX::OuterLeft)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"OuterLeft"</Label>
-                        </FormControl>
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_x.get() == PlacementX::Left)
-                                set_checked=move |checked| { if checked { set_placement_x.set(PlacementX::Left)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"Left"</Label>
-                        </FormControl>
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_x.get() == PlacementX::Center)
-                                set_checked=move |checked| { if checked { set_placement_x.set(PlacementX::Center)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"Center"</Label>
-                        </FormControl>
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_x.get() == PlacementX::Right)
-                                set_checked=move |checked| { if checked { set_placement_x.set(PlacementX::Right)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"Right"</Label>
-                        </FormControl>
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_x.get() == PlacementX::OuterRight)
-                                set_checked=move |checked| { if checked { set_placement_x.set(PlacementX::OuterRight)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"OuterRight"</Label>
-                        </FormControl>
-                    </RadioGroup>
-                </Col>
-                <Col xs=6 attr:style="
-                    border: 0.1em solid lightgrey;
-                    border-radius: 0.25em;
-                    padding: 0.5em;
-                ">
-                    <strong>"Vertical"</strong>
-                    <RadioGroup attr:style="display: flex; flex-direction: column; gap: 0.2em; width: 100%; margin-top: 0.5em;">
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_y.get() == PlacementY::Above)
-                                set_checked=move |checked| { if checked { set_placement_y.set(PlacementY::Above)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"Above"</Label>
-                        </FormControl>
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_y.get() == PlacementY::Top)
-                                set_checked=move |checked| { if checked { set_placement_y.set(PlacementY::Top)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"Top"</Label>
-                        </FormControl>
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_y.get() == PlacementY::Center)
-                                set_checked=move |checked| { if checked { set_placement_y.set(PlacementY::Center)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"Center"</Label>
-                        </FormControl>
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_y.get() == PlacementY::Bottom)
-                                set_checked=move |checked| { if checked { set_placement_y.set(PlacementY::Bottom)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"Bottom"</Label>
-                        </FormControl>
-                        <FormControl attr:style="display: flex; flex-direction: row; align-items: center;">
-                            <Radio
-                                checked=Signal::derive(move || placement_y.get() == PlacementY::Below)
-                                set_checked=move |checked| { if checked { set_placement_y.set(PlacementY::Below)} }
-                            />
-                            <Label attr:style="margin-left: 0.25em;">"Below"</Label>
-                        </FormControl>
-                    </RadioGroup>
-                </Col>
-            </Row>
-        </Grid>
-
-        <div style="display: flex; justify-content: center; padding: 4em;">
-            <button
-                {..trigger_attrs.get_value()}
-                on:click=move |_| set_is_open.set(!is_open.get())
-                style=demo_button_primary()
-            >
-                {move || if is_open.get() { "Close" } else { "Open Popover" }}
-            </button>
-        </div>
-
-        <Portal>
-            <Show when=move || is_open.get()>
-                <div
-                    {..underlay_props.get_value()}
-                    style="position: fixed; inset: 0; z-index: 999;"
-                />
-                <div
-                    {..popover_props.get_value()}
-                    style="
-                        background: white;
-                        border: 1px solid #ccc;
-                        border-radius: 8px;
-                        padding: 1em;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                        z-index: 1000;
-                    "
-                >
-                    <p style="margin: 0; color: #666;">
-                        {move || format!("Placement: {:?} / {:?}", placement_x.get(), placement_y.get())}
-                    </p>
-                </div>
-            </Show>
-        </Portal>
-    }
-}
-
-/// Non-modal popover demo
-#[component]
-fn NonModalPopoverDemo() -> impl IntoView {
-    let (is_open, set_is_open) = signal(false);
-    let (counter, set_counter) = signal(0);
-
-    let UsePopoverReturn {
-        props,
-        trigger_props,
-        underlay_props: _,
-        id: _,
-        resolved_placement_x: _,
-        resolved_placement_y: _,
-    } = use_popover(UsePopoverInput {
-        is_open: is_open.into(),
-        on_close: Callback::new(move |_| set_is_open.set(false)),
-        placement_x: Signal::derive(|| PlacementX::OuterRight),
-        placement_y: Signal::derive(|| PlacementY::Top),
-        writing_direction: Signal::derive(|| WritingDirection::Ltr),
-        offset: 0.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        is_non_modal: true, // Allow interaction outside
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
-    });
-
-    let trigger_attrs = StoredValue::new(trigger_props.into_attrs());
-    let popover_props = StoredValue::new(props.into_attrs());
-
-    view! {
-        <div style="display: flex; gap: 1em; align-items: center; justify-content: center; padding: 2em;">
-            <button
-                {..trigger_attrs.get_value()}
-                on:click=move |_| set_is_open.set(!is_open.get())
-                style=demo_button_primary()
-            >
-                {move || if is_open.get() { "Close" } else { "Open Non-Modal" }}
-            </button>
-
-            <button
-                on:click=move |_| set_counter.update(|c| *c += 1)
-                style="padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; border: 1px solid #ccc; font-size: 1em;"
-            >
-                {move || format!("Counter: {}", counter.get())}
-            </button>
-        </div>
-
-        <p style="text-align: center; color: #666;">
-            "Notice: You can still click the counter button while the popover is open!"
-        </p>
-
-        <Portal>
-            <Show when=move || is_open.get()>
-                // No underlay for non-modal popover
-                <div
-                    {..popover_props.get_value()}
-                    style="
-                        background: white;
-                        border: 1px solid #ccc;
-                        border-radius: 8px;
-                        padding: 1em;
-                        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                        z-index: 1000;
-                        max-width: 200px;
-                    "
-                >
-                    <p style="margin: 0; color: #666;">
-                        "This is a non-modal popover. You can interact with elements outside!"
-                    </p>
-                </div>
-            </Show>
-        </Portal>
     }
 }

@@ -22,9 +22,6 @@ use std::str::FromStr;
 use itertools::Itertools;
 use leptos::{attr::AttributeKey, prelude::*, tachys::html::attribute::AttributeValue};
 use smallvec::SmallVec;
-// ----------------------------------------------------------------------------------
-// Macros
-// ----------------------------------------------------------------------------------
 
 /// Implements `AttributeValue` for a `Copy + Send + 'static` type that has an `into_str(self) -> &'static str` method.
 /// This delegates all rendering to the `&'static str` `AttributeValue` impl.
@@ -125,10 +122,6 @@ macro_rules! define_aria_bool {
     };
 }
 
-// ----------------------------------------------------------------------------------
-// AriaDescribedby
-// ----------------------------------------------------------------------------------
-
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Reference/Attributes/aria-describedby>
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct AriaDescribedby {
@@ -223,10 +216,6 @@ impl AttributeValue for AriaDescribedby {
         self
     }
 }
-
-// ----------------------------------------------------------------------------------
-// AriaRole
-// ----------------------------------------------------------------------------------
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Roles>
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -418,10 +407,6 @@ impl AriaRole {
 
 impl_attribute_value_via_str!(AriaRole);
 
-// ----------------------------------------------------------------------------------
-// AriaControls
-// ----------------------------------------------------------------------------------
-
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-controls>
 ///
 /// A space-separated list of one or more ID values referencing the elements being controlled
@@ -436,10 +421,6 @@ impl IntoAttributeValue for AriaControls {
         self.0.join(" ")
     }
 }
-
-// ----------------------------------------------------------------------------------
-// AriaHasPopup
-// ----------------------------------------------------------------------------------
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-haspopup>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -489,10 +470,6 @@ impl AsRef<str> for AriaHasPopup {
 
 impl_attribute_value_via_str!(AriaHasPopup);
 
-// ----------------------------------------------------------------------------------
-// AriaExpanded
-// ----------------------------------------------------------------------------------
-
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-expanded>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaExpanded {
@@ -529,19 +506,11 @@ impl FromStr for AriaExpanded {
 
 impl From<bool> for AriaExpanded {
     fn from(value: bool) -> Self {
-        if value {
-            Self::True
-        } else {
-            Self::False
-        }
+        if value { Self::True } else { Self::False }
     }
 }
 
 impl_attribute_value_via_str!(AriaExpanded);
-
-// ----------------------------------------------------------------------------------
-// Boolean ARIA types (always-present: renders "true" or "false")
-// ----------------------------------------------------------------------------------
 
 define_aria_bool! {
     /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-disabled>
@@ -578,10 +547,6 @@ define_aria_bool! {
     AriaMultiselectable
 }
 
-// ----------------------------------------------------------------------------------
-// AriaOrientation
-// ----------------------------------------------------------------------------------
-
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-orientation>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaOrientation {
@@ -600,10 +565,6 @@ impl AriaOrientation {
 }
 
 impl_attribute_value_via_str!(AriaOrientation);
-
-// ----------------------------------------------------------------------------------
-// AriaSort
-// ----------------------------------------------------------------------------------
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-sort>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -627,10 +588,6 @@ impl AriaSort {
 }
 
 impl_attribute_value_via_str!(AriaSort);
-
-// ----------------------------------------------------------------------------------
-// AriaCurrent
-// ----------------------------------------------------------------------------------
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-current>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -661,19 +618,11 @@ impl AriaCurrent {
 
 impl From<bool> for AriaCurrent {
     fn from(value: bool) -> Self {
-        if value {
-            Self::True
-        } else {
-            Self::False
-        }
+        if value { Self::True } else { Self::False }
     }
 }
 
 impl_attribute_value_via_str!(AriaCurrent);
-
-// ----------------------------------------------------------------------------------
-// AriaLive
-// ----------------------------------------------------------------------------------
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-live>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -696,10 +645,6 @@ impl AriaLive {
 
 impl_attribute_value_via_str!(AriaLive);
 
-// ----------------------------------------------------------------------------------
-// AriaPressed
-// ----------------------------------------------------------------------------------
-
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-pressed>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaPressed {
@@ -721,19 +666,11 @@ impl AriaPressed {
 
 impl From<bool> for AriaPressed {
     fn from(value: bool) -> Self {
-        if value {
-            Self::True
-        } else {
-            Self::False
-        }
+        if value { Self::True } else { Self::False }
     }
 }
 
 impl_attribute_value_via_str!(AriaPressed);
-
-// ----------------------------------------------------------------------------------
-// AriaChecked
-// ----------------------------------------------------------------------------------
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-checked>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -756,19 +693,11 @@ impl AriaChecked {
 
 impl From<bool> for AriaChecked {
     fn from(value: bool) -> Self {
-        if value {
-            Self::True
-        } else {
-            Self::False
-        }
+        if value { Self::True } else { Self::False }
     }
 }
 
 impl_attribute_value_via_str!(AriaChecked);
-
-// ----------------------------------------------------------------------------------
-// AriaInvalid
-// ----------------------------------------------------------------------------------
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-invalid>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -793,19 +722,11 @@ impl AriaInvalid {
 
 impl From<bool> for AriaInvalid {
     fn from(value: bool) -> Self {
-        if value {
-            Self::True
-        } else {
-            Self::False
-        }
+        if value { Self::True } else { Self::False }
     }
 }
 
 impl_attribute_value_via_str!(AriaInvalid);
-
-// ----------------------------------------------------------------------------------
-// AriaAutocomplete
-// ----------------------------------------------------------------------------------
 
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-autocomplete>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -830,10 +751,6 @@ impl AriaAutocomplete {
 
 impl_attribute_value_via_str!(AriaAutocomplete);
 
-// ----------------------------------------------------------------------------------
-// AriaSelected
-// ----------------------------------------------------------------------------------
-
 /// see: <https://developer.mozilla.org/en-US/docs/Web/Accessibility/ARIA/Attributes/aria-selected>
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AriaSelected {
@@ -853,11 +770,7 @@ impl AriaSelected {
 
 impl From<bool> for AriaSelected {
     fn from(value: bool) -> Self {
-        if value {
-            Self::True
-        } else {
-            Self::False
-        }
+        if value { Self::True } else { Self::False }
     }
 }
 

@@ -2,17 +2,14 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::input_basic::InputBasicDemo;
+use super::demos::input_labeled::InputLabeledDemo;
+use super::demos::input_password::InputPasswordDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageInput() -> impl IntoView {
-    let (text, set_text) = signal("text".to_owned());
-    let (password, set_password) = signal("secret".to_owned());
-    let (number, set_number) = signal(4.2);
-    let (unrestricted_number, set_unrestricted_number) = signal(4.2);
-    let number_string = Signal::derive(move || format!("{:.1}", number.get()));
-
     let (placeholder_input, set_placeholder_input) = signal(String::new());
 
     view! {
@@ -24,17 +21,9 @@ pub fn PageInput() -> impl IntoView {
 
             <p>"Creating an input is as simple as doing the following"</p>
 
-            <Code>
-                {indoc!(r#"
-                    let (text, set_text) = signal("text".to_owned());
-                    view! {
-                        <TextInput get=text set=set_text/>
-                    }
-                "#)}
-            </Code>
-
-            <TextInput get=text set=set_text/>
-            <p style="color: gray; margin-top: 0; font-style: italic;">"Text is: " {move || text.get()}</p>
+            <DemoShell source=include_str!("demos/input_basic.rs")>
+                <InputBasicDemo />
+            </DemoShell>
 
             <h2 id="labeled" class="anchor">
                 "Labeled"
@@ -43,23 +32,9 @@ pub fn PageInput() -> impl IntoView {
 
             <p>"Wrap an input and a label to link them together."</p>
 
-            <Code>
-                {indoc!(r#"
-                    <FormControl>
-                        <Label>
-                            "Label"
-                        </Label>
-                        <TextInput get=text set=set_text/>
-                    </FormControl>
-                "#)}
-            </Code>
-
-            <FormControl>
-                <Label>
-                    "Label"
-                </Label>
-                <TextInput get=text set=set_text/>
-            </FormControl>
+            <DemoShell source=include_str!("demos/input_labeled.rs")>
+                <InputLabeledDemo />
+            </DemoShell>
 
             <h2 id="types" class="anchor">
                 "Types"
@@ -74,48 +49,9 @@ pub fn PageInput() -> impl IntoView {
                 " input, "<Code inline=true>"Text"</Code>" being the default type when unspecified."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    let (password, set_password) = signal("secret".to_owned());
-                    view! {
-                        <PasswordInput get=password set=set_password/>
-                    }
-                "#)}
-            </Code>
-
-            <PasswordInput get=password set=set_password/>
-            <p style="color: gray; margin-top: 0; font-style: italic;">"Password is: " {move || password.get()}</p>
-
-            <p>
-                "Note that the input is always given back to you as a "<Code inline=true>"String"</Code>" no matter the type."
-                " When using a number input, you may want to convert the String like this: "
-                <Code inline=true>"str::parse::<f64>(v.as_str()).ok()"</Code>" to receive an "<Code inline=true>"Option<f64>"</Code>
-                ", being "<Code inline=true>"None"</Code>" on invalid input."
-            </p>
-
-            <Code>
-                {indoc!(r#"
-                    let (number, set_number) = signal(Some(42.0));
-                    let number_string = Signal::derive(move || format!("{:.1}", number.get()));
-                    view! {
-                        <NumberInput min=0.0 max=10.0 step=0.1
-                            get=number
-                            set=set_number
-                        />
-                    }
-                "#)}
-            </Code>
-
-            <NumberInput
-                get=unrestricted_number
-                set=set_unrestricted_number
-            />
-
-            <NumberInput min=0.0 max=10.0 step=0.1
-                get=number
-                set=set_number
-            />
-            <p style="color: gray; margin-top: 0; font-style: italic;">"Number is: " {move || number_string.get()}</p>
+            <DemoShell source=include_str!("demos/input_password.rs")>
+                <InputPasswordDemo />
+            </DemoShell>
 
             <h2 id="value-updates" class="anchor">
                 "Value updates"
@@ -140,7 +76,7 @@ pub fn PageInput() -> impl IntoView {
                 "You can define the "<Code inline=true>"set"</Code>" prop in one of the following ways."
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     view! {
                         <Input get=text set=set_text/>
@@ -156,7 +92,7 @@ pub fn PageInput() -> impl IntoView {
 
             <p>"You can supply a placeholder to the input. It is shown as when the input is empty."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let (text, set_text) = signal(String::new());
                     view! {
@@ -191,7 +127,7 @@ pub fn PageInput() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --input-padding
                     --input-color

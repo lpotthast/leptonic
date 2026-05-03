@@ -49,7 +49,7 @@ impl<T: AsRef<web_sys::EventTarget>> ListenExt for T {
     where
         E: FromWasmAbi + 'static,
     {
-        use wasm_bindgen::{closure::Closure, JsCast};
+        use wasm_bindgen::{JsCast, closure::Closure};
 
         let target: &web_sys::EventTarget = self.as_ref();
 

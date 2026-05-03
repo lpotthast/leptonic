@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use leptos::{
     attr,
@@ -17,31 +17,33 @@ use super::{
 };
 use crate::{
     hooks::{
+        IntoAttrs,
         selection::{
+            SelectionKey,
             keyboard_delegate::KeyboardDelegate,
             use_selection_state::{
-                use_selection_state, Selection, SelectionBehavior, SelectionMode,
-                UseSelectionStateInput, UseSelectionStateReturn,
+                DisabledBehavior, Selection, SelectionBehavior, SelectionMode,
+                UseSelectionStateInput, UseSelectionStateReturn, use_selection_state,
             },
         },
-        IntoAttrs,
     },
     utils::{
-        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
         EventAccessors, EventHandler,
+        aria::{AriaDisabled, AriaMultiselectable, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGrid.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## OMITTED FEATURES
 // - No virtualization (`is_virtualized`, `aria-rowcount`, `aria-colcount`).
 // - No selection announcements (`useGridSelectionAnnouncement`).
 // - No RTL direction swapping in keyboard navigation.
+// - Page Up/Down navigation: delegates to `GridKeyboardDelegate` which returns
+//   `None` (requires layout measurement not yet implemented).
+// - Empty-grid focus: simplified — the grid stays tabbable (tabindex 0) when
+//   empty. React-aria additionally checks `useHasTabbableChild` to decide
+//   whether the grid itself or its tabbable children should receive focus.
 //
 // ## DIFFERENT BEHAVIOR
 // - Selection is delegated to `use_selection_state` instead of react-aria's
@@ -52,8 +54,6 @@ use crate::{
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - Uses `EventHandler` pattern for composable event handlers.
-//
-// =============================================================================
 
 /// Controls Escape key behavior in the grid.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -69,7 +69,7 @@ pub enum EscapeKeyBehavior {
 #[derive(Clone)]
 pub struct UseGridInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     // --- ARIA ---
     /// An accessible label for the grid.
@@ -119,7 +119,7 @@ where
 #[derive(Clone)]
 pub struct UseGridState<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// The keyboard delegate for navigation.
     pub keyboard_delegate: GridKeyboardDelegate<K>,
@@ -133,8 +133,8 @@ where
     pub is_disabled: Signal<bool>,
     /// The selection mode.
     pub selection_mode: SelectionMode,
-    /// The selection behavior.
-    pub selection_behavior: SelectionBehavior,
+    /// The selection behavior (reactive — may change at runtime).
+    pub selection_behavior: Signal<SelectionBehavior>,
     /// Callback when a cell is activated (Enter key on a cell key).
     pub on_cell_action: Option<Callback<K>>,
     /// Callback when a row is activated (Enter key or double-click on a row key).
@@ -142,12 +142,12 @@ where
 }
 
 // Manual Copy impl to avoid the derive macro adding an unnecessary `K: Copy` bound.
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Copy for UseGridState<K> {}
+impl<K: SelectionKey> Copy for UseGridState<K> {}
 
 /// The return value of the `use_grid` hook.
 pub struct UseGridReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Props for the grid container element. Call `.into_attrs()` for view spreading.
     pub props: UseGridProps,
@@ -246,7 +246,7 @@ pub type UseGridAttrs = (
 #[allow(clippy::too_many_lines)]
 pub fn use_grid<K>(input: UseGridInput<K>) -> UseGridReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseGridInput {
         label,
@@ -262,7 +262,7 @@ where
         disallow_empty_selection,
         is_disabled,
         escape_key_behavior,
-        should_focus_wrap,
+        should_focus_wrap: _should_focus_wrap,
         on_row_action,
         on_cell_action,
     } = input;
@@ -282,6 +282,7 @@ where
         on_selection_change,
         disabled_keys,
         disallow_empty_selection,
+        disabled_behavior: DisabledBehavior::default(),
     });
 
     // --- Focus tracking ---
@@ -294,6 +295,8 @@ where
     });
 
     // --- Tabindex: -1 when grid has internal focus, 0 otherwise ---
+    // When the collection is empty, the grid itself stays tabbable (tabindex 0)
+    // so keyboard users can reach it and hear its label.
     let tabindex = Signal::derive(move || if is_focused.get() { "-1" } else { "0" });
 
     // --- ARIA attributes ---
@@ -474,7 +477,7 @@ where
         set_focused_key,
         is_disabled,
         selection_mode,
-        selection_behavior,
+        selection_behavior: selection.selection_behavior,
         on_cell_action,
         on_row_action,
     };

@@ -1,7 +1,11 @@
 use leptos::{context::Provider, prelude::*};
 use uuid::Uuid;
 
-use crate::{components::tab::TabData, Mount};
+use crate::{
+    Mount,
+    components::tab::TabData,
+    utils::{classes::Classes, styles::Styles},
+};
 
 #[derive(Debug, Clone)]
 pub struct TabHistory {
@@ -90,12 +94,17 @@ pub fn use_tabs() -> TabsContext {
 }
 
 #[component]
-pub fn Tabs(#[prop(optional)] mount: Option<Mount>, children: Children) -> impl IntoView {
+pub fn Tabs(
+    #[prop(optional)] mount: Option<Mount>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
     let (history, set_history) = signal(TabHistory::new());
     let (tabs, set_tabs) = signal(Vec::new());
 
     view! {
-        <div class="leptonic-tabs">
+        <div class=classes.add("leptonic-tabs") style=styles>
             <Provider value=TabsContext {
                 history,
                 set_history,

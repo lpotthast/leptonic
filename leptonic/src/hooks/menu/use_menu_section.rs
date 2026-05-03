@@ -5,13 +5,7 @@ use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuSection.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_menu_section` hook.
 #[derive(Debug, Clone, Default)]

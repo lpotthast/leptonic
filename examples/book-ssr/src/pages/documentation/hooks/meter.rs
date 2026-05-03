@@ -1,34 +1,14 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*, prelude::Size};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::meter_battery::MeterBatteryDemo;
+use super::demos::meter_disk::MeterDiskDemo;
 
 #[component]
 pub fn PageUseMeter() -> impl IntoView {
-    let (disk_usage, _set_disk_usage) = signal(72.5);
-    let (battery, _set_battery) = signal(45.0);
-
-    let disk_meter = use_meter(UseMeterInput {
-        value: disk_usage.into(),
-        label: Some("Disk Usage".to_string()),
-        min_value: 0.0,
-        max_value: 100.0,
-        ..Default::default()
-    });
-
-    let battery_meter = use_meter(UseMeterInput {
-        value: battery.into(),
-        label: Some("Battery".to_string()),
-        min_value: 0.0,
-        max_value: 100.0,
-        format_options: Some(MeterFormatOptions {
-            style: MeterFormatStyle::Percent,
-            decimals: 0,
-        }),
-        ..Default::default()
-    });
-
     view! {
         <Article>
             <h1 id="use_meter" class="anchor">
@@ -36,54 +16,32 @@ pub fn PageUseMeter() -> impl IntoView {
                 <AnchorLink href="#use_meter" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hook for creating accessible meter/gauge components that represent a scalar value within a known range."</p>
+            <p>
+                "The "<Code inline=true>"use_meter"</Code>" hook is a standalone hook for creating accessible meter/gauge components that represent a scalar value within a known range."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useMeter.html" target=LinkTarget::_Blank>
+                    "useMeter"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="demo" class="anchor">
                 "Interactive Demo"
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.5)>
-                <div style="max-width: 300px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5em;">
-                        <label id={disk_meter.label_props.id.clone()}>"Disk Usage"</label>
-                        <span>{ move || disk_meter.value_label.get() }</span>
-                    </div>
-                    <div
-                        {..disk_meter.meter_props.into_attrs()}
-                        style="height: 20px; background: #e0e0e0; border-radius: 4px; overflow: hidden;"
-                    >
-                        <div style=move || format!(
-                            "height: 100%; width: {}%; background: {}; transition: width 0.3s;",
-                            disk_meter.percentage.get(),
-                            if disk_meter.percentage.get() > 80.0 { "#e53935" }
-                            else if disk_meter.percentage.get() > 60.0 { "#fb8c00" }
-                            else { "#43a047" }
-                        )></div>
-                    </div>
-                </div>
+            <DemoShell source=include_str!("demos/meter_disk.rs")>
+                <MeterDiskDemo />
+            </DemoShell>
 
-                <div style="max-width: 300px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 0.5em;">
-                        <label id={battery_meter.label_props.id.clone()}>"Battery Level"</label>
-                        <span>{ move || battery_meter.value_label.get() }</span>
-                    </div>
-                    <div
-                        {..battery_meter.meter_props.into_attrs()}
-                        style="height: 20px; background: #e0e0e0; border-radius: 4px; overflow: hidden;"
-                    >
-                        <div style=move || format!(
-                            "height: 100%; width: {}%; background: {}; transition: width 0.3s;",
-                            battery_meter.percentage.get(),
-                            if battery_meter.percentage.get() < 20.0 { "#e53935" }
-                            else if battery_meter.percentage.get() < 50.0 { "#fb8c00" }
-                            else { "#43a047" }
-                        )></div>
-                    </div>
-                </div>
-            </Stack>
+            <DemoShell source=include_str!("demos/meter_battery.rs")>
+                <MeterBatteryDemo />
+            </DemoShell>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseMeterReturn { meter_props, label_props, percentage, value_label, .. } = use_meter(
                         UseMeterInput {
@@ -124,7 +82,7 @@ pub fn PageUseMeter() -> impl IntoView {
             </h2>
 
             <p>"Customize value display with format options:"</p>
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     UseMeterInput {
                         format_options: Some(MeterFormatOptions {
@@ -163,6 +121,16 @@ pub fn PageUseMeter() -> impl IntoView {
                 <li>"Label association"</li>
                 <li>"Full ARIA support"</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::DataDisplay.materialize()>"Data Display domain"</Link></li>
+                <li><Link href=crate::routes::doc::Progress.materialize()>"Progress"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -173,6 +141,7 @@ pub fn PageUseMeter() -> impl IntoView {
                 Toc::Leaf { title: "Format Options", link: "#format-options" },
                 Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

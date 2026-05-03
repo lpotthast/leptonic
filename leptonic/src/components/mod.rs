@@ -20,10 +20,10 @@ mod link;
 pub mod modal;
 pub mod popover;
 pub mod progress_bar;
-pub mod quicksearch;
 pub mod radio;
 pub mod root;
-pub mod safe_html;
+#[cfg(feature = "sanitize")]
+pub mod sanitized_html;
 pub mod select;
 pub mod separator;
 pub mod skeleton;
@@ -42,6 +42,8 @@ pub mod transitions;
 pub mod typography;
 
 pub mod prelude {
+    #[cfg(feature = "sanitize")]
+    pub use super::sanitized_html::SanitizedHtml;
     #[cfg(feature = "tiptap")]
     pub use super::tiptap_editor::TiptapEditor;
     pub use super::{
@@ -69,13 +71,11 @@ pub mod prelude {
         kbd::{KbdConcatenate, KbdKey, KbdShortcut, KbdShortcutRoot},
         label::Label,
         link::{AnchorLink, Link, LinkExt, LinkRel},
-        modal::{Modal, ModalBody, ModalFooter, ModalHeader, ModalRoot, ModalTitle},
-        popover::{Popover, PopoverAlignX, PopoverAlignY, PopoverContent},
+        modal::{Modal, ModalBody, ModalFooter, ModalHeader, ModalTitle},
+        popover::{Popover, PopoverContext, PopoverTrigger},
         progress_bar::ProgressBar,
-        quicksearch::{Quicksearch, QuicksearchOption, QuicksearchTrigger},
         radio::{Radio, RadioGroup},
         root::{Leptonic, Root},
-        safe_html::SafeHtml,
         select::{Multiselect, OptionalSelect, Select},
         separator::Separator,
         skeleton::Skeleton,
@@ -101,7 +101,7 @@ pub mod prelude {
             slide::Slide,
             zoom::Zoom,
         },
-        typography::{Code, Li, Ul},
+        typography::{Code, Language, Li, Ul},
     };
     pub use crate::hooks::LinkTarget;
 }

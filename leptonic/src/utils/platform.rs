@@ -55,6 +55,11 @@ pub mod device {
             && !user_agent.contains("CriOS")
     }
 
+    /// Returns `true` if the current device is an Apple device (macOS or iOS).
+    pub fn is_apple_device() -> bool {
+        is_mac() || is_ios()
+    }
+
     pub fn is_android() -> bool {
         user_agent().as_deref().is_some_and(_is_android)
     }

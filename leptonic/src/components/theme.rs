@@ -1,9 +1,18 @@
 use leptos::prelude::*;
+use leptos_use::use_document;
 
-use crate::components::{
-    prelude::{Toggle, ToggleIcons},
-    toggle::{ToggleProps, ToggleSize, ToggleVariant},
+use crate::{
+    components::{
+        prelude::{Toggle, ToggleIcons},
+        toggle::{ToggleProps, ToggleSize, ToggleVariant},
+    },
+    utils::{classes::Classes, styles::Styles},
 };
+
+/// Marker indicating that a `ThemeProvider` has already claimed the
+/// document-element `data-theme` attribute. Nested providers skip it.
+#[derive(Clone, Copy)]
+struct RootThemeApplied;
 
 /// Leptonic's default themes. You may want to create your own theme-defining-type if you have additional or differently named themes.
 #[derive(Default, Debug, PartialEq, Eq, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -54,6 +63,21 @@ where
 
     provide_context(ThemeContext { theme, set_theme });
 
+    // If no parent ThemeProvider has claimed the document element,
+    // mirror data-theme onto <html> so Portal content inherits CSS variables.
+    let is_root = use_context::<RootThemeApplied>().is_none();
+    if is_root {
+        provide_context(RootThemeApplied);
+
+        Effect::new(move |_| {
+            if let Some(doc) = use_document().as_ref() {
+                if let Some(el) = doc.document_element() {
+                    let _ = el.set_attribute("data-theme", theme.get().name());
+                }
+            }
+        });
+    }
+
     view! {
         <div
             class="leptonic-theme-provider"
@@ -66,7 +90,13 @@ where
 }
 
 #[component]
-pub fn ThemeToggle<T>(off: T, on: T, #[prop(optional)] variant: ToggleVariant) -> impl IntoView
+pub fn ThemeToggle<T>(
+    off: T,
+    on: T,
+    #[prop(optional)] variant: ToggleVariant,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+) -> impl IntoView
 where
     T: Theme + 'static,
 {
@@ -92,7 +122,9 @@ where
             on: on.icon(),
             off: off.icon(),
         }),
+        classes: Classes::default(),
+        styles: Styles::default(),
     });
 
-    view! { <div class="leptonic-theme-toggle">{toggle}</div> }
+    view! { <div class=classes.add("leptonic-theme-toggle") style=styles>{toggle}</div> }
 }

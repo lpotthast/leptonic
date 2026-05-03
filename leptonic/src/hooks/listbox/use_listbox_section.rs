@@ -8,13 +8,9 @@ use crate::{
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useListBoxSection.ts
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_listbox_section` hook.
 #[derive(Debug, Clone, Default)]

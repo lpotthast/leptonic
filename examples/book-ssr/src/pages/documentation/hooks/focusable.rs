@@ -1,50 +1,13 @@
 use indoc::indoc;
-use leptonic::{
-    atoms::focus_ring::FocusRing, components::prelude::*, hooks::*, prelude::Size,
-    utils::Propagation,
-};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::focusable::FocusableDemo;
 
 #[component]
 pub fn PageUseFocusable() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
-    let (exclude_from_tab, set_exclude_from_tab) = signal(false);
-    let (focus_count, set_focus_count) = signal(0);
-    let (blur_count, set_blur_count) = signal(0);
-    let (is_focused, set_is_focused) = signal(false);
-    let (key_events, set_key_events) = signal(Vec::<String>::new());
-
-    let UseFocusableReturn {
-        props,
-        focus_handle,
-    } = use_focusable(UseFocusableInput {
-        disabled: disabled.into(),
-        auto_focus: false,
-        exclude_from_tab_order: exclude_from_tab.into(),
-        on_focus: Some(Callback::new(move |_| {
-            set_focus_count.update(|c| *c += 1);
-        })),
-        on_blur: Some(Callback::new(move |_| {
-            set_blur_count.update(|c| *c += 1);
-        })),
-        on_focus_change: Some(Callback::new(move |focused: bool| {
-            set_is_focused.set(focused);
-        })),
-        on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
-            set_key_events.update(|events| {
-                events.push(format!("Key: {}", e.key()));
-                if events.len() > 5 {
-                    events.remove(0);
-                }
-            });
-            e.continue_propagation();
-        })),
-        on_key_up: None,
-    });
-    let attrs = props.into_attrs();
-
     view! {
         <Article>
             <h1 id="use_focusable" class="anchor">
@@ -52,105 +15,33 @@ pub fn PageUseFocusable() -> impl IntoView {
                 <AnchorLink href="#use_focusable" description="Direct link to article header"/>
             </h1>
 
-            <p>"Make any element focusable with proper keyboard event handling. Combines " <code>"use_focus"</code> " and " <code>"use_keyboard"</code> " for a complete focusable element solution."</p>
+            <p>
+                "The "<code>"use_focusable"</code>" hook makes any element focusable with proper keyboard event handling. "
+                "Combines "<code>"use_focus"</code>" and "<code>"use_keyboard"</code>" for a complete focusable element solution. "
+                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+            </p>
 
-            <h2 id="basic-usage" class="anchor">
-                "Basic Usage"
-                <AnchorLink href="#basic-usage" description="Direct link to basic usage"/>
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useFocusable.html" target=LinkTarget::_Blank>
+                    "useFocusable"
+                </LinkExt>
+                "."
+            </p>
+
+            <h2 id="demo" class="anchor">
+                "Interactive Demo"
+                <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
-
-            <Code>
-                {indoc!(r#"
-                    let UseFocusableReturn { props, focus_handle } = use_focusable(UseFocusableInput {
-                        disabled: Signal::derive(|| false),
-                        auto_focus: false,
-                        exclude_from_tab_order: Signal::derive(|| false),
-                        on_focus: Some(Callback::new(|_| { /* focused */ })),
-                        on_blur: Some(Callback::new(|_| { /* blurred */ })),
-                        on_focus_change: Some(Callback::new(|focused: bool| { /* focus state changed */ })),
-                        on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
-                            if e.key() == "Enter" {
-                                // Handle enter key
-                            } else {
-                                e.continue_propagation();
-                            }
-                        })),
-                        on_key_up: None,
-                    });
-
-                    view! {
-                        <div role="button" {..props.into_attrs()}>
-                            "Click or Tab to focus"
-                        </div>
-
-                        // Programmatically focus the element
-                        <button on:click=move |_| focus_handle.focus()>
-                            "Focus"
-                        </button>
-                    }
-                "#)}
-            </Code>
 
             <p>"Focus the custom element below using Tab, click, or the button. The demo uses " <code>"FocusRing"</code> " (powered by " <code>"use_focus_ring"</code> ") to show a visible ring on keyboard focus:"</p>
 
-            <div style=flex_row_center()>
-                <FocusRing>
-                    <div
-                        {..attrs}
-                        role="button"
-                        style="
-                            display: inline-flex;
-                            align-items: center;
-                            justify-content: center;
-                            border: 2px solid var(--brand-color);
-                            padding: 1em 2em;
-                            border-radius: 8px;
-                            cursor: pointer;
-                            background: var(--brand-color-light, rgba(230, 105, 86, 0.1));
-                            outline: none;
-                            transition: all 0.2s;
-                        "
-                    >
-                        "Custom Focusable Element"
-                    </div>
-                </FocusRing>
-
-                <button
-                    on:click=move |_| focus_handle.focus()
-                    style=demo_button()
-                >
-                    "Click to focus"
-                </button>
-            </div>
-
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Em(0.5) attr:style="margin-top: 1em;">
-                <FormControl attr:style=form_control_row()>
-                    <Checkbox checked=disabled set_checked=set_disabled />
-                    <Label>"Disabled"</Label>
-                </FormControl>
-
-                <FormControl attr:style=form_control_row()>
-                    <Checkbox checked=exclude_from_tab set_checked=set_exclude_from_tab />
-                    <Label>"Exclude from tab order (tabindex=-1)"</Label>
-                </FormControl>
-            </Stack>
-
-            <div style=flex_row_gap()>
-                <p>"Focus count: " { move || focus_count.get() }</p>
-                <p>"Blur count: " { move || blur_count.get() }</p>
-                <p style=move || if is_focused.get() { state_active() } else { state_inactive() }>
-                    { move || if is_focused.get() { "Focused" } else { "Not focused" } }
-                </p>
-            </div>
-
-            <p>"Last key events: " { move || {
-                let events = key_events.get();
-                if events.is_empty() {
-                    "(none)".to_string()
-                } else {
-                    events.join(", ")
-                }
-            }}</p>
+            <DemoShell
+                source=include_str!("demos/focusable.rs")
+                description="Custom focusable element with keyboard events"
+            >
+                <FocusableDemo />
+            </DemoShell>
 
             <h2 id="programmatic-focus" class="anchor">
                 "Programmatic Focus"
@@ -159,7 +50,7 @@ pub fn PageUseFocusable() -> impl IntoView {
 
             <p>"The hook returns a " <code>"FocusHandle"</code> " that allows you to programmatically focus the element. The " <code>"focus()"</code> " method uses " <code>"focus_safely"</code> " which defers focus during screen reader (virtual) modality to avoid VoiceOver scroll issues during CSS transitions:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     let UseFocusableReturn { props, focus_handle } = use_focusable(input);
 
@@ -199,7 +90,7 @@ pub fn PageUseFocusable() -> impl IntoView {
 
             <p>"Set " <code>"auto_focus: true"</code> " to automatically focus the element when it mounts:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     let focusable = use_focusable(UseFocusableInput {
                         auto_focus: true,  // Element will be focused on mount
@@ -215,7 +106,7 @@ pub fn PageUseFocusable() -> impl IntoView {
 
             <p>"Parent components (e.g., " <code>"TooltipTrigger"</code> ") can inject additional event handlers into a focusable child via " <code>"FocusableContext"</code> ". The child's " <code>"use_focusable"</code> " automatically reads the context and chains the parent's handlers with its own."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     // Parent provides context:
                     provide_context(FocusableContext {
@@ -330,16 +221,17 @@ pub fn PageUseFocusable() -> impl IntoView {
                 </Table>
             </TableContainer>
 
-            <h2 id="related-hooks" class="anchor">
-                "Related Hooks"
-                <AnchorLink href="#related-hooks" description="Direct link to related hooks"/>
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
             </h2>
 
             <ul>
-                <li><code>"use_focus"</code> " — Low-level focus/blur event handling. Used internally by " <code>"use_focusable"</code> "."</li>
-                <li><code>"use_keyboard"</code> " — Low-level keyboard event handling. Used internally by " <code>"use_focusable"</code> "."</li>
-                <li><code>"use_focus_ring"</code> " — Tracks whether a focus ring should be visible (keyboard navigation only). The " <code>"FocusRing"</code> " atom wraps this hook."</li>
-                <li><code>"use_focus_visible"</code> " — Tracks the current input modality (keyboard, pointer, virtual) to decide focus visibility."</li>
+                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocus.materialize()>"use_focus"</Link>" \u{2014} low-level focus/blur, used internally"</li>
+                <li><Link href=crate::routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link>" \u{2014} low-level keyboard, used internally"</li>
+                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>" \u{2014} tracks whether a focus ring should be visible"</li>
+                <li><Link href=crate::routes::doc::focus::UseFocusVisible.materialize()>"use_focus_visible"</Link>" \u{2014} tracks current input modality"</li>
             </ul>
 
             <h2 id="deviations" class="anchor">
@@ -356,14 +248,14 @@ pub fn PageUseFocusable() -> impl IntoView {
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "use_focusable", link: "#use_focusable" },
-                Toc::Leaf { title: "Basic Usage", link: "#basic-usage" },
+                Toc::Leaf { title: "Interactive Demo", link: "#demo" },
                 Toc::Leaf { title: "Programmatic Focus", link: "#programmatic-focus" },
                 Toc::Leaf { title: "Tab Index Management", link: "#tab-index" },
                 Toc::Leaf { title: "Auto Focus", link: "#auto-focus" },
                 Toc::Leaf { title: "FocusableContext", link: "#context" },
                 Toc::Leaf { title: "Input", link: "#input" },
                 Toc::Leaf { title: "Return Value", link: "#return-value" },
-                Toc::Leaf { title: "Related Hooks", link: "#related-hooks" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
                 Toc::Leaf { title: "Deviations from react-aria", link: "#deviations" },
             ]
         }/>

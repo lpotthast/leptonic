@@ -1,13 +1,13 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::app_bar::AppBarDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageAppBar() -> impl IntoView {
-    let app_bar_height = Height::Em(3.0);
-
     view! {
         <Article>
             <h1 id="overview">
@@ -17,43 +17,9 @@ pub fn PageAppBar() -> impl IntoView {
 
             <p>"The "<Code inline=true>"<AppBar>"</Code>" component sticks to the top of its parent and provides a convenient entrypoint for many app layouts."</p>
 
-            <div style="position: relative; border: 4px solid gray; width: 100%; height: 20em; overflow: auto;">
-                <AppBar height=app_bar_height attr:style="z-index: 1; background: var(--brand-color); color: white;">
-                    <h3 style="margin-left: 1em; color: white;">"Leptonic"</h3>
-                    <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) attr:style="margin-right: 1em">
-                        <Icon icon=icondata::BsBell></Icon>
-                        <Icon icon=icondata::BsPower></Icon>
-                    </Stack>
-                </AppBar>
-
-                <div style="padding: 0.5em;">
-                    <p>"Scroll ↓"</p>
-                    <Stack spacing=Size::Em(0.5)>
-                        {(0..10).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                    </Stack>
-                </div>
-            </div>
-
-            <Code>
-                {indoc!(r#"
-                    <Box style="position: relative; border: 4px solid gray; width: 100%; height: 20em; overflow: auto;">
-                        <AppBar height=app_bar_height style="z-index: 1; background: var(--brand-color); color: white;">
-                            <H3 style="margin-left: 1em; color: white;">"Leptonic"</h3>
-                            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0) style="margin-right: 1em">
-                                <Icon icon=icondata::BsGithub></Icon>
-                                <Icon icon=icondata::BsPower></Icon>
-                            </Stack>
-                        </AppBar>
-
-                        <Box style="padding: 0.5em;">
-                            <p>"Scroll ↓"</p>
-                            <Stack spacing=Size::Em(0.5)>
-                                {(0..10).map(|_| view! { <Skeleton height=Size::Em(3.0)/> }).collect_view()}
-                            </Stack>
-                        </Box>
-                    </Box>
-                "#)}
-            </Code>
+            <DemoShell source=include_str!("demos/app_bar.rs")>
+                <AppBarDemo />
+            </DemoShell>
 
             <h2 id="styling">
                 "Styling"
@@ -62,7 +28,7 @@ pub fn PageAppBar() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --app-bar-height
                     --app-bar-background-color

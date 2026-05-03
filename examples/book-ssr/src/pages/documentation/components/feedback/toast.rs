@@ -1,20 +1,13 @@
 use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
-use strum::IntoEnumIterator;
-use uuid::Uuid;
 
+use super::demos::toast_creation::ToastCreationDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageToast() -> impl IntoView {
-    let (variant, set_variant) = signal(ToastVariant::Success);
-    let (timeout, set_timeout) = signal(ToastTimeout::DefaultDelay);
-    let (header, set_header) = signal("Header".to_owned());
-    let (body, set_body) = signal("Body".to_owned());
-
-    let toasts = expect_context::<Toasts>();
-
     view! {
         <Article>
             <h1 id="toast" class="anchor">
@@ -22,59 +15,9 @@ pub fn PageToast() -> impl IntoView {
                 <AnchorLink href="#toast" description="Direct link to article header"/>
             </h1>
 
-            <TextInput get=header set=set_header placeholder=Oco::Borrowed("Header text") attr:style="margin-bottom: 1em;"/>
-            <TextInput get=body set=set_body placeholder=Oco::Borrowed("Body text") attr:style="margin-bottom: 1em;"/>
-
-            <Select
-                options={ToastVariant::iter().collect::<Vec<_>>()}
-                selected=variant
-                set_selected=set_variant
-                search_text_provider=move |o| format!("{o}")
-                render_option=move |o| format!("{o:?}").into_view()
-                attr:style="margin-bottom: 1em;"
-            />
-
-            <Select
-                options=vec![ToastTimeout::None, ToastTimeout::DefaultDelay]
-                selected=timeout
-                set_selected=set_timeout
-                search_text_provider=move |o| format!("{o}")
-                render_option=move |o| format!("{o:?}").into_view()
-                attr:style="margin-bottom: 1em;"
-            />
-
-            <Button on_press=move |_| { toasts.push(
-                Toast {
-                    id: Uuid::new_v4(),
-                    created_at: time::OffsetDateTime::now_utc(),
-                    variant: variant.get_untracked(),
-                    header: (move || header.get()).into(),
-                    body: (move || body.get()).into(),
-                    timeout: timeout.get_untracked(),
-                }); }>
-                "Create Toast"
-            </Button>
-
-            <Code>
-                {indoc!(r#"
-                    let toasts = expect_context::<Toasts>();
-
-                    view! {
-                        <Button on_press=move |_| { toasts.push(
-                            Toast {
-                                id: Uuid::new_v4(),
-                                created_at: time::OffsetDateTime::now_utc(),
-                                variant: variant.get_untracked(),
-                                header: header.get_untracked().into_view(),
-                                body: body.get_untracked().into_view(),
-                                timeout: timeout.get_untracked(),
-                            }
-                        )}>
-                            "Create Toast"
-                        </Button>
-                    }
-                "#)}
-            </Code>
+            <DemoShell source=include_str!("demos/toast_creation.rs")>
+                <ToastCreationDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -83,7 +26,7 @@ pub fn PageToast() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --toast-border-radius
                     --toast-header-border-bottom

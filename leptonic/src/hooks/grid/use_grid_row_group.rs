@@ -4,17 +4,11 @@ use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridRowGroup.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## OMITTED FEATURES
 // - `isVirtualized` — no virtualization support.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - Returns a props struct with `into_attrs()` instead of React props.
-//
-// =============================================================================
 
 /// Return value for a grid row group.
 pub struct UseGridRowGroupReturn {

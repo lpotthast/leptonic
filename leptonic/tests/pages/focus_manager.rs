@@ -17,6 +17,7 @@ impl BaseActions for FocusManagerPage<'_> {
     }
 }
 
+#[allow(dead_code)]
 impl FocusManagerPage<'_> {
     pub async fn goto(&self) -> anyhow::Result<()> {
         tracing::info!("Navigating to focus-manager hook test page...");

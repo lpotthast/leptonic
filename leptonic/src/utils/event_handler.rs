@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use leptos::{
     attr::Attribute,
-    ev::{on, EventDescriptor, On, SharedEventCallback},
+    ev::{EventDescriptor, On, SharedEventCallback, on},
 };
 use wasm_bindgen::JsValue;
 

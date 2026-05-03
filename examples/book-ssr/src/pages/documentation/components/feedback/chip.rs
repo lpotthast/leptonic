@@ -2,12 +2,13 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::chip_colors::ChipColorsDemo;
+use super::demos::chip_dismissible::ChipDismissibleDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageChip() -> impl IntoView {
-    let (dismissed, set_dismissed) = signal(false);
-
     view! {
         <Article>
             <h1 id="chip" class="anchor">
@@ -15,18 +16,9 @@ pub fn PageChip() -> impl IntoView {
                 <AnchorLink href="#chip" description="Direct link to article header"/>
             </h1>
 
-            <Code>
-                {indoc!(r#"
-                    <Chip color=ChipColor::Primary>"Primary"</Chip>
-                "#)}
-            </Code>
-
-            <Chip color=ChipColor::Primary>"Primary"</Chip>
-            <Chip color=ChipColor::Secondary>"Secondary"</Chip>
-            <Chip color=ChipColor::Success>"Success"</Chip>
-            <Chip color=ChipColor::Info>"Info"</Chip>
-            <Chip color=ChipColor::Warn>"Warn"</Chip>
-            <Chip color=ChipColor::Danger>"Danger"</Chip>
+            <DemoShell source=include_str!("demos/chip_colors.rs")>
+                <ChipColorsDemo />
+            </DemoShell>
 
             <h2 id="dismissible-chips" class="anchor">
                 "Dismissible chips"
@@ -39,22 +31,9 @@ pub fn PageChip() -> impl IntoView {
                 "The component embedding the chip is responsible of actually removing it, e.g. not rendering it again."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    <Chip color=ChipColor::Secondary dismissible=move |()| set_dismissed.set(true)>
-                        "Dismissible"
-                    </Chip>
-                "#)}
-            </Code>
-
-            <Show
-                when=move || !dismissed.get()
-                fallback=move || view! { <Button on_press=move |_| set_dismissed.set(false)>"Reveal chip"</Button>}
-            >
-                <Chip color=ChipColor::Secondary dismissible=move |_| set_dismissed.set(true)>
-                    "Dismissible"
-                </Chip>
-            </Show>
+            <DemoShell source=include_str!("demos/chip_dismissible.rs")>
+                <ChipDismissibleDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -63,7 +42,7 @@ pub fn PageChip() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --chip-font-size
                     --chip-margin

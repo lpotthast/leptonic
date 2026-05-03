@@ -47,7 +47,7 @@ pub fn focus_safely(element: &web_sys::Element) {
     #[cfg(not(feature = "ssr"))]
     {
         use crate::{
-            hooks::{get_modality, Modality},
+            hooks::{Modality, get_modality},
             utils::shadow_dom::get_active_element,
         };
 

@@ -9,23 +9,19 @@ use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
     hooks::{
-        focus::use_focus::{use_focus, UseFocusInput},
-        interactions::use_keyboard::{use_keyboard, KeyboardEventWrapper, UseKeyboardInput},
         IntoAttrs,
+        focus::use_focus::{UseFocusInput, use_focus},
+        interactions::use_keyboard::{KeyboardEventWrapper, UseKeyboardInput, use_keyboard},
     },
     utils::{
+        EventHandler,
         element_capture::{CapturedElement, ElementCaptureAttr},
         focus::focus_safely,
-        EventHandler,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusable.tsx
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## DIFFERENT BEHAVIOR
 //
 // - Handler optimization when disabled
@@ -45,8 +41,6 @@ use crate::{
 //   There is no wrapper component for providing FocusableContext to children.
 //   Parent components must call `provide_context(FocusableContext { ... })`
 //   directly before rendering focusable children.
-//
-// =============================================================================
 
 /// Input parameters for the `use_focusable` hook.
 #[derive(Debug, Clone, Copy)]
@@ -387,7 +381,7 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
     // Uses `get_element()` (reactive) so the Effect re-runs when the element
     // is captured — critical for client-side navigation.
     if auto_focus {
-        let auto_focus_done: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
+        let auto_focus_done: StoredValue<bool> = StoredValue::new(false);
 
         Effect::new(move |_| {
             if auto_focus_done.get_value() {

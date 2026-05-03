@@ -24,10 +24,7 @@ pub fn Toc(toc: Toc) -> impl IntoView {
     view! {
         <nav
             id="toc"
-            style:display=move || match app_layout_context.is_medium.get() {
-                true => "none",
-                false => "initial",
-            }
+            style:display=move || if app_layout_context.is_medium.get() { "none" } else { "initial" }
         >
             <h2 style="margin-top: 0; margin-bottom: 1em;">
                 "Contents"

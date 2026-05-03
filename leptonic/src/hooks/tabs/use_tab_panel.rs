@@ -7,13 +7,9 @@ use crate::{
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabPanel.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_tab_panel` hook.
 #[derive(Debug, Clone)]

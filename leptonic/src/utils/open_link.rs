@@ -3,9 +3,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use wasm_bindgen::{JsCast, JsValue};
 
 use crate::utils::{
+    Modifiers,
     focus::focus_element,
     platform::{browser, device},
-    Modifiers,
 };
 
 /// Whether a link is currently being programmatically opened.
@@ -13,6 +13,7 @@ static IS_OPENING_LINK: AtomicBool = AtomicBool::new(false);
 
 /// Returns whether a link is currently being programmatically opened.
 /// Used by focus-visible tracking to suppress modality changes during link activation.
+#[cfg(not(feature = "ssr"))]
 pub(crate) fn is_opening_link() -> bool {
     IS_OPENING_LINK.load(Ordering::Acquire)
 }

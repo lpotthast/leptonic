@@ -1,7 +1,8 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::collapsible::CollapsibleDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
@@ -13,43 +14,9 @@ pub fn PageCollapsible() -> impl IntoView {
                 <AnchorLink href="#collapsible" description="Direct link to article header"/>
             </h1>
 
-            <Code>
-                {indoc!(r#"
-                    <Collapsibles default_on_open=OnOpen::CloseOthers>
-                        <Stack spacing=Size::Em(0.6)>
-                            <Collapsible>
-                                <CollapsibleHeader slot>"Header1"</CollapsibleHeader>
-                                <CollapsibleBody attr:class="my-body" slot>"Body1"</CollapsibleBody>
-                            </Collapsible>
-                            <Collapsible>
-                                <CollapsibleHeader slot>"Header2"</CollapsibleHeader>
-                                <CollapsibleBody slot>"Body2"</CollapsibleBody>
-                            </Collapsible>
-                            <Collapsible on_open=OnOpen::DoNothing >
-                                <CollapsibleHeader slot>"Header3 - on_open::DoNothing"</CollapsibleHeader>
-                                <CollapsibleBody slot>"Body3"</CollapsibleBody>
-                            </Collapsible>
-                        </Stack>
-                    </Collapsibles>
-                "#)}
-            </Code>
-
-            <Collapsibles default_on_open=OnOpen::CloseOthers>
-                <Stack spacing=Size::Em(0.6)>
-                    <Collapsible>
-                        <CollapsibleHeader slot>"Header1"</CollapsibleHeader>
-                        <CollapsibleBody class="my-body" slot>"Body1"</CollapsibleBody>
-                    </Collapsible>
-                    <Collapsible>
-                        <CollapsibleHeader slot>"Header2"</CollapsibleHeader>
-                        <CollapsibleBody slot>"Body2"</CollapsibleBody>
-                    </Collapsible>
-                    <Collapsible on_open=OnOpen::DoNothing >
-                        <CollapsibleHeader slot>"Header3 - on_open::DoNothing"</CollapsibleHeader>
-                        <CollapsibleBody slot>"Body3"</CollapsibleBody>
-                    </Collapsible>
-                </Stack>
-            </Collapsibles>
+            <DemoShell source=include_str!("demos/collapsible.rs")>
+                <CollapsibleDemo />
+            </DemoShell>
         </Article>
 
         <Toc toc=Toc::List {

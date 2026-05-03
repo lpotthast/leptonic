@@ -2,12 +2,13 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::progress_controlled::ProgressControlledDemo;
+use super::demos::progress_indeterminate::ProgressIndeterminateDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageProgress() -> impl IntoView {
-    let (progress, set_progress) = signal(Some(34.0));
-
     view! {
         <Article>
             <h1 id="progress" class="anchor">
@@ -19,31 +20,9 @@ pub fn PageProgress() -> impl IntoView {
                 "Display how much work of an operation is already completed using the "<Code inline=true>"<ProgressBar>"</Code>" component."
             </p>
 
-            <Code>
-                {indoc!(r"
-                    let (progress, set_progress) = signal(Some(34.0));
-
-                    view! {
-                        <ProgressBar progress=progress/>
-                    }
-                ")}
-            </Code>
-
-            <ProgressBar progress=progress/>
-
-            <NumberInput
-                get=Signal::derive(move || progress.get().unwrap_or_default())
-                set=move |v| set_progress.set(Some(v))
-                attr:style="margin-top: 1em;"
-            />
-
-            <Slider
-                value=Signal::derive(move || progress.get().unwrap_or(0.0))
-                set_value=move |v: f64| set_progress.set(Some((v * 100.0).round() / 100.0))
-                min=0.0
-                max=100.0
-                step=0.01
-            />
+            <DemoShell source=include_str!("demos/progress_controlled.rs")>
+                <ProgressControlledDemo />
+            </DemoShell>
 
             <h2 id="indeterminate-state" class="anchor">
                 "Indeterminate state"
@@ -57,13 +36,9 @@ pub fn PageProgress() -> impl IntoView {
                 "telling the user that something is going on, but we cannot exactly say how much of the total work already completed."
             </p>
 
-            <Code>
-                {indoc!(r"
-                    <ProgressBar progress=signal(None).0 />
-                ")}
-            </Code>
-
-            <ProgressBar progress=signal(None).0 />
+            <DemoShell source=include_str!("demos/progress_indeterminate.rs")>
+                <ProgressIndeterminateDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -72,7 +47,7 @@ pub fn PageProgress() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --progress-bar-height
                     --progress-bar-border-radius

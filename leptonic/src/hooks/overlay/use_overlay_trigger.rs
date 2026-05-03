@@ -11,9 +11,6 @@ use crate::{
     utils::aria::AriaControls,
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // 1. No `overlayProps` / ID generation: react-aria generates an ID for the
 //    overlay and returns `overlayProps` with that ID. In leptonic, the ID is
@@ -27,7 +24,6 @@ use crate::{
 //    handler map for overlay stacking. Leptonic handles dismiss differently
 //    via `use_overlay`.
 //
-// =============================================================================
 
 /// The type of overlay opened by a trigger.
 ///

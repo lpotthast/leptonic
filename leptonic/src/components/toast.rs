@@ -54,7 +54,7 @@ impl Debug for Toast {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[allow(unused)]
 pub enum ToastTimeout {
     None,
@@ -173,6 +173,7 @@ pub enum ToastVerticalPosition {
 }
 
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn Toast(toast: Toast) -> impl IntoView {
     let manually_closable = match toast.timeout {
         ToastTimeout::None => true,

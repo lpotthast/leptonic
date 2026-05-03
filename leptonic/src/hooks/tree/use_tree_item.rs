@@ -1,6 +1,9 @@
 use leptos::{
     attr,
-    attr::Attr,
+    attr::{
+        Attr,
+        custom::{CustomAttr, custom_attribute},
+    },
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
@@ -10,18 +13,14 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaRole, AriaSelected},
         EventHandler,
+        aria::{AriaDisabled, AriaExpanded, AriaRole, AriaSelected},
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_tree_item` hook.
 #[derive(Debug, Clone)]
@@ -62,17 +61,26 @@ pub struct UseTreeItemInput {
     /// Callback when the item is activated.
     pub on_action: Option<Callback<()>>,
 
-    /// Callback to navigate to the next item.
+    /// Called when navigation to the next visible item is requested (ArrowDown).
     pub on_focus_next: Option<Callback<()>>,
 
-    /// Callback to navigate to the previous item.
+    /// Called when navigation to the previous visible item is requested (ArrowUp).
     pub on_focus_previous: Option<Callback<()>>,
 
-    /// Callback to navigate to the parent item.
+    /// Called when navigation to the parent item is requested (ArrowLeft on collapsed/leaf).
     pub on_focus_parent: Option<Callback<()>>,
 
-    /// Callback to navigate to the first child.
+    /// Called when navigation to the first child is requested (ArrowRight on expanded).
     pub on_focus_first_child: Option<Callback<()>>,
+
+    /// Called when navigation to the first visible item in the tree is requested (Home).
+    pub on_focus_first: Option<Callback<()>>,
+
+    /// Called when navigation to the last visible item in the tree is requested (End).
+    pub on_focus_last: Option<Callback<()>>,
+
+    /// Called when this item receives DOM focus, so the tree can update its focus tracking.
+    pub on_focus_self: Option<Callback<()>>,
 }
 
 /// The return value of the `use_tree_item` hook.
@@ -95,13 +103,15 @@ pub struct UseTreeItemReturn {
 }
 
 /// Props from `use_tree_item` for the item element that can be extracted and merged programmatically.
-/// Note: aria-level, aria-setsize, aria-posinset should be set via custom attributes.
 #[derive(Debug)]
 pub struct UseTreeItemProps {
     pub role: AriaRole,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
     pub aria_selected: Signal<Option<AriaSelected>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_level: String,
+    pub aria_setsize: String,
+    pub aria_posinset: String,
     pub tabindex: Signal<&'static str>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
@@ -117,6 +127,9 @@ impl IntoAttrs for UseTreeItemProps {
             Attr(attr::AriaExpanded, self.aria_expanded),
             Attr(attr::AriaSelected, self.aria_selected),
             Attr(attr::AriaDisabled, self.aria_disabled),
+            custom_attribute("aria-level", self.aria_level),
+            Attr(attr::AriaSetsize, self.aria_setsize),
+            Attr(attr::AriaPosinset, self.aria_posinset),
             Attr(attr::Tabindex, self.tabindex),
             self.on_click.into_on(ev::click),
             self.on_keydown.into_on(ev::keydown),
@@ -126,12 +139,14 @@ impl IntoAttrs for UseTreeItemProps {
 }
 
 /// Attributes for the tree item element.
-/// Note: aria-level, aria-setsize, aria-posinset should be set via custom attributes.
 pub type UseTreeItemAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
     Attr<attr::AriaSelected, Signal<Option<AriaSelected>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    CustomAttr<&'static str, String>,
+    Attr<attr::AriaSetsize, String>,
+    Attr<attr::AriaPosinset, String>,
     Attr<attr::Tabindex, Signal<&'static str>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
@@ -175,6 +190,9 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
         on_focus_previous,
         on_focus_parent,
         on_focus_first_child,
+        on_focus_first,
+        on_focus_last,
+        on_focus_self,
     } = input;
 
     // aria-expanded only applies if has children
@@ -209,6 +227,9 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
 
     let handle_keydown = move |e: KeyboardEvent| {
         if disabled.get_untracked() {
+            return;
+        }
+        if e.is_composing() {
             return;
         }
 
@@ -268,18 +289,33 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
                     on_prev.run(());
                 }
             }
+            "Home" => {
+                e.prevent_default();
+                if let Some(on_first) = on_focus_first {
+                    on_first.run(());
+                }
+            }
+            "End" => {
+                e.prevent_default();
+                if let Some(on_last) = on_focus_last {
+                    on_last.run(());
+                }
+            }
             _ => {}
         }
     };
 
     let handle_focus = move |_e: web_sys::FocusEvent| {
-        // Focus is managed by parent
+        if let Some(on_focus_self) = on_focus_self {
+            on_focus_self.run(());
+        }
     };
 
-    // Note: aria-level, aria-setsize, aria-posinset should be set via custom attributes
-    // let aria_level = (input.level + 1).to_string();
-    // let aria_setsize = input.set_size.to_string();
-    // let aria_posinset = input.position_in_set.to_string();
+    // Convert to 1-based ARIA level (input is 0-based: 0 = root).
+    let aria_level = (level + 1).to_string();
+    // position_in_set is already 1-based per input contract.
+    let aria_posinset = position_in_set.to_string();
+    let aria_setsize = set_size.to_string();
 
     UseTreeItemReturn {
         item_props: UseTreeItemProps {
@@ -287,6 +323,9 @@ pub fn use_tree_item(input: UseTreeItemInput) -> UseTreeItemReturn {
             aria_expanded,
             aria_selected,
             aria_disabled,
+            aria_level,
+            aria_setsize,
+            aria_posinset,
             tabindex,
             on_click: EventHandler::new(handle_click),
             on_keydown: EventHandler::new(handle_keydown),

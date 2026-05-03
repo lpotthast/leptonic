@@ -2,9 +2,7 @@ use leptos::prelude::*;
 
 // Based on: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/DismissButton.tsx
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## STRUCTURAL
 //
@@ -19,8 +17,6 @@ use leptos::prelude::*;
 //   rarely needed for dismiss buttons.
 // - Localized default label: react-aria uses i18n for the default "Dismiss"
 //   label. We use a static English default with an `aria_label` prop override.
-//
-// =============================================================================
 
 /// A visually hidden button that allows screen reader users to dismiss an overlay.
 ///

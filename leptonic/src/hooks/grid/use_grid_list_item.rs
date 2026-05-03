@@ -1,5 +1,3 @@
-use std::hash::Hash;
-
 use leptos::{
     attr,
     attr::Attr,
@@ -13,33 +11,28 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use super::use_grid_list::UseGridListState;
 use crate::{
     hooks::{
+        IntoAttrs, PropsWithStyles,
         focus::use_focus_manager::{FocusManager, FocusManagerOptions},
         selection::{
-            use_selectable_item::{use_selectable_item, UseSelectableItemInput},
+            SelectionKey,
+            use_selectable_item::{UseSelectableItemInput, use_selectable_item},
             use_selection_state::SelectionMode,
         },
-        IntoAttrs,
     },
     utils::{
+        EventAccessors, EventHandler,
         aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::{CapturedElement, ElementCaptureAttr},
         focus::focus_element,
-        EventAccessors, EventHandler,
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input for a grid list item.
 pub struct UseGridListItemInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Shared grid list state from `use_grid_list`.
     pub state: UseGridListState<K>,
@@ -60,7 +53,7 @@ where
 /// Return value for a grid list item.
 pub struct UseGridListItemReturn {
     /// Props for the row element (`role="row"`).
-    pub row_props: UseGridListItemRowProps,
+    pub row_props: PropsWithStyles<UseGridListItemRowProps>,
 
     /// Props for the gridcell element (`role="gridcell"`).
     pub gridcell_props: UseGridListItemGridCellProps,
@@ -76,7 +69,7 @@ pub struct UseGridListItemReturn {
 }
 
 /// Props for the row element of a grid list item.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseGridListItemRowProps {
     pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
@@ -130,7 +123,7 @@ pub type UseGridListItemRowAttrs = (
 );
 
 /// Props for the gridcell element of a grid list item.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseGridListItemGridCellProps {
     pub role: AriaRole,
     pub aria_colindex: &'static str,
@@ -195,7 +188,7 @@ pub type UseGridListItemGridCellAttrs = (
 #[allow(clippy::needless_pass_by_value, clippy::too_many_lines)]
 pub fn use_grid_list_item<K>(input: UseGridListItemInput<K>) -> UseGridListItemReturn
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseGridListItemInput {
         state,
@@ -224,14 +217,23 @@ where
         selection_behavior: state.selection_behavior,
         selected_keys: state.selection.selected_keys,
         focused_key: state.focused_key,
+        is_collection_focused: Signal::derive(|| true),
         is_disabled,
+        disabled_behavior: state.selection.disabled_behavior,
+        disallow_empty_selection: false,
         on_toggle: state.selection.toggle,
-        on_select: state.selection.select,
+        on_replace: state.selection.select,
+        on_extend: None,
         on_focus: state.set_focused_key,
         should_select_on_press_up: false,
+        should_focus_on_hover: false,
         allow_drag: false,
+        allows_different_press_origin: false,
+        on_action: None,
         on_double_click: None,
+        on_selection_behavior_change: None,
         focus: Some(focus_fn),
+        data_key: None,
     });
 
     let is_selected = selectable.is_selected;
@@ -309,27 +311,33 @@ where
     });
 
     // --- Compose handlers ---
-    let on_click = selectable.props.on_click;
-    let on_dblclick = selectable.props.on_dblclick;
-    let on_keydown = row_keydown;
-    let on_focus = selectable.props.on_focus.chain(row_focus);
-    let on_mouseenter = selectable.props.on_mouseenter;
+    let (selectable_props, selectable_styles) = selectable.props.into_inner();
+    let on_click = selectable_props.press.on_click;
+    let on_dblclick = selectable_props.press.on_dblclick;
+    let on_keydown = row_keydown.chain(selectable_props.press.on_keydown);
+    let on_focus = selectable_props.on_focus.chain(row_focus);
+    let on_mouseenter = selectable_props.on_mouseenter;
 
     UseGridListItemReturn {
-        row_props: UseGridListItemRowProps {
-            role: AriaRole::Row,
-            tabindex,
-            aria_rowindex,
-            aria_selected,
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-            aria_label: text_value,
-            element_capture: row_element.attr(),
-            on_keydown,
-            on_click,
-            on_dblclick,
-            on_focus,
-            on_mouseenter,
-        },
+        row_props: PropsWithStyles::new(
+            UseGridListItemRowProps {
+                role: AriaRole::Row,
+                tabindex,
+                aria_rowindex,
+                aria_selected,
+                aria_disabled: Signal::derive(move || {
+                    is_disabled.get().then_some(AriaDisabled::True)
+                }),
+                aria_label: text_value,
+                element_capture: row_element.attr(),
+                on_keydown,
+                on_click,
+                on_dblclick,
+                on_focus,
+                on_mouseenter,
+            },
+            selectable_styles,
+        ),
         gridcell_props: UseGridListItemGridCellProps {
             role: AriaRole::Gridcell,
             aria_colindex: "1",

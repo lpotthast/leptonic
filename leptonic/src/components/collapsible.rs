@@ -4,7 +4,10 @@ use leptos::prelude::*;
 use tracing::warn;
 use uuid::Uuid;
 
-use crate::components::icon::Icon;
+use crate::{
+    components::icon::Icon,
+    utils::{classes::Classes, styles::Styles},
+};
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
 pub enum OnOpen {
@@ -69,12 +72,17 @@ impl CollapsibleContext {
 }
 
 #[component]
-pub fn Collapsibles(default_on_open: OnOpen, children: Children) -> impl IntoView {
+pub fn Collapsibles(
+    default_on_open: OnOpen,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
     provide_context(CollapsiblesContext {
         default_on_open,
         collapsibles: Arc::new(RwLock::new(vec![])),
     });
-    view! { <div class="leptonic-collapsibles">{children()}</div> }
+    view! { <div class=classes.add("leptonic-collapsibles") style=styles>{children()}</div> }
 }
 
 pub fn use_collapsible(open: bool, on_open: Option<OnOpen>) -> CollapsibleContext {
@@ -85,7 +93,9 @@ pub fn use_collapsible(open: bool, on_open: Option<OnOpen>) -> CollapsibleContex
     let mut parent = use_context::<CollapsiblesContext>();
 
     if parent.is_none() && on_open.is_some() {
-        warn!("Collapsible {id}: Setting on_open on a Collapsible when that collapsible is not a Child of a Collapsibles parent element is pointless. Remove the argument or wrap this Collapsible in a Collapsibles.");
+        warn!(
+            "Collapsible {id}: Setting on_open on a Collapsible when that collapsible is not a Child of a Collapsibles parent element is pointless. Remove the argument or wrap this Collapsible in a Collapsibles."
+        );
     }
 
     let ctx = CollapsibleContext {
@@ -110,13 +120,15 @@ pub fn Collapsible(
     #[prop(optional, default = false)]
     open: bool,
     #[prop(optional)] on_open: Option<OnOpen>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     collapsible_header: CollapsibleHeader,
     collapsible_body: CollapsibleBody,
 ) -> impl IntoView {
     let collapsible = use_collapsible(open, on_open);
     let id_str = collapsible.id.to_string();
     view! {
-        <div class="leptonic-collapsible" id=id_str>
+        <div class=classes.add("leptonic-collapsible") style=styles id=id_str>
             <CollapsibleHeaderInternal collapsible_header />
             <CollapsibleBodyInternal collapsible_body />
         </div>

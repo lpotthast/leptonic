@@ -1,19 +1,18 @@
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
-    tachys::html::style::Style,
 };
 use web_sys::{DragEvent, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
     hooks::{IntoAttrs, UseFocusRingProps, UsePressProps},
-    utils::{aria::AriaDescribedby, style::TouchActionStyle, EventHandler, MergeWith},
+    utils::{EventHandler, MergeWith, aria::AriaDescribedby},
 };
 
 /// Combined props from `use_press` and `use_focus_ring` hooks (without hover).
@@ -68,7 +67,6 @@ pub type MergedPressFocusRingAttrs = (
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
     On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-    Style<(TouchActionStyle, &'static str)>,
     Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
     // From focus ring.
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -89,7 +87,6 @@ impl IntoAttrs for MergedPressFocusRingProps {
             self.on_dragstart.into_on(ev::dragstart),
             self.on_mousedown.into_on(ev::mousedown),
             self.on_pointerup.into_on(ev::pointerup),
-            TouchActionStyle::with_value("pan-x pan-y pinch-zoom"),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),

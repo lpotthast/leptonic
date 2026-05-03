@@ -1,8 +1,8 @@
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
@@ -10,33 +10,38 @@ use leptos::{
 };
 use web_sys::{FocusEvent, KeyboardEvent};
 
-use super::use_field::ValidationState;
+use super::{
+    use_form_reset::{UseFormResetInput, use_form_reset},
+    use_form_validation::{UseFormValidationInput, use_form_validation},
+    use_form_validation_state::{
+        UseFormValidationStateInput, ValidateFn, ValidationBehavior, ValidityStateSnapshot,
+        use_form_validation_state,
+    },
+};
 use crate::{
     hooks::{
-        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
+        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
     },
     utils::{
+        CapturedElement, ElementCaptureAttr, EventHandler,
         aria::{AriaChecked, AriaDisabled, AriaHidden, AriaInvalid, AriaRole},
-        EventHandler,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/switch/src/useSwitch.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_switch` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Clone)]
 pub struct UseSwitchInput {
     /// Whether the switch is selected (controlled).
     pub is_selected: Signal<bool>,
+
+    /// The default value to restore on form reset.
+    /// If `None`, the initial value of `is_selected` at hook creation time is used.
+    pub default_value: Option<bool>,
 
     /// Callback when the selection changes.
     pub on_change: Option<Callback<bool>>,
@@ -47,8 +52,21 @@ pub struct UseSwitchInput {
     /// Whether the switch is read-only.
     pub is_read_only: Signal<bool>,
 
-    /// The validation state of the switch.
-    pub validation_state: ValidationState,
+    /// Whether the field is explicitly marked as invalid (controlled validation).
+    ///
+    /// - `None` — not controlled; validation comes from `validate`, server errors,
+    ///   or native constraint validation.
+    /// - `Some(signal)` — controlled; the signal value determines valid/invalid
+    ///   and overrides all other validation sources.
+    pub is_invalid: Option<Signal<bool>>,
+
+    /// Custom client-side validation function.
+    ///
+    /// Returns `Ok(())` for valid, `Err(messages)` for invalid.
+    pub validate: Option<ValidateFn<bool>>,
+
+    /// Validation behavior mode.
+    pub validation_behavior: ValidationBehavior,
 
     /// An accessibility label for the switch.
     pub aria_label: Option<&'static str>,
@@ -64,10 +82,13 @@ impl Default for UseSwitchInput {
     fn default() -> Self {
         Self {
             is_selected: Signal::derive(|| false),
+            default_value: None,
             on_change: None,
             is_disabled: Signal::derive(|| false),
             is_read_only: Signal::derive(|| false),
-            validation_state: ValidationState::Valid,
+            is_invalid: None,
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
             aria_label: None,
             name: None,
             value: None,
@@ -91,6 +112,15 @@ pub struct UseSwitchReturn {
 
     /// Whether the focus ring should be visible (keyboard navigation only).
     pub is_focus_visible: Signal<bool>,
+
+    /// Whether the displayed validation is invalid.
+    pub is_invalid: Signal<bool>,
+
+    /// The displayed validation error messages.
+    pub validation_errors: Signal<Vec<String>>,
+
+    /// Detailed validity state (mirrors native `ValidityState`).
+    pub validation_details: Signal<ValidityStateSnapshot>,
 }
 
 /// Props from `use_switch` for the switch element that can be extracted and merged programmatically.
@@ -99,10 +129,11 @@ pub struct UseSwitchProps {
     pub role: AriaRole,
     pub aria_checked: Signal<AriaChecked>,
     pub aria_label: Option<&'static str>,
-    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub tabindex: &'static str,
     pub data_focus_visible: Signal<Option<&'static str>>,
+    pub element_capture: ElementCaptureAttr,
     pub on_click: EventHandler<web_sys::MouseEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -122,6 +153,7 @@ impl IntoAttrs for UseSwitchProps {
             Attr(attr::AriaInvalid, self.aria_invalid),
             Attr(attr::AriaDisabled, self.aria_disabled),
             Attr(attr::Tabindex, self.tabindex),
+            self.element_capture,
             self.on_click.into_on(ev::click),
             self.on_keydown.into_on(ev::keydown),
             self.on_focus.into_on(ev::focus),
@@ -138,9 +170,10 @@ pub type UseSwitchAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaChecked, Signal<AriaChecked>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::Tabindex, &'static str>,
+    ElementCaptureAttr,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -214,19 +247,54 @@ pub type UseSwitchInputAttrs = (
 ///     <input {..switch.input_props.into_attrs()} />
 /// }
 /// ```
+#[allow(clippy::needless_pass_by_value, clippy::too_many_lines)]
 pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
     let UseSwitchInput {
         is_selected,
+        default_value,
         on_change,
         is_disabled,
         is_read_only,
-        validation_state,
+        is_invalid,
+        validate,
+        validation_behavior,
         aria_label,
         name,
         value,
     } = input;
 
     let (is_pressed, _set_is_pressed) = signal(false);
+
+    // ---- Element capture for DOM access ----
+    let element = CapturedElement::new();
+
+    // ---- Form validation state ----
+    let validation = use_form_validation_state(UseFormValidationStateInput {
+        is_invalid,
+        value: is_selected,
+        validate,
+        validation_behavior,
+        name: name.map(ToString::to_string),
+    });
+
+    // ---- Form reset (restores value on form reset) ----
+    let initial_value = default_value.unwrap_or_else(|| is_selected.get_untracked());
+    use_form_reset(UseFormResetInput {
+        element,
+        initial_value,
+        on_reset: Callback::new(move |val: bool| {
+            if let Some(on_change) = on_change {
+                on_change.run(val);
+            }
+        }),
+    });
+
+    // ---- Form validation DOM connection ----
+    use_form_validation(UseFormValidationInput {
+        element,
+        state: validation,
+        validation_behavior,
+    });
 
     // Toggle the state
     let toggle = move || {
@@ -266,7 +334,8 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
     let aria_checked = Signal::derive(move || AriaChecked::from(is_selected.get()));
 
     // Compute aria-invalid
-    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid =
+        Signal::derive(move || validation.is_invalid.get().then_some(AriaInvalid::True));
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
@@ -285,6 +354,10 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
         on_focus_change: None,
     });
 
+    // ---- Validation details convenience signal ----
+    let validation_details =
+        Signal::derive(move || validation.display_validation.get().validation_details);
+
     UseSwitchReturn {
         switch_props: UseSwitchProps {
             role: AriaRole::Switch,
@@ -294,6 +367,7 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
             aria_disabled,
             tabindex: "0",
             data_focus_visible: focus_ring_props.data_focus_visible,
+            element_capture: element.attr(),
             on_click: EventHandler::new(handle_click),
             on_keydown: EventHandler::new(handle_keydown),
             on_focus: focus_ring_props.on_focus,
@@ -312,5 +386,8 @@ pub fn use_switch(input: UseSwitchInput) -> UseSwitchReturn {
         is_selected,
         is_pressed: is_pressed.into(),
         is_focus_visible,
+        is_invalid: validation.is_invalid,
+        validation_errors: validation.validation_errors,
+        validation_details,
     }
 }

@@ -1,47 +1,67 @@
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
 };
 use uuid::Uuid;
-use wasm_bindgen::JsCast;
-use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
+use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent, WheelEvent};
 
-use super::use_field::ValidationState;
+use super::{
+    use_form_reset::{UseFormResetInput, use_form_reset},
+    use_form_validation::{UseFormValidationInput, use_form_validation},
+    use_form_validation_state::{
+        UseFormValidationStateInput, ValidateFn, ValidationBehavior, ValidityStateSnapshot,
+        use_form_validation_state,
+    },
+    use_number_field_state::UseNumberFieldStateReturn,
+};
 use crate::{
     hooks::{
-        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
+        focus::{
+            use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+            use_focus_within::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
+        },
+        interactions::use_scroll_wheel::{
+            ScrollEvent, UseScrollWheelInput, UseScrollWheelReturn, use_scroll_wheel,
+        },
+        spinbutton::use_spin_button::{UseSpinButtonInput, UseSpinButtonReturn, use_spin_button},
     },
     utils::{
+        CapturedElement, ElementCaptureAttr, EventHandler,
         aria::{AriaInvalid, AriaLive, AriaRequired, AriaRole},
-        EventAccessors, EventHandler,
+        platform::device,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/numberfield/src/useNumberField.ts
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// 1. Hook-owned state: Callers must pass `UseNumberFieldStateReturn` from
+//    `use_number_field_state` instead of inline value/onChange.
 //
-// =============================================================================
+// 2. ICU4X instead of `Intl.NumberFormat` for SSR safety.
+//
+// 3. No separate `useFormattedTextField` hook: input filtering and
+//    composition handling are integrated directly.
+//
+// 4. PointerEvent-only for button auto-repeat (per CLAUDE.md: PointerEvent
+//    is always available).
+//
+// 5. `role="spinbutton"` is removed from the input element (matching
+//    react-aria which explicitly nullifies it for VoiceOver compatibility).
 
 /// Input parameters for the `use_number_field` hook.
 #[derive(Clone)]
 pub struct UseNumberFieldInput {
-    /// The current value (controlled).
-    pub value: Signal<Option<f64>>,
-
-    /// Callback when the value changes.
-    pub on_change: Option<Callback<Option<f64>>>,
+    /// The number field state (from `use_number_field_state`).
+    pub state: UseNumberFieldStateReturn,
 
     /// Callback when input receives focus.
     pub on_focus: Option<Callback<()>>,
@@ -58,8 +78,17 @@ pub struct UseNumberFieldInput {
     /// Whether the field is required.
     pub is_required: bool,
 
-    /// The validation state of the field.
-    pub validation_state: ValidationState,
+    /// Whether the field is explicitly marked as invalid (controlled validation).
+    pub is_invalid: Option<Signal<bool>>,
+
+    /// Custom client-side validation function.
+    pub validate: Option<ValidateFn<Option<f64>>>,
+
+    /// Validation behavior mode.
+    pub validation_behavior: ValidationBehavior,
+
+    /// The default value to restore on form reset.
+    pub default_value: Option<Option<f64>>,
 
     /// Placeholder text.
     pub placeholder: Option<&'static str>,
@@ -76,70 +105,62 @@ pub struct UseNumberFieldInput {
     /// A description for the field.
     pub description: Option<String>,
 
-    /// An error message for the field.
-    pub error_message: Option<String>,
-
-    /// The minimum value.
+    /// The minimum value (for ARIA and inputmode computation).
     pub min_value: Option<f64>,
 
-    /// The maximum value.
+    /// The maximum value (for ARIA and inputmode computation).
     pub max_value: Option<f64>,
 
-    /// The step value for increment/decrement.
+    /// The step value (for inputmode computation).
     pub step: f64,
-
-    /// Number of decimal places.
-    pub decimal_places: Option<usize>,
-
-    /// Number of decimal places.
-    pub format_options: Option<NumberFormatOptions>,
 
     /// Whether to auto-focus the input on mount.
     pub auto_focus: bool,
-}
 
-/// Options for number formatting.
-#[derive(Debug, Clone, Default)]
-pub struct NumberFormatOptions {
-    /// Minimum fraction digits.
-    pub minimum_fraction_digits: Option<usize>,
+    /// Whether scroll wheel increment/decrement is disabled.
+    pub is_wheel_disabled: bool,
 
-    /// Maximum fraction digits.
-    pub maximum_fraction_digits: Option<usize>,
+    /// Custom aria-label for the increment button.
+    pub increment_aria_label: Option<String>,
 
-    /// Whether to use grouping (thousands separators).
-    pub use_grouping: bool,
+    /// Custom aria-label for the decrement button.
+    pub decrement_aria_label: Option<String>,
 }
 
 impl Default for UseNumberFieldInput {
     fn default() -> Self {
         Self {
-            value: Signal::derive(|| None),
-            on_change: None,
+            state: UseNumberFieldStateReturn::empty(),
             on_focus: None,
             on_blur: None,
             is_disabled: Signal::derive(|| false),
             is_read_only: Signal::derive(|| false),
             is_required: false,
-            validation_state: ValidationState::Valid,
+            is_invalid: None,
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
+            default_value: None,
             placeholder: None,
             aria_label: None,
             name: None,
             label: None,
             description: None,
-            error_message: None,
             min_value: None,
             max_value: None,
             step: 1.0,
-            decimal_places: None,
-            format_options: None,
             auto_focus: false,
+            is_wheel_disabled: false,
+            increment_aria_label: None,
+            decrement_aria_label: None,
         }
     }
 }
 
 /// The return value of the `use_number_field` hook.
 pub struct UseNumberFieldReturn {
+    /// Props for the group wrapper element.
+    pub group_props: UseNumberFieldGroupProps,
+
     /// Props for the input element.
     pub input_props: UseNumberFieldInputProps,
 
@@ -158,7 +179,7 @@ pub struct UseNumberFieldReturn {
     /// Props for the error message element.
     pub error_props: UseNumberFieldErrorProps,
 
-    /// The formatted display value.
+    /// The formatted display value (from `state.input_value`).
     pub display_value: Signal<String>,
 
     /// Whether increment is allowed.
@@ -169,36 +190,77 @@ pub struct UseNumberFieldReturn {
 
     /// Whether the focus ring should be visible (keyboard navigation only).
     pub is_focus_visible: Signal<bool>,
+
+    /// Whether the displayed validation is invalid.
+    pub is_invalid: Signal<bool>,
+
+    /// The displayed validation error messages.
+    pub validation_errors: Signal<Vec<String>>,
+
+    /// Detailed validity state (mirrors native `ValidityState`).
+    pub validation_details: Signal<ValidityStateSnapshot>,
 }
 
+/// Props for the group wrapper element (wraps input + buttons).
+#[derive(Debug)]
+pub struct UseNumberFieldGroupProps {
+    pub role: AriaRole,
+    pub aria_disabled: Signal<Option<&'static str>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
+    pub on_focusin: EventHandler<FocusEvent>,
+    pub on_focusout: EventHandler<FocusEvent>,
+}
+
+impl IntoAttrs for UseNumberFieldGroupProps {
+    type Attrs = UseNumberFieldGroupAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        (
+            Attr(attr::Role, self.role),
+            custom_attribute("aria-disabled", self.aria_disabled),
+            Attr(attr::AriaInvalid, self.aria_invalid),
+            self.on_focusin.into_on(ev::focusin),
+            self.on_focusout.into_on(ev::focusout),
+        )
+    }
+}
+
+pub type UseNumberFieldGroupAttrs = (
+    Attr<attr::Role, AriaRole>,
+    CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
+);
+
 /// Props from `use_number_field` for the input element.
-/// Call `.into_attrs()` for view spreading.
 #[derive(Debug)]
 pub struct UseNumberFieldInputProps {
     pub id: String,
     pub r#type: &'static str,
-    pub role: AriaRole,
     pub name: Option<&'static str>,
     pub placeholder: Option<&'static str>,
     pub disabled: Signal<bool>,
     pub readonly: Signal<bool>,
     pub aria_label: Option<&'static str>,
     pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_required: Option<AriaRequired>,
-    pub aria_valuenow: Signal<Option<f64>>,
-    pub aria_valuemin: Option<f64>,
-    pub aria_valuemax: Option<f64>,
+    pub aria_roledescription: Option<&'static str>,
     pub autofocus: bool,
+    pub autocorrect: &'static str,
+    pub spellcheck: &'static str,
     pub inputmode: &'static str,
     pub data_focus_visible: Signal<Option<&'static str>>,
+    pub element_capture: ElementCaptureAttr,
     pub on_input: EventHandler<Event>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
+    pub on_wheel: EventHandler<WheelEvent>,
 }
 
 impl IntoAttrs for UseNumberFieldInputProps {
@@ -208,7 +270,6 @@ impl IntoAttrs for UseNumberFieldInputProps {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Type, self.r#type),
-            Attr(attr::Role, self.role),
             Attr(attr::Name, self.name),
             Attr(attr::Placeholder, self.placeholder),
             Attr(attr::Disabled, self.disabled),
@@ -218,60 +279,63 @@ impl IntoAttrs for UseNumberFieldInputProps {
             Attr(attr::AriaDescribedby, self.aria_describedby),
             Attr(attr::AriaInvalid, self.aria_invalid),
             Attr(attr::AriaRequired, self.aria_required),
-            Attr(attr::AriaValuenow, self.aria_valuenow),
-            Attr(attr::AriaValuemin, self.aria_valuemin),
-            Attr(attr::AriaValuemax, self.aria_valuemax),
+            Attr(attr::AriaRoledescription, self.aria_roledescription),
             Attr(attr::Autofocus, self.autofocus),
+            custom_attribute("autocorrect", self.autocorrect),
+            Attr(attr::Spellcheck, self.spellcheck),
             Attr(attr::Inputmode, self.inputmode),
             custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.element_capture,
             self.on_input.into_on(ev::input),
             self.on_keydown.into_on(ev::keydown),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
+            self.on_wheel.into_on(ev::wheel),
         )
     }
 }
 
-/// Attributes for the number field input element.
-/// Spread onto the input element using `<input {..input_props.into_attrs()}>`.
 pub type UseNumberFieldInputAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Type, &'static str>,
-    Attr<attr::Role, AriaRole>,
     Attr<attr::Name, Option<&'static str>>,
     Attr<attr::Placeholder, Option<&'static str>>,
     Attr<attr::Disabled, Signal<bool>>,
     Attr<attr::Readonly, Signal<bool>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
     Attr<attr::AriaRequired, Option<AriaRequired>>,
-    Attr<attr::AriaValuenow, Signal<Option<f64>>>,
-    Attr<attr::AriaValuemin, Option<f64>>,
-    Attr<attr::AriaValuemax, Option<f64>>,
+    Attr<attr::AriaRoledescription, Option<&'static str>>,
     Attr<attr::Autofocus, bool>,
+    CustomAttr<&'static str, &'static str>,
+    Attr<attr::Spellcheck, &'static str>,
     Attr<attr::Inputmode, &'static str>,
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    ElementCaptureAttr,
     On<ev::input, SharedEventCallback<Event>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
+    On<ev::wheel, SharedEventCallback<WheelEvent>>,
 );
 
-/// Props from `use_number_field` for the increment/decrement button elements.
-/// Call `.into_attrs()` for view spreading.
+/// Props for increment/decrement button elements.
 #[derive(Debug)]
 pub struct UseNumberFieldButtonProps {
     pub r#type: &'static str,
-    pub aria_label: &'static str,
+    pub aria_label: String,
+    pub aria_controls: String,
     pub tabindex: &'static str,
     pub disabled: Signal<bool>,
-    pub on_click: EventHandler<MouseEvent>,
+    pub on_pointerdown: EventHandler<PointerEvent>,
+    pub on_pointerup: EventHandler<PointerEvent>,
+    pub on_pointerleave: EventHandler<PointerEvent>,
 }
 
 impl IntoAttrs for UseNumberFieldButtonProps {
@@ -281,30 +345,31 @@ impl IntoAttrs for UseNumberFieldButtonProps {
         (
             Attr(attr::Type, self.r#type),
             Attr(attr::AriaLabel, self.aria_label),
+            custom_attribute("aria-controls", self.aria_controls),
             Attr(attr::Tabindex, self.tabindex),
             Attr(attr::Disabled, self.disabled),
-            self.on_click.into_on(ev::click),
+            self.on_pointerdown.into_on(ev::pointerdown),
+            self.on_pointerup.into_on(ev::pointerup),
+            self.on_pointerleave.into_on(ev::pointerleave),
         )
     }
 }
 
-/// Attributes for increment/decrement button elements.
-/// Spread onto the button element using `<button {..button_props.into_attrs()}>`.
 pub type UseNumberFieldButtonAttrs = (
     Attr<attr::Type, &'static str>,
-    Attr<attr::AriaLabel, &'static str>,
+    Attr<attr::AriaLabel, String>,
+    CustomAttr<&'static str, String>,
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::Disabled, Signal<bool>>,
-    On<ev::click, SharedEventCallback<MouseEvent>>,
+    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
+    On<ev::pointerup, SharedEventCallback<PointerEvent>>,
+    On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
 );
 
 /// Props for the label element.
 #[derive(Debug)]
 pub struct UseNumberFieldLabelProps {
-    /// The id of the label element.
     pub id: String,
-
-    /// The "for" attribute linking to the input.
     pub html_for: String,
 }
 
@@ -316,14 +381,11 @@ impl IntoAttrs for UseNumberFieldLabelProps {
     }
 }
 
-/// Attributes for the label element (id, for).
-/// Spread onto the label element using `<label {..label_props.into_attrs()}>`.
 pub type UseNumberFieldLabelAttrs = (Attr<attr::Id, String>, Attr<attr::For, String>);
 
 /// Props for the description element.
 #[derive(Debug)]
 pub struct UseNumberFieldDescriptionProps {
-    /// The id of the description element.
     pub id: String,
 }
 
@@ -335,20 +397,13 @@ impl IntoAttrs for UseNumberFieldDescriptionProps {
     }
 }
 
-/// Attributes for the description element (id).
-/// Spread onto the description element using `<p {..description_props.into_attrs()}>`.
 pub type UseNumberFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the error message element.
 #[derive(Debug)]
 pub struct UseNumberFieldErrorProps {
-    /// The id of the error message element.
     pub id: String,
-
-    /// The role attribute.
     pub role: AriaRole,
-
-    /// The aria-live attribute.
     pub aria_live: AriaLive,
 }
 
@@ -364,8 +419,6 @@ impl IntoAttrs for UseNumberFieldErrorProps {
     }
 }
 
-/// Attributes for the error message element (id, role, aria-live).
-/// Spread onto the error message element using `<p {..error_props.into_attrs()}>`.
 pub type UseNumberFieldErrorAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
@@ -373,199 +426,70 @@ pub type UseNumberFieldErrorAttrs = (
 );
 
 /// Provides the behavior and accessibility implementation for a number field.
-///
-/// Number fields allow users to enter numeric values with increment/decrement buttons.
-///
-/// # Example
-///
-/// ```ignore
-/// let (value, set_value) = signal(Some(0.0));
-///
-/// let number_field = use_number_field(UseNumberFieldInput {
-///     value: value.into(),
-///     on_change: Some(Callback::new(move |v| {
-///         set_value.set(v);
-///     })),
-///     min_value: Some(0.0),
-///     max_value: Some(100.0),
-///     step: 1.0,
-///     label: Some("Quantity".to_string()),
-///     ..Default::default()
-/// });
-///
-/// view! {
-///     <div>
-///         <label {..number_field.label_props.into_attrs()}>"Quantity"</label>
-///         <button {..number_field.decrement_button_props.into_attrs()}>"-"</button>
-///         <input value=number_field.display_value {..number_field.input_props.into_attrs()} />
-///         <button {..number_field.increment_button_props.into_attrs()}>"+"</button>
-///     </div>
-/// }
-/// ```
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     let UseNumberFieldInput {
-        value,
-        on_change,
+        state,
         on_focus,
         on_blur,
         is_disabled,
         is_read_only,
         is_required,
-        validation_state,
+        is_invalid,
+        validate,
+        validation_behavior,
+        default_value,
         placeholder,
         aria_label,
         name,
         label,
         description,
-        error_message,
         min_value,
-        max_value,
+        max_value: _,
         step,
-        decimal_places,
-        format_options: _,
         auto_focus,
+        is_wheel_disabled,
+        increment_aria_label,
+        decrement_aria_label,
     } = input;
 
+    // ---- Element capture for DOM access ----
+    let element = CapturedElement::new();
+
+    // ---- Form validation state ----
+    let validation = use_form_validation_state(UseFormValidationStateInput {
+        is_invalid,
+        value: state.number_value,
+        validate,
+        validation_behavior,
+        name: name.map(ToString::to_string),
+    });
+
+    // ---- Form reset ----
+    let initial_value = default_value.unwrap_or_else(|| state.number_value.get_untracked());
+    use_form_reset(UseFormResetInput {
+        element,
+        initial_value,
+        on_reset: Callback::new(move |val: Option<f64>| {
+            state.set_number_value.run(val);
+        }),
+    });
+
+    // ---- Form validation DOM connection ----
+    use_form_validation(UseFormValidationInput {
+        element,
+        state: validation,
+        validation_behavior,
+    });
+
+    // ---- IDs ----
     let base_id = Uuid::new_v4();
     let input_id = format!("numberfield-{base_id}");
     let label_id = format!("numberfield-label-{base_id}");
     let description_id = format!("numberfield-description-{base_id}");
     let error_id = format!("numberfield-error-{base_id}");
 
-    // Clamp value to min/max
-    let clamp_value = move |v: f64| -> f64 {
-        let mut result = v;
-        if let Some(min) = min_value {
-            result = result.max(min);
-        }
-        if let Some(max) = max_value {
-            result = result.min(max);
-        }
-        result
-    };
-
-    // Format the display value
-    let display_value = Signal::derive(move || {
-        value.get().map_or(String::new(), |v| {
-            if let Some(places) = decimal_places {
-                format!("{v:.places$}")
-            } else {
-                v.to_string()
-            }
-        })
-    });
-
-    // Whether we can increment
-    let can_increment = Signal::derive(move || {
-        if is_disabled.get() || is_read_only.get() {
-            return false;
-        }
-        match (value.get(), max_value) {
-            (Some(v), Some(max)) => v < max,
-            (None, _) | (Some(_), None) => true,
-        }
-    });
-
-    // Whether we can decrement
-    let can_decrement = Signal::derive(move || {
-        if is_disabled.get() || is_read_only.get() {
-            return false;
-        }
-        match (value.get(), min_value) {
-            (Some(v), Some(min)) => v > min,
-            (None, _) | (Some(_), None) => true,
-        }
-    });
-
-    // Increment the value
-    let increment = move || {
-        if !can_increment.get_untracked() {
-            return;
-        }
-
-        let current = value.get_untracked().unwrap_or(min_value.unwrap_or(0.0));
-        let new_value = clamp_value(current + step);
-
-        if let Some(on_change) = on_change {
-            on_change.run(Some(new_value));
-        }
-    };
-
-    // Decrement the value
-    let decrement = move || {
-        if !can_decrement.get_untracked() {
-            return;
-        }
-
-        let current = value.get_untracked().unwrap_or(max_value.unwrap_or(0.0));
-        let new_value = clamp_value(current - step);
-
-        if let Some(on_change) = on_change {
-            on_change.run(Some(new_value));
-        }
-    };
-
-    // Handle input event
-    let handle_input = move |e: Event| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
-            return;
-        }
-
-        if let Ok(input_el) = e.expect_target().dyn_into::<web_sys::HtmlInputElement>() {
-            let text_value = input_el.value();
-
-            // Parse the value
-            let new_value = if text_value.is_empty() {
-                None
-            } else {
-                text_value.parse::<f64>().ok().map(clamp_value)
-            };
-
-            if let Some(on_change) = on_change {
-                on_change.run(new_value);
-            }
-        }
-    };
-
-    // Handle keydown event
-    let increment_key = increment;
-    let decrement_key = decrement;
-    let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
-            return;
-        }
-
-        match e.key().as_str() {
-            "ArrowUp" => {
-                e.prevent_default();
-                increment_key();
-            }
-            "ArrowDown" => {
-                e.prevent_default();
-                decrement_key();
-            }
-            "Home" => {
-                if let Some(min) = min_value {
-                    e.prevent_default();
-                    if let Some(on_change) = on_change {
-                        on_change.run(Some(min));
-                    }
-                }
-            }
-            "End" => {
-                if let Some(max) = max_value {
-                    e.prevent_default();
-                    if let Some(on_change) = on_change {
-                        on_change.run(Some(max));
-                    }
-                }
-            }
-            _ => {}
-        }
-    };
-
-    // Use focus ring to track focus visibility with user callbacks
+    // ---- Focus ring (on input) ----
     let UseFocusRingReturn {
         props: focus_ring_props,
         is_focus_visible,
@@ -576,59 +500,200 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         auto_focus,
         is_text_input: true,
         on_focus: on_focus.map(|cb| Callback::new(move |_| cb.run(()))),
-        on_blur: on_blur.map(|cb| Callback::new(move |_| cb.run(()))),
+        on_blur: on_blur.map(|cb| {
+            Callback::new(move |_| {
+                // Commit value on blur.
+                state.commit.run(());
+                cb.run(());
+            })
+        }),
         on_focus_change: None,
     });
 
-    // Handle increment button click
-    let increment_click = increment;
-    let handle_increment = move |_e: MouseEvent| {
-        increment_click();
+    // If no on_blur callback, still commit on blur via a wrapper.
+    // The focus_ring on_blur already handles this when on_blur is Some.
+    // When on_blur is None, we need to commit on blur separately.
+    // This is handled by overriding on_blur in focus_ring_props if needed.
+
+    // ---- Focus within (on group) ----
+    let UseFocusWithinReturn {
+        props: focus_within_props,
+        is_focus_within,
+    } = use_focus_within(UseFocusWithinInput {
+        disabled: is_disabled,
+        on_focus_within: None,
+        on_blur_within: None,
+        on_focus_within_change: None,
+    });
+
+    // ---- Spin button ----
+    let UseSpinButtonReturn {
+        on_keydown: spin_keydown,
+        increment_button_props: spin_inc_props,
+        decrement_button_props: spin_dec_props,
+    } = use_spin_button(UseSpinButtonInput {
+        text_value: state.input_value,
+        is_disabled,
+        is_read_only,
+        on_increment: state.increment,
+        on_decrement: state.decrement,
+        on_increment_to_max: state.increment_to_max,
+        on_decrement_to_min: state.decrement_to_min,
+    });
+
+    // ---- Scroll wheel ----
+    let scroll_disabled = Signal::derive(move || {
+        is_wheel_disabled || is_disabled.get() || is_read_only.get() || !is_focus_within.get()
+    });
+
+    let UseScrollWheelReturn {
+        props: scroll_wheel_props,
+    } = use_scroll_wheel(UseScrollWheelInput {
+        disabled: scroll_disabled,
+        on_scroll: Some(Callback::new(move |e: ScrollEvent| {
+            // Only respond to primarily vertical scrolling.
+            if e.delta_y.abs() <= e.delta_x.abs() {
+                return;
+            }
+            if e.delta_y > 0.0 {
+                state.decrement.run(());
+            } else if e.delta_y < 0.0 {
+                state.increment.run(());
+            }
+        })),
+    });
+
+    // ---- Input handler (text changes during typing) ----
+    let handle_input = move |e: Event| {
+        if is_disabled.get_untracked() || is_read_only.get_untracked() {
+            return;
+        }
+        if let Some(input_el) = e.target().and_then(|t| {
+            use wasm_bindgen::JsCast;
+            t.dyn_into::<web_sys::HtmlInputElement>().ok()
+        }) {
+            let text = input_el.value();
+            // Validate partial input before accepting.
+            if state.validate.run(text.clone()) {
+                state.set_input_value.run(text);
+            } else {
+                // Revert the DOM input to the current input_value.
+                input_el.set_value(&state.input_value.get_untracked());
+            }
+        }
     };
 
-    // Handle decrement button click
-    let decrement_click = decrement;
-    let handle_decrement = move |_e: MouseEvent| {
-        decrement_click();
+    // ---- Keyboard handler (merged: spin button + Enter commit) ----
+    let handle_keydown = move |e: KeyboardEvent| {
+        if e.key() == "Enter" && !e.is_composing() {
+            e.prevent_default();
+            state.commit.run(());
+            return;
+        }
+        // Delegate to spin button for ArrowUp/Down, Home/End, PageUp/Down.
+        spin_keydown.call(e);
     };
 
-    // Build aria-describedby
-    let mut describedby_parts = Vec::new();
-    if description.is_some() {
-        describedby_parts.push(description_id.clone());
-    }
-    if validation_state == ValidationState::Invalid && error_message.is_some() {
-        describedby_parts.push(error_id.clone());
-    }
-
-    let aria_describedby = if describedby_parts.is_empty() {
-        None
+    // ---- Blur handler (commit on blur) ----
+    // If on_blur is None, we need to ensure commit happens on blur.
+    // The focus_ring on_blur already handles commit when on_blur is Some.
+    // For the None case, we wrap it here.
+    let blur_handler = if on_blur.is_none() {
+        EventHandler::new(move |e: FocusEvent| {
+            state.commit.run(());
+            focus_ring_props.on_blur.call(e);
+        })
     } else {
-        Some(describedby_parts.join(" "))
+        focus_ring_props.on_blur
     };
 
-    // Build aria-labelledby
-    let aria_labelledby = if label.is_some() {
+    // ---- Dynamic inputmode ----
+    let allows_negative = min_value.is_none_or(|m| m < 0.0);
+    let step_is_integer = step.fract() == 0.0;
+    let inputmode = if device::is_iphone() {
+        // iPhone lacks minus key in numeric/decimal keyboards.
+        if allows_negative {
+            "text"
+        } else if step_is_integer {
+            "numeric"
+        } else {
+            "decimal"
+        }
+    } else if device::is_android() || (step_is_integer && !allows_negative) {
+        "numeric"
+    } else {
+        "decimal"
+    };
+
+    // ---- ARIA ----
+    let has_description = description.is_some();
+    let has_label = label.is_some();
+
+    let description_id_for_signal = description_id.clone();
+    let error_id_for_signal = error_id.clone();
+    let aria_describedby = Signal::derive(move || {
+        let mut parts = Vec::new();
+        if has_description {
+            parts.push(description_id_for_signal.clone());
+        }
+        if validation.is_invalid.get() {
+            parts.push(error_id_for_signal.clone());
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
+    });
+
+    let aria_labelledby = if has_label {
         Some(label_id.clone())
     } else {
         None
     };
 
-    // Compute aria-invalid
-    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    let aria_invalid =
+        Signal::derive(move || validation.is_invalid.get().then_some(AriaInvalid::True));
 
-    // Compute aria-required
     let aria_required = is_required.then_some(AriaRequired::True);
 
-    // Disabled signals for buttons
-    let increment_disabled = Signal::derive(move || !can_increment.get());
-    let decrement_disabled = Signal::derive(move || !can_decrement.get());
+    // aria-roledescription: "Number field" except on iOS.
+    let aria_roledescription = if device::is_ios() {
+        None
+    } else {
+        Some("Number field")
+    };
+
+    // ---- Group ARIA ----
+    let group_aria_disabled = Signal::derive(move || is_disabled.get().then_some("true"));
+    let group_aria_invalid = aria_invalid;
+
+    // ---- Button labels ----
+    let field_label = label.as_deref().or(aria_label).unwrap_or("value");
+    let inc_label = increment_aria_label.unwrap_or_else(|| format!("Increase {field_label}"));
+    let dec_label = decrement_aria_label.unwrap_or_else(|| format!("Decrease {field_label}"));
+
+    // ---- Button disabled signals ----
+    let increment_disabled = Signal::derive(move || !state.can_increment.get());
+    let decrement_disabled = Signal::derive(move || !state.can_decrement.get());
+
+    // ---- Validation details ----
+    let validation_details =
+        Signal::derive(move || validation.display_validation.get().validation_details);
+
+    let input_id_clone = input_id.clone();
 
     UseNumberFieldReturn {
+        group_props: UseNumberFieldGroupProps {
+            role: AriaRole::Group,
+            aria_disabled: group_aria_disabled,
+            aria_invalid: group_aria_invalid,
+            on_focusin: focus_within_props.on_focusin,
+            on_focusout: focus_within_props.on_focusout,
+        },
         input_props: UseNumberFieldInputProps {
             id: input_id.clone(),
             r#type: "text",
-            role: AriaRole::Spinbutton,
             name,
             placeholder,
             disabled: is_disabled,
@@ -638,32 +703,40 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
             aria_describedby,
             aria_invalid,
             aria_required,
-            aria_valuenow: value,
-            aria_valuemin: min_value,
-            aria_valuemax: max_value,
+            aria_roledescription,
             autofocus: auto_focus,
-            inputmode: "decimal",
+            autocorrect: "off",
+            spellcheck: "false",
+            inputmode,
             data_focus_visible: focus_ring_props.data_focus_visible,
+            element_capture: element.attr(),
             on_input: EventHandler::new(handle_input),
             on_keydown: EventHandler::new(handle_keydown),
             on_focus: focus_ring_props.on_focus,
-            on_blur: focus_ring_props.on_blur,
+            on_blur: blur_handler,
             on_focusin: focus_ring_props.on_focusin,
             on_focusout: focus_ring_props.on_focusout,
+            on_wheel: scroll_wheel_props.on_wheel,
         },
         increment_button_props: UseNumberFieldButtonProps {
             r#type: "button",
-            aria_label: "Increase value",
+            aria_label: inc_label,
+            aria_controls: input_id_clone.clone(),
             tabindex: "-1",
             disabled: increment_disabled,
-            on_click: EventHandler::new(handle_increment),
+            on_pointerdown: spin_inc_props.on_pointerdown,
+            on_pointerup: spin_inc_props.on_pointerup,
+            on_pointerleave: spin_inc_props.on_pointerleave,
         },
         decrement_button_props: UseNumberFieldButtonProps {
             r#type: "button",
-            aria_label: "Decrease value",
+            aria_label: dec_label,
+            aria_controls: input_id_clone,
             tabindex: "-1",
             disabled: decrement_disabled,
-            on_click: EventHandler::new(handle_decrement),
+            on_pointerdown: spin_dec_props.on_pointerdown,
+            on_pointerup: spin_dec_props.on_pointerup,
+            on_pointerleave: spin_dec_props.on_pointerleave,
         },
         label_props: UseNumberFieldLabelProps {
             id: label_id,
@@ -675,9 +748,12 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
             role: AriaRole::Alert,
             aria_live: AriaLive::Polite,
         },
-        display_value,
-        can_increment,
-        can_decrement,
+        display_value: state.input_value,
+        can_increment: state.can_increment,
+        can_decrement: state.can_decrement,
         is_focus_visible,
+        is_invalid: validation.is_invalid,
+        validation_errors: validation.validation_errors,
+        validation_details,
     }
 }

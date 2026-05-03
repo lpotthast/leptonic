@@ -9,18 +9,12 @@ use leptos::{
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaRole},
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input for a checkbox cell in a table.
 #[derive(Debug, Clone, Copy)]
@@ -118,7 +112,7 @@ pub type UseTableCheckboxAttrs = (
 pub fn use_table_checkbox_cell(input: UseTableCheckboxCellInput) -> UseTableCheckboxCellReturn {
     let UseTableCheckboxCellInput {
         is_selected,
-        is_indeterminate,
+        is_indeterminate: _is_indeterminate,
         is_disabled: disabled,
         on_change,
     } = input;

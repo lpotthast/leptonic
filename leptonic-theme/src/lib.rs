@@ -1,7 +1,7 @@
 use std::{io::Write, path::Path};
 
 use anyhow::{Context, Result};
-use include_dir::{include_dir, Dir};
+use include_dir::{Dir, include_dir};
 use indoc::indoc;
 
 static SCSS_DIR: Dir<'static> = include_dir!("$CARGO_MANIFEST_DIR/scss");

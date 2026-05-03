@@ -35,7 +35,7 @@ pub fn is_virtual_click(e: &web_sys::MouseEvent) -> bool {
 
     // Default: screen reader synthetic click has detail == 0 and no/empty pointer_type.
     // When the event is not a PointerEvent (pointer_type is None), or pointer_type is empty.
-    e.detail() == 0 && !pointer_type.as_ref().is_some_and(|pt| !pt.is_empty())
+    e.detail() == 0 && pointer_type.as_ref().is_none_or(String::is_empty)
 }
 
 /// Detects virtual pointer events (e.g., `VoiceOver` on iOS).

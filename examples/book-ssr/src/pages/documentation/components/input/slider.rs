@@ -1,27 +1,15 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::slider_basic::SliderBasicDemo;
+use super::demos::slider_marks::SliderMarksDemo;
+use super::demos::slider_volume::SliderVolumeDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
-#[allow(clippy::too_many_lines)]
-#[allow(clippy::similar_names)]
 pub fn PageSlider() -> impl IntoView {
-    let (value1, set_value1) = signal(6.0);
-    let (value2, set_value2) = signal(4.2);
-    let (value3, set_value3) = signal(-3.0);
-    let (value4, set_value4) = signal(0.5);
-    let (value5, set_value5) = signal(0.5);
-    let (popover_value, set_popover_value) = signal(50.0);
-    let (popover_always_value, set_popover_always_value) = signal(30.0);
-    let (popover_range_a, set_popover_range_a) = signal(20.0);
-    let (popover_range_b, set_popover_range_b) = signal(80.0);
-    let (range_a, set_range_a) = signal(0.5);
-    let (range_b, set_range_b) = signal(0.75);
-    let (range_a_step, set_range_a_step) = signal(2.0);
-    let (range_b_step, set_range_b_step) = signal(4.0);
-
     view! {
         <Article>
             <h1 id="slider" class="anchor">
@@ -37,29 +25,14 @@ pub fn PageSlider() -> impl IntoView {
                 "You may exclude the "<Code inline=true>"step"</Code>" prop altogether to let the sliders use its full "<Code inline=true>"f64"</Code>" precision."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    let (value, set_value) = signal(6.0);
-                    view! {
-                        <Slider min=0.0 max=1.0 step=0.0001
-                            value=value set_value=set_value
-                            value_display=move |v| format!("{v:.4}") />
-                    }
-                "#)}
-            </Code>
-
             <p>
                 "The slider always operates with "<Code inline=true>"f64"</Code>" values and may suffer from typical IEEE-math rounding problems. "
                 "We use the "<Code inline=true>"value_display"</Code>" property to specify how a selected value should be rendered."
             </p>
 
-            <Slider min=0.0 max=100.0 step=1.0
-                value=value4 set_value=set_value4
-                value_display=move |v| format!("{v:.4}") />
-
-            <Slider min=0.0 max=1.0 step=0.0001
-                value=value4 set_value=set_value4
-                value_display=move |v| format!("{v:.4}") />
+            <DemoShell source=include_str!("demos/slider_basic.rs")>
+                <SliderBasicDemo />
+            </DemoShell>
 
             <h1 id="example" class="anchor">
                 "Example - Volume slider"
@@ -68,240 +41,24 @@ pub fn PageSlider() -> impl IntoView {
 
             <p>"Continuous sliders are perfect when the exact value selected is of no particular interest to your user. For example, when operating a volume slider."</p>
 
-            <Code>
-                {indoc!(r#"
-                    let (value, set_value) = signal(0.5);
-                    view! {
-                        <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
-                            <Icon icon=icondata::BsVolumeDownFill style="font-size: 2.5em;"/>
-                            <Slider min=0.0 max=1.0
-                                value=value set_value=set_value
-                                value_display=move |v| format!("{:.0}%", v * 100.0)
-                                style="width: 10em"/>
-                            <Icon icon=icondata::BsVolumeUpFill style="font-size: 2.5em; margin-left: 0.25em;"/>
-                        </Stack>
-                    }
-                "#)}
-            </Code>
-
-            <Stack orientation=StackOrientation::Horizontal spacing=Size::Zero>
-                <Icon icon=icondata::BsVolumeDownFill attr:style="font-size: 2.5em;"/>
-                <Slider min=0.0 max=1.0 value=value5 set_value=set_value5 attr:style="width: 10em"
-                    value_display=move |v| format!("{:.0}%", v * 100.0)/>
-                <Icon icon=icondata::BsVolumeUpFill attr:style="font-size: 2.5em; margin-left: 0.25em;"/>
-            </Stack>
+            <DemoShell source=include_str!("demos/slider_volume.rs")>
+                <SliderVolumeDemo />
+            </DemoShell>
 
             <h2 id="marks" class="anchor">
-                "Marks"
+                "Marks, Ranges, Popovers"
                 <AnchorLink href="#marks" description="Direct link to section: Marks"/>
             </h2>
 
             <p>
                 "Small step values result in lesser selectable values, as only values starting from min and increased by multiples of step are selectable. "
-                "To help visualize the selectable values of the slider, marks can be automatically generated."
+                "To help visualize the selectable values of the slider, marks can be automatically generated. "
+                "Sliders also support range selection, popovers, and custom marks."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    let (value, set_value) = signal(6.0);
-                    view! {
-                        <Slider min=1.0 max=10.0 step=1.0
-                            value=value set_value=set_value
-                            marks=SliderMarks::Automatic { create_names: false }
-                            value_display=move |v| format!("{v:.0}")/>
-                    }
-                "#)}
-            </Code>
-
-            <Slider min=1.0 max=10.0 step=1.0
-                value=value1 set_value=set_value1
-                marks=SliderMarks::Automatic { create_names: false }
-                value_display=move |v| format!("{v:.0}")/>
-
-            <p>
-                "Note that marks are only helpful when dealing with sliders having a limited number of selectable values, meaning ones with small ranges and a high stepping value. "
-                "Automatic mark generation is currently limited to creating 20 evenly spaced marks so that continuous sliders will not create thousands of them."
-            </p>
-
-            <p>
-                "You can also specify custom marks! Custom marks will be validated. "
-                "If the specified value is outside the sliders [min..max] range or the percentage is outside the [0..1] range, the mark will be excluded and a warning will be logged to the console."
-            </p>
-
-            <Code>
-                {indoc!(r#"
-                    let (value, set_value) = signal(6.0);
-                    view! {
-                        <Slider min=1.0 max=10.0 step=1.0
-                            value=value set_value=set_value
-                            marks=SliderMarks::Custom {
-                                marks: vec![
-                                    SliderMark {
-                                        value: SliderMarkValue::Value(5.5),
-                                        name: Some("5.5".into())
-                                    },
-                                    SliderMark {
-                                        value: SliderMarkValue::Value(7.0),
-                                        name: Some("7".into())
-                                    },
-                                    SliderMark {
-                                        value: SliderMarkValue::Percentage(0.888),
-                                        name: Some("88%".into())
-                                    },
-                                    SliderMark {
-                                        value: SliderMarkValue::Value(20.0),
-                                        name: Some("this mark will not show up".into())
-                                    }
-                                ]
-                            }
-                            value_display=move |v| format!("{v:.0}")/>
-                    }
-                "#)}
-            </Code>
-
-            <Slider min=1.0 max=10.0 step=1.0
-                value=value1 set_value=set_value1
-                marks=SliderMarks::Custom {
-                    marks: vec![
-                        SliderMark {
-                            value: SliderMarkValue::Value(5.5),
-                            name: Some("5.5".into())
-                        },
-                        SliderMark {
-                            value: SliderMarkValue::Value(7.0),
-                            name: Some("7".into())
-                        },
-                        SliderMark {
-                            value: SliderMarkValue::Percentage(0.888),
-                            name: Some("88%".into())
-                        }
-                    ]
-                }
-                value_display=move |v| format!("{v:.0}")/>
-
-            <h2 id="arbitrary-ranges" class="anchor">
-                "Arbitrary ranges"
-                <AnchorLink href="#arbitrary-ranges" description="Direct link to section: Arbitrary ranges"/>
-            </h2>
-
-            <p>"Sliders can use any combination of min, max and step values."</p>
-
-            <Slider value=value2 set_value=set_value2 min=2.0 max=8.0 step=0.4
-                marks=SliderMarks::Automatic { create_names: false }
-                value_display=move |v| format!("{v:.1}")/>
-
-            <p>"You can also use a positive value for the "<Code inline=true>"min"</Code>" prop, and a negative value for the "<Code inline=true>"max"</Code>" prop, resulting in a reversed axis."</p>
-
-            <Slider value=value3 set_value=set_value3 min=9.0 max=-9.0 step=1.0
-                marks=SliderMarks::Automatic { create_names: false }
-                value_display=move |v| format!("{v:.0}")/>
-
-            <h2 id="range-sliders" class="anchor">
-                "Range sliders"
-                <AnchorLink href="#range-sliders" description="Direct link to section: Range sliders"/>
-            </h2>
-
-            <p>
-                "A range of values can be selected using the "<Code inline=true>"RangeSlider"</Code>" component. "
-                "The component requires two values and in return provides a slider with two control knobs, allowing you to select a range of values. "
-                "Thumbs are constrained and cannot cross each other."
-            </p>
-
-            <Code>
-                {indoc!(r#"
-                    let (value_a, set_value_a) = signal(0.5);
-                    let (value_b, set_value_b) = signal(0.75);
-                    view! {
-                        <RangeSlider
-                            value_a=range_a
-                            value_b=range_b
-                            set_value_a=set_value_a
-                            set_value_b=set_value_b
-                            min=0.0
-                            max=1.0
-                            value_display=move |v| format!("{v:.4}")
-                        />
-                    }
-                "#)}
-            </Code>
-
-            <RangeSlider
-                value_a=range_a
-                value_b=range_b
-                set_value_a=set_range_a
-                set_value_b=set_range_b
-                min=0.0
-                max=1.0
-                value_display=move |v| format!("{v:.4}")
-            />
-
-            <p>"Range sliders can also use marks, just like the normal slider."</p>
-
-            <RangeSlider
-                value_a=range_a_step
-                value_b=range_b_step
-                set_value_a=set_range_a_step
-                set_value_b=set_range_b_step
-                min=1.0
-                max=5.0
-                step=1.0
-                marks=SliderMarks::Automatic { create_names: true }
-                value_display=move |v| format!("{v:.0}")
-            />
-
-            <h2 id="popover" class="anchor">
-                "Popover"
-                <AnchorLink href="#popover" description="Direct link to section: Popover"/>
-            </h2>
-
-            <p>
-                "A tooltip can be shown above the slider thumb to display the current value. "
-                "Control its visibility with the "<Code inline=true>"popover"</Code>" prop using "<Code inline=true>"SliderPopover"</Code>"."
-            </p>
-
-            <p>
-                "Use "<Code inline=true>"SliderPopover::When { hovered: true, dragged: true }"</Code>" to show the tooltip when the thumb is hovered or dragged."
-            </p>
-
-            <Code>
-                {indoc!(r#"
-                    let (value, set_value) = signal(50.0);
-                    view! {
-                        <Slider min=0.0 max=100.0 step=1.0
-                            value=value set_value=set_value
-                            popover=SliderPopover::When { hovered: true, dragged: true }
-                            value_display=move |v| format!("{v:.0}")/>
-                    }
-                "#)}
-            </Code>
-
-            <Slider min=0.0 max=100.0 step=1.0
-                value=popover_value set_value=set_popover_value
-                popover=SliderPopover::When { hovered: true, dragged: true }
-                value_display=move |v| format!("{v:.0}")/>
-
-            <p>
-                "Use "<Code inline=true>"SliderPopover::Always"</Code>" to keep the tooltip permanently visible."
-            </p>
-
-            <Slider min=0.0 max=100.0 step=1.0
-                value=popover_always_value set_value=set_popover_always_value
-                popover=SliderPopover::Always
-                value_display=move |v| format!("{v:.0}")/>
-
-            <p>"Popovers also work with range sliders, displaying independently for each thumb."</p>
-
-            <RangeSlider
-                value_a=popover_range_a
-                value_b=popover_range_b
-                set_value_a=set_popover_range_a
-                set_value_b=set_popover_range_b
-                min=0.0
-                max=100.0
-                step=1.0
-                popover=SliderPopover::When { hovered: true, dragged: true }
-                value_display=move |v| format!("{v:.0}")
-            />
+            <DemoShell source=include_str!("demos/slider_marks.rs")>
+                <SliderMarksDemo />
+            </DemoShell>
 
             <h2 id="keyboard-input" class="anchor">
                 "Keyboard input"
@@ -327,7 +84,7 @@ pub fn PageSlider() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --slider-margin
                     --slider-track-height
@@ -364,10 +121,7 @@ pub fn PageSlider() -> impl IntoView {
             inner: vec![
                 Toc::Leaf { title: "Slider", link: "#slider" },
                 Toc::Leaf { title: "Example", link: "#example" },
-                Toc::Leaf { title: "Marks", link: "#marks" },
-                Toc::Leaf { title: "Arbitrary ranges", link: "#arbitrary-ranges" },
-                Toc::Leaf { title: "Range sliders", link: "#range-sliders" },
-                Toc::Leaf { title: "Popover", link: "#popover" },
+                Toc::Leaf { title: "Marks, Ranges, Popovers", link: "#marks" },
                 Toc::Leaf { title: "Keyboard input", link: "#keyboard-input" },
                 Toc::Leaf { title: "Styling", link: "#styling" },
             ]

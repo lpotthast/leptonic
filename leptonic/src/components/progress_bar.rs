@@ -1,10 +1,18 @@
 use leptos::{html, prelude::*};
-use leptos_use::{use_element_size, UseElementSizeReturn};
+use leptos_use::{UseElementSizeReturn, use_element_size};
+
+use crate::utils::{
+    classes::Classes,
+    css::{pct, px},
+    styles::{Styles, Width},
+};
 
 #[component]
 pub fn ProgressBar(
     #[prop(into, default = Signal::from(100.0))] max: Signal<f64>,
     #[prop(into)] progress: Signal<Option<f64>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let el: NodeRef<html::Div> = NodeRef::new();
 
@@ -29,19 +37,20 @@ pub fn ProgressBar(
         percentage_done.map(|percentage_done| percentage_done * width)
     });
 
-    let fill_style = Signal::derive(move || match fill_width_px.get() {
-        Some(px) => format!("width: {px}px"),
-        None => "width: 20%".to_owned(),
+    let fill_styles = Styles::new().add(Width, move || match fill_width_px.get() {
+        Some(px_val) => px(px_val),
+        None => pct(20.0),
     });
 
     view! {
         <div
-            class="leptonic-progress-bar"
+            class=classes.add("leptonic-progress-bar")
+            style=styles
             node_ref=el
             data-indeterminate=move || progress.get().is_none()
         >
             <div class="leptonic-progress-bar-background">
-                <div class="leptonic-progress-bar-fill" style=move || fill_style.get()>
+                <div class="leptonic-progress-bar-fill" style=fill_styles>
                     <div class="leptonic-progress-bar-fill-overlay" />
                 </div>
 

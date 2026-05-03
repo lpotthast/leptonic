@@ -1,11 +1,10 @@
 @use "./leptonic/leptonic-themes";
-
-* {
-  font-family: Roboto, sans-serif;
-}
+@use "./jetbrains-mono";
+@use "./demo-classes";
 
 html {
   font-size: 16px;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -31,6 +30,9 @@ body {
   --book-menu-item-active-color: var(--std-text-bright);
   --book-menu-item-hover-color: var(--std-text-bright);
 
+  --font-family: 'Roboto', sans-serif;
+  --typography-code-font-family: 'JetBrains Mono', monospace;
+
   --toc-border-color: #d3d3d3;
   --toc-entry-hovered-background-color: #d3d3d3;
 }
@@ -42,6 +44,9 @@ body {
   --main-background-color: #141414;
 
   --brand-color: #e66956;
+
+  --font-family: 'Roboto', sans-serif;
+  --typography-code-font-family: 'JetBrains Mono', monospace;
 
   --app-bar-background-color: #141414;
   --app-bar-box-shadow: 1px 0px 15px 0px #0a0a0a;
@@ -149,20 +154,25 @@ body {
 
   #doc-drawer {
     overflow: auto;
-    width: auto;
     width: 16em;
     padding: 1em 0;
     margin: 0;
+    position: fixed;
+    left: 0;
+    top: 3.5em;
+    bottom: 0;
 
-    &.mobile {
-      overflow: none;
-      position: absolute;
-      right: 0;
-      top: var(--app-bar-height);
-      bottom: 0;
-      left: 0;
+    @media only screen and (max-width: 800px) {
+      width: 100%;
       background-color: var(--book-menu-background-color);
-      padding: 1em 0;
+      z-index: 999;
+    }
+
+    @media only screen and (min-width: 801px) {
+      &.hidden {
+        display: flex;
+        transform: translateX(0%);
+      }
     }
 
     .drawer-section {
@@ -205,7 +215,7 @@ body {
         font-size: 1.1em;
       }
 
-      .leptonic-stack [data-orientation="vertical"] {
+      .leptonic-stack[data-orientation="vertical"] {
         align-items: flex-start;
       }
 
@@ -455,6 +465,42 @@ leptonic-quicksearch-result {
   }
 }
 
+/* Demo shell with source code */
+.demo-shell {
+  margin: 1em 0;
+
+  .demo {
+    display: block;
+    border: 2px solid var(--brand-color);
+    padding: 1.5em;
+    border-radius: 0.5em;
+  }
+
+  &.has-source > .demo {
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+  }
+
+  > .source {
+    border: 2px solid var(--brand-color);
+    border-top: 1px solid var(--brand-color);
+    border-radius: 0 0 0.5em 0.5em;
+
+    > summary {
+      padding: 0.5em 1em;
+      cursor: pointer;
+      font-size: 0.85em;
+      color: var(--brand-color);
+      user-select: none;
+    }
+
+    > .leptonic-code {
+      max-height: 40em;
+      overflow: auto;
+    }
+  }
+}
+
 /* Tooltip demo styles */
 .tooltip-demo {
   padding: 0.5em 1em;
@@ -474,4 +520,195 @@ leptonic-quicksearch-result {
   font-size: 0.8em;
   white-space: nowrap;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Domain links in sidebar */
+.drawer-domain-link {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-start;
+  align-items: center;
+  color: var(--book-menu-header-color);
+  font-weight: 900;
+  font-size: 1.1em;
+  text-decoration: none;
+  padding: 0.25em 0;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--brand-color);
+  }
+
+  &[aria-current] {
+    color: var(--brand-color);
+  }
+}
+
+/* Concept layout with sticky tabs */
+.concept-layout {
+  width: 100%;
+
+  .concept-name {
+    padding: 0 1.5em;
+    margin-bottom: 0;
+  }
+}
+
+.concept-tabs {
+  position: sticky;
+  top: 3.5em;
+  z-index: 10;
+  background: var(--main-background-color);
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--toc-border-color);
+  padding: 0 1.5em;
+}
+
+/* Copy as Markdown button */
+.copy-md-button {
+  position: absolute;
+  right: 1em;
+  top: 0.5em;
+  cursor: pointer;
+  background: none;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 0.25em 0.5em;
+  font-size: 0.8em;
+  opacity: 0.7;
+  z-index: 10;
+  color: inherit;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+/* Doc search */
+.doc-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  min-width: 14em;
+  background: none;
+  border: 1px solid var(--toc-border-color, #ccc);
+  border-radius: 999px;
+  padding: 0.4em 0.8em;
+  cursor: pointer;
+  color: inherit;
+  font-size: 0.85em;
+  opacity: 0.8;
+  transition: opacity 0.15s;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
+.doc-search-trigger-text {
+  flex: 1;
+  text-align: left;
+  opacity: 0.6;
+}
+
+.doc-search-trigger-kbd {
+  font-family: inherit;
+  font-size: 0.8em;
+  padding: 0.1em 0.4em;
+  border: 1px solid var(--toc-border-color, #ccc);
+  border-radius: 4px;
+  opacity: 0.5;
+}
+
+@media only screen and (max-width: 800px) {
+  .doc-search-trigger {
+    min-width: auto;
+  }
+
+  .doc-search-trigger-text,
+  .doc-search-trigger-kbd {
+    display: none;
+  }
+}
+
+.leptonic-modal.doc-search-modal {
+  width: 600px;
+  height: 450px;
+  overflow: hidden;
+
+  .leptonic-modal-header {
+    flex-shrink: 0;
+    align-items: stretch;
+  }
+
+  .leptonic-modal-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    align-items: stretch;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+}
+
+@media only screen and (max-width: 800px) {
+  .leptonic-modal.doc-search-modal {
+    width: 90vw;
+    height: 60vh;
+  }
+}
+
+.doc-search-results {
+  height: 100%;
+}
+
+.doc-search-result {
+  display: block;
+  padding: 0.75em 1em;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--toc-entry-hovered-background-color, #f0f0f0);
+  }
+}
+
+.doc-search-result-title {
+  font-weight: 600;
+  margin-bottom: 0.2em;
+}
+
+.doc-search-result-snippet {
+  font-size: 0.85em;
+  opacity: 0.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doc-search-loading,
+.doc-search-empty {
+  padding: 1em;
+  text-align: center;
+  opacity: 0.6;
+}
+
+.concept-tab {
+  padding: 0.75em 1em;
+  text-decoration: none;
+  color: var(--main-color);
+  border-bottom: 2px solid transparent;
+  font-size: 0.95em;
+  transition: color 0.15s, border-color 0.15s;
+
+  &:hover {
+    color: var(--brand-color);
+  }
+
+  &.active {
+    color: var(--brand-color);
+    border-bottom-color: var(--brand-color);
+  }
 }

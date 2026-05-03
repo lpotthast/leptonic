@@ -1,114 +1,107 @@
 use leptos::prelude::*;
 
-use super::use_drag_and_drop::{DragAndDropState, RemoveEvent};
+use super::draggable_collection_state::DraggableCollectionState;
 use crate::hooks::{
-    use_draggable, DragEndEvent, DragItem, DragStartEvent, DropEffect, UseDraggableInput,
-    UseDraggableReturn,
+    DragEndEvent, DragItem, DragMoveEvent, DragStartEvent, UseDraggableInput, UseDraggableReturn,
+    use_draggable,
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// ## API DIFFERENCES
 //
-// =============================================================================
+// - Uses `DraggableCollectionState` with selection awareness instead of
+//   react-aria's direct `useDraggableItem` hook.
+// - `has_action` parameter mirrors react-aria's `hasAction`: when true,
+//   keyboard drag requires Alt+Enter to avoid conflicting with item actions.
+//
 
-/// Creates draggable props for an item within a drag-and-drop collection.
+/// Input for [`use_draggable_collection_item`].
+pub struct UseDraggableCollectionItemInput {
+    /// A unique identifier for this item within the collection.
+    pub key: String,
+    /// The draggable collection state (selection-aware).
+    pub state: DraggableCollectionState,
+    /// Whether this item is disabled.
+    pub is_disabled: Signal<bool>,
+    /// Whether this item has a primary action (e.g. navigation, selection).
+    /// When true, keyboard drag requires Alt+Enter instead of Enter.
+    pub has_action: bool,
+}
+
+/// Creates draggable props for an item within a selection-aware collection.
 ///
-/// This hook should be called at the component level (not inside a callback)
-/// to ensure event handlers are properly attached during SSR hydration.
+/// Creates draggable props for an item within a selection-aware collection.
 ///
-/// # Arguments
-///
-/// * `key` - A unique identifier for this item within the collection.
-/// * `state` - The shared state from `use_drag_and_drop`.
-///
-/// # Returns
-///
-/// Returns `Some(UseDraggableReturn)` if drag options are configured,
-/// or `None` if dragging is not enabled for this collection.
+/// Supports multi-select drag: when a selected item is dragged, all
+/// selected items are included in the drag.
 ///
 /// # Example
 ///
 /// ```ignore
 /// #[component]
-/// fn DraggableItem(key: String, state: DragAndDropState) -> impl IntoView {
-///     let drag = use_draggable_item(key, state);
+/// fn CollectionItem(key: String, state: DraggableCollectionState) -> impl IntoView {
+///     let drag = use_draggable_collection_item(UseDraggableCollectionItemInput {
+///         key,
+///         state,
+///         is_disabled: Signal::derive(|| false),
+///     });
 ///
-///     if let Some(drag) = drag {
-///         view! { <div {..drag.drag_props}>"Drag me"</div> }.into_any()
-///     } else {
-///         view! { <div>"Not draggable"</div> }.into_any()
-///     }
+///     view! { <div {..drag.drag_props.into_attrs()}>"Drag me"</div> }
 /// }
 /// ```
 #[allow(clippy::needless_pass_by_value)]
-pub fn use_draggable_item(key: String, state: DragAndDropState) -> Option<UseDraggableReturn> {
-    // Register this key as part of the collection
-    state.collection_keys.update(|keys| {
-        keys.insert(key.clone());
-    });
+pub fn use_draggable_collection_item(input: UseDraggableCollectionItemInput) -> UseDraggableReturn {
+    let UseDraggableCollectionItemInput {
+        key,
+        state,
+        is_disabled,
+        has_action,
+    } = input;
 
-    let drag_options = state.drag_options.as_ref()?;
-
-    let get_items = drag_options.get_items;
-    let on_drag_start = drag_options.on_drag_start;
-    let on_drag_move = drag_options.on_drag_move;
-    let on_drag_end = drag_options.on_drag_end;
-    let allowed_drop_effect = drag_options.allowed_drop_effect;
     let key_for_items = key.clone();
-    let key_for_end = key;
+    let key_for_start = key.clone();
+    let state_for_start = state.clone();
+    let state_for_move = state.clone();
+    let state_for_end = state.clone();
+    let state_for_items = state.clone();
+    let state_for_ops = state.clone();
+    let state_for_preview = state.clone();
 
-    let set_is_dragging = state.set_is_dragging;
-    let internal_reorder_happened = state.internal_reorder_happened;
-    let on_remove = state.on_remove;
-    let is_disabled = state.is_disabled;
-
-    // Wrap callbacks to track dragging state
-    let on_start_with_state = Callback::new(move |e: DragStartEvent| {
-        set_is_dragging.set(true);
-        internal_reorder_happened.set(false);
-        if let Some(cb) = on_drag_start {
-            cb.run(e);
-        }
-    });
-
-    let on_end_with_state = Callback::new(move |e: DragEndEvent| {
-        set_is_dragging.set(false);
-        // If the drop effect was Move and no internal reorder happened,
-        // the item was moved to a different collection - call on_remove
-        if e.drop_effect == DropEffect::Move
-            && !internal_reorder_happened.get_untracked()
-            && on_remove.is_some()
-        {
-            if let Some(on_remove) = on_remove {
-                on_remove.run(RemoveEvent {
-                    keys: vec![key_for_end.clone()],
-                });
-            }
-        }
-        internal_reorder_happened.set(false);
-        if let Some(cb) = on_drag_end {
-            cb.run(e);
-        }
-    });
-
-    Some(use_draggable(UseDraggableInput {
+    use_draggable(UseDraggableInput {
         is_disabled,
         get_items: Callback::new(move |_| {
-            // Include the key in the items
-            let mut items = get_items.run(key_for_items.clone());
-            items.push(DragItem::custom(
-                "application/x-dnd-key",
-                key_for_items.clone(),
-            ));
+            let mut items = state_for_items.get_items(&key_for_items);
+            // Add internal key marker for all dragged keys.
+            let dragging = state_for_items.dragging_keys().get_untracked();
+            if dragging.is_empty() {
+                // Before drag starts, include just this key
+                items.push(DragItem::custom(
+                    "application/x-dnd-key",
+                    key_for_items.clone(),
+                ));
+            } else {
+                for k in &dragging {
+                    items.push(DragItem::custom("application/x-dnd-key", k.clone()));
+                }
+            }
             items
         }),
-        allowed_drop_effect,
-        on_drag_start: Some(on_start_with_state),
-        on_drag_move,
-        on_drag_end: Some(on_end_with_state),
-        ..Default::default()
-    }))
+        get_allowed_drop_operations: Callback::new(move |_| {
+            state_for_ops.get_allowed_drop_operations()
+        }),
+        render_drag_preview: Some(Callback::new(move |items: Vec<DragItem>| {
+            state_for_preview.get_preview(items)
+        })),
+        on_drag_start: Some(Callback::new(move |e: DragStartEvent| {
+            state_for_start.start_drag(&key_for_start, &e);
+        })),
+        on_drag_move: Some(Callback::new(move |e: DragMoveEvent| {
+            state_for_move.move_drag(e.x, e.y);
+        })),
+        on_drag_end: Some(Callback::new(move |e: DragEndEvent| {
+            state_for_end.end_drag(e.drop_effect, e.x, e.y);
+        })),
+        has_drag_button: false,
+        has_action,
+    })
 }

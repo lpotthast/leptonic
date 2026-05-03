@@ -2,58 +2,13 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::select_basic::SelectBasicDemo;
+use super::demos::select_optional::SelectOptionalDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-enum Foo {
-    A,
-    B,
-    C,
-}
-
-impl std::fmt::Display for Foo {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::A => f.write_str("A"),
-            Self::B => f.write_str("B"),
-            Self::C => f.write_str("C"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-struct User {
-    name: String,
-    value: ordered_float::OrderedFloat<f32>,
-}
-
-impl std::fmt::Display for User {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_fmt(format_args!("{} - {}", &self.name, &self.value))
-    }
-}
-
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageSelect() -> impl IntoView {
-    let (selected, set_selected) = signal(Foo::A);
-    let (selected_opt, set_selected_opt) = signal(Option::<Foo>::None);
-    let (selected_multi, set_selected_multi) = signal(vec![Foo::A, Foo::B]);
-    let (selected_multi2, set_selected_multi2) = signal(vec![Foo::A]);
-
-    let selectable_users = vec![
-        User {
-            name: "Tom".to_owned(),
-            value: ordered_float::OrderedFloat(1.0),
-        },
-        User {
-            name: "Bob".to_owned(),
-            value: ordered_float::OrderedFloat(42.0),
-        },
-    ];
-
-    let (selected_user, set_selected_user) = signal(selectable_users[0].clone());
-
     view! {
         <Article>
             <h1 id="select" class="anchor">
@@ -65,7 +20,7 @@ pub fn PageSelect() -> impl IntoView {
 
             <p>"Lets assume this type definition, providing us with a set of values to choose from."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
                     enum Foo {
@@ -83,36 +38,9 @@ pub fn PageSelect() -> impl IntoView {
 
             <p>"There are three variants of the select component, accepting different inputs and changing only slightly in its behavior."</p>
 
-            <h3 id="variant-select" class="anchor">
-                "Select"
-                <AnchorLink href="#variant-select" description="Direct link to section: Variant - Select"/>
-            </h3>
-
-            <p>"The simplest form, requiring a selected option to be present the whole time."</p>
-
-            <Code>
-                {indoc!(r#"
-                    let (selected, set_selected) = signal(Foo::A);
-
-                    view! {
-                        <Select
-                            options=vec![Foo::A, Foo::B, Foo::C]
-                            search_text_provider=move |o| format!("{o}")
-                            render_option=move |o| format!("{o:?}")
-                            selected=selected
-                            set_selected=move |v| set_selected.set(v)
-                        />
-                    }
-                "#)}
-            </Code>
-
-            <Select
-                options=vec![Foo::A, Foo::B, Foo::C]
-                search_text_provider=move |o| format!("{o}")
-                render_option=move |o| format!("{o:?}")
-                selected=selected
-                set_selected=move |v| set_selected.set(v)
-            />
+            <DemoShell source=include_str!("demos/select_basic.rs")>
+                <SelectBasicDemo />
+            </DemoShell>
 
             <h3 id="variant-optional-select" class="anchor">
                 "OptionalSelect"
@@ -121,73 +49,9 @@ pub fn PageSelect() -> impl IntoView {
 
             <p>"As the name implies, this variant stores its chosen value in an " <Code inline=true>"Option"</Code> ", allowing the select to be initialized without a value and optionally allowing the user to deselect the current value."</p>
 
-            <Code>
-                {indoc!(r#"
-                    let (selected_opt, set_selected_opt) = signal(Option::<Foo>::None);
-
-                    view! {
-                        <OptionalSelect
-                            options=vec![Foo::A, Foo::B, Foo::C]
-                            search_text_provider=move |o| format!("{o}")
-                            render_option=move |o| format!("{o:?}")
-                            selected=selected_opt
-                            set_selected=set_selected_opt
-                            allow_deselect=true
-                        />
-                    }
-                "#)}
-            </Code>
-
-            <OptionalSelect
-                options=vec![Foo::A, Foo::B, Foo::C]
-                search_text_provider=move |o| format!("{o:?}")
-                render_option=move |o| format!("{o:?}")
-                selected=selected_opt
-                set_selected=set_selected_opt
-                allow_deselect=true
-            />
-
-            <h3 id="variant-multiselect" class="anchor">
-                "Multiselect"
-                <AnchorLink href="#variant-multiselect" description="Direct link to section: Variant - Multiselect"/>
-            </h3>
-
-            <p>"In its simplest form, the Select component can be created with a static list of options to choose from."</p>
-
-            <Code>
-                {indoc!(r#"
-                    let (selected_multi, set_selected_multi) = signal(vec![Foo::A, Foo::B]);
-
-                    view! {
-                        <Multiselect
-                            options=vec![Foo::A, Foo::B, Foo::C]
-                            search_text_provider=move |o| format!("{o}")
-                            render_option=move |o| format!("{o:?}")
-                            selected=selected_multi
-                            set_selected=move |v| set_selected_multi.set(v)
-                        />
-                    }
-                "#)}
-            </Code>
-
-            <Multiselect
-                options=vec![Foo::A, Foo::B, Foo::C]
-                search_text_provider=move |o| format!("{o}")
-                render_option=move |o| format!("{o:?}")
-                selected=selected_multi
-                set_selected=move |v| set_selected_multi.set(v)
-            />
-
-            <p>"Using the "<Code inline=true>"max"</Code>" prop, a maximum number of selectable elements can be specified. Here: 2"</p>
-
-            <Multiselect
-                options=vec![Foo::A, Foo::B, Foo::C]
-                max=2
-                search_text_provider=move |o| format!("{o}")
-                render_option=move |o| format!("{o:?}")
-                selected=selected_multi2
-                set_selected=set_selected_multi2
-            />
+            <DemoShell source=include_str!("demos/select_optional.rs")>
+                <SelectOptionalDemo />
+            </DemoShell>
 
             <h2 id="keyboard-navigation" class="anchor">
                 "Keyboard navigation"
@@ -209,63 +73,6 @@ pub fn PageSelect() -> impl IntoView {
                 "When closing the dropdown, focus is automatically restored to the select, allowing you to "<Code inline=true>"Tab"</Code>" to the next element."
             </p>
 
-            <h2 id="customization" class="anchor">
-                "Customization"
-                <AnchorLink href="#customization" description="Direct link to section: Customization"/>
-            </h2>
-
-            <p>"Let's define a select component which allows selection from a list of struct values."</p>
-
-            <Code>
-                {indoc!(r#"
-                    #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-                    struct User {
-                        name: String,
-                        value: ordered_float::OrderedFloat<f32>,
-                    }
-
-                    impl std::fmt::Display for User {
-                        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-                            f.write_fmt(format_args!("{} - {}", &self.name, &self.value))
-                        }
-                    }
-
-                    let selectable_users = vec![
-                        User {
-                            name: "Tom".to_owned(),
-                            value: ordered_float::OrderedFloat(1.0),
-                        },
-                        User {
-                            name: "Bob".to_owned(),
-                            value: ordered_float::OrderedFloat(42.0),
-                        },
-                    ];
-
-                    let (selected_user, set_selected_user) = signal(selectable_users[0].clone());
-
-                    view! {
-                        <p>"Selected user is: " { move || selected_user.get().to_string() }</p>
-                        <Select
-                            options=selectable_users.clone()
-                            search_text_provider=move |o| o.to_string()
-                            render_option=move |o: User| o.name
-                            selected=selected_user
-                            set_selected=move |v| set_selected_user.set(v)
-                        />
-                    }
-                "#)}
-            </Code>
-
-            <p>"Selected user is: " { move || selected_user.get().to_string() }</p>
-
-            <Select
-                options=selectable_users.clone()
-                search_text_provider=move |o: User| o.to_string()
-                render_option=move |o: User| o.name
-                selected=selected_user
-                set_selected=move |v| set_selected_user.set(v)
-            />
-
             <h2 id="styling" class="anchor">
                 "Styling"
                 <AnchorLink href="#styling" description="Direct link to section: Styling"/>
@@ -273,7 +80,7 @@ pub fn PageSelect() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --select-padding
                     --select-min-height
@@ -308,12 +115,9 @@ pub fn PageSelect() -> impl IntoView {
             inner: vec![
                 Toc::Leaf { title: "Select", link: "#select" },
                 Toc::Group { title: "Variants", link: "#variants", inner: vec![
-                    Toc::Leaf { title: "Select", link: "#variant-select" },
                     Toc::Leaf { title: "OptionalSelect", link: "#variant-optional-select" },
-                    Toc::Leaf { title: "Multiselect", link: "#variant-multiselect" },
                 ]},
                 Toc::Leaf { title: "Keyboard navigation", link: "#keyboard-navigation" },
-                Toc::Leaf { title: "Customization", link: "#customization" },
                 Toc::Leaf { title: "Styling", link: "#styling" },
             ]
         }/>

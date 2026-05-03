@@ -1,4 +1,4 @@
-use thirtyfour::{prelude::*, TypingData, WebDriver};
+use thirtyfour::{TypingData, WebDriver, prelude::*};
 
 use crate::pages::BaseActions;
 

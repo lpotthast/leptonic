@@ -77,14 +77,34 @@ lib-default-features = false
 # Optional. Defaults to "release".
 lib-profile-release = "wasm-release"
 
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+# Consistent with workspace allows
+must_use_candidate = "allow"
+wildcard_imports = "allow"
+module_name_repetitions = "allow"
+# Leptos view macros generate let-bindings with unit value (e.g., <Route .../>)
+let_unit_value = "allow"
+# Demo pages are inherently long view functions
+too_many_lines = "allow"
+# Demo variables like range_a_step / range_b_step are intentionally similar
+similar_names = "allow"
+
 [lib]
 crate-type = ["cdylib", "rlib"]
 
 [features]
-hydrate = ["leptos/hydrate", "leptonic/hydrate"]
+hydrate = [
+    "leptos/hydrate",
+    "leptonic/hydrate",
+    "leptos-element-capture/hydrate",
+]
 ssr = [
     "dep:axum",
     "dep:axum-server",
+    "dep:htmd",
+    "dep:scraper",
     "dep:tokio",
     "dep:tower",
     "dep:tower-http",
@@ -93,17 +113,23 @@ ssr = [
     "leptos_meta/ssr",
     "leptos_router/ssr",
     "leptonic/ssr",
+    "leptos-element-capture/ssr",
 ]
 
 [dependencies]
 axum = { version = "0.8.8", optional = true }
 axum-server = { version = "0.8.0", features = ["tls-rustls"], optional = true }
 console_error_panic_hook = "0.1.7"
+htmd = { version = "0.5.1", optional = true }
+scraper = { version = "0.22", optional = true }
 indoc = "2.0.7"
 #leptonic = { git = "https://github.com/lpotthast/leptonic", branch = "main", features = ["clipboard", "tiptap"] }
 leptonic = { path = "../../leptonic", features = ["full"] }
+leptos-classes = { path = "../../../leptos-classes" }
+leptos-element-capture = "0.1.0"
 leptos = { version = "0.8.17", features = [] }
 leptos-routes = { git = "https://github.com/lpotthast/leptos-routes", branch = "main" }
+leptos-styles = { path = "../../../leptos-styles" }
 leptos-use = "0.18.3"
 leptos_axum = { version = "0.8.8", optional = true }
 leptos_meta = { version = "0.8.6", features = [] }
@@ -111,23 +137,65 @@ leptos_router = { version = "0.8.12", features = [] }
 ordered-float = "5.1.0"
 ringbuf = "0.4.8"
 send_wrapper = "0.6"
+serde = { version = "1", features = ["derive"] }
 strum = { version = "0.27.2", features = ["derive"] }
 time = { version = "0.3.47", features = ["wasm-bindgen"] }
-tokio = { version = "1.50.0", features = ["rt-multi-thread", "signal"], optional = true }
+tokio = { version = "1.51.1", features = ["rt-multi-thread", "signal"], optional = true }
 tower = { version = "0.5.3", optional = true }
 tower-http = { version = "0.6.8", features = ["full"], optional = true }
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 tracing-wasm = "0.2.1"
 uuid = { version = "1.22.0", features = ["js", "v4", "serde"] }
-wasm-bindgen = "0.2.114"
+wasm-bindgen = "0.2.117"
+wasm-bindgen-futures = "0.4.64"
+web-sys = { version = "0.3", features = ["Clipboard", "Navigator", "Response"] }
 itertools = "0.14.0"
+
+#[patch.crates-io]
+#any_spawner = { path = "/Users/lukaspotthast/dev/leptos/any_spawner" }
+#const_str_slice_concat = { path = "/Users/lukaspotthast/dev/leptos/const_str_slice_concat" }
+#either_of = { path = "/Users/lukaspotthast/dev/leptos/either_of" }
+#next_tuple = { path = "/Users/lukaspotthast/dev/leptos/next_tuple" }
+#or_poisoned = { path = "/Users/lukaspotthast/dev/leptos/or_poisoned" }
+#hydration_context = { path = "/Users/lukaspotthast/dev/leptos/hydration_context" }
+#leptos = { path = "/Users/lukaspotthast/dev/leptos/leptos" }
+#leptos_dom = { path = "/Users/lukaspotthast/dev/leptos/leptos_dom" }
+#leptos_config = { path = "/Users/lukaspotthast/dev/leptos/leptos_config" }
+#leptos_hot_reload = { path = "/Users/lukaspotthast/dev/leptos/leptos_hot_reload" }
+#leptos_macro = { path = "/Users/lukaspotthast/dev/leptos/leptos_macro" }
+#leptos_server = { path = "/Users/lukaspotthast/dev/leptos/leptos_server" }
+#reactive_graph = { path = "/Users/lukaspotthast/dev/leptos/reactive_graph" }
+#reactive_stores = { path = "/Users/lukaspotthast/dev/leptos/reactive_stores" }
+#reactive_stores_macro = { path = "/Users/lukaspotthast/dev/leptos/reactive_stores_macro" }
+#server_fn = { path = "/Users/lukaspotthast/dev/leptos/server_fn" }
+#server_fn_macro = { path = "/Users/lukaspotthast/dev/leptos/server_fn_macro" }
+#server_fn_macro_default = { path = "/Users/lukaspotthast/dev/leptos/server_fn/server_fn_macro_default" }
+#tachys = { path = "/Users/lukaspotthast/dev/leptos/tachys" }
+#leptos_actix = { path = "/Users/lukaspotthast/dev/leptos/integrations/actix" }
+#leptos_axum = { path = "/Users/lukaspotthast/dev/leptos/integrations/axum" }
+#leptos_integration_utils = { path = "/Users/lukaspotthast/dev/leptos/integrations/utils" }
+#leptos_meta = { path = "/Users/lukaspotthast/dev/leptos/meta" }
+#leptos_router = { path = "/Users/lukaspotthast/dev/leptos/router" }
+#leptos_router_macro = { path = "/Users/lukaspotthast/dev/leptos/router_macro" }
 
 [profile.dev.package.leptonic]
 # High optimization for our dependencies. This should decrease wasm-filesize and increase performance drastically
 # whithout impacting our incremental compilation times.
 # It will lead to obscure error messages from third party libraries though. So comment this out when seeing lib errors.
 opt-level = 3
+
+[profile.dev.package.syntect]
+opt-level = 2
+
+[profile.dev.package.fancy-regex]
+opt-level = 2
+
+[profile.dev.package.regex-automata]
+opt-level = 2
+
+[profile.dev.package.regex-syntax]
+opt-level = 2
 
 # Defines a size-optimized profile for the WASM bundle in release mode
 [profile.wasm-release]

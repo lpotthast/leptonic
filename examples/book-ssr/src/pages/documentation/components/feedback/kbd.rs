@@ -1,9 +1,12 @@
-use std::borrow::Cow;
-
 use indoc::indoc;
 use leptonic::{components::prelude::*, utils::key::Key};
 use leptos::prelude::*;
 
+use super::demos::kbd_custom::KbdCustomDemo;
+use super::demos::kbd_manual::KbdManualDemo;
+use super::demos::kbd_shortcut::KbdShortcutDemo;
+use super::demos::kbd_single::KbdSingleDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
@@ -22,13 +25,9 @@ pub fn PageKbd() -> impl IntoView {
                 " Leptonic provides the "<Code inline=true>"Key"</Code>" enum which provides well-known keys and their display properties."
             </p>
 
-            <Code>
-                {indoc!(r"
-                    <KbdKey key=Key::Option/>
-                ")}
-            </Code>
-
-            <KbdKey key=Key::Option/>
+            <DemoShell source=include_str!("demos/kbd_single.rs")>
+                <KbdSingleDemo />
+            </DemoShell>
 
             <h2 id="shortcuts" class="anchor">
                 "Shortcuts"
@@ -43,31 +42,15 @@ pub fn PageKbd() -> impl IntoView {
 
             <p>"Note that these component do not listen for key-presses. Their sole purpose is to unify rendering of key caps and shortcuts!"</p>
 
-            <Code>
-                {indoc!(r"
-                    <KbdShortcut keys=[Key::Command, Key::Enter]/>
-                ")}
-            </Code>
-
-            <KbdShortcut keys=[Key::Command, Key::Enter]/>
+            <DemoShell source=include_str!("demos/kbd_shortcut.rs")>
+                <KbdShortcutDemo />
+            </DemoShell>
 
             <p>"This could also be rendered manually using the following markup."</p>
 
-            <Code>
-                {indoc!(r#"
-                    <KbdShortcutRoot>
-                        <KbdKey key=Key::Command/>
-                        <KbdConcatenate with="+"/>
-                        <KbdKey key=Key::Enter/>
-                    </KbdShortcutRoot>
-                "#)}
-            </Code>
-
-            <KbdShortcutRoot>
-                <KbdKey key=Key::Command/>
-                <KbdConcatenate with="+"/>
-                <KbdKey key=Key::Enter/>
-            </KbdShortcutRoot>
+            <DemoShell source=include_str!("demos/kbd_manual.rs")>
+                <KbdManualDemo />
+            </DemoShell>
 
             <h2 id="keys" class="anchor">
                 "Keys"
@@ -86,14 +69,9 @@ pub fn PageKbd() -> impl IntoView {
 
             <p>"If you need custom content in a "<Code inline=true>"<Kbd>"</Code>" element, use the "<Code inline=true>"Key::Other(Cow::Borrowed(...))"</Code>" variant."</p>
 
-            <Code>
-                {indoc!(r#"
-                    use std::borrow::Cow;
-                    <KbdKey key=Key::Other(Cow::Borrowed("Foo"))/>
-                "#)}
-            </Code>
-
-            <KbdKey key=Key::Other(Cow::Borrowed("Foo"))/>
+            <DemoShell source=include_str!("demos/kbd_custom.rs")>
+                <KbdCustomDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -102,7 +80,7 @@ pub fn PageKbd() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --leptonic-kbd-key-color
                     --leptonic-kbd-key-background-color

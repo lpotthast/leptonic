@@ -8,13 +8,9 @@ use crate::{
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/meter/src/useMeter.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_meter` hook.
 #[derive(Debug, Clone)]
@@ -165,7 +161,7 @@ pub fn use_meter(input: UseMeterInput) -> UseMeterReturn {
         min_value,
         max_value,
         label,
-        show_value_label,
+        show_value_label: _show_value_label,
         format_options,
     } = input;
 

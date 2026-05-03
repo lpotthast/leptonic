@@ -1,49 +1,51 @@
-use std::hash::Hash;
-
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
 };
 use uuid::Uuid;
-use web_sys::FocusEvent;
+use web_sys::{FocusEvent, MouseEvent};
 
 use crate::{
     hooks::{
+        IntoAttrs, PropsWithStyles,
         focus::{
-            use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
-            use_focusable::{use_focusable, UseFocusableInput},
+            use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+            use_focusable::{UseFocusableInput, use_focusable},
         },
-        selection::use_selection_state::{Selection, UseSelectionStateReturn},
-        IntoAttrs,
+        interactions::use_press::UsePressAttrs,
+        selection::{
+            SelectionKey,
+            use_selectable_item::{UseSelectableItemInput, use_selectable_item},
+            use_selection_state::UseSelectionStateReturn,
+        },
     },
     utils::{
+        EventHandler,
         aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::ElementCaptureAttr,
-        EventHandler,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useOption.ts
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
+// Like react-aria's useOption, this hook delegates selection behavior to
+// use_selectable_item (which internally uses use_press).
 
 /// Input parameters for the `use_option` hook.
 #[derive(Clone)]
 pub struct UseOptionInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// The unique key for this option.
     pub key: K,
@@ -59,6 +61,9 @@ where
 
     /// Whether the option should use virtual focus (for combobox).
     pub should_use_virtual_focus: bool,
+
+    /// Whether the option should receive focus on mouse hover.
+    pub should_focus_on_hover: bool,
 
     /// Callback when the option is focused.
     pub on_focus: Option<Callback<()>>,
@@ -79,7 +84,7 @@ where
 /// The return value of the `use_option` hook.
 pub struct UseOptionReturn {
     /// Props for the option element.
-    pub option_props: UseOptionProps,
+    pub option_props: PropsWithStyles<UseOptionProps>,
 
     /// Props for the label element inside the option.
     pub label_props: UseOptionLabelProps,
@@ -113,15 +118,15 @@ pub struct UseOptionProps {
     pub aria_disabled: Signal<Option<AriaDisabled>>,
     pub aria_label: Option<String>,
     pub aria_describedby: Option<String>,
-    pub on_click: EventHandler<web_sys::MouseEvent>,
-    pub on_pointerdown: EventHandler<web_sys::PointerEvent>,
-    pub on_pointerup: EventHandler<web_sys::PointerEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
     pub on_focusin: EventHandler<FocusEvent>,
     pub on_focusout: EventHandler<FocusEvent>,
     pub data_focus_visible: Signal<Option<&'static str>>,
+    pub on_mouseenter: EventHandler<MouseEvent>,
     pub element_capture: ElementCaptureAttr,
+    /// Press-related event handlers from `use_press` (via `use_selectable_item`).
+    pub press_attrs: UsePressAttrs,
 }
 
 impl IntoAttrs for UseOptionProps {
@@ -136,15 +141,14 @@ impl IntoAttrs for UseOptionProps {
             Attr(attr::AriaDisabled, self.aria_disabled),
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaDescribedby, self.aria_describedby),
-            self.on_click.into_on(ev::click),
-            self.on_pointerdown.into_on(ev::pointerdown),
-            self.on_pointerup.into_on(ev::pointerup),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
             self.on_focusin.into_on(ev::focusin),
             self.on_focusout.into_on(ev::focusout),
             custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.on_mouseenter.into_on(ev::mouseenter),
             self.element_capture,
+            self.press_attrs,
         )
     }
 }
@@ -158,15 +162,14 @@ pub type UseOptionAttrs = (
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaLabel, Option<String>>,
     Attr<attr::AriaDescribedby, Option<String>>,
-    On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
-    On<ev::pointerdown, SharedEventCallback<web_sys::PointerEvent>>,
-    On<ev::pointerup, SharedEventCallback<web_sys::PointerEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
     On<ev::focusin, SharedEventCallback<FocusEvent>>,
     On<ev::focusout, SharedEventCallback<FocusEvent>>,
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    On<ev::mouseenter, SharedEventCallback<MouseEvent>>,
     ElementCaptureAttr,
+    UsePressAttrs,
 );
 
 /// Props for the label element.
@@ -207,7 +210,9 @@ pub type UseOptionDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Provides the behavior and accessibility implementation for an option in a listbox.
 ///
-/// Options are the selectable items within a listbox.
+/// Options are the selectable items within a listbox. This hook delegates selection
+/// behavior to `use_selectable_item` (which internally uses `use_press`), and
+/// composes with `use_focusable` and `use_focus_ring` for focus management.
 ///
 /// # Example
 ///
@@ -217,7 +222,12 @@ pub type UseOptionDescriptionAttrs = (Attr<attr::Id, String>,);
 ///     state: listbox.state.collection.selection_state,
 ///     is_disabled: Signal::derive(|| false),
 ///     text_value: Some("Apple".to_string()),
-///     ..Default::default()
+///     should_select_on_press_up: false,
+///     should_use_virtual_focus: false,
+///     should_focus_on_hover: false,
+///     on_focus: None,
+///     on_press: None,
+///     focused_key: listbox.state.collection.selection_state.focused_key,
 /// });
 ///
 /// view! {
@@ -229,7 +239,7 @@ pub type UseOptionDescriptionAttrs = (Attr<attr::Id, String>,);
 #[allow(clippy::too_many_lines)]
 pub fn use_option<K>(input: UseOptionInput<K>) -> UseOptionReturn
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseOptionInput {
         key,
@@ -237,6 +247,7 @@ where
         is_disabled: local_disabled,
         should_select_on_press_up,
         should_use_virtual_focus,
+        should_focus_on_hover,
         on_focus,
         on_press,
         text_value,
@@ -248,24 +259,10 @@ where
     let label_id = format!("option-label-{base_id}");
     let description_id = format!("option-description-{base_id}");
 
-    let (is_pressed, set_is_pressed) = signal(false);
-
-    // Check if this option is selected - derive directly from selected_keys for proper reactivity
-    let key_for_selected = key.clone();
-    let selected_keys = state.selected_keys;
-    let is_selected = Signal::derive(move || match selected_keys.get() {
-        Selection::Keys(keys) => keys.contains(&key_for_selected),
-        Selection::All => true,
-    });
-
-    // Derive is_focused from parent's focused_key for proper reactivity
-    let key_for_focus = key.clone();
-    let is_focused = Signal::derive(move || focused_key.get().as_ref() == Some(&key_for_focus));
-
     // Combine local and global disabled state
     let is_disabled = Signal::derive(move || local_disabled.get() || state.is_disabled.get());
 
-    // Use focusable to get element capture and focus handle (for real focus mode)
+    // --- Use focusable for element capture and focus handle (real focus mode) ---
     let focusable = use_focusable(UseFocusableInput {
         disabled: is_disabled,
         auto_focus: false,
@@ -277,50 +274,49 @@ where
         on_key_up: None,
     });
 
-    // Effect to focus the element when is_focused becomes true (real focus mode only)
-    if !should_use_virtual_focus {
+    // Focus callback for DOM synchronization (for use_selectable_item).
+    let focus_fn = if should_use_virtual_focus {
+        None
+    } else {
         let focus_handle = focusable.focus_handle;
-        Effect::new(move |prev_focused: Option<bool>| {
-            let currently_focused = is_focused.get();
-            let was_focused = prev_focused.unwrap_or(false);
-
-            // Only focus if we just became focused (transition from false to true)
-            if currently_focused && !was_focused {
-                focus_handle.focus();
-            }
-
-            currently_focused
-        });
-    }
-
-    // Handle click
-    let key_for_click = key.clone();
-    let on_press_click = on_press;
-    let handle_click = move |_e: web_sys::MouseEvent| {
-        if is_disabled.get_untracked() {
-            return;
-        }
-
-        state.toggle.run(key_for_click.clone());
-
-        if let Some(on_press) = on_press_click {
-            on_press.run(());
-        }
+        Some(Callback::new(move |()| focus_handle.focus()))
     };
 
-    // Handle pointer down (for immediate feedback)
-    let handle_pointer_down = move |_e: web_sys::PointerEvent| {
-        if !is_disabled.get_untracked() {
-            set_is_pressed.set(true);
-        }
-    };
+    // Adapter: use_selectable_item expects Callback<Option<K>> for on_focus.
+    let set_focused_key_adapter = Callback::new(move |key_opt: Option<K>| {
+        state.set_focused_key.run((key_opt, None));
+    });
 
-    // Handle pointer up
-    let handle_pointer_up = move |_e: web_sys::PointerEvent| {
-        set_is_pressed.set(false);
-    };
+    // --- Delegate selection to use_selectable_item ---
+    let selectable = use_selectable_item(UseSelectableItemInput {
+        key: key.clone(),
+        selection_mode: state.selection_mode,
+        selection_behavior: state.selection_behavior,
+        selected_keys: state.selected_keys,
+        focused_key,
+        is_collection_focused: state.is_focused,
+        is_disabled,
+        disabled_behavior: state.disabled_behavior,
+        disallow_empty_selection: state.disallow_empty_selection,
+        on_toggle: state.toggle,
+        on_replace: state.select,
+        on_extend: None, // Listbox options don't extend-select
+        on_double_click: None,
+        on_focus: set_focused_key_adapter,
+        should_select_on_press_up,
+        should_focus_on_hover,
+        allow_drag: false,
+        allows_different_press_origin: false,
+        on_action: on_press,
+        on_selection_behavior_change: None,
+        focus: focus_fn,
+        data_key: Some(format!("{key}")),
+    });
 
-    // Compute tabindex - roving tabindex pattern
+    let is_selected = selectable.is_selected;
+    let is_focused = selectable.is_focused;
+
+    // Tabindex
     let tabindex = Signal::derive(move || {
         if should_use_virtual_focus {
             "-1"
@@ -331,13 +327,11 @@ where
         }
     });
 
-    // Compute aria-selected
+    // ARIA attributes
     let aria_selected = Signal::derive(move || Some(AriaSelected::from(is_selected.get())));
-
-    // Compute aria-disabled (reactive)
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
-    // Use focus ring for keyboard focus visibility with user callback
+    // --- Focus ring for keyboard focus visibility ---
     let on_focus_input = on_focus;
     let UseFocusRingReturn {
         props: focus_ring_props,
@@ -353,31 +347,40 @@ where
         on_focus_change: None,
     });
 
+    // Chain selectable_item's focus handler with focus_ring's focus handler.
+    let (selectable_props, selectable_styles) = selectable.props.into_inner();
+    let on_focus_merged = selectable_props.on_focus.chain(focus_ring_props.on_focus);
+
+    // Convert press props to attrs for embedding in the option's attrs tuple.
+    let press_attrs = selectable_props.press.into_attrs();
+
     UseOptionReturn {
-        option_props: UseOptionProps {
-            id: option_id,
-            role: AriaRole::Option,
-            tabindex,
-            aria_selected,
-            aria_disabled,
-            aria_label: text_value,
-            aria_describedby: None,
-            on_click: EventHandler::new(handle_click),
-            on_pointerdown: EventHandler::new(handle_pointer_down),
-            on_pointerup: EventHandler::new(handle_pointer_up),
-            on_focus: focus_ring_props.on_focus,
-            on_blur: focus_ring_props.on_blur,
-            on_focusin: focus_ring_props.on_focusin,
-            on_focusout: focus_ring_props.on_focusout,
-            data_focus_visible: focus_ring_props.data_focus_visible,
-            element_capture: focusable.props.element_capture,
-        },
+        option_props: PropsWithStyles::new(
+            UseOptionProps {
+                id: option_id,
+                role: AriaRole::Option,
+                tabindex,
+                aria_selected,
+                aria_disabled,
+                aria_label: text_value,
+                aria_describedby: None,
+                on_focus: on_focus_merged,
+                on_blur: focus_ring_props.on_blur,
+                on_focusin: focus_ring_props.on_focusin,
+                on_focusout: focus_ring_props.on_focusout,
+                data_focus_visible: focus_ring_props.data_focus_visible,
+                on_mouseenter: selectable_props.on_mouseenter,
+                element_capture: focusable.props.element_capture,
+                press_attrs,
+            },
+            selectable_styles,
+        ),
         label_props: UseOptionLabelProps { id: label_id },
         description_props: UseOptionDescriptionProps { id: description_id },
         is_selected,
         is_focused,
         is_disabled,
-        is_pressed: is_pressed.into(),
+        is_pressed: selectable.is_pressed,
         is_focus_visible,
     }
 }

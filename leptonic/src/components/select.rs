@@ -1,93 +1,42 @@
-use std::fmt::Debug;
+use std::fmt::Display;
 
-use leptos::{html, prelude::*};
-use web_sys::{HtmlElement, KeyboardEvent, MouseEvent};
+use leptos::prelude::*;
+use web_sys::MouseEvent;
 
 use crate::{
+    Out,
+    atoms::{
+        listbox::{ListBox, ListBoxItem},
+        select::{HiddenSelect, Select as SelectAtom, SelectPopover, SelectTrigger, SelectValue},
+    },
     components::{
         chip::{Chip, ChipColor},
         icon::Icon,
         input::TextInput,
         prelude::Leptonic,
     },
-    prelude::{GlobalClickEvent, GlobalKeyboardEvent, ViewCallback},
-    Out,
+    hooks::{PlacementX, PlacementY, Selection, SelectionKey, SelectionMode, SelectionSet},
+    prelude::ViewCallback,
+    utils::{classes::Classes, locale::WritingDirection, styles::Styles},
 };
 
-pub trait SearchTextProvider {
-    fn get_searchable_content() -> String;
-}
+/// Trait for types that can be used as select options in the component-level
+/// [`Select`], [`OptionalSelect`], and [`Multiselect`] components.
+///
+/// Extends [`SelectionKey`] and may gain select-specific methods in the future.
+/// For custom item types that yield a different key type via [`Keyed`](crate::hooks::Keyed),
+/// use the atom-level [`Select`](crate::atoms::select::Select) directly.
+pub trait SelectOption: SelectionKey {}
 
-pub trait SelectSearchable {
-    fn get_searchable_content() -> String;
+impl<T: SelectionKey> SelectOption for T {}
 
-    fn matches(&self, lowercase_searchable_content: &str, lowercase_search: &str) -> bool {
-        lowercase_searchable_content.contains(lowercase_search)
-    }
-}
-
-pub trait SelectOption: Debug + Clone + PartialEq + Send + Sync {}
-
-impl<T: Debug + Clone + PartialEq + Send + Sync> SelectOption for T {}
-
-// TODO: select_previous and select_next could be made more efficient.
-// If we would know that the initial vec from which the current preselect'ed option was taken didn't change
-// and if we also keep track of the index of this option in the vec, we can just read the previous / next option
-// be decrementing or incrementing the old index!
-
-// TODO: Prop: close_options_menu_on_selection: bool
-// TODO: Prop: selection_changed: Consumer<Selection<T>>
-// TODO: multiselect deselect performance
-// TODO: remove code duplication between select variants
-
-// TODO: Replace select_previous and select_next with a function that stores the current index and does not need to traverse on each call!
-
-fn select_previous<O: SelectOption + 'static>(
-    available: &[O],
-    preselected: ReadSignal<Option<O>>,
-    set_preselected: WriteSignal<Option<O>>,
-) {
-    let previous = preselected.with_untracked(|current| match current {
-        Some(current) => match available.iter().position(|it| it == current) {
-            Some(current_pos) => {
-                if current_pos >= 1 {
-                    Some(available[current_pos - 1].clone())
-                } else {
-                    available.last().cloned()
-                }
-            }
-            None => available.last().cloned(),
-        },
-        None => available.last().cloned(),
-    });
-    set_preselected.set(previous);
-}
-
-fn select_next<O: SelectOption + 'static>(
-    available: &[O],
-    preselected: ReadSignal<Option<O>>,
-    set_preselected: WriteSignal<Option<O>>,
-) {
-    let next = preselected.with_untracked(|current| match current {
-        Some(current) => match available.iter().position(|it| it == current) {
-            Some(current_pos) => {
-                if (current_pos + 1) < available.len() {
-                    Some(available[current_pos + 1].clone())
-                } else {
-                    available.first().cloned()
-                }
-            }
-            None => available.first().cloned(),
-        },
-        None => available.first().cloned(),
-    });
-    set_preselected.set(next);
-}
-
-// TODO: class and style will now (as of leptos 0.7) appear on the wrapper element!
+/// Single-select component (required selection).
+///
+/// Displays a dropdown allowing the user to choose exactly one option.
+/// Uses hook-based ARIA accessibility, keyboard navigation, and
+/// overlay positioning internally via select atoms.
 #[component]
 #[allow(clippy::too_many_lines)]
-#[allow(clippy::type_complexity)]
 pub fn Select<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<O>,
@@ -96,233 +45,106 @@ pub fn Select<O>(
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
 {
-    let id: uuid::Uuid = uuid::Uuid::new_v4();
-    let id_string = format!("s-{id}");
-    let id_selector_string = format!("#{id_string}");
-
-    let (focused, set_focused) = signal(false);
-    let (show_options, set_show_options) = signal(false);
-
     let autofocus_search =
         autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
 
-    let search_should_be_focused =
-        Signal::derive(move || show_options.get() && autofocus_search.get());
-    let (search_is_focused, set_search_is_focused) = signal(false);
-
-    let stored_options = StoredValue::new(options);
-    let (preselected, set_preselected) = signal(Option::<O>::None);
-    let memoized_preselected = Memo::new(move |_| preselected.get());
-
+    // Search/filter state (component-level concern).
     let (search, set_search) = signal(String::new());
 
-    let search_filter_provider =
-        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
-            let lowercased_search = s.to_lowercase();
-            o.into_iter()
-                .filter(|it| {
-                    search_text_provider
-                        .run(it.clone())
-                        .to_lowercase()
-                        .contains(lowercased_search.as_str())
-                })
-                .collect::<Vec<O>>()
-        }));
-
-    let filtered_options = Memo::new(move |_| {
-        search_filter_provider.run((search.get(), stored_options.get_value().get()))
-    });
-
+    let search_filter = resolve_search_filter(search_text_provider, search_filter_provider);
+    let stored_options = StoredValue::new(options);
+    let filtered_options =
+        Memo::new(move |_| search_filter.run((search.get(), stored_options.get_value().get())));
     let has_options = Memo::new(move |_| !filtered_options.with(Vec::is_empty));
 
-    let select = Callback::new(move |option: O| {
-        set_selected.set(option);
-        set_show_options.set(false);
+    // Map Signal<O> → Signal<Selection<O>>
+    let selected_keys = Signal::derive(move || {
+        let key = selected.get();
+        Selection::Keys(std::iter::once(key).collect::<SelectionSet<O>>())
     });
 
-    let is_selected = move |option: &O| selected.with(|selected| selected == option);
-
-    let is_disabled = move |option: &O| selected.with(|selected| selected == option);
-
-    let is_disabled_untracked =
-        move |option: &O| selected.with_untracked(|selected| selected == option);
-
-    // We need to check for global mouse events.
-    // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
-    create_click_away_listener(id_selector_string, show_options, set_show_options.into());
-
-    create_key_down_listener(move |e| {
-        match (show_options.get_untracked(), focused.get_untracked()) {
-            (true, _) => match e.key().as_str() {
-                "Escape" => set_show_options.set(false),
-                "Backspace" => {
-                    if !search_is_focused.get_untracked() {
-                        set_show_options.set(false);
-                    }
-                }
-                "ArrowUp" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
-                    select_previous(
-                        &filtered_options.get_untracked(),
-                        preselected,
-                        set_preselected,
-                    );
-                }
-                "ArrowDown" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
-                    select_next(
-                        &filtered_options.get_untracked(),
-                        preselected,
-                        set_preselected,
-                    );
-                }
-                "Enter" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    if let Some(preselected) = preselected.get_untracked() {
-                        if !is_disabled_untracked(&preselected) {
-                            select.run(preselected);
-                        }
-                    }
-                }
-                _ => {}
-            },
-            (false, true) => match e.key().as_str() {
-                "Enter" | "ArrowDown" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    set_show_options.set(true);
-                }
-                _ => {}
-            },
-            _ => {}
-        }
-    });
-
-    let toggle_show = move || set_show_options.update(|val| *val = !*val);
-
-    let wrapper: NodeRef<html::Div> = NodeRef::new();
-
-    // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
-    Effect::new(move |_| {
-        if !show_options.get() && search_is_focused.get_untracked() {
-            // TODO: Use with() when available.
-            if let Some(wrapper) = wrapper.get() {
-                wrapper.focus().expect("wrapper to be focusable");
-            } else {
-                tracing::warn!("missing node_ref");
+    // Map Selection<O> → O
+    let on_selection_change = Callback::new(move |sel: Selection<O>| {
+        if let Selection::Keys(keys) = sel {
+            if let Some(key) = keys.into_iter().next() {
+                set_selected.set(key);
             }
         }
     });
 
     view! {
-        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
-        <div
-            node_ref=wrapper
-            class="leptonic-select-wrapper"
-            tabindex=0
-            on:blur=move |_| set_focused.set(false)
-            on:focus=move |_| set_focused.set(true)
+        <SelectAtom<O>
+            items=filtered_options
+            selection_mode=SelectionMode::Single
+            selected_keys=selected_keys
+            on_selection_change=on_selection_change
+            get_text_value=search_text_provider
+            classes=classes.add("leptonic-select")
+            styles=styles
         >
-            <div
-                class="leptonic-select"
-                id=id_string
-                data-variant="select"
-                aria-haspopup="listbox"
-                class:active=move || show_options.get()
+            <SelectTrigger<O> classes="leptonic-select-selected">
+                <SelectValue<O> />
+                <SelectShowTriggerIcon />
+            </SelectTrigger<O>>
+
+            <SelectPopover<O>
+                placement_x=Signal::derive(|| PlacementX::Left)
+                placement_y=Signal::derive(|| PlacementY::Below)
+                writing_direction=Signal::derive(|| WritingDirection::Ltr)
+                classes="leptonic-select-options"
             >
-                <div class="leptonic-select-selected" on:click=move |_| toggle_show()>
-                    {move || render_option.render(selected.get())}
-                    <div class="leptonic-select-show-trigger">
-                        {move || {
-                            if show_options.get() {
-                                view! { <Icon icon=icondata::BsCaretUpFill /> }
-                            } else {
-                                view! { <Icon icon=icondata::BsCaretDownFill /> }
-                            }
-                        }}
-                    </div>
-                </div>
+                <SelectSearchInput
+                    search=search
+                    set_search=set_search
+                    autofocus_search=autofocus_search
+                />
 
-                <div class="leptonic-select-options" class:shown=move || show_options.get()>
-                    <TextInput
-                        get=search
-                        set=set_search
-                        should_be_focused=search_should_be_focused
-                        on_focus_change=move |focused| {
-                            if show_options.get_untracked() {
-                                set_search_is_focused.set(focused);
-                            }
-                        }
-                        attr:class="search"
-                    />
-
-                    <Show when=move || show_options.get() fallback=move || ()>
-                        // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                        {filtered_options
-                            .get()
-                            .into_iter()
-                            .map(|option| {
-                                let clone1 = option.clone();
-                                let clone2 = option.clone();
-                                let clone3 = option.clone();
-                                let clone4 = option.clone();
-                                let clone5 = option.clone();
-                                view! {
-                                    <div
-                                        class="leptonic-select-option"
-                                        class:preselected=move || {
-                                            memoized_preselected
-                                                .with(|preselected| preselected.as_ref() == Some(&option))
-                                        }
-                                        class:selected=move || is_selected(&clone4)
-                                        class:disabled=move || is_disabled(&clone5)
-                                        on:mouseenter=move |_e| {
-                                            set_preselected.set(Some(clone3.clone()));
-                                        }
-                                        on:click=move |_e| {
-                                            if !is_disabled_untracked(&clone2) {
-                                                select.run(clone2.clone());
-                                            }
-                                        }
-                                    >
-                                        {render_option.render(clone1)}
-                                    </div>
-                                }
-                            })
-                            .collect_view()}
-
-                        {move || {
-                            if has_options.get() {
-                                None
-                            } else {
-                                Some(
+                <ListBox<O> classes="leptonic-select-listbox">
+                    {move || {
+                        if has_options.get() {
+                            filtered_options
+                                .get()
+                                .into_iter()
+                                .map(|option| {
+                                    let render_clone = option.clone();
                                     view! {
-                                        <div class="leptonic-select-no-search-results">
-                                            "No options..."
-                                        </div>
-                                    },
-                                )
+                                        <ListBoxItem<O> key=option classes="leptonic-select-option">
+                                            {render_option.render(render_clone)}
+                                        </ListBoxItem<O>>
+                                    }
+                                })
+                                .collect_view()
+                                .into_any()
+                        } else {
+                            view! {
+                                <div class="leptonic-select-no-search-results">
+                                    "No options..."
+                                </div>
                             }
-                        }}
-                    </Show>
-                </div>
-            </div>
-        </div>
+                            .into_any()
+                        }
+                    }}
+                </ListBox<O>>
+            </SelectPopover<O>>
+
+            <HiddenSelect<O>
+                get_text_value=search_text_provider
+            />
+        </SelectAtom<O>>
     }
 }
 
+/// Optional single-select component (nullable selection).
+///
+/// Displays a dropdown allowing the user to choose one option or deselect.
 #[component]
 #[allow(clippy::too_many_lines)]
-#[allow(clippy::type_complexity)]
 pub fn OptionalSelect<O>(
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<Option<O>>,
@@ -332,260 +154,126 @@ pub fn OptionalSelect<O>(
     #[prop(into)] allow_deselect: Signal<bool>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
 where
     O: SelectOption + 'static,
 {
-    let id: uuid::Uuid = uuid::Uuid::new_v4();
-    let id_string = format!("s-{id}");
-    let id_selector_string = format!("#{id_string}");
-
-    let (focused, set_focused) = signal(false);
-    let (show_options, set_show_options) = signal(false);
-
     let autofocus_search =
         autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
 
-    let search_should_be_focused =
-        Signal::derive(move || show_options.get() && autofocus_search.get());
-    let (search_is_focused, set_search_is_focused) = signal(false);
-
-    let stored_options = StoredValue::new(options);
-    let (preselected, set_preselected) = signal(Option::<O>::None);
-    let memoized_preselected = Memo::new(move |_| preselected.get());
-
     let (search, set_search) = signal(String::new());
 
-    let search_filter_provider =
-        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
-            let lowercased_search = s.to_lowercase();
-            o.into_iter()
-                .filter(|it| {
-                    search_text_provider
-                        .run(it.clone())
-                        .to_lowercase()
-                        .contains(lowercased_search.as_str())
-                })
-                .collect::<Vec<O>>()
-        }));
-
-    let filtered_options = Memo::new(move |_| {
-        search_filter_provider.run((search.get(), stored_options.get_value().get()))
-    });
-
+    let search_filter = resolve_search_filter(search_text_provider, search_filter_provider);
+    let stored_options = StoredValue::new(options);
+    let filtered_options =
+        Memo::new(move |_| search_filter.run((search.get(), stored_options.get_value().get())));
     let has_options = Memo::new(move |_| !filtered_options.with(Vec::is_empty));
 
-    let select = Callback::new(move |option: O| {
-        set_selected.set(Some(option));
-        set_show_options.set(false);
+    // Map Signal<Option<O>> → Signal<Selection<O>>
+    let selected_keys = Signal::derive(move || match selected.get() {
+        Some(key) => Selection::Keys(std::iter::once(key).collect::<SelectionSet<O>>()),
+        None => Selection::default(),
     });
 
-    let deselect = move || {
+    // Map Selection<O> → Option<O>
+    let on_selection_change = Callback::new(move |sel: Selection<O>| {
+        if let Selection::Keys(keys) = sel {
+            set_selected.set(keys.into_iter().next());
+        } else {
+            set_selected.set(None);
+        }
+    });
+
+    let deselect = move |e: MouseEvent| {
+        e.prevent_default();
+        e.stop_propagation();
         set_selected.set(None);
     };
 
-    let is_selected = move |option: &O| selected.with(|selected| selected.as_ref() == Some(option));
-
-    let is_disabled = move |option: &O| selected.with(|selected| selected.as_ref() == Some(option));
-
-    let is_disabled_untracked =
-        move |option: &O| selected.with_untracked(|selected| selected.as_ref() == Some(option));
-
-    // We need to check for global mouse events.
-    // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
-    create_click_away_listener(id_selector_string, show_options, set_show_options.into());
-
-    create_key_down_listener(move |e| {
-        match (show_options.get_untracked(), focused.get_untracked()) {
-            (true, _) => match e.key().as_str() {
-                "Escape" => set_show_options.set(false),
-                "Backspace" => {
-                    if !search_is_focused.get_untracked() {
-                        set_show_options.set(false);
-                    }
-                }
-                "ArrowUp" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
-                    select_previous(
-                        &filtered_options.get_untracked(),
-                        preselected,
-                        set_preselected,
-                    );
-                }
-                "ArrowDown" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
-                    select_next(
-                        &filtered_options.get_untracked(),
-                        preselected,
-                        set_preselected,
-                    );
-                }
-                "Enter" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    if let Some(preselected) = preselected.get_untracked() {
-                        if !is_disabled_untracked(&preselected) {
-                            select.run(preselected);
-                        }
-                    }
-                }
-                _ => {}
-            },
-            (false, true) => match e.key().as_str() {
-                "Enter" | "ArrowDown" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    set_show_options.set(true);
-                }
-                _ => {}
-            },
-            _ => {}
-        }
-    });
-
-    let toggle_show = move || set_show_options.update(|val| *val = !*val);
-
-    let wrapper: NodeRef<html::Div> = NodeRef::new();
-
-    // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
-    Effect::new(move |_| {
-        if !show_options.get() && search_is_focused.get_untracked() {
-            // TODO: Use with() when available.
-            if let Some(wrapper) = wrapper.get() {
-                wrapper.focus().expect("wrapper to be focusable");
-            } else {
-                tracing::warn!("missing node_ref");
-            }
-        }
-    });
-
     view! {
-        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
-        <div
-            node_ref=wrapper
-            class="leptonic-select-wrapper"
-            tabindex=0
-            on:blur=move |_| set_focused.set(false)
-            on:focus=move |_| set_focused.set(true)
+        <SelectAtom<O>
+            items=filtered_options
+            selection_mode=SelectionMode::Single
+            selected_keys=selected_keys
+            on_selection_change=on_selection_change
+            get_text_value=search_text_provider
+            classes=classes.add("leptonic-select")
+            styles=styles
         >
-            <div
-                class="leptonic-select"
-                id=id_string
-                data-variant="optional-select"
-                aria-haspopup="listbox"
-            >
-                <div class="leptonic-select-selected" on:click=move |_| toggle_show()>
-                    {move || {
-                        selected
-                            .get()
-                            .map(|selected| {
-                                view! {
-                                    <div class="leptonic-select-option">
-                                        {render_option.render(selected)}
-                                    </div>
-                                }
-                            })
-                    }}
-                    {if allow_deselect.get() {
-                        Some(
-                            view! {
-                                <div
-                                    class="leptonic-select-deselect-trigger"
-                                    on:click=move |e| {
-                                        e.prevent_default();
-                                        e.stop_propagation();
-                                        deselect();
-                                    }
-                                >
-                                    <Icon icon=icondata::BsXCircleFill />
-                                </div>
-                            },
-                        )
-                    } else {
-                        None
-                    }}
-                    <div class="leptonic-select-show-trigger">
-                        {move || {
-                            if show_options.get() {
-                                view! { <Icon icon=icondata::BsCaretUpFill /> }
-                            } else {
-                                view! { <Icon icon=icondata::BsCaretDownFill /> }
-                            }
-                        }}
-                    </div>
-                </div>
-
-                <div class="leptonic-select-options" class:shown=move || show_options.get()>
-                    <TextInput
-                        get=search
-                        set=set_search
-                        should_be_focused=search_should_be_focused
-                        on_focus_change=move |focused| {
-                            if show_options.get_untracked() {
-                                set_search_is_focused.set(focused);
-                            }
+            <SelectTrigger<O> classes="leptonic-select-selected">
+                <SelectValue<O> />
+                {move || {
+                    (allow_deselect.get() && selected.get().is_some()).then(|| {
+                        view! {
+                            <div
+                                class="leptonic-select-deselect-trigger"
+                                on:click=deselect
+                            >
+                                <Icon icon=icondata::BsXCircleFill />
+                            </div>
                         }
-                        attr:class="search"
-                    />
+                    })
+                }}
+                <SelectShowTriggerIcon />
+            </SelectTrigger<O>>
 
-                    <Show when=move || show_options.get() fallback=move || ()>
-                        // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                        {filtered_options
-                            .get()
-                            .into_iter()
-                            .map(|option| {
-                                let clone1 = option.clone();
-                                let clone2 = option.clone();
-                                let clone3 = option.clone();
-                                let clone4 = option.clone();
-                                let clone5 = option.clone();
-                                view! {
-                                    <div
-                                        class="leptonic-select-option"
-                                        class:preselected=move || {
-                                            memoized_preselected
-                                                .with(|preselected| preselected.as_ref() == Some(&option))
-                                        }
-                                        class:selected=move || is_selected(&clone4)
-                                        class:disabled=move || is_disabled(&clone5)
-                                        on:mouseenter=move |_e| {
-                                            set_preselected.set(Some(clone3.clone()));
-                                        }
-                                        on:click=move |_e| {
-                                            if !is_disabled_untracked(&clone2) {
-                                                select.run(clone2.clone());
-                                            }
-                                        }
-                                    >
-                                        {render_option.render(clone1)}
-                                    </div>
-                                }
-                            })
-                            .collect_view()}
+            <SelectPopover<O>
+                placement_x=Signal::derive(|| PlacementX::Left)
+                placement_y=Signal::derive(|| PlacementY::Below)
+                writing_direction=Signal::derive(|| WritingDirection::Ltr)
+                classes="leptonic-select-options"
+            >
+                <SelectSearchInput
+                    search=search
+                    set_search=set_search
+                    autofocus_search=autofocus_search
+                />
 
-                        {move || {
-                            if has_options.get() {
-                                None
-                            } else {
-                                Some(view! { <div class="option">"No options..."</div> })
+                <ListBox<O> classes="leptonic-select-listbox">
+                    {move || {
+                        if has_options.get() {
+                            filtered_options
+                                .get()
+                                .into_iter()
+                                .map(|option| {
+                                    let render_clone = option.clone();
+                                    view! {
+                                        <ListBoxItem<O> key=option classes="leptonic-select-option">
+                                            {render_option.render(render_clone)}
+                                        </ListBoxItem<O>>
+                                    }
+                                })
+                                .collect_view()
+                                .into_any()
+                        } else {
+                            view! {
+                                <div class="leptonic-select-no-search-results">
+                                    "No options..."
+                                </div>
                             }
-                        }}
-                    </Show>
-                </div>
-            </div>
-        </div>
+                            .into_any()
+                        }
+                    }}
+                </ListBox<O>>
+            </SelectPopover<O>>
+
+            <HiddenSelect<O>
+                get_text_value=search_text_provider
+            />
+        </SelectAtom<O>>
     }
 }
 
+/// Multi-select component.
+///
+/// Displays a dropdown allowing the user to select multiple options,
+/// shown as dismissible chips in the trigger area.
 #[component]
 #[allow(clippy::too_many_lines)]
-#[allow(clippy::type_complexity)]
 pub fn Multiselect<O>(
-    #[prop(optional, default=u64::MAX)] max: u64,
+    #[prop(optional, default = u64::MAX)] max: u64,
     #[prop(into)] options: Signal<Vec<O>>,
     #[prop(into)] selected: Signal<Vec<O>>,
     #[prop(into)] set_selected: Out<Vec<O>>,
@@ -593,58 +281,36 @@ pub fn Multiselect<O>(
     #[prop(into)] render_option: ViewCallback<O>,
     #[prop(into, optional)] search_filter_provider: Option<Callback<(String, Vec<O>), Vec<O>>>,
     #[prop(into, optional)] autofocus_search: Option<Signal<bool>>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
 where
     O: SelectOption + PartialOrd + Ord + 'static,
 {
-    let id: uuid::Uuid = uuid::Uuid::new_v4();
-    let id_string = format!("s-{id}");
-    let id_selector_string = format!("#{id_string}");
-
-    let (focused, set_focused) = signal(false);
-    let (show_options, set_show_options) = signal(false);
-
     let autofocus_search =
         autofocus_search.unwrap_or(expect_context::<Leptonic>().is_desktop_device);
 
-    let search_should_be_focused =
-        Signal::derive(move || show_options.get() && autofocus_search.get());
-    let (search_is_focused, set_search_is_focused) = signal(false);
-
-    let stored_options = StoredValue::new(options);
-    let (preselected, set_preselected) = signal(Option::<O>::None);
-    let memoized_preselected = Memo::new(move |_| preselected.get());
-
     let (search, set_search) = signal(String::new());
 
-    let search_filter_provider =
-        search_filter_provider.unwrap_or(Callback::new(move |(s, o): (String, Vec<O>)| {
-            let lowercased_search = s.to_lowercase();
-            o.into_iter()
-                .filter(|it| {
-                    search_text_provider
-                        .run(it.clone())
-                        .to_lowercase()
-                        .contains(lowercased_search.as_str())
-                })
-                .collect::<Vec<O>>()
-        }));
-
-    let filtered_options = Memo::new(move |_| {
-        search_filter_provider.run((search.get(), stored_options.get_value().get()))
-    });
-
+    let search_filter = resolve_search_filter(search_text_provider, search_filter_provider);
+    let stored_options = StoredValue::new(options);
+    let filtered_options =
+        Memo::new(move |_| search_filter.run((search.get(), stored_options.get_value().get())));
     let has_options = Memo::new(move |_| !filtered_options.with(Vec::is_empty));
 
-    let select = Callback::new(move |option: O| {
-        let mut vec = selected.get_untracked();
-        if !vec.contains(&option) {
-            vec.push(option); // TODO
+    // Map Signal<Vec<O>> → Signal<Selection<O>>
+    let selected_keys = Signal::derive(move || {
+        Selection::Keys(selected.get().into_iter().collect::<SelectionSet<O>>())
+    });
+
+    // Map Selection<O> → Vec<O> (sorted, with max enforcement)
+    let on_selection_change = Callback::new(move |sel: Selection<O>| {
+        if let Selection::Keys(keys) = sel {
+            let mut vec: Vec<O> = keys.into_iter().collect();
+            vec.sort();
+            vec.truncate(usize::try_from(max).unwrap_or(usize::MAX));
+            set_selected.set(vec);
         }
-        vec.sort();
-        tracing::info!(?vec, "selected");
-        set_selected.set(vec);
-        set_show_options.set(false); // TODO: Make this optional.
     });
 
     let deselect = Callback::new(move |option: O| {
@@ -652,253 +318,144 @@ where
         if let Some(pos) = vec.iter().position(|it| it == &option) {
             vec.remove(pos);
         }
-        tracing::info!(?vec, "deselected");
         set_selected.set(vec);
-        // set_show_options.set(false); // TODO: Make this optional.
-    });
-
-    let is_selected = move |option: &O| selected.with(|selected| selected.contains(option));
-
-    let is_disabled = move |option: &O| {
-        selected.with(|selected| selected.contains(option) || selected.len() as u64 == max)
-    };
-
-    let is_disabled_untracked = move |option: &O| {
-        selected
-            .with_untracked(|selected| selected.contains(option) || selected.len() as u64 == max)
-    };
-
-    // We need to check for global mouse events.
-    // If our option list is shown and such an event occurs and does not target our option list, the options list should be closed.
-    create_click_away_listener(id_selector_string, show_options, set_show_options.into());
-
-    create_key_down_listener(move |e| {
-        match (show_options.get_untracked(), focused.get_untracked()) {
-            (true, _) => match e.key().as_str() {
-                "Escape" => set_show_options.set(false),
-                "Backspace" => {
-                    if !search_is_focused.get_untracked() {
-                        set_show_options.set(false);
-                    }
-                }
-                "ArrowUp" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
-                    select_previous(
-                        &filtered_options.get_untracked(),
-                        preselected,
-                        set_preselected,
-                    );
-                }
-                "ArrowDown" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    // TODO: Use options_available_for_preselect.with_untracked when https://github.com/leptos-rs/leptos/issues/1212 is resolved and released.
-                    select_next(
-                        &filtered_options.get_untracked(),
-                        preselected,
-                        set_preselected,
-                    );
-                }
-                "Enter" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    if let Some(preselected) = preselected.get_untracked() {
-                        if !is_disabled_untracked(&preselected) {
-                            select.run(preselected);
-                        }
-                    }
-                }
-                _ => {}
-            },
-            (false, true) => match e.key().as_str() {
-                "Enter" | "ArrowDown" => {
-                    e.prevent_default();
-                    e.stop_propagation();
-                    set_show_options.set(true);
-                }
-                _ => {}
-            },
-            _ => {}
-        }
-    });
-
-    let toggle_show = move || set_show_options.update(|val| *val = !*val);
-
-    let wrapper: NodeRef<html::Div> = NodeRef::new();
-
-    // Put focus back on our wrapper when the dropdown was closed while the search input had focus.
-    Effect::new(move |_| {
-        if !show_options.get() && search_is_focused.get_untracked() {
-            // TODO: Use with() when available.
-            if let Some(wrapper) = wrapper.get() {
-                wrapper.focus().expect("wrapper to be focusable");
-            } else {
-                tracing::warn!("missing node_ref");
-            }
-        }
     });
 
     view! {
-        // TODO: If possible, move this focus-tracking functionality to our main leptonic-select element. it requires the focus() method to be available.
-        <div
-            node_ref=wrapper
-            class="leptonic-select-wrapper"
-            tabindex=0
-            on:blur=move |_| set_focused.set(false)
-            on:focus=move |_| set_focused.set(true)
+        <SelectAtom<O>
+            items=filtered_options
+            classes=classes.add("leptonic-select").add("leptonic-multiselect")
+            styles=styles
+            selection_mode=SelectionMode::Multiple
+            selected_keys=selected_keys
+            on_selection_change=on_selection_change
+            get_text_value=search_text_provider
         >
-            <div
-                class="leptonic-select"
-                id=id_string
-                data-variant="multiselect"
-                aria-haspopup="listbox"
-            >
-                <div class="leptonic-select-selected" on:click=move |_| toggle_show()>
-                    // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                    {move || {
-                        selected
-                            .get()
-                            .into_iter()
-                            .map(|selected| {
-                                let clone = selected.clone();
-                                view! {
-                                    <div class="leptonic-select-option">
-                                        <Chip
-                                            color=ChipColor::Secondary
-                                            on:click=move |e| {
-                                                e.stop_propagation();
-                                            }
-                                            dismissible=move |e: MouseEvent| {
-                                                e.stop_propagation();
-                                                deselect.run(clone.clone());
-                                            }
-                                        >
-                                            {render_option.render(selected)}
-                                        </Chip>
-                                    </div>
-                                }
-                            })
-                            .collect_view()
-                    }}
-                    <div class="leptonic-select-show-trigger">
-                        {move || {
-                            if show_options.get() {
-                                view! { <Icon icon=icondata::BsCaretUpFill /> }
-                            } else {
-                                view! { <Icon icon=icondata::BsCaretDownFill /> }
-                            }
-                        }}
-                    </div>
-                </div>
-
-                <div class="leptonic-select-options" class:shown=move || show_options.get()>
-                    <TextInput
-                        get=search
-                        set=set_search
-                        should_be_focused=search_should_be_focused
-                        on_focus_change=move |focused| {
-                            if show_options.get_untracked() {
-                                set_search_is_focused.set(focused);
-                            }
-                        }
-                        attr:class="search"
-                    />
-
-                    <Show when=move || show_options.get() fallback=move || ()>
-                        // TOD: Use <For> once leptos 0.4 is out. Use full option for hash.
-                        {filtered_options
-                            .get()
-                            .into_iter()
-                            .map(|option| {
-                                let clone1 = option.clone();
-                                let clone2 = option.clone();
-                                let clone3 = option.clone();
-                                let clone4 = option.clone();
-                                let clone5 = option.clone();
-                                view! {
-                                    <div
-                                        class="leptonic-select-option"
-                                        class:preselected=move || {
-                                            memoized_preselected
-                                                .with(|preselected| preselected.as_ref() == Some(&option))
+            <SelectTrigger<O> classes="leptonic-select-selected">
+                {move || {
+                    selected
+                        .get()
+                        .into_iter()
+                        .map(|item| {
+                            let deselect_clone = item.clone();
+                            view! {
+                                <div class="leptonic-select-option">
+                                    <Chip
+                                        color=ChipColor::Secondary
+                                        on:click=move |e: MouseEvent| {
+                                            e.stop_propagation();
                                         }
-                                        class:selected=move || is_selected(&clone4)
-                                        class:disabled=move || is_disabled(&clone5)
-                                        on:mouseenter=move |_e| {
-                                            set_preselected.set(Some(clone3.clone()));
-                                        }
-                                        on:click=move |_e| {
-                                            if !is_disabled_untracked(&clone2) {
-                                                select.run(clone2.clone());
-                                            }
+                                        dismissible=move |e: MouseEvent| {
+                                            e.stop_propagation();
+                                            deselect.run(deselect_clone.clone());
                                         }
                                     >
-                                        {render_option.render(clone1)}
-                                    </div>
-                                }
-                            })
-                            .collect_view()}
-
-                        {move || {
-                            if has_options.get() {
-                                None
-                            } else {
-                                Some(view! { <div class="option">"No options..."</div> })
+                                        {render_option.render(item)}
+                                    </Chip>
+                                </div>
                             }
-                        }}
-                    </Show>
-                </div>
-            </div>
+                        })
+                        .collect_view()
+                }}
+                <SelectShowTriggerIcon />
+            </SelectTrigger<O>>
+
+            <SelectPopover<O>
+                placement_x=Signal::derive(|| PlacementX::Left)
+                placement_y=Signal::derive(|| PlacementY::Below)
+                writing_direction=Signal::derive(|| WritingDirection::Ltr)
+                classes="leptonic-select-options"
+            >
+                <SelectSearchInput
+                    search=search
+                    set_search=set_search
+                    autofocus_search=autofocus_search
+                />
+
+                <ListBox<O> classes="leptonic-select-listbox">
+                    {move || {
+                        if has_options.get() {
+                            filtered_options
+                                .get()
+                                .into_iter()
+                                .map(|option| {
+                                    let render_clone = option.clone();
+                                    view! {
+                                        <ListBoxItem<O> key=option classes="leptonic-select-option">
+                                            {render_option.render(render_clone)}
+                                        </ListBoxItem<O>>
+                                    }
+                                })
+                                .collect_view()
+                                .into_any()
+                        } else {
+                            view! {
+                                <div class="leptonic-select-no-search-results">
+                                    "No options..."
+                                </div>
+                            }
+                            .into_any()
+                        }
+                    }}
+                </ListBox<O>>
+            </SelectPopover<O>>
+
+            <HiddenSelect<O>
+                get_text_value=search_text_provider
+            />
+        </SelectAtom<O>>
+    }
+}
+
+/// Resolves the search filter callback, using the default lowercase-contains
+/// filter when no custom provider is given.
+fn resolve_search_filter<O: Display + Clone + Send + Sync + 'static>(
+    search_text_provider: Callback<O, String>,
+    custom: Option<Callback<(String, Vec<O>), Vec<O>>>,
+) -> Callback<(String, Vec<O>), Vec<O>> {
+    custom.unwrap_or(Callback::new(move |(s, opts): (String, Vec<O>)| {
+        let lowered = s.to_lowercase();
+        opts.into_iter()
+            .filter(|it| {
+                search_text_provider
+                    .run(it.clone())
+                    .to_lowercase()
+                    .contains(lowered.as_str())
+            })
+            .collect()
+    }))
+}
+
+/// Internal: the caret up/down icon shown in the trigger area.
+#[component]
+fn SelectShowTriggerIcon() -> impl IntoView {
+    // Read is_open from any SelectCtx available. Since this is always
+    // inside a SelectTrigger, we can reach the context dynamically.
+    // However, SelectCtx is generic over K, so we pass the open state
+    // via a simple signal instead.
+    //
+    // For now, render a static down-caret. The open/close animation
+    // should be handled via CSS data-open attribute on the trigger.
+    view! {
+        <div class="leptonic-select-show-trigger">
+            <Icon icon=icondata::BsCaretDownFill />
         </div>
     }
 }
 
-fn create_click_away_listener(
-    id_selector_string: String,
-    when: ReadSignal<bool>,
-    on_click_outside: Out<bool>,
-) {
-    let g_mouse_event =
-        use_context::<GlobalClickEvent>().expect("Must be a child of the Root component.");
-
-    Effect::new(move |_old| {
-        use wasm_bindgen::JsCast;
-        let last_mouse_event = g_mouse_event.read_signal.get();
-
-        if when.get_untracked() {
-            if let Some(e) = last_mouse_event {
-                if let Some(target) = e.target() {
-                    if let Some(target_elem) = target.dyn_ref::<HtmlElement>() {
-                        match target_elem.closest(id_selector_string.as_ref()) {
-                            Ok(closest) => {
-                                if let Some(_found) = closest {
-                                    // User clicked on the options list. Ignoring this global mouse event.
-                                } else {
-                                    // User clicked outside.
-                                    on_click_outside.set(false);
-                                }
-                            }
-                            Err(err) => {
-                                tracing::error!("Error processing latest mouse event: {err:?}");
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-fn create_key_down_listener<T: Fn(KeyboardEvent) + 'static>(then: T) {
-    let g_keyboard_event =
-        use_context::<GlobalKeyboardEvent>().expect("Must be a child of the Root component.");
-
-    Effect::new(move |_old| {
-        let g_keyboard_event = g_keyboard_event.read_signal.get();
-        if let Some(e) = g_keyboard_event {
-            then(e);
-        }
-    });
+/// Internal: the search text input inside the dropdown popover.
+#[component]
+fn SelectSearchInput(
+    #[prop(into)] search: Signal<String>,
+    #[prop(into)] set_search: WriteSignal<String>,
+    #[prop(into)] autofocus_search: Signal<bool>,
+) -> impl IntoView {
+    view! {
+        <TextInput
+            get=search
+            set=set_search
+            should_be_focused=autofocus_search
+            attr:class="search"
+        />
+    }
 }

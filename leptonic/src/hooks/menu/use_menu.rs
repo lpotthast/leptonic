@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use leptos::{
     attr,
@@ -11,10 +11,6 @@ use web_sys::KeyboardEvent;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenu.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // 1. `selection_mode` defaults to `SelectionMode::None` (action-only menu).
 //    React-aria determines mode from the collection; we require it upfront.
 //
@@ -23,28 +19,30 @@ use web_sys::KeyboardEvent;
 //
 // 3. Tab key is not intercepted at the menu level. React-aria delegates Tab
 //    handling to `useSelectableCollection` / `FocusScope`. We do the same.
-//
-// =============================================================================
-use crate::hooks::selection::use_selectable_collection::FocusStrategy;
+
+use crate::hooks::selection::use_selectable_collection::EscapeKeyBehavior;
+use crate::hooks::selection::use_selection_state::FocusStrategy;
 use crate::{
     hooks::{
-        selection::{
-            use_selectable_list::{
-                use_selectable_list, UseSelectableListInput, UseSelectableListReturn,
-            },
-            use_selection_state::{Selection, SelectionBehavior, SelectionMode},
-            use_type_select::{use_type_select, UseTypeSelectInput, UseTypeSelectReturn},
-        },
         IntoAttrs,
+        form::use_checkbox_group::Orientation,
+        selection::{
+            SelectionKey,
+            use_selectable_list::{
+                UseSelectableListInput, UseSelectableListReturn, use_selectable_list,
+            },
+            use_selection_state::{DisabledBehavior, Selection, SelectionBehavior, SelectionMode},
+            use_type_select::{UseTypeSelectInput, UseTypeSelectReturn, use_type_select},
+        },
     },
-    utils::{aria::AriaRole, EventHandler},
+    utils::{CapturedElement, EventHandler, aria::AriaRole, locale::WritingDirection},
 };
 
 /// Input parameters for the `use_menu` hook.
 #[derive(Clone)]
 pub struct UseMenuInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Whether keyboard navigation should wrap around.
     pub should_focus_wrap: bool,
@@ -79,9 +77,12 @@ where
     /// - `Single`: Radio-style selection (`role="menuitemradio"`).
     /// - `Multiple`: Checkbox-style selection (`role="menuitemcheckbox"`).
     pub selection_mode: SelectionMode,
+
+    /// Element ref for the menu container.
+    pub collection_ref: CapturedElement,
 }
 
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseMenuInput<K> {
+impl<K: SelectionKey> Default for UseMenuInput<K> {
     fn default() -> Self {
         Self {
             should_focus_wrap: true,
@@ -94,6 +95,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseMenuInput<K> {
             disabled: Signal::derive(|| false),
             auto_focus: Signal::derive(|| None),
             selection_mode: SelectionMode::None,
+            collection_ref: CapturedElement::new(),
         }
     }
 }
@@ -101,7 +103,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseMenuInput<K> {
 /// The return value of the `use_menu` hook.
 pub struct UseMenuReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Props for the menu element. Call `.into_attrs()` for view spreading.
     pub menu_props: UseMenuProps,
@@ -178,7 +180,7 @@ pub type UseMenuAttrs = (
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_menu<K>(input: UseMenuInput<K>) -> UseMenuReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseMenuInput {
         should_focus_wrap,
@@ -191,6 +193,7 @@ where
         disabled,
         auto_focus,
         selection_mode,
+        collection_ref,
     } = input;
 
     // Auto-focus fallback: default to FocusStrategy::First when no explicit strategy
@@ -209,7 +212,8 @@ where
         SelectionMode::Multiple => (SelectionMode::Multiple, SelectionBehavior::Toggle),
     };
 
-    // Create the selectable list
+    // Create the selectable list.
+    // Menu handles Escape for closing, so disable collection's Escape behavior.
     let list = use_selectable_list(UseSelectableListInput {
         selection_mode: list_selection_mode,
         selection_behavior: list_selection_behavior,
@@ -228,19 +232,35 @@ where
         })),
         disabled_keys,
         disallow_empty_selection: false,
+        disabled_behavior: DisabledBehavior::default(),
         all_keys,
         should_focus_wrap,
         auto_focus: auto_focus_with_fallback,
-        select_on_focus: false,
+        select_on_focus: Some(false),
+        orientation: Orientation::Vertical,
+        direction: Signal::derive(|| WritingDirection::Ltr), // TODO: get from i18n context
+        collection_ref,
+        escape_key_behavior: EscapeKeyBehavior::None, // Menu handles Escape for closing
+        disallow_select_all: true,                    // Menus don't support Ctrl+A
+        on_close: None,                               // Menu handles close separately
+        disallow_type_ahead: false,
+        get_key_label: None,
+        allows_tab_navigation: false,
     });
+
+    // Access focused key through selection_state
+    let focused_key = list.collection.selection_state.focused_key;
+    let set_focused_key = list.collection.selection_state.set_focused_key;
 
     // Create type-ahead selection
     let type_select = use_type_select(UseTypeSelectInput {
         disabled,
         all_keys,
         get_key_label,
-        focused_key: list.collection.focused_key,
-        on_focus: list.collection.set_focused_key,
+        focused_key,
+        on_focus: Callback::new(move |key: Option<K>| {
+            set_focused_key.run((key, None));
+        }),
         timeout_ms: 500,
     });
 

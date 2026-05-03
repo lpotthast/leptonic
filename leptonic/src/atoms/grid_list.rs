@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use leptos::prelude::*;
 
@@ -9,15 +9,12 @@ use crate::{
 
 /// Private context struct sharing grid list state between `GridList` and `GridListItem`.
 #[derive(Clone)]
-struct GridListCtx<K>
-where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
-{
+struct GridListCtx<K: SelectionKey> {
     state: UseGridListState<K>,
 }
 
 // Manual Copy impl to avoid derive adding `K: Copy` bound.
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Copy for GridListCtx<K> {}
+impl<K: SelectionKey> Copy for GridListCtx<K> {}
 
 /// A headless 1D grid list container atom.
 ///
@@ -79,7 +76,7 @@ pub fn GridList<K>(
     children: Children,
 ) -> impl IntoView
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let disabled_keys = disabled_keys.unwrap_or_else(|| Signal::derive(HashSet::new));
     let is_disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
@@ -141,7 +138,7 @@ pub fn GridListItem<K>(
     children: Children,
 ) -> impl IntoView
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let ctx = expect_context::<GridListCtx<K>>();
     let is_disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
@@ -172,9 +169,12 @@ where
         }
     });
 
+    let (row_attrs, row_styles) = item.row_props.into_inner();
+    let styles = row_styles.merge(styles);
+
     view! {
         <div
-            {..item.row_props.into_attrs()}
+            {..row_attrs.into_attrs()}
             class=classes
             style=styles
             attr:data-selected=data_selected

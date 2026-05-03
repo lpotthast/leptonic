@@ -8,79 +8,43 @@ use leptos::{
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
-use super::use_calendar_state::create_weeks;
+use super::use_range_calendar_state::{
+    DateRange, UseRangeCalendarStateInput, UseRangeCalendarStateReturn, use_range_calendar_state,
+};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaRole},
-        time::{start_of_next_month, start_of_previous_month, Day, Week},
         EventHandler,
+        aria::{AriaDisabled, AriaRole},
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useRangeCalendar.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useRangeCalendar.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// 1. No blur-to-finalize: react-aria finalizes range selection (calls
+//    `selectFocusedDate`) when focus leaves the calendar. Not implemented
+//    because the grid's focus/blur events don't reliably track subtree focus.
+//    The `from_range_calendar_state` method on `UseCalendarGridInput` does
+//    include a best-effort blur handler.
 //
-// =============================================================================
+// 2. No VoiceOver virtual click workaround: react-aria filters virtual
+//    pointer events from VoiceOver to prevent conflicts with `usePress`.
+//    Not needed since we don't use `usePress` in calendar cells.
+//
+// 3. No touch scroll prevention: react-aria prevents touch scrolling via
+//    `touchmove` during drag interaction. Not needed since we don't support
+//    drag-to-select.
+//
 
-/// A date range with start and end dates.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct DateRange {
-    /// The start of the range.
-    pub start: Option<time::OffsetDateTime>,
-    /// The end of the range.
-    pub end: Option<time::OffsetDateTime>,
-}
-
-impl DateRange {
-    /// Creates a new empty range.
-    pub fn empty() -> Self {
-        Self {
-            start: None,
-            end: None,
-        }
-    }
-
-    /// Creates a new range with start and end.
-    pub fn new(start: time::OffsetDateTime, end: time::OffsetDateTime) -> Self {
-        Self {
-            start: Some(start),
-            end: Some(end),
-        }
-    }
-
-    /// Checks if a date is within this range.
-    pub fn contains(&self, date: &time::OffsetDateTime) -> bool {
-        match (self.start, self.end) {
-            (Some(start), Some(end)) => date >= &start && date <= &end,
-            (Some(start), None) => date >= &start,
-            (None, Some(end)) => date <= &end,
-            (None, None) => false,
-        }
-    }
-
-    /// Checks if this range is complete (has both start and end).
-    pub fn is_complete(&self) -> bool {
-        self.start.is_some() && self.end.is_some()
-    }
-}
-
-impl Default for DateRange {
-    fn default() -> Self {
-        Self::empty()
-    }
-}
+// Re-export for convenience.
+pub use super::use_range_calendar_state::DateRange as RangeDateRange;
 
 /// Input parameters for the `use_range_calendar` hook.
 #[derive(Debug, Clone, Copy)]
 pub struct UseRangeCalendarInput {
-    /// The initial value for the range (optional).
-    pub value: Option<DateRange>,
+    /// The initial value for the range.
+    pub default_value: Option<DateRange>,
 
     /// The minimum allowed date.
     pub min: Option<time::OffsetDateTime>,
@@ -94,64 +58,58 @@ pub struct UseRangeCalendarInput {
     /// Whether the calendar is read-only.
     pub is_read_only: Signal<bool>,
 
+    /// Callback to check if a specific date is unavailable.
+    pub is_date_unavailable: Option<Callback<time::OffsetDateTime, bool>>,
+
+    /// Whether to allow ranges spanning unavailable dates.
+    pub allows_non_contiguous_ranges: bool,
+
     /// Callback when the range changes.
     pub on_change: Option<Callback<DateRange>>,
+
+    /// Callback when the focused date changes.
+    pub on_focus_change: Option<Callback<time::OffsetDateTime>>,
+
+    /// The initial focused date.
+    pub default_focused_value: Option<time::OffsetDateTime>,
+
+    /// External validity signal.
+    pub is_invalid: Option<Signal<bool>>,
+
+    /// The first day of the week. Defaults to Monday.
+    pub first_day_of_week: time::Weekday,
 }
 
 impl Default for UseRangeCalendarInput {
     fn default() -> Self {
         Self {
-            value: None,
+            default_value: None,
             min: None,
             max: None,
             is_disabled: Signal::derive(|| false),
             is_read_only: Signal::derive(|| false),
+            is_date_unavailable: None,
+            allows_non_contiguous_ranges: false,
             on_change: None,
+            on_focus_change: None,
+            default_focused_value: None,
+            is_invalid: None,
+            first_day_of_week: time::Weekday::Monday,
         }
     }
 }
 
 /// The return value of the `use_range_calendar` hook.
-#[derive(Debug)]
 pub struct UseRangeCalendarReturn {
     /// Props for the calendar container. Call `.into_attrs()` for view spreading.
     pub calendar_props: UseRangeCalendarProps,
 
-    /// The current focused/staging date.
-    pub staging: ReadSignal<time::OffsetDateTime>,
+    /// The range calendar state. Access navigation/display via `state.calendar`
+    /// and range-specific features directly on `state`.
+    pub state: UseRangeCalendarStateReturn,
 
-    /// The year of the staging date.
-    pub staging_year: Memo<i32>,
-
-    /// The month name of the staging date.
-    pub staging_month_name: Memo<String>,
-
-    /// The current selected range.
-    pub value: Signal<DateRange>,
-
-    /// The currently highlighted range (during selection).
-    pub highlighted_range: Signal<DateRange>,
-
-    /// The weeks to display.
-    pub weeks: Signal<Vec<Week>>,
-
-    /// The ID of the calendar.
+    /// The ID of the calendar container.
     pub calendar_id: String,
-
-    /// Whether we're currently selecting the start or end of the range.
-    pub anchor_date: Signal<Option<time::OffsetDateTime>>,
-
-    /// Navigate to the previous month.
-    pub previous_month: Callback<()>,
-
-    /// Navigate to the next month.
-    pub next_month: Callback<()>,
-
-    /// Select a date (for range selection).
-    pub select_date: Callback<Day>,
-
-    /// Set the highlighted date (for hover effects).
-    pub set_highlighted: Callback<Option<time::OffsetDateTime>>,
 }
 
 /// Props from `use_range_calendar` for the calendar container.
@@ -190,6 +148,12 @@ pub type UseRangeCalendarAttrs = (
 /// Provides the behavior and accessibility for a range calendar.
 ///
 /// A range calendar allows selecting a date range (start and end dates).
+/// This hook creates the range calendar state internally and provides
+/// ARIA props for the container element.
+///
+/// For the grid and cells, use
+/// [`UseCalendarGridInput::from_range_calendar_state`](super::use_calendar_grid::UseCalendarGridInput::from_range_calendar_state)
+/// and [`use_calendar_cell`](super::use_calendar_cell::use_calendar_cell).
 ///
 /// # Example
 ///
@@ -201,134 +165,52 @@ pub type UseRangeCalendarAttrs = (
 ///     ..Default::default()
 /// });
 ///
+/// let state = range_calendar.state;
+///
 /// view! {
 ///     <div {..range_calendar.calendar_props.into_attrs()}>
 ///         <div class="calendar-header">
-///             <button on:click=move |_| range_calendar.previous_month.run(())>"<"</button>
-///             <span>{move || range_calendar.staging_month_name.get()}</span>
-///             <span>{move || range_calendar.staging_year.get()}</span>
-///             <button on:click=move |_| range_calendar.next_month.run(())>">"</button>
+///             <button on:click=move |_| state.calendar.focus_previous_page.run(())>"<"</button>
+///             <span>{move || state.calendar.focused_month_name.get()}</span>
+///             <span>{move || state.calendar.focused_year.get()}</span>
+///             <button on:click=move |_| state.calendar.focus_next_page.run(())>">"</button>
 ///         </div>
-///         // Render grid with weeks...
+///         // Render grid with weeks from state.calendar.weeks ...
 ///     </div>
 /// }
 /// ```
-///
-/// # Panics
-///
-/// Panics if the `on` event handler cannot be converted to a cloneable callback.
-#[allow(clippy::too_many_lines)]
 pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarReturn {
-    let UseRangeCalendarInput {
-        value,
-        min,
-        max,
-        is_disabled: disabled,
-        is_read_only,
-        on_change,
-    } = input;
+    let is_disabled = input.is_disabled;
+
+    let state = use_range_calendar_state(UseRangeCalendarStateInput {
+        default_value: input.default_value,
+        min: input.min,
+        max: input.max,
+        is_disabled: input.is_disabled,
+        is_read_only: input.is_read_only,
+        is_date_unavailable: input.is_date_unavailable,
+        allows_non_contiguous_ranges: input.allows_non_contiguous_ranges,
+        on_change: input.on_change,
+        on_focus_change: input.on_focus_change,
+        default_focused_value: input.default_focused_value,
+        is_invalid: input.is_invalid,
+        first_day_of_week: input.first_day_of_week,
+    });
 
     let calendar_id = format!("range-calendar-{}", Uuid::new_v4());
 
-    // Initialize staging date
-    let initial_staging = value
-        .and_then(|r| r.start)
-        .unwrap_or_else(time::OffsetDateTime::now_utc);
-    let (staging, set_staging) = signal(initial_staging);
+    let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 
-    // The selected range
-    let (value, set_value) = signal(value.unwrap_or_default());
-
-    // The anchor date (first click in range selection)
-    let (anchor_date, set_anchor_date) = signal::<Option<time::OffsetDateTime>>(None);
-
-    // The currently highlighted date (for hover effects)
-    let (highlighted_date, set_highlighted_date) = signal::<Option<time::OffsetDateTime>>(None);
-
-    // Compute the highlighted range based on anchor and highlighted dates
-    let highlighted_range =
-        Signal::derive(move || match (anchor_date.get(), highlighted_date.get()) {
-            (Some(anchor), Some(highlighted)) => {
-                if anchor <= highlighted {
-                    DateRange::new(anchor, highlighted)
-                } else {
-                    DateRange::new(highlighted, anchor)
-                }
-            }
-            (Some(anchor), None) => DateRange {
-                start: Some(anchor),
-                end: None,
-            },
-            _ => DateRange::empty(),
-        });
-
-    // Derived signals
-    let staging_year = Memo::new(move |_| staging.get().year());
-    let staging_month_name = Memo::new(move |_| staging.get().month().to_string());
-
-    let weeks = Signal::derive(move || create_weeks(&staging.get(), min.as_ref(), max.as_ref()));
-
-    // Compute aria-disabled
-    let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
-    // Navigation callbacks
-    let previous_month = Callback::new(move |_| {
-        set_staging.update(|s| *s = start_of_previous_month(*s));
-    });
-
-    let next_month = Callback::new(move |_| {
-        set_staging.update(|s| *s = start_of_next_month(*s));
-    });
-
-    // Select a date for range
-    let select_date = Callback::new(move |day: Day| {
-        if disabled.get_untracked() || is_read_only.get_untracked() || day.disabled {
-            return;
-        }
-
-        let current_anchor = anchor_date.get_untracked();
-
-        if let Some(anchor) = current_anchor {
-            // Second click - complete the range
-            let (start, end) = if anchor <= day.date_time {
-                (anchor, day.date_time)
-            } else {
-                (day.date_time, anchor)
-            };
-
-            let new_range = DateRange::new(start, end);
-            set_value.set(new_range);
-            set_anchor_date.set(None);
-            set_highlighted_date.set(None);
-
-            if let Some(on_change) = on_change {
-                on_change.run(new_range);
-            }
-        } else {
-            // First click - set anchor
-            set_anchor_date.set(Some(day.date_time));
-        }
-    });
-
-    // Set highlighted date (for hover)
-    let set_highlighted = Callback::new(move |date: Option<time::OffsetDateTime>| {
-        set_highlighted_date.set(date);
-    });
-
-    // Handle keyboard navigation
+    // Escape cancels the current range selection.
+    let anchor_date = state.anchor_date;
+    let set_anchor_date = state.set_anchor_date;
     let handle_keydown = move |e: KeyboardEvent| {
-        if disabled.get_untracked() {
+        if is_disabled.get_untracked() {
             return;
         }
-
-        let key = e.key();
-        if key.as_str() == "Escape" {
-            // Cancel current selection
-            if anchor_date.get_untracked().is_some() {
-                e.prevent_default();
-                set_anchor_date.set(None);
-                set_highlighted_date.set(None);
-            }
+        if e.key().as_str() == "Escape" && anchor_date.get_untracked().is_some() {
+            e.prevent_default();
+            set_anchor_date.run(None);
         }
     };
 
@@ -340,17 +222,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
             aria_disabled,
             on_keydown: EventHandler::new(handle_keydown),
         },
-        staging,
-        staging_year,
-        staging_month_name,
-        value: value.into(),
-        highlighted_range,
-        weeks,
+        state,
         calendar_id,
-        anchor_date: anchor_date.into(),
-        previous_month,
-        next_month,
-        select_date,
-        set_highlighted,
     }
 }

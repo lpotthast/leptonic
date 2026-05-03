@@ -1,3 +1,5 @@
+pub mod demos;
+
 pub mod button;
 pub mod checkbox;
 pub mod color_picker;

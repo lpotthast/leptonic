@@ -29,8 +29,8 @@ pub trait InteractionRect {
 
 impl InteractionRect for web_sys::MouseEvent {
     fn get_interaction_client_rect(&self) -> RectPrecise {
-        let client_x = f64::from(self.client_x());
-        let client_y = f64::from(self.client_y());
+        let client_x = self.client_x();
+        let client_y = self.client_y();
 
         let contact_width = 1.0;
         let contact_height = 1.0;
@@ -49,8 +49,8 @@ impl InteractionRect for web_sys::MouseEvent {
 
 impl InteractionRect for web_sys::PointerEvent {
     fn get_interaction_client_rect(&self) -> RectPrecise {
-        let client_x = f64::from(self.client_x());
-        let client_y = f64::from(self.client_y());
+        let client_x = self.client_x();
+        let client_y = self.client_y();
 
         let contact_width = f64::from(self.width());
         let contact_height = f64::from(self.height());

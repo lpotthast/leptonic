@@ -41,10 +41,11 @@ impl Settings {
     }
 
     pub fn to_style(&self) -> String {
+        use std::fmt::Write;
         let mut style = String::new();
         for (s, v) in &self.map {
             if let Some(v) = v {
-                style.push_str(&format!("{}: {};\n", s.0, v));
+                let _ = writeln!(style, "{}: {};", s.0, v);
             }
         }
         style
@@ -55,7 +56,7 @@ impl Settings {
 pub fn ThemeEditor() -> impl IntoView {
     let (settings, set_settings) = signal(Settings::new());
 
-    let style = Signal::derive(move || settings.with(|s| s.to_style()));
+    let style = Signal::derive(move || settings.with(Settings::to_style));
 
     view! {
         <div style="display: grid; grid-template-columns: 1fr 2fr 2fr; width: 100%; gap: 0.75em;">
@@ -122,8 +123,8 @@ fn Setting(setting: SettingSpec, set_settings: WriteSignal<Settings>) -> impl In
         set_settings.update(|settings| {
             if let Some(map_value) = settings.map.get_mut(&setting) {
                 *map_value = Some(v);
-            };
-        })
+            }
+        });
     };
 
     view! {

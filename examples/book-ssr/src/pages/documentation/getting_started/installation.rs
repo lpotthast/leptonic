@@ -8,7 +8,6 @@ use crate::{
 };
 
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageInstallation() -> impl IntoView {
     view! {
         <Article>
@@ -23,7 +22,7 @@ pub fn PageInstallation() -> impl IntoView {
                 <LinkExt href="https://github.com/lpotthast/leptonic-template-csr" target=LinkTarget::_Blank>"template-csr"</LinkExt> "."
             </p>
 
-            <Code>
+            <Code language=Language::Shell>
                 {indoc!(r"
                     git clone https://github.com/lpotthast/leptonic-template-ssr.git
                     git clone https://github.com/lpotthast/leptonic-template-csr.git
@@ -44,7 +43,7 @@ pub fn PageInstallation() -> impl IntoView {
 
             <p>"Start by adding "<Code inline=true>"leptonic"</Code>" as a dependency of your app. "</p>
 
-            <Code>
+            <Code language=Language::Shell>
                 {indoc!(r"
                     cargo add leptonic
                 ")}
@@ -59,7 +58,7 @@ pub fn PageInstallation() -> impl IntoView {
 
             <p>"Add the following to your "<Code inline=true>"Cargo.toml"</Code>". We will assume that the 'style' directory also contains your 'main.scss' file."</p>
 
-            <Code>
+            <Code language=Language::Toml>
                 {indoc!(r#"
                     [package.metadata.leptonic]
                     # REQUIRED: Leptonic's build-script will copy the Leptonic themes to this directory.
@@ -72,7 +71,7 @@ pub fn PageInstallation() -> impl IntoView {
 
             <p>"To incorporate the Leptonic themes in your app, add the following to your "<Code inline=true>"style/main.scss"</Code>" file."</p>
 
-            <Code>
+            <Code language=Language::Css>
                 {indoc!(r#"
                     @use "./leptonic/leptonic-themes";
                 "#)}
@@ -80,7 +79,7 @@ pub fn PageInstallation() -> impl IntoView {
 
             <p>"You can overwrite or add styles for a particular theme using a "<Code inline=true>"[data-theme=\"...\"]"</Code>" selector like so:"</p>
 
-            <Code>
+            <Code language=Language::Css>
                 {indoc!(r#"
                     [data-theme="light"] {
                         --brand-color: #8856e6;
@@ -98,11 +97,25 @@ pub fn PageInstallation() -> impl IntoView {
                 " Place a "<Code inline=true>"config.toml"</Code>" file inside it containing the following content:"
             </p>
 
-            <Code>
+            <Code language=Language::Toml>
                 {indoc!(r#"
                     [build]
                     # `leptonic` depends on some `leptos-use` functions requiring this opt-in. This may change in the future.
                     rustflags = ["--cfg=web_sys_unstable_apis"]
+                "#)}
+            </Code>
+
+            <p>
+                "Important: If you add target-specific "<Code inline=true>"rustflags"</Code>" (e.g. for a custom linker), "
+                "you must include "<Code inline=true>"\"--cfg=web_sys_unstable_apis\""</Code>" there as well. "
+                "Cargo does not merge "<Code language=Language::Toml inline=true>"[build].rustflags"</Code>" with "<Code language=Language::Toml inline=true>"[target.<triple>].rustflags"</Code>
+                " — the target-specific entry takes precedence and replaces the build-level flags entirely."
+            </p>
+
+            <Code language=Language::Toml>
+                {indoc!(r#"
+                    [target.aarch64-apple-darwin]
+                    rustflags = ["--cfg=web_sys_unstable_apis", "-C", "link-arg=-fuse-ld=lld"]
                 "#)}
             </Code>
 
@@ -111,18 +124,18 @@ pub fn PageInstallation() -> impl IntoView {
 
             <p>"Similar to Leptos, this crate comes with a prelude module."</p>
 
-            <p>"Just " <Code inline=true>"use leptonic::prelude::*;"</Code> " and you are ready to use any component mentioned in this book."</p>
+            <p>"Just " <Code language=Language::Rust inline=true>"use leptonic::prelude::*;"</Code> " and you are ready to use any component mentioned in this book."</p>
 
             <p>
                 "Leptonic provides the "<Code inline=true>"<Root>"</Code>" component. "
-                "It is responsible for enabling the "<Link href=routes::doc::Themes.materialize()>"Theming"</Link>", "<Link href=routes::doc::components::Modal.materialize()>"Modal"</Link>" and "
+                "It is responsible for enabling the "<Link href=routes::doc::Themes.materialize()>"Theming"</Link>", "<Link href=routes::doc::Modal.materialize()>"Modal"</Link>" and "
                 <Link href=routes::doc::components::Toast.materialize()>"Toast"</Link>" functionality of Leptonic as well as providing global event-listening capabilities."
                 "You have to include it in your app once, and render all your content inside it."
             </p>
 
             <p>"Let's implement the famous counter example."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     use leptonic::prelude::*;
 

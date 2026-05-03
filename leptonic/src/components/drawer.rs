@@ -1,5 +1,7 @@
 use leptos::prelude::*;
-use leptos_use::{use_interval_fn_with_options, utils::Pausable, UseIntervalFnOptions};
+use leptos_classes::Classes;
+use leptos_styles::Styles;
+use leptos_use::{UseIntervalFnOptions, use_interval_fn_with_options, utils::Pausable};
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DrawerSide {
@@ -30,6 +32,8 @@ enum DrawerAnimationState {
 pub fn Drawer(
     side: DrawerSide,
     #[prop(into, optional, default = Signal::from(true))] shown: Signal<bool>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     let memoized_shown = Memo::new(move |_| shown.get());
@@ -100,12 +104,13 @@ pub fn Drawer(
 
     view! {
         <div
-            class="leptonic-drawer"
+            class=classes.add("leptonic-drawer")
             class:shown=move || anim_state.get() == DrawerAnimationState::Shown
             class:showing=move || anim_state.get() == DrawerAnimationState::Showing
             class:hiding=move || anim_state.get() == DrawerAnimationState::Hiding
             class:hidden=move || anim_state.get() == DrawerAnimationState::Hidden
             data-side=side.to_str()
+            style=styles
         >
             {children()}
         </div>

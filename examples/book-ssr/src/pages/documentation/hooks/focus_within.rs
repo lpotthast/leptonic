@@ -1,32 +1,13 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*, prelude::Size};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::focus_within::FocusWithinDemo;
 
 #[component]
 pub fn PageUseFocusWithin() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
-    let (focus_count, set_focus_count) = signal(0);
-    let (blur_count, set_blur_count) = signal(0);
-    let (change_count, set_change_count) = signal(0);
-
-    let UseFocusWithinReturn {
-        props,
-        is_focus_within,
-    } = use_focus_within(UseFocusWithinInput {
-        disabled: disabled.into(),
-        on_focus_within: Some(Callback::new(move |_| {
-            set_focus_count.update(|c| *c += 1);
-        })),
-        on_blur_within: Some(Callback::new(move |_| {
-            set_blur_count.update(|c| *c += 1);
-        })),
-        on_focus_within_change: Some(Callback::new(move |_focused: bool| {
-            set_change_count.update(|c| *c += 1);
-        })),
-    });
-
     view! {
         <Article>
             <h1 id="use_focus_within" class="anchor">
@@ -34,83 +15,34 @@ pub fn PageUseFocusWithin() -> impl IntoView {
                 <AnchorLink href="#use_focus_within" description="Direct link to article header"/>
             </h1>
 
-            <p>"Track when focus is anywhere within an element tree. Unlike " <code>"use_focus"</code> " which only fires when the element itself receives focus, " <code>"use_focus_within"</code> " fires when focus enters or leaves the entire element tree. Common use cases include form groups that highlight when any field is focused, dropdown menus that stay open while navigating between items, and card components that respond to child focus."</p>
+            <p>
+                "The "<code>"use_focus_within"</code>" hook tracks when focus is anywhere within an element tree. Unlike "
+                <code>"use_focus"</code>" which only fires when the element itself receives focus, "
+                <code>"use_focus_within"</code>" fires when focus enters or leaves the entire element tree. "
+                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+            </p>
 
-            <h2 id="basic-usage" class="anchor">
-                "Basic Usage"
-                <AnchorLink href="#basic-usage" description="Direct link to basic usage"/>
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useFocusWithin.html" target=LinkTarget::_Blank>
+                    "useFocusWithin"
+                </LinkExt>
+                "."
+            </p>
+
+            <h2 id="demo" class="anchor">
+                "Interactive Demo"
+                <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
-
-            <Code>
-                {indoc!(r#"
-                    let UseFocusWithinReturn { props, is_focus_within } = use_focus_within(
-                        UseFocusWithinInput {
-                            disabled: Signal::derive(|| false),
-                            on_focus_within: Some(Callback::new(|_| { /* focus entered */ })),
-                            on_blur_within: Some(Callback::new(|_| { /* focus left */ })),
-                            on_focus_within_change: Some(Callback::new(|is_focused: bool| {
-                                // Fires whenever focus-within state changes
-                            })),
-                        }
-                    );
-
-                    view! {
-                        <div {..props.into_attrs()}>
-                            <input type="text" />
-                            <button>"Submit"</button>
-                        </div>
-                    }
-                "#)}
-            </Code>
 
             <p>"Click on any element inside the container below. Focus within is tracked even as you move between different focusable children:"</p>
 
-            <div
-                {..props.into_attrs()}
-                style=move || if is_focus_within.get() { demo_container_active() } else { demo_container_inactive() }
+            <DemoShell
+                source=include_str!("demos/focus_within.rs")
+                description="Focus within tracking"
             >
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Em(1.0)>
-                    <p style="margin: 0;">
-                        "Focus within: "
-                        <strong style=move || if is_focus_within.get() { state_active() } else { state_inactive() }>
-                            { move || if is_focus_within.get() { "Yes" } else { "No" } }
-                        </strong>
-                    </p>
-
-                    <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(1.0)>
-                        <input
-                            type="text"
-                            placeholder="Click me..."
-                            style=demo_input()
-                        />
-                        <button style=demo_button()>
-                            "Button 1"
-                        </button>
-                        <button style=demo_button()>
-                            "Button 2"
-                        </button>
-                    </Stack>
-
-                    <p style="margin: 0; font-size: 0.85em; opacity: 0.7;">
-                        "Tab between elements - focus stays \"within\" the container"
-                    </p>
-                </Stack>
-            </div>
-
-            <h2 id="event-callbacks" class="anchor">
-                "Event Callbacks"
-                <AnchorLink href="#event-callbacks" description="Direct link to event callbacks"/>
-            </h2>
-
-            <p>"Three callbacks report focus activity within the container: " <code>"on_focus_within"</code>
-                " fires when focus enters, " <code>"on_blur_within"</code> " fires when focus leaves, and "
-                <code>"on_focus_within_change"</code> " fires on every transition."</p>
-
-            <div style=flex_row_gap()>
-                <p>"Focus within: " <strong>{ move || focus_count.get() }</strong></p>
-                <p>"Blur within: " <strong>{ move || blur_count.get() }</strong></p>
-                <p>"Change: " <strong>{ move || change_count.get() }</strong></p>
-            </div>
+                <FocusWithinDemo />
+            </DemoShell>
 
             <h2 id="is-focus-within" class="anchor">
                 "is_focus_within Signal"
@@ -120,7 +52,7 @@ pub fn PageUseFocusWithin() -> impl IntoView {
             <p>"The hook returns a reactive " <code>"Signal<bool>"</code> " named " <code>"is_focus_within"</code>
                 " that is true whenever any descendant is focused. Use it for conditional styling:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseFocusWithinReturn { props, is_focus_within } = use_focus_within(input);
 
@@ -138,18 +70,6 @@ pub fn PageUseFocusWithin() -> impl IntoView {
                     }
                 "#)}
             </Code>
-
-            <h2 id="disabled" class="anchor">
-                "Disabled State"
-                <AnchorLink href="#disabled" description="Direct link to disabled state"/>
-            </h2>
-
-            <p>"When " <code>"disabled"</code> " is true, all event handlers are suppressed and " <code>"is_focus_within"</code> " remains false. Toggle the checkbox to see the effect on the demo above:"</p>
-
-            <FormControl attr:style=form_control_row()>
-                <Checkbox checked=disabled set_checked=set_disabled />
-                <Label>"Disabled"</Label>
-            </FormControl>
 
             <h2 id="input" class="anchor">
                 "Input"
@@ -238,20 +158,31 @@ pub fn PageUseFocusWithin() -> impl IntoView {
                 <li>"Handles focus moving between children without triggering blur."</li>
                 <li>"Ignores events bubbling through portals."</li>
                 <li>"Global focus listener detects DOM-removal edge cases."</li>
-                <li>"Respects disabled state — handlers are suppressed when disabled."</li>
+                <li>"Respects disabled state \u{2014} handlers are suppressed when disabled."</li>
+            </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocus.materialize()>"use_focus"</Link>" \u{2014} tracks focus on the element itself (not descendants)"</li>
+                <li><Link href=crate::routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
             </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "use_focus_within", link: "#use_focus_within" },
-                Toc::Leaf { title: "Basic Usage", link: "#basic-usage" },
-                Toc::Leaf { title: "Event Callbacks", link: "#event-callbacks" },
+                Toc::Leaf { title: "Interactive Demo", link: "#demo" },
                 Toc::Leaf { title: "is_focus_within Signal", link: "#is-focus-within" },
-                Toc::Leaf { title: "Disabled State", link: "#disabled" },
                 Toc::Leaf { title: "Input", link: "#input" },
                 Toc::Leaf { title: "Return Value", link: "#return-value" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

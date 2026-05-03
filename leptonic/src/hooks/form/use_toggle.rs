@@ -1,5 +1,5 @@
 use leptos::{
-    attr::custom::{custom_attribute, CustomAttr},
+    attr::custom::{CustomAttr, custom_attribute},
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
@@ -8,21 +8,15 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::{
     hooks::{
-        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
+        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
     },
     utils::EventHandler,
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toggle/src/useToggle.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_toggle` hook.
 #[derive(Debug, Clone, Copy)]
@@ -144,7 +138,7 @@ pub fn use_toggle(input: UseToggleInput) -> UseToggleReturn {
         on_change,
         is_disabled,
         is_read_only,
-        value,
+        value: _value,
     } = input;
 
     let (is_pressed, _set_is_pressed) = signal(false);

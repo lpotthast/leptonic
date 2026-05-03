@@ -1,17 +1,21 @@
+#![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
+
 use leptos::{html, prelude::*};
 use leptos_use::{use_document, use_event_listener};
 use wasm_bindgen::JsCast;
 
 use crate::{
     hooks::{FocusManager, FocusManagerOptions},
-    utils::focus_scope_tree::{self, FocusScopeParentContext},
+    utils::{
+        classes::Classes,
+        focus_scope_tree::{self, FocusScopeParentContext},
+        styles::Styles,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/FocusScope.tsx
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## DIFFERENT BEHAVIOR
 //
@@ -22,8 +26,6 @@ use crate::{
 //
 // - Custom event name `leptonic-focus-scope-restore` instead of
 //   `react-aria-focus-scope-restore`
-//
-// =============================================================================
 
 /// Custom event dispatched before a `FocusScope` restores focus.
 ///
@@ -92,15 +94,32 @@ pub fn FocusScope(
     #[prop(default = false)]
     auto_focus: bool,
 
+    #[prop(into, optional)] classes: Classes,
+
+    #[prop(into, optional)] styles: Styles,
+
     /// The content of the focus scope.
     children: Children,
 ) -> impl IntoView {
-    let scope_ref = NodeRef::<html::Div>::new();
+    cfg_if::cfg_if! {
+        if #[cfg(feature = "ssr")] {
+            let _ = (contain, restore_focus, auto_focus);
+            let scope_ref = NodeRef::<html::Div>::new();
+            provide_context(FocusScopeContext {
+                focus_manager: FocusManager::new(|| None),
+            });
+            view! {
+                <div node_ref=scope_ref class=classes style=styles.add("display", "contents")>
+                    {children()}
+                </div>
+            }
+        } else {
+            let scope_ref = NodeRef::<html::Div>::new();
 
-    // ---- Scope tree integration ----
-    // Discover parent scope (if any) via Leptos context.
-    let parent_id = use_context::<FocusScopeParentContext>().map(|ctx| ctx.scope_id);
-    let scope_id = focus_scope_tree::allocate_id();
+            // ---- Scope tree integration ----
+            // Discover parent scope (if any) via Leptos context.
+            let parent_id = use_context::<FocusScopeParentContext>().map(|ctx| ctx.scope_id);
+            let scope_id = focus_scope_tree::allocate_id();
 
     // Provide our scope ID so nested FocusScopes can discover us as parent.
     provide_context(FocusScopeParentContext { scope_id });
@@ -148,6 +167,10 @@ pub fn FocusScope(
     });
 
     // Auto-focus on mount (Issue 6: skip if focus is already within the scope).
+    // Uses `focus_safely` (preventScroll: true) instead of the FocusManager's
+    // standard `focus_first` (which allows scroll) to avoid triggering
+    // scroll-based overlay dismissal via `use_close_on_scroll`.
+    // Matches react-aria's FocusScope auto-focus behavior.
     if auto_focus {
         let fm = focus_manager.clone();
         Effect::new(move |prev_run: Option<bool>| {
@@ -167,15 +190,19 @@ pub fn FocusScope(
                     // Try tabbable elements first, then fall back to any focusable
                     // element (e.g., tabindex="-1"). Matches react-aria's
                     // focusFirstInScope fallback behavior.
-                    let focused = fm.focus_first(FocusManagerOptions {
-                        tabbable: true,
-                        ..Default::default()
-                    });
-                    if focused.is_none() {
-                        fm.focus_first(FocusManagerOptions {
-                            tabbable: false,
+                    let element = fm
+                        .find_first(FocusManagerOptions {
+                            tabbable: true,
                             ..Default::default()
+                        })
+                        .or_else(|| {
+                            fm.find_first(FocusManagerOptions {
+                                tabbable: false,
+                                ..Default::default()
+                            })
                         });
+                    if let Some(el) = element {
+                        crate::utils::focus::focus_safely(&el);
                     }
                 }
             }
@@ -496,10 +523,12 @@ pub fn FocusScope(
         }
     });
 
-    view! {
-        <div node_ref=scope_ref style="display: contents">
-            {children()}
-        </div>
+            view! {
+                <div node_ref=scope_ref class=classes style=styles.add("display", "contents")>
+                    {children()}
+                </div>
+            }
+        }
     }
 }
 

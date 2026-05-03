@@ -1,17 +1,8 @@
-use indoc::indoc;
-use leptonic::{
-    atoms::{
-        button::Button,
-        hoverable::Hoverable,
-        popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger},
-    },
-    components::prelude::*,
-    hooks::{PlacementX, PlacementY},
-    utils::locale::WritingDirection,
-};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::popover::PopoverDemo;
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageAtomPopover() -> impl IntoView {
@@ -24,56 +15,9 @@ pub fn PageAtomPopover() -> impl IntoView {
 
             <p>"..."</p>
 
-            <Code>
-                {indoc!(r#"
-                    use leptonic::atoms::button::Button;
-                    use leptonic::atoms::hoverable::Hoverable;
-
-                    use leptonic::atoms::popover::{Popover, PopoverContent, PopoverContext, PopoverTrigger};
-
-                    view! {
-                        <Popover>
-                            <PopoverTrigger>
-                                {
-                                    let ctx = expect_context::<PopoverContext>();
-                                    view! {
-                                        <Button on_hover_start=move |_| ctx.set_state.set(true) on_hover_end=move |_| ctx.set_state.set(false)>
-                                            "Press me"
-                                        </Button>
-                                    }
-                                }
-                            </PopoverTrigger>
-
-                            <PopoverContent placement_x=PlacementX::Center placement_y=PlacementY::Above writing_direction=WritingDirection::Ltr>
-                                "Overlay"
-                            </PopoverContent>
-                        </Popover>
-                    }
-                "#)}
-            </Code>
-
-            <Popover>
-                <PopoverTrigger>
-                    {
-                        let ctx = expect_context::<PopoverContext>();
-                        view! {
-                            <Button on_press=move |_| ctx.set_state.set(!ctx.state.get_untracked())>
-                                "Press me"
-                            </Button>
-
-                            <Hoverable on_hover_start=move |_| ctx.set_state.set(true) on_hover_end=move |_| ctx.set_state.set(false)>
-                                <div>
-                                    "Hover me"
-                                </div>
-                            </Hoverable>
-                        }
-                    }
-                </PopoverTrigger>
-
-                <PopoverContent placement_x=PlacementX::Center placement_y=PlacementY::Above writing_direction=WritingDirection::Ltr>
-                    "Overlay"
-                </PopoverContent>
-            </Popover>
+            <DemoShell source=include_str!("demos/popover.rs")>
+                <PopoverDemo />
+            </DemoShell>
         </Article>
 
         <Toc toc=Toc::List {

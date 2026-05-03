@@ -1,6 +1,3 @@
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // This hook is based on React Aria's `usePopover`:
 // https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/usePopover.ts
@@ -13,10 +10,13 @@
 // - `groupRef`: Submenu-style popover groups (where multiple popovers share a
 //   trigger area) are not implemented.
 //
-// - `ariaHideOutside`/`keepVisible`: React Aria hides outside elements from
-//   assistive technology when a popover is open. This is not implemented.
-//
 // ## IMPLEMENTED (previously omitted)
+//
+// - `ariaHideOutside`/`keepVisible`: Implemented in this hook for modal popovers
+//   (`!is_non_modal`). The `Popover` atom (`atoms/popover.rs`) also implements
+//   both `ariaHideOutside` (modal) and `keepVisible` (non-modal) directly,
+//   since the atom's split architecture (separate trigger/content components)
+//   means it doesn't use this hook.
 //
 // - `placement` return value: Resolved placement after flipping is now returned
 //   via `resolved_placement_x` and `resolved_placement_y`.
@@ -25,28 +25,27 @@
 //
 // - `underlayProps` is renamed to `underlay_props` following Rust naming conventions.
 //
-// =============================================================================
 
 use leptos::{oco::Oco, prelude::*};
 
 use super::{
-    use_overlay::{use_overlay, UseOverlayInput, UseOverlayUnderlayAttrs, UseOverlayUnderlayProps},
+    use_overlay::{UseOverlayInput, UseOverlayUnderlayAttrs, UseOverlayUnderlayProps, use_overlay},
     use_overlay_position::{
-        use_overlay_position, PhysicalPlacementX, PlacementX, PlacementY, UseOverlayPositionInput,
+        PhysicalPlacementX, PlacementX, PlacementY, UseOverlayPositionInput, use_overlay_position,
     },
 };
 use crate::{
     hooks::{
-        interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput},
-        merged::MergedOverlayOverlayPositionProps,
-        IntoAttrs, MergedOverlayOverlayPositionAttrs, UsePreventScrollProps,
+        IntoAttrs, MergedOverlayOverlayPositionAttrs, PropsWithStyles, UsePreventScrollProps,
         UsePreventScrollReturn,
+        interactions::use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
+        merged::MergedOverlayOverlayPositionProps,
     },
-    utils::{locale::WritingDirection, CapturedElement, ElementCaptureAttr, MergeWith},
+    utils::{CapturedElement, ElementCaptureAttr, MergeWith, locale::WritingDirection},
 };
 
 /// Input parameters for the `use_popover` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct UsePopoverInput {
     /// Whether the popover is open.
     pub is_open: Signal<bool>,
@@ -95,8 +94,8 @@ pub struct UsePopoverInput {
 /// The return value of the `use_popover` hook.
 #[derive(Debug)]
 pub struct UsePopoverReturn {
-    /// Props for the popover element. Call `.into_attrs()` for view spreading.
-    pub props: UsePopoverProps,
+    /// Props for the popover element. Call `.into_parts()` for view spreading and styles.
+    pub props: PropsWithStyles<UsePopoverProps>,
 
     /// Props for the trigger element. Call `.into_attrs()` for view spreading.
     /// Spread these onto the trigger element so the hook can capture it for positioning.
@@ -281,12 +280,60 @@ pub fn use_popover(input: UsePopoverInput) -> UsePopoverReturn {
         disabled: Signal::derive(move || is_non_modal || !is_open.get()),
     });
 
-    // 4. Return merged props.
+    // 4. Hide outside elements from assistive technology (modal popovers only).
+    if !is_non_modal {
+        #[cfg(not(feature = "ssr"))]
+        {
+            use crate::utils::aria_hide_outside::{AriaHideOutsideOptions, aria_hide_outside};
+
+            let overlay_element = overlay.overlay_element;
+
+            let hide_cleanup: StoredValue<Option<Box<dyn FnOnce()>>, LocalStorage> =
+                StoredValue::new_local(None);
+
+            Effect::new(move |_| {
+                // Clean up previous hide (if any).
+                hide_cleanup.update_value(|opt| {
+                    if let Some(f) = opt.take() {
+                        f();
+                    }
+                });
+
+                if is_open.get() {
+                    let mut targets = Vec::new();
+                    if let Some(el) = overlay_element.get() {
+                        targets.push((*el).clone());
+                    }
+                    if let Some(el) = trigger_element.get() {
+                        targets.push((*el).clone());
+                    }
+                    if !targets.is_empty() {
+                        let undo = aria_hide_outside(&targets, AriaHideOutsideOptions::default());
+                        hide_cleanup.set_value(Some(undo));
+                    }
+                }
+            });
+
+            on_cleanup(move || {
+                hide_cleanup.update_value(|opt| {
+                    if let Some(f) = opt.take() {
+                        f();
+                    }
+                });
+            });
+        }
+    }
+
+    // 5. Return merged props.
     let id = overlay.id;
+    let (position_props, position_styles) = position.props.into_inner();
     UsePopoverReturn {
-        props: UsePopoverProps {
-            other: overlay.props.merge_with(position.props),
-        },
+        props: PropsWithStyles::new(
+            UsePopoverProps {
+                other: overlay.props.merge_with(position_props),
+            },
+            position_styles,
+        ),
         trigger_props: UsePopoverTriggerProps {
             element_capture: trigger_element.attr(),
         },

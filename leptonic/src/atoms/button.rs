@@ -1,11 +1,15 @@
-use leptos::{prelude::*, tachys::html::class::class};
-use leptos_router::components::{AProps, ToHref, A};
+use leptos::{
+    prelude::*,
+    tachys::html::{class::class, style::style},
+};
+use leptos_router::components::{A, AProps, ToHref};
 
 use crate::{
     hooks::{LinkTarget, *},
     utils::{
         aria::{AriaExpanded, AriaHasPopup},
         classes::Classes,
+        styles::Styles,
     },
 };
 
@@ -18,10 +22,11 @@ pub fn Button(
     #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: Signal<Option<AriaExpanded>>,
     #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     let UseButtonReturn {
-        props,
+        props: button_props,
         is_hovered: _,
         is_pressed: _,
         is_focus_visible: _,
@@ -70,8 +75,11 @@ pub fn Button(
         },
     });
 
+    let (button_attrs, button_styles) = button_props.into_parts();
+    let styles = button_styles.merge(styles);
+
     view! {
-        <button {..props.into_attrs()} class=classes>
+        <button {..button_attrs} class=classes style=styles>
             {children()}
         </button>
     }
@@ -97,6 +105,8 @@ pub fn LinkButton<H>(
 
     #[prop(into, optional)] classes: Classes,
 
+    #[prop(into, optional)] styles: Styles,
+
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
@@ -110,7 +120,7 @@ where
     let disabled = disabled.unwrap_or(Signal::from(false));
 
     let UseButtonReturn {
-        props,
+        props: button_props,
         is_hovered: _,
         is_pressed: _,
         is_focus_visible: _,
@@ -163,6 +173,9 @@ where
     // TODO: Propagate scroll and strict_trailing_slash?
     // TODO (new): Does a class in props.attrs override this? Do we need the old "prepend" logic?
 
+    let (button_attrs, button_styles) = button_props.into_parts();
+    let styles = button_styles.merge(styles);
+
     A(AProps {
         href,
         target,
@@ -172,10 +185,15 @@ where
         children,
     })
     .add_any_attr(class(classes))
-    .add_any_attr(props.into_attrs())
+    .add_any_attr(style(styles))
+    .add_any_attr(button_attrs)
 }
 
 #[component]
-pub fn ButtonWrapper(children: Children) -> impl IntoView {
-    view! { <div class="leptonic-btn-wrapper">{children()}</div> }
+pub fn ButtonWrapper(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <div class=classes.add("leptonic-btn-wrapper") style=styles>{children()}</div> }
 }

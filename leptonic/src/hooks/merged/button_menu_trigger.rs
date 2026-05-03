@@ -7,13 +7,13 @@ use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
     hooks::{
+        IntoAttrs, MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps,
         button::UseButtonProps,
         menu::use_menu_trigger::{UseMenuTriggerMenuProps, UseMenuTriggerProps},
-        IntoAttrs, MergedPressHoverFocusRingAttrs, MergedPressHoverFocusRingProps,
     },
     utils::{
-        aria::{AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
         MergeWith,
+        aria::{AriaDisabled, AriaExpanded, AriaHasPopup, AriaRole},
     },
 };
 

@@ -1,5 +1,5 @@
 use leptos::{
-    attr::custom::{custom_attribute, CustomAttr},
+    attr::custom::{CustomAttr, custom_attribute},
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,

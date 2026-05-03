@@ -2,13 +2,7 @@ use leptos::prelude::*;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/searchfield/src/useSearchFieldState.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// State for managing search field state.
 #[derive(Clone, Copy)]

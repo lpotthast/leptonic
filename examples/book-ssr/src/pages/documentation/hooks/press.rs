@@ -1,268 +1,15 @@
-use std::time::Duration;
-
 use indoc::indoc;
-use leptonic::{
-    atoms::slider::{
-        Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
-    },
-    components::prelude::*,
-    hooks::*,
-    utils::{
-        key::Key,
-        styles::{Style::*, Styles},
-    },
-};
+use leptonic::{components::prelude::*, utils::key::Key};
 use leptos::prelude::*;
-use ringbuf::{
-    traits::{Consumer, Observer, RingBuffer},
-    HeapRb,
+
+use super::demos::{
+    press_basic::PressBasicDemo, press_cancel::PressCancelDemo, press_long::PressLongDemo,
+    press_no_focus::PressNoFocusDemo,
 };
-
-use crate::pages::documentation::{article::Article, toc::Toc};
-
-fn track_style() -> Styles {
-    Styles::from([
-        (Display, "flex"),
-        (Width, "200px"),
-        (Height, "8px"),
-        (Background, "#ddd"),
-        (BorderRadius, "4px"),
-        (Position, "relative"),
-        (Cursor, "pointer"),
-    ])
-}
-
-fn thumb_style() -> Styles {
-    Styles::builder()
-        .with((Width, "20px"))
-        .with((Height, "20px"))
-        .with((BackgroundColor, "var(--brand-color)"))
-        .with((BorderRadius, "50%"))
-        .with((Border, "2px solid white"))
-        .with((BoxShadow, "0 2px 4px rgba(0,0,0,0.2)"))
-        .with((Cursor, "grab"))
-        .build()
-}
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageUsePress() -> impl IntoView {
-    let (count, set_count) = signal(0);
-    let (dbl_count, set_dbl_count) = signal(0);
-    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
-    let (disabled, set_disabled) = signal(false);
-    let (press_state, set_press_state) = signal(false);
-
-    let string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
-
-    let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
-        disabled: disabled.into(),
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
-        on_press: Callback::new(move |e: PressEvent| {
-            set_count.update(|c| *c += 1);
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "Press: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        }),
-        on_press_up: Some(Callback::new(move |e: PressEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "PressUp: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        on_press_start: Some(Callback::new(move |e: PressEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "PressStart: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        on_press_end: Some(Callback::new(move |e: PressEvent| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "PressEnd: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        on_press_change: Some(Callback::new(move |pressed: bool| {
-            set_press_state.set(pressed);
-        })),
-        on_double_press: Some(Callback::new(move |e: PressEvent| {
-            set_dbl_count.update(|c| *c += 1);
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "DoublePress: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
-    });
-
-    // Long press demo state
-    let (lp_count, set_lp_count) = signal(0);
-    let (lp_events, set_lp_events) = signal(HeapRb::<Oco<'static, str>>::new(20));
-    let (lp_disabled, set_lp_disabled) = signal(false);
-    let (threshold, set_threshold) = signal(Duration::from_millis(500));
-
-    let lp_string = Memo::new(move |_| {
-        lp_events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
-
-    let UsePressReturn {
-        props: lp_props,
-        is_pressed: _,
-    } = use_press(UsePressInput {
-        disabled: lp_disabled.into(),
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
-        on_press: Callback::new(|_| {}),
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: Some(Callback::new(move |e: LongPressEvent| {
-            set_lp_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "LongPressStart: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        on_long_press: Some(Callback::new(move |e: LongPressEvent| {
-            set_lp_count.update(|c| *c += 1);
-            set_lp_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "LongPress: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        on_long_press_end: Some(Callback::new(move |e: LongPressEvent| {
-            set_lp_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "LongPressEnd: pointer_type={:?}, x={:?}, y={:?}",
-                    e.pointer_type, e.x, e.y,
-                )));
-            });
-        })),
-        long_press_threshold: Some(threshold.into()),
-        long_press_accessibility_description: Some("Long press to increment counter".into()),
-    });
-
-    // Configuration options demo: cancel_on_pointer_exit button
-    let (cancel_events, set_cancel_events) = signal(HeapRb::<Oco<'static, str>>::new(10));
-    let cancel_string = Memo::new(move |_| {
-        cancel_events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
-    let UsePressReturn {
-        props: cancel_props,
-        is_pressed: cancel_is_pressed,
-    } = use_press(UsePressInput {
-        disabled: Signal::derive(|| false),
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: true,
-        prevent_focus_on_press: false,
-        force_is_pressed: None,
-        on_press: Callback::new(move |_: PressEvent| {
-            set_cancel_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("Press completed"));
-            });
-        }),
-        on_press_up: None,
-        on_press_start: Some(Callback::new(move |_: PressEvent| {
-            set_cancel_events.update(|events| {
-                events.push_overwrite(Oco::Borrowed("PressStart"));
-            });
-        })),
-        on_press_end: Some(Callback::new(move |e: PressEvent| {
-            set_cancel_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!(
-                    "PressEnd: pointer_type={:?}",
-                    e.pointer_type,
-                )));
-            });
-        })),
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
-    });
-
-    // Configuration options demo: prevent_focus_on_press button
-    let (focus_demo_focused, set_focus_demo_focused) = signal(false);
-    let UsePressReturn {
-        props: no_focus_props,
-        is_pressed: no_focus_is_pressed,
-    } = use_press(UsePressInput {
-        disabled: Signal::derive(|| false),
-        force_prevent_default: false,
-        force_propagation: false,
-        allow_text_selection_on_press: false,
-        should_cancel_on_pointer_exit: false,
-        prevent_focus_on_press: true,
-        force_is_pressed: None,
-        on_press: Callback::new(|_| {}),
-        on_press_up: None,
-        on_press_start: None,
-        on_press_end: None,
-        on_press_change: None,
-        on_double_press: None,
-        on_long_press_start: None,
-        on_long_press: None,
-        on_long_press_end: None,
-        long_press_threshold: None,
-        long_press_accessibility_description: None,
-    });
-
     view! {
         <Article>
             <h1 id="use_press" class="anchor">
@@ -271,9 +18,18 @@ pub fn PageUsePress() -> impl IntoView {
             </h1>
 
             <p>
-                "Normalizes press interactions across mouse, touch, keyboard, and screen readers. "
+                "The "<Code inline=true>"use_press"</Code>" hook normalizes press interactions across mouse, touch, keyboard, and screen readers. "
                 "Provides consistent press event handling with support for press start, end, up, "
-                "and completion events, along with pointer type detection."
+                "and completion events, along with pointer type detection. "
+                "See the "<Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/usePress.html" target=LinkTarget::_Blank>
+                    "usePress"
+                </LinkExt>
+                "."
             </p>
 
             <h2 id="example" class="anchor">
@@ -281,7 +37,7 @@ pub fn PageUsePress() -> impl IntoView {
                 <AnchorLink href="#example" description="Direct link to example"/>
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
                         disabled: disabled.into(),
@@ -311,48 +67,9 @@ pub fn PageUsePress() -> impl IntoView {
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <p>"Try interacting with the button below using mouse, touch, or keyboard (Tab to focus, Enter/Space to press)."</p>
-
-            <button
-                {..props.into_attrs()}
-                style:background=move || if is_pressed.get() { "var(--brand-color)" } else { "" }
-                style:color=move || if is_pressed.get() { "white" } else { "" }
-                style:transform=move || if is_pressed.get() { "scale(0.97)" } else { "" }
-                style:transition="background 0.1s, color 0.1s, transform 0.1s"
-            >
-                "Press me"
-            </button>
-
-            <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em;">
-                <Checkbox checked=disabled set_checked=set_disabled />
-                <Label>"Disabled"</Label>
-            </FormControl>
-
-            <p>"Is pressed: " { move || is_pressed.get() }</p>
-            <p>"on_press_change: " { move || press_state.get() }</p>
-            <p>"Was pressed: " { move || count.get() } { move || match count.get() {
-                1 => " time",
-                _ => " times",
-            } }</p>
-            <p>"Was double-pressed: " { move || dbl_count.get() } { move || match dbl_count.get() {
-                1 => " time",
-                _ => " times",
-            } }</p>
-
-            <p>"Last " { move || events.with(|events| events.occupied_len()) } " events: "</p>
-
-            <pre style="
-                width: 100%;
-                height: 15em;
-                overflow: auto;
-                padding: var(--typography-code-padding);
-                border: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                color: var(--typography-code-color);
-            ">
-                { move || string.get() }
-            </pre>
+            <DemoShell source=include_str!("demos/press_basic.rs")>
+                <PressBasicDemo />
+            </DemoShell>
 
             <h2 id="features" class="anchor">
                 "Features"
@@ -413,52 +130,13 @@ pub fn PageUsePress() -> impl IntoView {
                 <AnchorLink href="#options-demo" description="Direct link to configuration options demo"/>
             </h3>
 
-            <p><strong>"should_cancel_on_pointer_exit"</strong>
-               " — Press the button below, then drag the pointer outside before releasing. "
-               "The press is cancelled and " <code>"on_press"</code> " does not fire."</p>
+            <DemoShell source=include_str!("demos/press_cancel.rs")>
+                <PressCancelDemo />
+            </DemoShell>
 
-            <button
-                {..cancel_props.into_attrs()}
-                style:background=move || if cancel_is_pressed.get() { "var(--brand-color)" } else { "" }
-                style:color=move || if cancel_is_pressed.get() { "white" } else { "" }
-                style:transform=move || if cancel_is_pressed.get() { "scale(0.97)" } else { "" }
-                style:transition="background 0.1s, color 0.1s, transform 0.1s"
-            >
-                "Drag outside to cancel"
-            </button>
-
-            <pre style="
-                width: 100%;
-                height: 5em;
-                overflow: auto;
-                padding: var(--typography-code-padding);
-                border: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                color: var(--typography-code-color);
-            ">
-                { move || cancel_string.get() }
-            </pre>
-
-            <p><strong>"prevent_focus_on_press"</strong>
-               " — Click the button below: it will not receive focus (no outline appears). "
-               "Compare with the demo button above which receives focus on click."</p>
-
-            <button
-                {..no_focus_props.into_attrs()}
-                on:focus=move |_| set_focus_demo_focused.set(true)
-                on:blur=move |_| set_focus_demo_focused.set(false)
-                style:background=move || if no_focus_is_pressed.get() { "var(--brand-color)" } else { "" }
-                style:color=move || if no_focus_is_pressed.get() { "white" } else { "" }
-                style:transform=move || if no_focus_is_pressed.get() { "scale(0.97)" } else { "" }
-                style:transition="background 0.1s, color 0.1s, transform 0.1s"
-                style:outline=move || if focus_demo_focused.get() { "2px solid var(--brand-color)" } else { "none" }
-                style:outline-offset="2px"
-            >
-                "Click me (no focus)"
-            </button>
-
-            <p>"Focused: " { move || focus_demo_focused.get() }</p>
+            <DemoShell source=include_str!("demos/press_no_focus.rs")>
+                <PressNoFocusDemo />
+            </DemoShell>
 
             <h2 id="long-press" class="anchor">
                 "Long Press"
@@ -478,7 +156,7 @@ pub fn PageUsePress() -> impl IntoView {
                 <AnchorLink href="#long-press-example" description="Direct link to long press example"/>
             </h3>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let (threshold, set_threshold) = signal(Duration::from_millis(500));
 
@@ -516,69 +194,9 @@ pub fn PageUsePress() -> impl IntoView {
                 <AnchorLink href="#long-press-demo" description="Direct link to long press demo"/>
             </h3>
 
-            <p>"Press and hold the button below for " { move || threshold.get().as_millis() } "ms to trigger a long press:"</p>
-
-            <button
-                {..lp_props.into_attrs()}
-                style="
-                    display: inline-flex;
-                    border: 2px solid var(--brand-color);
-                    padding: 1em 2em;
-                    cursor: pointer;
-                    border-radius: 4px;
-                    background: var(--brand-color);
-                    color: white;
-                    font-size: 1em;
-                "
-            >
-                "Long press me"
-            </button>
-
-            <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em; margin-top: 1em;">
-                <Checkbox checked=lp_disabled set_checked=set_lp_disabled />
-                <Label>"Disabled"</Label>
-            </FormControl>
-
-            <div style="display: flex; align-items: center; gap: 0.5em; margin-top: 0.5em;">
-                <Label>"Threshold:"</Label>
-                <SliderAtom
-                    values=SliderValues::Uncontrolled(vec![500.0])
-                    min=100.0
-                    max=2000.0
-                    step=100.0
-                    on_change=Callback::new(move |vals: Vec<f64>| {
-                        set_threshold.set(Duration::from_millis(vals[0] as u64));
-                    })
-                    styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "0.5em"), (Flex, "0 0 200px")]
-                >
-                    <SliderTrack styles=track_style()>
-                        <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
-                        <SliderThumb styles=thumb_style()/>
-                    </SliderTrack>
-                    <SliderOutput let:attrs let:values>
-                        <output {..attrs} style=Styles::from([(MinWidth, "60px"), (TextAlign, "right")])>
-                            { move || format!("{}ms", values.get()[0] as u64) }
-                        </output>
-                    </SliderOutput>
-                </SliderAtom>
-            </div>
-
-            <p>"Long press count: " { move || lp_count.get() }</p>
-
-            <p>"Last " { move || lp_events.with(|events| events.occupied_len()) } " events:"</p>
-
-            <pre style="
-                width: 100%;
-                height: 10em;
-                overflow: auto;
-                padding: var(--typography-code-padding);
-                border: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                color: var(--typography-code-color);
-            ">
-                { move || lp_string.get() }
-            </pre>
+            <DemoShell source=include_str!("demos/press_long.rs")>
+                <PressLongDemo />
+            </DemoShell>
 
             <h3 id="long-press-features" class="anchor">
                 "Long Press Features"
@@ -621,6 +239,18 @@ pub fn PageUsePress() -> impl IntoView {
                 "Because the long press dispatches " <code>"pointercancel"</code> ", the "
                 <code>"on_press"</code> " callback is suppressed for interactions that became long presses."
             </p>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
+                <li><Link href=crate::routes::doc::interactions::UseHover.materialize()>"use_hover"</Link></li>
+                <li><Link href=crate::routes::doc::interactions::UseKeyboard.materialize()>"use_keyboard"</Link></li>
+                <li><Link href=crate::routes::doc::button::Hook.materialize()>"use_button"</Link>" (composes use_press)"</li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -637,6 +267,7 @@ pub fn PageUsePress() -> impl IntoView {
                 Toc::Leaf { title: "Long Press Demo", link: "#long-press-demo" },
                 Toc::Leaf { title: "Long Press Features", link: "#long-press-features" },
                 Toc::Leaf { title: "How Long Press Works", link: "#long-press-how-it-works" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

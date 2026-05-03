@@ -2,8 +2,12 @@ use leptos::prelude::*;
 
 use super::form_control::FormInput;
 use crate::{
-    components::{form_control::FormControlContext, icon::Icon},
     Out,
+    components::{form_control::FormControlContext, icon::Icon},
+    utils::{
+        classes::Classes,
+        styles::{Display, Styles},
+    },
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -30,6 +34,8 @@ pub fn Checkbox(
     #[prop(into)] set_checked: Out<bool>,
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(default = icondata::BsCheck2)] checked_icon: icondata::Icon,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let ctx = CheckboxContext {
         checked,
@@ -44,7 +50,8 @@ pub fn Checkbox(
 
     view! {
         <div
-            class="leptonic-checkbox"
+            class=classes.add("leptonic-checkbox")
+            style=styles
             role="checkbox"
             aria-checked=move || if checked.get() { "true" } else { "false" }
             aria-disabled=move || if disabled.get() { "true" } else { "false" }
@@ -57,7 +64,11 @@ pub fn Checkbox(
         >
             <Icon
                 icon=checked_icon
-                attr:style=move || if checked.get() { "display: inherit" } else { "display: none" }
+                styles=Styles::new().add(Display, move || if checked.get() {
+                    "inherit"
+                } else {
+                    "none"
+                })
             />
         </div>
     }

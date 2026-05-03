@@ -2,45 +2,12 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::table::TableDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
-
-#[derive(Clone)]
-pub struct Minion {
-    id: u32,
-    name: String,
-    appearance: String,
-    num_eyes: u32,
-}
 
 #[component]
 pub fn PageTable() -> impl IntoView {
-    let minions = RwSignal::new(vec![
-        Minion {
-            id: 1,
-            name: String::from("Kevin"),
-            appearance: String::from("Tall"),
-            num_eyes: 2,
-        },
-        Minion {
-            id: 2,
-            name: String::from("Bob"),
-            appearance: String::from("Short"),
-            num_eyes: 2,
-        },
-        Minion {
-            id: 3,
-            name: String::from("Stuart"),
-            appearance: String::from("Medium"),
-            num_eyes: 1,
-        },
-        Minion {
-            id: 4,
-            name: String::from("Otto"),
-            appearance: String::from("Round"),
-            num_eyes: 2,
-        },
-    ]);
-
     view! {
         <Article>
             <h1 id="table" class="anchor">
@@ -50,63 +17,9 @@ pub fn PageTable() -> impl IntoView {
 
             <p>"Tables..."</p>
 
-            <Code>
-                {indoc!(r##"
-                    <TableContainer>
-                        <Table bordered=true hoverable=true>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHeaderCell min_width=true>"#"</TableHeaderCell>
-                                    <TableHeaderCell>"Name"</TableHeaderCell>
-                                    <TableHeaderCell>"Appearance"</TableHeaderCell>
-                                    <TableHeaderCell>"Num. eyes"</TableHeaderCell>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                <For
-                                    each=move || minions.get()
-                                    key=move |minion| minion.id
-                                    children=move |minion| view! {
-                                        <TableRow>
-                                            <TableCell>{minion.id}</TableCell>
-                                            <TableCell>{minion.name}</TableCell>
-                                            <TableCell>{minion.appearance}</TableCell>
-                                            <TableCell>{minion.num_eyes}</TableCell>
-                                        </TableRow>
-                                    }
-                                />
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                "##)}
-            </Code>
-
-            <TableContainer>
-                <Table bordered=true hoverable=true>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHeaderCell min_width=true>"#"</TableHeaderCell>
-                            <TableHeaderCell>"Name"</TableHeaderCell>
-                            <TableHeaderCell>"Appearance"</TableHeaderCell>
-                            <TableHeaderCell>"Num. eyes"</TableHeaderCell>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <For
-                            each=move || minions.get()
-                            key=move |minion| minion.id
-                            children=move |minion| view! {
-                                <TableRow>
-                                    <TableCell>{minion.id}</TableCell>
-                                    <TableCell>{minion.name}</TableCell>
-                                    <TableCell>{minion.appearance}</TableCell>
-                                    <TableCell>{minion.num_eyes}</TableCell>
-                                </TableRow>
-                            }
-                        />
-                    </TableBody>
-                </Table>
-            </TableContainer>
+            <DemoShell source=include_str!("demos/table.rs")>
+                <TableDemo />
+            </DemoShell>
 
             <h2 id="styling">
                 "Styling"
@@ -115,7 +28,7 @@ pub fn PageTable() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     // Table wrapper
                     --table-wrapper-box-shadow-color

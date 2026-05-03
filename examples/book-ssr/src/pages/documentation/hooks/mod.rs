@@ -1,9 +1,18 @@
 use leptos::prelude::*;
 
+pub mod demos;
+
 pub mod anchor_link;
 pub mod breadcrumbs;
 pub mod button;
 pub mod checkbox;
+pub mod color;
+pub mod color_area;
+pub mod color_channel_field;
+pub mod color_field;
+pub mod color_slider;
+pub mod color_swatch;
+pub mod color_wheel;
 pub mod combobox;
 pub mod disclosure;
 pub mod dnd;
@@ -25,6 +34,7 @@ pub mod menu;
 pub mod meter;
 pub mod modal;
 pub mod r#move;
+pub mod number_field;
 pub mod overlay;
 pub mod popover;
 pub mod press;

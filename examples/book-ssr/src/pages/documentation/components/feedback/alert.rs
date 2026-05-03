@@ -2,6 +2,9 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::alert_custom::AlertCustomDemo;
+use super::demos::alert_variants::AlertVariantsDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
@@ -13,34 +16,9 @@ pub fn PageAlert() -> impl IntoView {
                 <AnchorLink href="#alert" description="Direct link to article header"/>
             </h1>
 
-            <Code>
-                {indoc!(r#"
-                    <Alert variant=AlertVariant::Success>
-                        <AlertTitle slot>"Success"</AlertTitle>
-                        <AlertContent slot>"Action completed"</AlertContent>
-                    </Alert>
-                "#)}
-            </Code>
-
-            <Alert variant=AlertVariant::Success>
-                <AlertTitle slot>"Success"</AlertTitle>
-                <AlertContent slot>"Action completed."</AlertContent>
-            </Alert>
-
-            <Alert variant=AlertVariant::Info>
-                <AlertTitle slot>"Info"</AlertTitle>
-                <AlertContent slot>"This concept is based on [...]"</AlertContent>
-            </Alert>
-
-            <Alert variant=AlertVariant::Warn>
-                <AlertTitle slot>"Warn"</AlertTitle>
-                <AlertContent slot>"This is not plausible."</AlertContent>
-            </Alert>
-
-            <Alert variant=AlertVariant::Danger>
-                <AlertTitle slot>"Danger"</AlertTitle>
-                <AlertContent slot>"There was an error!"</AlertContent>
-            </Alert>
+            <DemoShell source=include_str!("demos/alert_variants.rs")>
+                <AlertVariantsDemo />
+            </DemoShell>
 
             <h2 id="customization" class="anchor">
                 "Customization"
@@ -54,57 +32,9 @@ pub fn PageAlert() -> impl IntoView {
                 <Li slot>"Custom ids, classes and styles can be applied to all slots."</Li>
             </Ul>
 
-            <Code>
-                {indoc!(r##"
-                    <Alert variant=AlertVariant::Success default_icon_slot=AlertIconSlot::None>
-                        <AlertPrepend slot style="align-items: center; font-size: 1.8em; margin: 0;">"🎉"</AlertPrepend>
-                        <AlertTitle slot style=r#"
-                            align-items: center;
-                            justify-content: center;
-                            height: 100%;
-                            text-transform: uppercase;
-                            font-size: 1.3em;
-                        "#>
-                            "Success"
-                        </AlertTitle>
-                        <AlertAppend slot style="align-items: center; font-size: 1.8em; margin: 0;">"🎉"</AlertAppend>
-                    </Alert>
-                "##)}
-            </Code>
-
-            <Alert variant=AlertVariant::Success default_icon_slot=AlertIconSlot::None>
-                <AlertPrepend slot style="align-items: center; font-size: 1.8em; margin: 0;">"🎉"</AlertPrepend>
-                <AlertTitle slot style=r"
-                    align-items: center;
-                    justify-content: center;
-                    height: 100%;
-                    text-transform: uppercase;
-                    font-size: 1.3em;
-                ">
-                    "Success"
-                </AlertTitle>
-                <AlertAppend slot style="align-items: center; font-size: 1.8em; margin: 0;">"🎉"</AlertAppend>
-            </Alert>
-
-            <Code>
-                {indoc!(r#"
-                    <Alert variant=AlertVariant::Warn default_icon_slot=AlertIconSlot::None>
-                        <AlertTitle slot style="text-transform: uppercase; font-size: 1.3em;">
-                            "Warning"
-                            <AlertIcon variant=AlertVariant::Warn style="margin-left: 0.5em;" />
-                        </AlertTitle>
-                        <AlertContent slot>"This is dangerous!"</AlertContent>
-                    </Alert>
-                "#)}
-            </Code>
-
-            <Alert variant=AlertVariant::Warn default_icon_slot=AlertIconSlot::None>
-                <AlertTitle slot style="text-transform: uppercase; font-size: 1.3em;">
-                    "Warning"
-                    <AlertIcon variant=AlertVariant::Warn attr:style="margin-left: 0.5em;" />
-                </AlertTitle>
-                <AlertContent slot>"This is dangerous!"</AlertContent>
-            </Alert>
+            <DemoShell source=include_str!("demos/alert_custom.rs")>
+                <AlertCustomDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -113,7 +43,7 @@ pub fn PageAlert() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --alert-margin
                     --alert-padding

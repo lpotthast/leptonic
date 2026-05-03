@@ -4,13 +4,7 @@ use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableRowGroup.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_table_header` hook.
 #[derive(Debug, Clone, Copy, Default)]

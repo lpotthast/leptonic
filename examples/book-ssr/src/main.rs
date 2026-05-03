@@ -2,11 +2,11 @@
 #[tokio::main]
 async fn main() {
     use axum::Router;
-    use book_ssr::app::*;
+    use book_ssr::{app::*, markdown};
     use leptos::prelude::*;
-    use leptos_axum::{generate_route_list, LeptosRoutes};
+    use leptos_axum::{LeptosRoutes, generate_route_list};
     use tracing_subscriber::{
-        prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt, Layer,
+        Layer, prelude::__tracing_subscriber_SubscriberExt, util::SubscriberInitExt,
     };
 
     let log_filter = tracing_subscriber::filter::Targets::new()
@@ -37,12 +37,30 @@ async fn main() {
         // Generate the list of routes in your Leptos App
         let routes = generate_route_list(App);
 
+        let doc_paths: Vec<String> = routes
+            .iter()
+            .map(|r| r.path().to_owned())
+            .filter(|p| p.starts_with("/doc/"))
+            .collect();
+
+        let md_cache = markdown::MarkdownCache::default();
+
+        let md_cache_for_ctx = md_cache.clone();
         let app = Router::new()
-            .leptos_routes(&leptos_options, routes, {
-                let leptos_options = leptos_options.clone();
-                move || shell(leptos_options.clone())
-            })
+            .leptos_routes_with_context(
+                &leptos_options,
+                routes,
+                move || leptos::prelude::provide_context(md_cache_for_ctx.clone()),
+                {
+                    let leptos_options = leptos_options.clone();
+                    move || shell(leptos_options.clone())
+                },
+            )
             .fallback(leptos_axum::file_and_error_handler(shell))
+            .layer(axum::middleware::from_fn_with_state(
+                md_cache,
+                markdown::markdown_middleware,
+            ))
             .layer(
                 tower_http::compression::CompressionLayer::new()
                     .gzip(true)
@@ -51,6 +69,11 @@ async fn main() {
                     .quality(tower_http::CompressionLevel::Default),
             )
             .with_state(leptos_options);
+
+        let warmup_app = app.clone();
+        tokio::spawn(async move {
+            markdown::warm_markdown_cache(warmup_app, &doc_paths).await;
+        });
 
         tracing::info!("Loading certs...");
 

@@ -8,13 +8,9 @@ use crate::{
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/progress/src/useProgressBar.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_progress_bar` hook.
 #[derive(Debug, Clone)]
@@ -149,7 +145,7 @@ pub fn use_progress_bar(input: UseProgressBarInput) -> UseProgressBarReturn {
         min_value,
         max_value,
         label,
-        show_value_label,
+        show_value_label: _show_value_label,
         is_indeterminate,
     } = input;
 
@@ -194,11 +190,7 @@ pub fn use_progress_bar(input: UseProgressBarInput) -> UseProgressBarReturn {
             None
         } else {
             let label = value_label.get();
-            if label.is_empty() {
-                None
-            } else {
-                Some(label)
-            }
+            if label.is_empty() { None } else { Some(label) }
         }
     });
 

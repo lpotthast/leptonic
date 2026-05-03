@@ -1,7 +1,9 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::popover_hover::PopoverHoverDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
@@ -14,36 +16,24 @@ pub fn PagePopover() -> impl IntoView {
             </h1>
 
             <p>
-                "Floating information which can be shown or hidden using a signal."
+                "A themed popover component with ARIA dialog semantics, positioning, "
+                "and dismiss behavior. Bundles overlay, trigger, dialog, and dismiss "
+                "button atoms into a single convenience component."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    view! {
-                        <Popover>
-                            <PopoverContent slot>
-                                "1"
-                            </PopoverContent>
+            <h2 id="hover-trigger" class="anchor">
+                "Hover Trigger"
+                <AnchorLink href="#hover-trigger" description="Direct link to section: Hover Trigger"/>
+            </h2>
 
-                            <Skeleton animated=false width=Size::Em(10.0)>
-                                "Hover me!"
-                            </Skeleton>
-                        </Popover>
-                    }
-                "#)}
-            </Code>
+            <p>
+                "Use controlled mode with a "<Code inline=true>"Hoverable"</Code>
+                " wrapper for hover-triggered popovers."
+            </p>
 
-            <div style="margin-top: 3em; margin-bottom: 1em;">
-                <Popover>
-                    <PopoverContent slot>
-                        "1"
-                    </PopoverContent>
-
-                    <Skeleton animated=false width=Size::Em(10.0)>
-                        "Hover me!"
-                    </Skeleton>
-                </Popover>
-            </div>
+            <DemoShell source=include_str!("demos/popover_hover.rs")>
+                <PopoverHoverDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -52,9 +42,12 @@ pub fn PagePopover() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
-                    --popover-content-background-color
+                    --popover-padding
+                    --popover-border-radius
+                    --popover-color
+                    --popover-background-color
                 ")}
             </Code>
         </Article>
@@ -62,6 +55,7 @@ pub fn PagePopover() -> impl IntoView {
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "Popover", link: "#popover" },
+                Toc::Leaf { title: "Hover Trigger", link: "#hover-trigger" },
                 Toc::Leaf { title: "Styling", link: "#styling" },
             ]
         }/>

@@ -1,33 +1,14 @@
-.leptonic-select-wrapper {
-    display: inline; // Most not be `contents` or item would not be focusable.
+.leptonic-select {
+    display: block;
+    position: relative;
+    border: none;
+    cursor: pointer;
 
     &,
     &:focus,
     &:active {
         outline: none;
     }
-
-    &:focus,
-    &:active {
-        .leptonic-select {
-            .leptonic-select-selected {
-                border-color: var(--select-focused-border-color);
-            }
-        }
-    }
-
-    .leptonic-select.active {
-        .leptonic-select-selected {
-            border-color: var(--select-focused-border-color);
-        }
-    }
-}
-
-.leptonic-select {
-    display: block;
-    position: relative;
-    border: none;
-    cursor: pointer;
 
     .leptonic-select-selected {
         display: flex;
@@ -48,6 +29,10 @@
 
         border: var(--select-selected-border);
         border-radius: var(--select-selected-border-radius);
+
+        &[data-open="true"] {
+            border-color: var(--select-focused-border-color);
+        }
 
         .leptonic-select-deselect-trigger {
             display: flex;
@@ -81,70 +66,65 @@
             }
         }
     }
+}
 
-    &[data-variant="multiselect"] {
-        .leptonic-select-selected {
-            .leptonic-select-option {
-                .leptonic-chip {
-                    margin: 0.1em 0.4em 0.1em 0;
-                    border-radius: 0.8em;
-                }
+.leptonic-select.leptonic-multiselect {
+    .leptonic-select-selected {
+        .leptonic-select-option {
+            .leptonic-chip {
+                margin: 0.1em 0.4em 0.1em 0;
+                border-radius: 0.8em;
             }
         }
     }
+}
 
-    .leptonic-select-options {
-        display: none;
-        position: absolute;
-        top: 100%;
-        left: 0;
-        flex-direction: column;
-        width: 100%;
-        background-color: var(--select-dropdown-background-color);
-        box-shadow: var(--select-dropdown-shadow);
-        border: none;
-        border-top: none;
-        max-height: 14em;
-        overflow-y: scroll;
-        z-index: 999;
+// The dropdown is rendered via <Portal> (outside the .leptonic-select tree).
+// Visibility is controlled by <Show> (element present when open, absent when closed).
+// Position is set inline by use_overlay_position.
+.leptonic-select-options {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--select-dropdown-background-color);
+    border: none;
+    max-height: 14em;
+    overflow-y: scroll;
+    z-index: 999;
 
-        box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 5px -3px, rgba(0, 0, 0, 0.14) 0px 8px 10px 1px, rgba(0, 0, 0, 0.12) 0px 3px 14px 2px;
-        border-radius: 0.25em;
+    box-shadow: rgba(0, 0, 0, 0.2) 0px 5px 5px -3px, rgba(0, 0, 0, 0.14) 0px 8px 10px 1px, rgba(0, 0, 0, 0.12) 0px 3px 14px 2px;
+    border-radius: 0.25em;
 
-        &.shown {
-            display: flex;
+    .leptonic-input.search input {
+        margin: 0.3em;
+        border: 1px solid lightgray;
+        padding: 0.5em 0.75em;
+    }
+
+    .leptonic-select-option {
+        padding: 0.6em;
+        user-select: none;
+
+        &:hover {
+            background-color: var(--select-item-hover-background-color);
         }
 
-        .leptonic-input {
-            input.search {
-                margin: 0.3em;
-                border: 1px solid lightgray;
-                padding: 0.5em 0.75em;
-            }
+        &[data-disabled] {
+            color: var(--select-item-disabled-color);
+            background-color: var(--select-item-disabled-background-color);
         }
 
-        .leptonic-select-option {
-            padding: 0.6em;
-            user-select: none;
-
-            &:hover {
-                background-color: var(--select-item-hover-background-color);
-            }
-
-            &.disabled {
-                color: var(--select-item-disabled-color);
-                background-color: var(--select-item-disabled-background-color);
-            }
-
-            &.preselected {
-                background-color: var(--select-item-preselected-background-color);
-            }
+        &[data-focused] {
+            background-color: var(--select-item-preselected-background-color);
         }
 
-        .leptonic-select-no-search-results {
-            padding: 0.6em;
-            user-select: none;
-            cursor: default;
+        &[data-selected] {
+            background-color: var(--select-item-selected-background-color);
         }
+    }
+
+    .leptonic-select-no-search-results {
+        padding: 0.6em;
+        user-select: none;
+        cursor: default;
     }
 }

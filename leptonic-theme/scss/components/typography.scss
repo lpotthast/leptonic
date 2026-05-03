@@ -50,7 +50,7 @@ p {
 .leptonic-code {
   display: block;
   position: relative;
-  font-family: monospace;
+  font-family: var(--typography-code-font-family);
   font-size: var(--typography-code-font-size);
   font-weight: var(--typography-code-font-weight);
   line-height: var(--typography-line-height);
@@ -65,14 +65,20 @@ p {
 
   &[data-inline="true"] {
     display: inline;
+    font-family: var(--typography-inline-code-font-family);
     margin: var(--typography-inline-code-margin);
     padding: var(--typography-inline-code-padding);
     line-height: var(--typography-inline-code-line-height);
   }
 
+  *,
+  ::before,
+  ::after {
+    font-family: inherit;
+  }
+
   .leptonic-code-text {
     display: block;
-    font-family: monospace;
     white-space: pre;
     overflow: auto;
 

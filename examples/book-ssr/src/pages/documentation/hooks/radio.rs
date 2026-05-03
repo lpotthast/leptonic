@@ -1,61 +1,132 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::radio::RadioDemo;
 
 #[component]
 pub fn PageUseRadioHook() -> impl IntoView {
-    let UseRadioGroupStateReturn {
-        selected_value,
-        set_selected,
-    } = use_radio_group_state(Some("option1".to_string()));
-
-    let UseRadioGroupReturn {
-        group_props,
-        label_props,
-        state,
-    } = use_radio_group(UseRadioGroupInput {
-        label: Some("Select an option".into()),
-        description: None,
-        error_message: None,
-        is_disabled: Signal::derive(|| false),
-        is_read_only: Signal::derive(|| false),
-        is_required: false,
-        value: selected_value.into(),
-        validation_state: ValidationState::Valid,
-        orientation: Orientation::Vertical,
-        on_change: Some(Callback::new(move |value: String| {
-            set_selected.run(value);
-        })),
-    });
-
-    let options = vec![
-        ("option1", "First Option"),
-        ("option2", "Second Option"),
-        ("option3", "Third Option"),
-    ];
-
     view! {
         <Article>
-            <h1 id="use_radio" class="anchor">
+            <h1 id="use-radio-group" class="anchor">
                 "use_radio & use_radio_group"
-                <AnchorLink href="#use_radio" description="Direct link to article header"/>
+                <AnchorLink href="#use-radio-group" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hooks for creating accessible radio buttons with group management and mutual exclusion."</p>
+            <p>
+                "Hooks for creating accessible radio buttons with group management and mutual exclusion. "
+                "See the "<Link href=crate::routes::doc::Radio.materialize()>"Radio overview"</Link>" for concept guidance."
+            </p>
 
-            <h2 id="radio-group" class="anchor">
-                "use_radio_group"
-                <AnchorLink href="#radio-group" description="Direct link to radio group"/>
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useRadioGroup.html" target=LinkTarget::_Blank>
+                    "useRadioGroup"
+                </LinkExt>
+                "."
+            </p>
+
+            // ── use_radio_group Input ───────────────────────────────
+
+            <h2 id="group-input" class="anchor">
+                "use_radio_group Input"
+                <AnchorLink href="#group-input" description="Direct link to section: use_radio_group Input"/>
             </h2>
 
-            <Code>
+            <p><Code inline=true>"UseRadioGroupInput<T>"</Code>" fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"value"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<Option<T>>"</Code></TableCell>
+                            <TableCell>"The current selected value (controlled)"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"on_change"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Callback<T>>"</Code></TableCell>
+                            <TableCell>"Callback when the selection changes"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_disabled"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the group is disabled"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_read_only"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the group is read-only"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"orientation"</Code></TableCell>
+                            <TableCell><Code inline=true>"Orientation"</Code></TableCell>
+                            <TableCell>"The orientation of the group (Vertical or Horizontal)"</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            // ── use_radio_group Return ──────────────────────────────
+
+            <h2 id="group-return" class="anchor">
+                "use_radio_group Return"
+                <AnchorLink href="#group-return" description="Direct link to section: use_radio_group Return"/>
+            </h2>
+
+            <p><Code inline=true>"UseRadioGroupReturn<T>"</Code>" fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"group_props"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseRadioGroupProps"</Code></TableCell>
+                            <TableCell>"ARIA attributes for the group container element"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"label_props"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseRadioGroupLabelProps"</Code></TableCell>
+                            <TableCell>"Props for the label element (contains generated id)"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"state"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseRadioGroupState<T>"</Code></TableCell>
+                            <TableCell>"Group state for individual radio buttons (selected_value, set_selected_value, name)"</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            // ── Radio Group Demo ────────────────────────────────────
+
+            <h2 id="group-demo" class="anchor">
+                "Radio Group Demo"
+                <AnchorLink href="#group-demo" description="Direct link to section: Radio Group Demo"/>
+            </h2>
+
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseRadioGroupStateReturn { selected_value, set_selected } =
                         use_radio_group_state(Some("option1".to_string()));
 
-                    let UseRadioGroupReturn { group_props, label_props, state } = use_radio_group(
+                    let UseRadioGroupReturn { group_props, label_props, state, .. } = use_radio_group(
                         UseRadioGroupInput {
                             label: Some("Select an option".into()),
                             value: selected_value.into(),
@@ -67,50 +138,20 @@ pub fn PageUseRadioHook() -> impl IntoView {
                 "#)}
             </Code>
 
-            <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-                <fieldset
-                    role=group_props.role
-                    aria-labelledby=group_props.aria_labelledby.clone()
-                    aria-orientation=group_props.aria_orientation
-                    style="border: none; padding: 0; margin: 0;"
-                >
-                    <legend id=label_props.id.clone() style="font-weight: bold; margin-bottom: 0.5em;">
-                        "Select an option"
-                    </legend>
+            <DemoShell source=include_str!("demos/radio.rs")>
+                <RadioDemo />
+            </DemoShell>
 
-                    {options.into_iter().map(|(value, label)| {
-                        let value_owned = value.to_string();
-                        let value_for_check = value_owned.clone();
-                        let value_for_change = value_owned.clone();
-                        let state_clone = state.clone();
-                        view! {
-                            <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer; margin: 0.5em 0;">
-                                <input
-                                    type="radio"
-                                    name=state.name
-                                    value=value
-                                    checked=move || state_clone.selected_value.get().as_ref() == Some(&value_for_check)
-                                    on:change=move |_| state.set_selected_value.run(value_for_change.clone())
-                                />
-                                <span>{ label }</span>
-                            </label>
-                        }
-                    }).collect::<Vec<_>>()}
-                </fieldset>
+            // ── use_radio ───────────────────────────────────────────
 
-                <p style="margin-top: 1em; font-size: 0.9em;">
-                    "Selected: " <strong>{ move || selected_value.get().unwrap_or_else(|| "None".to_string()) }</strong>
-                </p>
-            </div>
-
-            <h2 id="use_radio" class="anchor">
+            <h2 id="use-radio" class="anchor">
                 "use_radio"
-                <AnchorLink href="#use_radio" description="Direct link to use_radio"/>
+                <AnchorLink href="#use-radio" description="Direct link to use_radio"/>
             </h2>
 
             <p>"For individual radio buttons within a group:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseRadioReturn { input_props, is_selected, .. } = use_radio(UseRadioInput {
                         value: "option1".to_string(),
@@ -122,6 +163,8 @@ pub fn PageUseRadioHook() -> impl IntoView {
                     });
                 "#)}
             </Code>
+
+            // ── Keyboard Navigation ─────────────────────────────────
 
             <h2 id="keyboard" class="anchor">
                 "Keyboard Navigation"
@@ -135,16 +178,7 @@ pub fn PageUseRadioHook() -> impl IntoView {
                 <li><strong>"Tab"</strong> " - Move focus to/from the group"</li>
             </ul>
 
-            <h2 id="orientation" class="anchor">
-                "Orientation"
-                <AnchorLink href="#orientation" description="Direct link to orientation"/>
-            </h2>
-
-            <p>"Radio groups support two orientations:"</p>
-            <ul>
-                <li><code>"Orientation::Vertical"</code> " - Up/Down arrows navigate"</li>
-                <li><code>"Orientation::Horizontal"</code> " - Left/Right arrows navigate"</li>
-            </ul>
+            // ── Features ────────────────────────────────────────────
 
             <h2 id="features" class="anchor">
                 "Features"
@@ -159,16 +193,31 @@ pub fn PageUseRadioHook() -> impl IntoView {
                 <li>"Required field validation"</li>
                 <li>"ARIA role and attributes for accessibility"</li>
             </ul>
+
+            // ── See Also ────────────────────────────────────────────
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Radio.materialize()>"Radio overview"</Link></li>
+                <li><Link href=crate::routes::doc::radio::Component.materialize()>"Radio component"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_radio & use_radio_group", link: "#use_radio" },
-                Toc::Leaf { title: "Radio Group", link: "#radio-group" },
-                Toc::Leaf { title: "use_radio", link: "#use_radio" },
+                Toc::Leaf { title: "use_radio & use_radio_group", link: "#use-radio-group" },
+                Toc::Leaf { title: "use_radio_group Input", link: "#group-input" },
+                Toc::Leaf { title: "use_radio_group Return", link: "#group-return" },
+                Toc::Leaf { title: "Radio Group Demo", link: "#group-demo" },
+                Toc::Leaf { title: "use_radio", link: "#use-radio" },
                 Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard" },
-                Toc::Leaf { title: "Orientation", link: "#orientation" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

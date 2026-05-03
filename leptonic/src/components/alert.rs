@@ -1,4 +1,6 @@
 use leptos::prelude::*;
+use leptos_classes::Classes;
+use leptos_styles::Styles;
 
 use super::icon::Icon;
 
@@ -67,9 +69,11 @@ pub fn Alert(
     #[prop(optional)] alert_content: Option<AlertContent>,
     #[prop(optional)] alert_append: Option<AlertAppend>,
     #[prop(optional)] default_icon_slot: AlertIconSlot,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     view! {
-        <div class="leptonic-alert" data-variant=variant.to_str()>
+        <div class=classes.add("leptonic-alert") style=styles data-variant=variant.to_str()>
             {match alert_prepend {
                 Some(slot) => {
                     view! {

@@ -3,13 +3,12 @@ use leptos::{
     attr::Attr,
     ev,
     ev::{On, SharedEventCallback},
-    tachys::html::style::Style,
 };
 use web_sys::{DragEvent, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::{
     hooks::{IntoAttrs, UseHoverProps, UsePressProps},
-    utils::{aria::AriaDescribedby, style::TouchActionStyle, EventHandler, MergeWith},
+    utils::{EventHandler, MergeWith, aria::AriaDescribedby},
 };
 
 /// Combined props from `use_press` and `use_hover` hooks.
@@ -62,7 +61,6 @@ pub type MergedPressHoverAttrs = (
     On<ev::dragstart, SharedEventCallback<DragEvent>>,
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
     On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-    Style<(TouchActionStyle, &'static str)>,
     Attr<attr::AriaDescribedby, Option<AriaDescribedby>>,
     // From hover.
     On<ev::pointerenter, SharedEventCallback<PointerEvent>>,
@@ -80,7 +78,6 @@ impl IntoAttrs for MergedPressHoverProps {
             self.on_dragstart.into_on(ev::dragstart),
             self.on_mousedown.into_on(ev::mousedown),
             self.on_pointerup.into_on(ev::pointerup),
-            TouchActionStyle::with_value("pan-x pan-y pinch-zoom"),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             self.on_pointerenter.into_on(ev::pointerenter),
             self.on_pointerleave.into_on(ev::pointerleave),

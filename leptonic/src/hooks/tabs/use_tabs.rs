@@ -5,13 +5,9 @@ use crate::{hooks::IntoAttrs, utils::aria::AriaOrientation};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// The orientation of the tab list.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -140,8 +136,8 @@ pub type UseTabsAttrs = (Attr<attr::Id, String>,);
 pub fn use_tabs(input: UseTabsInput) -> UseTabsReturn {
     let UseTabsInput {
         selected_key,
-        default_selected_key,
-        is_disabled: disabled,
+        default_selected_key: _default_selected_key,
+        is_disabled: _disabled,
         orientation,
         activation_mode,
         on_selection_change,

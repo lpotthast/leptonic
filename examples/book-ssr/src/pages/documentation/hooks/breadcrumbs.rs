@@ -1,36 +1,12 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::breadcrumbs::BreadcrumbsDemo;
 
 #[component]
 pub fn PageUseBreadcrumbs() -> impl IntoView {
-    let UseBreadcrumbsReturn { nav_props, .. } = use_breadcrumbs(UseBreadcrumbsInput {
-        label: Some("Navigation".to_string()),
-        ..Default::default()
-    });
-
-    let home_item = use_breadcrumb_item(UseBreadcrumbItemInput {
-        href: Some("#".to_string()),
-        is_current: false,
-        on_press: Some(Callback::new(|_| {})),
-        ..Default::default()
-    });
-
-    let products_item = use_breadcrumb_item(UseBreadcrumbItemInput {
-        href: Some("#".to_string()),
-        is_current: false,
-        on_press: Some(Callback::new(|_| {})),
-        ..Default::default()
-    });
-
-    let current_item = use_breadcrumb_item(UseBreadcrumbItemInput {
-        href: None,
-        is_current: true,
-        ..Default::default()
-    });
-
     view! {
         <Article>
             <h1 id="use_breadcrumbs" class="anchor">
@@ -38,62 +14,29 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                 <AnchorLink href="#use_breadcrumbs" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hook for creating accessible breadcrumb navigation trails."</p>
+            <p>
+                "The "<Code inline=true>"use_breadcrumbs"</Code>" hook is a standalone hook that provides accessible breadcrumb navigation trails."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useBreadcrumbs.html" target=LinkTarget::_Blank>
+                    "useBreadcrumbs"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="demo" class="anchor">
                 "Interactive Demo"
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <nav {..nav_props.into_attrs()} style="margin: 1em 0;">
-                <ol style="display: flex; list-style: none; padding: 0; margin: 0; gap: 0.5em;">
-                    <li>
-                        <a {..home_item.link_props.into_attrs()} style="color: var(--brand-color); text-decoration: none;">
-                            "Home"
-                        </a>
-                        <span style="margin-left: 0.5em;">"/"</span>
-                    </li>
-                    <li>
-                        <a {..products_item.link_props.into_attrs()} style="color: var(--brand-color); text-decoration: none;">
-                            "Products"
-                        </a>
-                        <span style="margin-left: 0.5em;">"/"</span>
-                    </li>
-                    <li>
-                        <span {..current_item.link_props.into_attrs()} style="color: inherit;">
-                            "Widget Pro"
-                        </span>
-                    </li>
-                </ol>
-            </nav>
-
-            <Code>
-                {indoc!(r#"
-                    let UseBreadcrumbsReturn { nav_props, .. } = use_breadcrumbs(UseBreadcrumbsInput {
-                        label: Some("Navigation".to_string()),
-                        ..Default::default()
-                    });
-                    let nav_props = nav_props.into_attrs();
-
-                    let home_item = use_breadcrumb_item(UseBreadcrumbItemInput {
-                        href: Some("/".to_string()),
-                        is_current: false,
-                        on_press: Some(Callback::new(|_| navigate("/"))),
-                        ..Default::default()
-                    });
-
-                    view! {
-                        <nav {..nav_props}>
-                            <ol>
-                                <li>
-                                    <a {..home_item.link_props.into_attrs()}>"Home"</a>
-                                </li>
-                                // More items...
-                            </ol>
-                        </nav>
-                    }
-                "#)}
-            </Code>
+            <DemoShell
+                source=include_str!("demos/breadcrumbs.rs")
+                description="Breadcrumb navigation trail"
+            >
+                <BreadcrumbsDemo />
+            </DemoShell>
 
             <h2 id="aria-attributes" class="anchor">
                 "ARIA Attributes"
@@ -120,6 +63,16 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                 <li>"Disabled state handling"</li>
                 <li>"Press callback for SPA navigation"</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Navigation.materialize()>"Navigation domain"</Link></li>
+                <li><Link href=crate::routes::doc::link::UseLink.materialize()>"use_link"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -128,6 +81,7 @@ pub fn PageUseBreadcrumbs() -> impl IntoView {
                 Toc::Leaf { title: "Demo", link: "#demo" },
                 Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

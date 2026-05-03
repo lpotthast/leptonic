@@ -11,17 +11,14 @@ use web_sys::KeyboardEvent;
 use super::use_tooltip_trigger_state::UseTooltipTriggerStateReturn;
 use crate::{
     hooks::{
-        focus::use_focus_visible::{get_modality, Modality},
         IntoAttrs,
+        focus::use_focus_visible::{Modality, get_modality},
     },
-    utils::{aria::AriaRole, EventHandler},
+    utils::{EventHandler, aria::AriaRole},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tooltip/src/useTooltipTrigger.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //
@@ -44,7 +41,6 @@ use crate::{
 // - No `mousedown` fallback handler: We assume PointerEvent is always available
 //   (per CLAUDE.md).
 //
-// =============================================================================
 
 /// Input parameters for the `use_tooltip_trigger` hook.
 #[derive(Debug, Clone, Copy)]
@@ -196,8 +192,8 @@ pub fn use_tooltip_trigger(
     let is_open = state.is_open;
 
     // Track hover/focus state to coordinate show/hide.
-    let is_hovered: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
-    let is_focused: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
+    let is_hovered: StoredValue<bool> = StoredValue::new(false);
+    let is_focused: StoredValue<bool> = StoredValue::new(false);
 
     // handle_show: open the tooltip if hovered or focused.
     let handle_show = move || {
@@ -285,7 +281,7 @@ pub fn use_tooltip_trigger(
     // the trigger element.
     #[cfg(not(feature = "ssr"))]
     {
-        use leptos_use::{use_document, use_event_listener_with_options, UseEventListenerOptions};
+        use leptos_use::{UseEventListenerOptions, use_document, use_event_listener_with_options};
 
         let document = use_document();
         Effect::new(move |_| {

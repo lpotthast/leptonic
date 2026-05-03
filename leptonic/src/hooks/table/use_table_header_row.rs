@@ -2,13 +2,7 @@ use leptos::{attr, attr::Attr};
 
 use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input for the table header row.
 #[derive(Debug, Clone, Copy, Default)]

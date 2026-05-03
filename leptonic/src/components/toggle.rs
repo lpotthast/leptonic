@@ -1,6 +1,13 @@
 use leptos::prelude::*;
 
-use crate::{components::icon::Icon, prelude::*};
+use crate::{
+    components::icon::Icon,
+    prelude::*,
+    utils::{
+        classes::Classes,
+        styles::{Display, Styles},
+    },
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum ToggleSize {
@@ -58,9 +65,11 @@ pub fn Toggle(
     #[prop(optional)] size: ToggleSize,
     #[prop(optional)] variant: ToggleVariant,
     #[prop(into, optional)] icons: Option<ToggleIcons>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     view! {
-        <div class="leptonic-toggle-wrapper">
+        <div class=classes.add("leptonic-toggle-wrapper") style=styles>
             <div
                 class="leptonic-toggle"
                 class:active=move || active.get().unwrap_or(true)
@@ -84,23 +93,19 @@ pub fn Toggle(
                                     <span class="icon-positioner">
                                         <Icon
                                             icon=off_icon
-                                            attr:style=move || {
-                                                if state.get() {
-                                                    "display: none"
-                                                } else {
-                                                    "display: inherit"
-                                                }
-                                            }
+                                            styles=Styles::new().add(Display, move || if state.get() {
+                                                "none"
+                                            } else {
+                                                "inherit"
+                                            })
                                         />
                                         <Icon
                                             icon=on_icon
-                                            attr:style=move || {
-                                                if state.get() {
-                                                    "display: inherit"
-                                                } else {
-                                                    "display: none"
-                                                }
-                                            }
+                                            styles=Styles::new().add(Display, move || if state.get() {
+                                                "inherit"
+                                            } else {
+                                                "none"
+                                            })
                                         />
                                     </span>
                                 }

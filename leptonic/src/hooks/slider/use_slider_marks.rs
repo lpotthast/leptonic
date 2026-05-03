@@ -8,13 +8,9 @@ use crate::{
 
 // Note: This hooks is not available in react-aria.
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Configuration for slider marks.
 #[derive(Default, Debug, Clone)]
@@ -239,10 +235,10 @@ mod tests {
 
     use super::*;
     use crate::hooks::{
-        slider::use_slider_state::{
-            use_slider_state, SliderValues, UseSliderStateInput, UseSliderStateReturn,
-        },
         SliderOrientation,
+        slider::use_slider_state::{
+            SliderValues, UseSliderStateInput, UseSliderStateReturn, use_slider_state,
+        },
     };
 
     /// Helper: create slider state within the current reactive owner.
@@ -264,10 +260,6 @@ mod tests {
         })
     }
 
-    // =====================================================================
-    // SliderMarks::None
-    // =====================================================================
-
     #[test]
     fn none_produces_empty_marks() {
         let owner = Owner::new();
@@ -281,10 +273,6 @@ mod tests {
             assert_that(result.marks.get().len()).is_equal_to(0);
         });
     }
-
-    // =====================================================================
-    // SliderMarks::Automatic
-    // =====================================================================
 
     #[test]
     fn automatic_generates_marks_at_each_step() {
@@ -418,10 +406,6 @@ mod tests {
         });
     }
 
-    // =====================================================================
-    // SliderMarks::Custom
-    // =====================================================================
-
     #[test]
     fn custom_marks_at_values() {
         let owner = Owner::new();
@@ -534,10 +518,6 @@ mod tests {
             assert_that(marks[0].name.as_deref()).is_equal_to(Some("valid"));
         });
     }
-
-    // =====================================================================
-    // in_range reactivity
-    // =====================================================================
 
     #[test]
     fn single_thumb_in_range() {

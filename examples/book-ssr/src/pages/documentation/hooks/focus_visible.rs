@@ -1,23 +1,13 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::focus_visible::FocusVisibleDemo;
 
 #[component]
 pub fn PageUseFocusVisible() -> impl IntoView {
-    let UseFocusVisibleReturn {
-        focus_should_be_visible,
-        modality,
-    } = use_focus_visible(UseFocusVisibleInput::default());
-
-    let modality_display = Memo::new(move |_| match modality.get() {
-        Modality::Unknown => "Unknown",
-        Modality::Pointer => "Pointer",
-        Modality::Keyboard => "Keyboard",
-        Modality::Virtual => "Virtual",
-    });
-
     view! {
         <Article>
             <h1 id="use_focus_visible" class="anchor">
@@ -25,58 +15,33 @@ pub fn PageUseFocusVisible() -> impl IntoView {
                 <AnchorLink href="#use_focus_visible" description="Direct link to article header"/>
             </h1>
 
-            <p>"Tracks whether focus should be made visible (e.g., with a focus ring). When the user navigates via keyboard or assistive technology, focus is visible. When they use a pointer (mouse, touch), focus is hidden."</p>
-
-            <h2 id="basic-usage" class="anchor">
-                "Basic Usage"
-                <AnchorLink href="#basic-usage" description="Direct link to basic usage"/>
-            </h2>
-
-            <Code>
-                {indoc!(r"
-                    let UseFocusVisibleReturn { focus_should_be_visible, modality } =
-                        use_focus_visible(UseFocusVisibleInput::default());
-
-                    // focus_should_be_visible: Signal<bool> — true during keyboard/virtual modality.
-                    // modality: Signal<Modality> — tracks the current input modality.
-                ")}
-            </Code>
-
-            <p>"Try tabbing to the button below (keyboard), then clicking it (mouse). The button shows a focus outline only during keyboard navigation:"</p>
-
-            <style>
-                {format!(
-                    ".focus-visible-demo:focus {{ {} }}",
-                    FOCUS_OUTLINE_CSS
-                )}
-            </style>
-
-            <button
-                tabindex=0
-                class="focus-visible-demo"
-                style=move || format!(
-                    "padding: 1em 2em; font-size: 1em; border-radius: 8px; cursor: pointer; transition: all 0.2s; {}",
-                    if focus_should_be_visible.get() {
-                        "border: 2px solid var(--brand-color); background: var(--brand-color-light, rgba(230, 105, 86, 0.1));"
-                    } else {
-                        "border: 2px solid #ccc; background: white;"
-                    }
-                )
-            >
-                "Interact with me"
-            </button>
-
-            <p style=margin_top_1em()>
-                "Focus should be visible: "
-                <strong style=move || if focus_should_be_visible.get() { state_active() } else { state_inactive() }>
-                    { move || focus_should_be_visible.get().to_string() }
-                </strong>
+            <p>
+                "The "<code>"use_focus_visible"</code>" hook tracks whether focus should be made visible (e.g., with a focus ring). "
+                "When the user navigates via keyboard or assistive technology, focus is visible. When they use a pointer, focus is hidden. "
+                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
             </p>
 
             <p>
-                "Current modality: "
-                <strong>{ move || modality_display.get() }</strong>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useFocusVisible.html" target=LinkTarget::_Blank>
+                    "useFocusVisible"
+                </LinkExt>
+                "."
             </p>
+
+            <h2 id="demo" class="anchor">
+                "Interactive Demo"
+                <AnchorLink href="#demo" description="Direct link to demo"/>
+            </h2>
+
+            <p>"Try tabbing to the button below (keyboard), then clicking it (mouse). The button shows a focus outline only during keyboard navigation:"</p>
+
+            <DemoShell
+                source=include_str!("demos/focus_visible.rs")
+                description="Modality-based focus visibility"
+            >
+                <FocusVisibleDemo />
+            </DemoShell>
 
             <h2 id="modality" class="anchor">
                 "Modality Detection"
@@ -103,7 +68,7 @@ pub fn PageUseFocusVisible() -> impl IntoView {
 
             <p><code>"enabled: Signal<bool>"</code> " controls whether the hook subscribes to global modality changes. When false, the hook does not update its signals, saving unnecessary reactivity. This is useful when a component is hidden or inactive:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     let focus_visible = use_focus_visible(UseFocusVisibleInput {
                         enabled: Signal::derive(move || is_panel_visible.get()),
@@ -116,7 +81,7 @@ pub fn PageUseFocusVisible() -> impl IntoView {
 
             <p><code>"is_text_input: bool"</code> " changes the keyboard filtering logic. When true, only Tab and Escape trigger focus-visible; other keys (arrows, letters, etc.) do not. This is intended for compound components like date pickers where focus sits on a button but the component should use text-input focus rules:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     let focus_visible = use_focus_visible(UseFocusVisibleInput {
                         is_text_input: true,
@@ -131,7 +96,7 @@ pub fn PageUseFocusVisible() -> impl IntoView {
 
             <p><code>"auto_focus: bool"</code> " sets the initial value of " <code>"focus_should_be_visible"</code> " during SSR and before any user interaction. If the element auto-focuses on mount, set this to " <code>"true"</code> " so the focus ring appears immediately:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     let focus_visible = use_focus_visible(UseFocusVisibleInput {
                         auto_focus: true,
@@ -148,7 +113,7 @@ pub fn PageUseFocusVisible() -> impl IntoView {
 
             <p>"Two companion functions are available for non-reactive modality access:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     // Read the current modality (non-reactive).
                     let modality: Modality = get_modality();
@@ -242,18 +207,30 @@ pub fn PageUseFocusVisible() -> impl IntoView {
                 <li>"SSR-safe (returns " <code>"auto_focus"</code> " value during SSR)."</li>
                 <li>"Subscription control via " <code>"enabled"</code> " signal."</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link>" \u{2014} uses use_focus_visible internally"</li>
+                <li><Link href=crate::routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "use_focus_visible", link: "#use_focus_visible" },
-                Toc::Leaf { title: "Basic Usage", link: "#basic-usage" },
+                Toc::Leaf { title: "Interactive Demo", link: "#demo" },
                 Toc::Leaf { title: "Modality Detection", link: "#modality" },
                 Toc::Leaf { title: "Input Options", link: "#input-options" },
                 Toc::Leaf { title: "Utility Functions", link: "#utility-functions" },
                 Toc::Leaf { title: "Input", link: "#input" },
                 Toc::Leaf { title: "Return Value", link: "#return-value" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

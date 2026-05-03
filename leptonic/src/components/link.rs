@@ -3,10 +3,10 @@ use leptos_router::components::ToHref;
 
 pub use crate::hooks::LinkRel;
 use crate::{
+    ScrollBehavior,
     atoms::link::{AnchorLink as AnchorLinkAtom, Link as LinkAtom, LinkExt as LinkExtAtom},
     hooks::{LinkTarget, PressEvent},
     utils::{classes::Classes, styles::Styles},
-    ScrollBehavior,
 };
 
 #[component]

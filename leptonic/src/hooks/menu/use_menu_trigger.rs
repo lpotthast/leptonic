@@ -12,28 +12,22 @@ use web_sys::{KeyboardEvent, MouseEvent, PointerEvent};
 use super::use_menu_trigger_state::UseMenuTriggerStateReturn;
 use crate::{
     hooks::{
-        interactions::use_press::{use_press, LongPressEvent, PressEvent, UsePressInput},
+        IntoAttrs, PropsWithStyles,
+        interactions::use_press::{LongPressEvent, PressEvent, UsePressInput, use_press},
         overlay::use_overlay_trigger::{
-            use_overlay_trigger, OverlayTriggerType, UseOverlayTriggerInput,
+            OverlayTriggerType, UseOverlayTriggerInput, use_overlay_trigger,
         },
-        selection::use_selectable_collection::FocusStrategy,
-        IntoAttrs,
+        selection::use_selection_state::FocusStrategy,
     },
     prelude::AriaHasPopup,
     utils::{
-        aria::AriaExpanded, focus::focus_event_target, pointer_type::PointerType, EventHandler,
+        EventHandler, aria::AriaExpanded, focus::focus_event_target, pointer_type::PointerType,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuTrigger.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// How the menu is triggered.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -64,8 +58,8 @@ pub struct UseMenuTriggerInput {
 /// The return value of the `use_menu_trigger` hook.
 #[derive(Debug)]
 pub struct UseMenuTriggerReturn {
-    /// Props for the menu trigger element. Call `.into_attrs()` for view spreading.
-    pub props: UseMenuTriggerProps,
+    /// Props for the menu trigger element. Call `.into_parts()` for view spreading and styles.
+    pub props: PropsWithStyles<UseMenuTriggerProps>,
 
     /// Props to pass to the menu.
     pub menu_props: UseMenuTriggerMenuProps,
@@ -228,7 +222,7 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
     });
 
     // Handle press events based on trigger type
-    let (press_on_keydown, press_on_click, press_on_pointerdown) = if trigger
+    let (press_on_keydown, press_on_click, press_on_pointerdown, press_styles) = if trigger
         == MenuTriggerType::Press
     {
         let press = use_press(UsePressInput {
@@ -271,10 +265,12 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             long_press_threshold: None,
             long_press_accessibility_description: None,
         });
+        let (press_props, press_styles) = press.props.into_inner();
         (
-            press.props.on_keydown,
-            press.props.on_click,
-            press.props.on_pointerdown,
+            press_props.on_keydown,
+            press_props.on_click,
+            press_props.on_pointerdown,
+            press_styles,
         )
     } else {
         // Long press trigger — use use_press with long press fields.
@@ -306,10 +302,12 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
             long_press_threshold: None,
             long_press_accessibility_description: Some("Long press to open menu".into()),
         });
+        let (press_props, press_styles) = press.props.into_inner();
         (
-            press.props.on_keydown,
-            press.props.on_click,
-            press.props.on_pointerdown,
+            press_props.on_keydown,
+            press_props.on_click,
+            press_props.on_pointerdown,
+            press_styles,
         )
     };
 
@@ -327,15 +325,18 @@ pub fn use_menu_trigger(input: UseMenuTriggerInput) -> UseMenuTriggerReturn {
     let combined_keydown = press_on_keydown.chain(menu_keydown_handler);
 
     UseMenuTriggerReturn {
-        props: UseMenuTriggerProps {
-            id: menu_trigger_id,
-            aria_haspopup: overlay_trigger.props.aria_haspopup,
-            aria_expanded: overlay_trigger.props.aria_expanded,
-            aria_controls: overlay_trigger.props.aria_controls,
-            on_keydown: combined_keydown,
-            on_click: press_on_click,
-            on_pointerdown: press_on_pointerdown,
-        },
+        props: PropsWithStyles::new(
+            UseMenuTriggerProps {
+                id: menu_trigger_id,
+                aria_haspopup: overlay_trigger.props.aria_haspopup,
+                aria_expanded: overlay_trigger.props.aria_expanded,
+                aria_controls: overlay_trigger.props.aria_controls,
+                on_keydown: combined_keydown,
+                on_click: press_on_click,
+                on_pointerdown: press_on_pointerdown,
+            },
+            press_styles,
+        ),
         menu_props: UseMenuTriggerMenuProps {
             id: menu_id_signal,
             aria_labelledby: menu_trigger_id_signal,

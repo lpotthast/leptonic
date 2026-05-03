@@ -1,6 +1,9 @@
 use leptos::{prelude::*, svg, text_prop::TextProp};
 
-use crate::Margin;
+use crate::{
+    Margin,
+    utils::{classes::Classes, styles::Styles},
+};
 
 /// The Icon component.
 #[component]
@@ -20,6 +23,9 @@ pub fn Icon(
     #[prop(optional)] margin: Option<Margin>,
 
     #[prop(into, optional)] aria_label: Option<Oco<'static, str>>,
+
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView
 where
 {
@@ -27,6 +33,8 @@ where
         let icon = icon.get();
         // TODO (new): Does into_any() do what we want? We deed it as svg() itself is now typed and alters the type whenever attributes are added.
         // TODO (new): We only add an arbitrary attribute here (aria-hidden) to get an `AnyViewWithAttrs`, on which we can conditionally add further attributes ...
+        // SAFETY: `icon.data` is a `&'static str` from the `icondata` crate,
+        // containing compile-time SVG path data. Not user-supplied input.
         let mut svg = svg::svg()
             .inner_html(icon.data)
             .into_any()
@@ -77,11 +85,15 @@ where
         svg
     };
 
+    let styles = match margin {
+        Some(m) => styles.add("--margin", leptos_styles::css::CssValue::from(m)),
+        None => styles,
+    };
     view! {
         <span
-            class="leptonic-icon"
+            class=classes.add("leptonic-icon")
             aria_label=aria_label
-            style=margin.map(|it| { ("--margin", format!("{it}")) })
+            style=styles
         >
             {svg}
         </span>

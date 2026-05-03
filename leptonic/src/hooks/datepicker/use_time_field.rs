@@ -8,24 +8,29 @@ use leptos::{
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
-use super::use_date_segment::{DateSegment, DateSegmentType};
+use super::{
+    incomplete_date::IncompleteDate,
+    incomplete_time::IncompleteTime,
+    use_date_segment::{DateSegment, DateSegmentType},
+};
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaRequired, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaInvalid, AriaRequired, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useTimeField.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// DIFFERENT BEHAVIOR
+// - Hook-owned state: Uses `IncompleteTime` editing buffer owned internally.
+//   Callers get read-only signals and `DateSegmentType`-based mutation callbacks
+//   instead of focused-segment-index-based ones.
+// - Segment mutation callbacks take `DateSegmentType` instead of operating on
+//   the focused segment implicitly.
 //
-// =============================================================================
 
 /// A time value with hours, minutes, and optional seconds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -135,7 +140,6 @@ impl Default for UseTimeFieldInput {
 }
 
 /// The return value of the `use_time_field` hook.
-#[derive(Debug)]
 pub struct UseTimeFieldReturn {
     /// Props for the field container element. Call `.into_attrs()` for view spreading.
     pub field_props: UseTimeFieldProps,
@@ -167,11 +171,32 @@ pub struct UseTimeFieldReturn {
     /// Focus the previous segment.
     pub focus_previous: Callback<()>,
 
-    /// Increment the focused segment.
-    pub increment: Callback<()>,
+    /// Increment a segment by type.
+    pub increment: Callback<DateSegmentType>,
 
-    /// Decrement the focused segment.
-    pub decrement: Callback<()>,
+    /// Decrement a segment by type.
+    pub decrement: Callback<DateSegmentType>,
+
+    /// Set a segment value by type.
+    pub set_segment: Callback<(DateSegmentType, i32)>,
+
+    /// Clear a segment.
+    pub clear_segment: Callback<DateSegmentType>,
+
+    /// Increment by page step.
+    pub increment_page: Callback<DateSegmentType>,
+
+    /// Decrement by page step.
+    pub decrement_page: Callback<DateSegmentType>,
+
+    /// Set segment to max value.
+    pub increment_to_max: Callback<DateSegmentType>,
+
+    /// Set segment to min value.
+    pub decrement_to_min: Callback<DateSegmentType>,
+
+    /// Confirm placeholder on blur.
+    pub confirm_placeholder: Callback<()>,
 }
 
 /// Props from `use_time_field` for the field container element.
@@ -180,8 +205,9 @@ pub struct UseTimeFieldProps {
     pub id: String,
     pub role: AriaRole,
     pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_required: Option<AriaRequired>,
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
@@ -196,6 +222,7 @@ impl IntoAttrs for UseTimeFieldProps {
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaInvalid, self.aria_invalid),
             Attr(attr::AriaRequired, self.aria_required),
             self.on_keydown.into_on(ev::keydown),
         )
@@ -207,8 +234,9 @@ pub type UseTimeFieldAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
     Attr<attr::AriaRequired, Option<AriaRequired>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
@@ -241,6 +269,7 @@ pub struct UseTimeFieldErrorProps {
 /// Provides the behavior and accessibility for a time field.
 ///
 /// A time field allows users to enter a time using editable segments.
+/// Uses an `IncompleteTime` editing buffer for partial state support.
 ///
 /// # Example
 ///
@@ -263,16 +292,12 @@ pub struct UseTimeFieldErrorProps {
 ///     </div>
 /// }
 /// ```
-///
-/// # Panics
-///
-/// Panics if the `on` event handler cannot be converted to a cloneable callback.
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
     let UseTimeFieldInput {
         value,
-        min,
-        max,
+        min: _,
+        max: _,
         is_disabled: disabled,
         is_read_only,
         is_required,
@@ -284,66 +309,64 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
         on_change,
     } = input;
 
+    // ---- Internal editing buffer ----
+    let initial_incomplete = value.get_untracked().map_or_else(
+        || IncompleteTime::empty(hour_cycle_24),
+        |t| IncompleteTime::from_time(&t, hour_cycle_24),
+    );
+    let display_value = StoredValue::new(initial_incomplete);
+    let placeholder = StoredValue::new(TimeValue::default());
+    let display_trigger = Trigger::new();
+
+    // Sync display_value when external value changes.
+    Effect::new(move |_| {
+        let ext = value.get();
+        match ext {
+            Some(time) => {
+                display_value.update_value(|dv| dv.sync_from_time(&time));
+            }
+            None => {
+                display_value.set_value(IncompleteTime::empty(hour_cycle_24));
+            }
+        }
+        display_trigger.notify();
+    });
+
+    // ---- Emit helpers ----
+    let emit = move |new_value: Option<TimeValue>| {
+        if let Some(on_change) = on_change {
+            on_change.run(new_value);
+        }
+    };
+
+    let try_emit_if_complete = move || {
+        let dv = display_value.get_value();
+        if dv.is_complete(show_seconds) {
+            let ph = placeholder.get_value();
+            emit(Some(dv.to_time(&ph)));
+        } else if dv.is_cleared(show_seconds) {
+            emit(None);
+        }
+    };
+
+    // ---- IDs ----
     let base_id = Uuid::new_v4();
     let field_id = format!("time-field-{base_id}");
     let label_id = format!("time-field-label-{base_id}");
     let description_id = format!("time-field-desc-{base_id}");
     let error_id = format!("time-field-error-{base_id}");
 
-    // Track focused segment
+    // ---- Track focused segment ----
     let (focused_segment, set_focused_segment) = signal::<Option<usize>>(None);
 
-    // Generate segments from the current value
+    // ---- Segment generation ----
     let segments = Signal::derive(move || {
-        let time_opt = value.get();
-        let mut segs = Vec::new();
-
-        if let Some(time) = time_opt {
-            // Hour
-            if hour_cycle_24 {
-                segs.push(DateSegment::hour(Some(time.hour), true));
-            } else {
-                let (hour_12, _is_pm) = time.to_12_hour();
-                segs.push(DateSegment::hour(Some(hour_12), false));
-            }
-            segs.push(DateSegment::literal(":"));
-
-            // Minute
-            segs.push(DateSegment::minute(Some(time.minute)));
-
-            // Second (optional)
-            if show_seconds {
-                segs.push(DateSegment::literal(":"));
-                segs.push(DateSegment::second(Some(time.second)));
-            }
-
-            // AM/PM (for 12-hour)
-            if !hour_cycle_24 {
-                segs.push(DateSegment::literal(" "));
-                let (_hour_12, is_pm) = time.to_12_hour();
-                segs.push(DateSegment::day_period(Some(is_pm)));
-            }
-        } else {
-            // Placeholder segments
-            segs.push(DateSegment::hour(None, hour_cycle_24));
-            segs.push(DateSegment::literal(":"));
-            segs.push(DateSegment::minute(None));
-
-            if show_seconds {
-                segs.push(DateSegment::literal(":"));
-                segs.push(DateSegment::second(None));
-            }
-
-            if !hour_cycle_24 {
-                segs.push(DateSegment::literal(" "));
-                segs.push(DateSegment::day_period(None));
-            }
-        }
-
-        segs
+        display_trigger.track();
+        let dv = display_value.get_value();
+        build_time_segments(&dv, show_seconds, hour_cycle_24)
     });
 
-    // Get editable segment indices
+    // Get editable segment indices.
     let editable_indices = move || {
         segments.with(|segs| {
             segs.iter()
@@ -354,7 +377,7 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
         })
     };
 
-    // Focus callbacks
+    // ---- Focus callbacks ----
     let focus_segment = Callback::new(move |index: usize| {
         set_focused_segment.set(Some(index));
     });
@@ -387,140 +410,135 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
         }
     });
 
-    // Increment/decrement the focused segment
-    let increment = Callback::new(move |_| {
-        let focused = focused_segment.get_untracked();
-        if focused.is_none() {
+    // ---- Mutation callbacks ----
+    let set_segment = Callback::new(move |(seg_type, val): (DateSegmentType, i32)| {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
             return;
         }
-
-        let current_value = value.get_untracked();
-        let time = current_value.unwrap_or_default();
-        let segment_idx = focused.unwrap();
-
-        segments.with_untracked(|segs| {
-            if let Some(seg) = segs.get(segment_idx) {
-                let new_time = match seg.segment_type {
-                    DateSegmentType::Hour => {
-                        let new_hour = (time.hour + 1) % 24;
-                        Some(TimeValue::new(new_hour, time.minute, time.second))
-                    }
-                    DateSegmentType::Minute => {
-                        let new_minute = (time.minute + 1) % 60;
-                        Some(TimeValue::new(time.hour, new_minute, time.second))
-                    }
-                    DateSegmentType::Second => {
-                        let new_second = (time.second + 1) % 60;
-                        Some(TimeValue::new(time.hour, time.minute, new_second))
-                    }
-                    DateSegmentType::DayPeriod => {
-                        // Toggle AM/PM (add/subtract 12 hours)
-                        let new_hour = if time.hour >= 12 {
-                            time.hour - 12
-                        } else {
-                            time.hour + 12
-                        };
-                        Some(TimeValue::new(new_hour, time.minute, time.second))
-                    }
-                    _ => None,
-                };
-
-                if let Some(new_time) = new_time {
-                    if let Some(on_change) = on_change {
-                        on_change.run(Some(new_time));
-                    }
-                }
-            }
-        });
+        display_value.update_value(|dv| dv.set(seg_type, val));
+        display_trigger.notify();
+        try_emit_if_complete();
     });
 
-    let decrement = Callback::new(move |_| {
-        let focused = focused_segment.get_untracked();
-        if focused.is_none() {
+    let clear_segment = Callback::new(move |seg_type: DateSegmentType| {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
             return;
         }
-
-        let current_value = value.get_untracked();
-        let time = current_value.unwrap_or_default();
-        let segment_idx = focused.unwrap();
-
-        segments.with_untracked(|segs| {
-            if let Some(seg) = segs.get(segment_idx) {
-                let new_time = match seg.segment_type {
-                    DateSegmentType::Hour => {
-                        let new_hour = if time.hour == 0 { 23 } else { time.hour - 1 };
-                        Some(TimeValue::new(new_hour, time.minute, time.second))
-                    }
-                    DateSegmentType::Minute => {
-                        let new_minute = if time.minute == 0 {
-                            59
-                        } else {
-                            time.minute - 1
-                        };
-                        Some(TimeValue::new(time.hour, new_minute, time.second))
-                    }
-                    DateSegmentType::Second => {
-                        let new_second = if time.second == 0 {
-                            59
-                        } else {
-                            time.second - 1
-                        };
-                        Some(TimeValue::new(time.hour, time.minute, new_second))
-                    }
-                    DateSegmentType::DayPeriod => {
-                        // Toggle AM/PM (add/subtract 12 hours)
-                        let new_hour = if time.hour >= 12 {
-                            time.hour - 12
-                        } else {
-                            time.hour + 12
-                        };
-                        Some(TimeValue::new(new_hour, time.minute, time.second))
-                    }
-                    _ => None,
-                };
-
-                if let Some(new_time) = new_time {
-                    if let Some(on_change) = on_change {
-                        on_change.run(Some(new_time));
-                    }
-                }
-            }
-        });
+        display_value.update_value(|dv| dv.clear(seg_type));
+        display_trigger.notify();
+        if display_value.get_value().is_cleared(show_seconds) {
+            emit(None);
+        }
     });
 
-    // Build aria-labelledby
-    let aria_labelledby = if label.is_some() {
+    let increment = Callback::new(move |seg_type: DateSegmentType| {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
+            return;
+        }
+        let ph = placeholder.get_value();
+        display_value.update_value(|dv| dv.cycle(seg_type, 1, &ph));
+        display_trigger.notify();
+        try_emit_if_complete();
+    });
+
+    let decrement = Callback::new(move |seg_type: DateSegmentType| {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
+            return;
+        }
+        let ph = placeholder.get_value();
+        display_value.update_value(|dv| dv.cycle(seg_type, -1, &ph));
+        display_trigger.notify();
+        try_emit_if_complete();
+    });
+
+    let increment_page = Callback::new(move |seg_type: DateSegmentType| {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
+            return;
+        }
+        let ph = placeholder.get_value();
+        let step = IncompleteDate::page_step(seg_type);
+        display_value.update_value(|dv| dv.cycle(seg_type, step, &ph));
+        display_trigger.notify();
+        try_emit_if_complete();
+    });
+
+    let decrement_page = Callback::new(move |seg_type: DateSegmentType| {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
+            return;
+        }
+        let ph = placeholder.get_value();
+        let step = IncompleteDate::page_step(seg_type);
+        display_value.update_value(|dv| dv.cycle(seg_type, -step, &ph));
+        display_trigger.notify();
+        try_emit_if_complete();
+    });
+
+    let increment_to_max = Callback::new(move |seg_type: DateSegmentType| {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
+            return;
+        }
+        display_value.update_value(|dv| dv.set_to_max(seg_type));
+        display_trigger.notify();
+        try_emit_if_complete();
+    });
+
+    let decrement_to_min = Callback::new(move |seg_type: DateSegmentType| {
+        if disabled.get_untracked() || is_read_only.get_untracked() {
+            return;
+        }
+        display_value.update_value(|dv| dv.set_to_min(seg_type));
+        display_trigger.notify();
+        try_emit_if_complete();
+    });
+
+    let confirm_placeholder = Callback::new(move |()| {
+        let dv = display_value.get_value();
+        if dv.is_complete(show_seconds) {
+            let ph = placeholder.get_value();
+            emit(Some(dv.to_time(&ph)));
+        } else if dv.is_cleared(show_seconds) {
+            emit(None);
+        }
+    });
+
+    // ---- Reactive ARIA attributes ----
+    let has_description = description.is_some();
+    let has_error = error_message.is_some();
+    let has_label = label.is_some();
+
+    let description_id_for_signal = description_id.clone();
+    let error_id_for_signal = error_id.clone();
+    let aria_describedby = Signal::derive(move || {
+        let mut parts = Vec::new();
+        if has_description {
+            parts.push(description_id_for_signal.clone());
+        }
+        if has_error {
+            parts.push(error_id_for_signal.clone());
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
+    });
+
+    let aria_labelledby = if has_label {
         Some(label_id.clone())
     } else {
         None
     };
 
-    // Build aria-describedby
-    let aria_describedby = if description.is_some() || error_message.is_some() {
-        let mut ids = Vec::new();
-        if description.is_some() {
-            ids.push(description_id.clone());
-        }
-        if error_message.is_some() {
-            ids.push(error_id.clone());
-        }
-        Some(ids.join(" "))
-    } else {
-        None
-    };
-
-    // Compute aria-disabled
     let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
+    // Time field doesn't have validation yet; always valid.
+    let aria_invalid = Signal::derive(|| None::<AriaInvalid>);
     let aria_required = is_required.then_some(AriaRequired::True);
 
-    // Handle keyboard navigation.
-    // Navigation is currently handled by individual segments.
-    #[allow(clippy::unused_unit)]
+    // Keyboard handler (field-level).
     let handle_keydown = move |_e: KeyboardEvent| {
-        if disabled.get_untracked() || is_read_only.get_untracked() {
-            // Early exit: disabled or read-only fields ignore keyboard events.
-        }
+        // Navigation is handled by individual segments.
+        // Disabled/read-only check is a no-op at field level.
+        let _ = disabled.get_untracked();
     };
 
     UseTimeFieldReturn {
@@ -530,6 +548,7 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
             aria_labelledby,
             aria_describedby,
             aria_disabled,
+            aria_invalid,
             aria_required,
             on_keydown: EventHandler::new(handle_keydown),
         },
@@ -548,5 +567,37 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
         focus_previous,
         increment,
         decrement,
+        set_segment,
+        clear_segment,
+        increment_page,
+        decrement_page,
+        increment_to_max,
+        decrement_to_min,
+        confirm_placeholder,
     }
+}
+
+/// Build time segments from the incomplete time state.
+fn build_time_segments(
+    dv: &IncompleteTime,
+    show_seconds: bool,
+    hour_cycle_24: bool,
+) -> Vec<DateSegment> {
+    let mut segs = vec![
+        DateSegment::hour(dv.hour, hour_cycle_24),
+        DateSegment::literal(":"),
+        DateSegment::minute(dv.minute),
+    ];
+
+    if show_seconds {
+        segs.push(DateSegment::literal(":"));
+        segs.push(DateSegment::second(dv.second));
+    }
+
+    if !hour_cycle_24 {
+        segs.push(DateSegment::literal(" "));
+        segs.push(DateSegment::day_period(dv.day_period));
+    }
+
+    segs
 }

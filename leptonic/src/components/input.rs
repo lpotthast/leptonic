@@ -5,8 +5,9 @@ use wasm_bindgen::JsCast;
 use web_sys::{HtmlElement, HtmlInputElement};
 
 use crate::{
-    components::form_control::{FormControlContext, FormInput},
     Out,
+    components::form_control::{FormControlContext, FormInput},
+    utils::{classes::Classes, styles::Styles},
 };
 
 fn prepare_autofocus<T>(node_ref: NodeRef<T>)
@@ -87,6 +88,8 @@ pub fn TextInput(
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Out<bool>,
     #[prop(into, optional)] autofocus: bool,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let node_ref: NodeRef<html::Input> = NodeRef::new();
 
@@ -107,7 +110,7 @@ pub fn TextInput(
     }
 
     view! {
-        <div class="leptonic-input">
+        <div class=classes.add("leptonic-input") style=styles>
             <input
                 node_ref=node_ref
                 placeholder=placeholder
@@ -150,6 +153,8 @@ pub fn PasswordInput(
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Out<bool>,
     #[prop(into, optional)] autofocus: bool,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let node_ref: NodeRef<html::Input> = NodeRef::new();
 
@@ -162,7 +167,7 @@ pub fn PasswordInput(
     }
 
     view! {
-        <div class="leptonic-input">
+        <div class=classes.add("leptonic-input") style=styles>
             <input
                 node_ref=node_ref
                 placeholder=placeholder
@@ -207,6 +212,8 @@ pub fn NumberInput(
     #[prop(into, optional)] should_be_focused: Option<Signal<bool>>,
     #[prop(into, optional)] on_focus_change: Out<bool>,
     #[prop(into, optional)] autofocus: bool,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let node_ref: NodeRef<html::Input> = NodeRef::new();
 
@@ -228,7 +235,7 @@ pub fn NumberInput(
     });
 
     view! {
-        <div class="leptonic-input">
+        <div class=classes.add("leptonic-input") style=styles>
             <input
                 node_ref=node_ref
                 placeholder=placeholder

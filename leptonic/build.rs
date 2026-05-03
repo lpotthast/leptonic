@@ -1,24 +1,23 @@
 use std::{
     path::{Path, PathBuf},
     str::FromStr,
+    sync::LazyLock,
 };
 
 use anyhow::{Context, Result};
 use cargo_toml::{Manifest, Value};
-use lazy_static::lazy_static;
 
-lazy_static! {
-    static ref ENABLE_LOGGING: bool = {
-        option_env!("LEPTONIC_BUILD_ENABLE_LOGGING")
-            .and_then(|v| str::parse::<bool>(v).ok())
-            .unwrap_or(false)
-    };
-    static ref MIN_LOG_LEVEL: Level = {
-        option_env!("LEPTONIC_BUILD_MIN_LOG_LEVEL")
-            .and_then(|v| str::parse::<Level>(v).ok())
-            .unwrap_or(Level::Debug)
-    };
-}
+static ENABLE_LOGGING: LazyLock<bool> = LazyLock::new(|| {
+    option_env!("LEPTONIC_BUILD_ENABLE_LOGGING")
+        .and_then(|v| str::parse::<bool>(v).ok())
+        .unwrap_or(false)
+});
+
+static MIN_LOG_LEVEL: LazyLock<Level> = LazyLock::new(|| {
+    option_env!("LEPTONIC_BUILD_MIN_LOG_LEVEL")
+        .and_then(|v| str::parse::<Level>(v).ok())
+        .unwrap_or(Level::Debug)
+});
 
 #[derive(Debug)]
 struct LeptonicMetadata {
@@ -130,7 +129,10 @@ fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMe
         );
         metadata
     } else {
-        log(Level::Debug, "Aborting. Cargo.toml in root dir does not contain a package or workspace or is missing the necessary metadata.");
+        log(
+            Level::Debug,
+            "Aborting. Cargo.toml in root dir does not contain a package or workspace or is missing the necessary metadata.",
+        );
         return Ok(None);
     };
 

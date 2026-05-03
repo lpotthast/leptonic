@@ -1,10 +1,8 @@
-use std::hash::Hash;
-
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
@@ -15,23 +13,28 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::{
     hooks::{
-        focus::{
-            use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
-            use_focus_visible::{get_modality, Modality},
-            use_focusable::{use_focusable, UseFocusableInput},
-        },
-        selection::use_selection_state::{Selection, SelectionMode},
         IntoAttrs,
+        focus::{
+            use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
+            use_focus_visible::{Modality, get_modality},
+            use_focusable::{UseFocusableInput, use_focusable},
+        },
+        selection::{
+            SelectionKey,
+            use_selection_state::{Selection, SelectionMode},
+        },
     },
-    utils::{aria::AriaRole, element_capture::ElementCaptureAttr, EventHandler},
+    utils::{
+        EventHandler,
+        aria::AriaRole,
+        element_capture::ElementCaptureAttr,
+        scroll::{ScrollIntoViewportOpts, get_scroll_parent, scroll_into_viewport},
+        slot_id::{join_slot_ids, use_slot_id},
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenuItem.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // 1. `close_on_select` is `Option<bool>` with smart defaults instead of `bool`.
 //    When `None`, close behavior varies by trigger and selection mode:
 //
@@ -46,14 +49,12 @@ use crate::{
 // 2. `is_pressed` state from `usePress` is not yet tracked. (Deferred)
 //
 // 3. Drag-from-trigger-to-item pointer behavior is not yet supported. (Deferred)
-//
-// =============================================================================
 
 /// Input parameters for the `use_menu_item` hook.
 #[derive(Clone)]
 pub struct UseMenuItemInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// The key for this menu item.
     pub key: K,
@@ -89,6 +90,16 @@ where
     /// - `Single` → `"menuitemradio"`
     /// - `Multiple` → `"menuitemcheckbox"`
     pub selection_mode: SelectionMode,
+
+    /// Whether the consumer renders a description slot element.
+    /// When `false`, the description ID is excluded from `aria-describedby`
+    /// to avoid dangling ARIA references.
+    pub has_description: bool,
+
+    /// Whether the consumer renders a keyboard shortcut slot element.
+    /// When `false`, the keyboard shortcut ID is excluded from `aria-describedby`
+    /// to avoid dangling ARIA references.
+    pub has_keyboard_shortcut: bool,
 }
 
 /// The return value of the `use_menu_item` hook.
@@ -130,7 +141,7 @@ pub struct UseMenuItemProps {
     pub aria_disabled: Signal<Option<&'static str>>,
     pub aria_checked: Signal<Option<&'static str>>,
     pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
     pub on_click: EventHandler<MouseEvent>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<FocusEvent>,
@@ -175,7 +186,7 @@ pub type UseMenuItemAttrs = (
     Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
     Attr<attr::AriaChecked, Signal<Option<&'static str>>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     On<ev::click, SharedEventCallback<MouseEvent>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
@@ -266,6 +277,8 @@ pub type UseMenuItemKeyboardShortcutAttrs = (Attr<attr::Id, String>,);
 ///         // Close the menu
 ///     })),
 ///     close_on_select: true,
+///     has_description: false,
+///     has_keyboard_shortcut: false,
 /// });
 ///
 /// view! {
@@ -277,7 +290,7 @@ pub type UseMenuItemKeyboardShortcutAttrs = (Attr<attr::Id, String>,);
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_menu_item<K>(input: UseMenuItemInput<K>) -> UseMenuItemReturn
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseMenuItemInput {
         key,
@@ -289,6 +302,8 @@ where
         on_close,
         close_on_select,
         selection_mode,
+        has_description,
+        has_keyboard_shortcut,
     } = input;
 
     // Generate unique IDs for accessible slot elements
@@ -298,9 +313,15 @@ where
     let description_id = format!("menuitem-desc-{base_id}");
     let keyboard_shortcut_id = format!("menuitem-kbd-{base_id}");
 
-    // Build aria-labelledby and aria-describedby referencing the slot IDs
+    // Build aria-labelledby and aria-describedby referencing the slot IDs.
+    // Use use_slot_id to avoid dangling ARIA references when slots are not rendered.
     let aria_labelledby = Some(label_id.clone());
-    let aria_describedby = Some(format!("{description_id} {keyboard_shortcut_id}"));
+    let slot_desc = use_slot_id(description_id.clone(), Signal::stored(has_description));
+    let slot_kbd = use_slot_id(
+        keyboard_shortcut_id.clone(),
+        Signal::stored(has_keyboard_shortcut),
+    );
+    let aria_describedby = join_slot_ids(&[slot_desc, slot_kbd]);
 
     // Determine ARIA role based on selection mode
     let role: AriaRole = match selection_mode {
@@ -334,6 +355,15 @@ where
         // Only focus if we just became focused (transition from false to true)
         if currently_focused && !was_focused {
             focus_handle.focus();
+            if let Some(el) = focus_handle.get_element() {
+                let el: &web_sys::Element = &el;
+                scroll_into_viewport(
+                    Some(el),
+                    &ScrollIntoViewportOpts {
+                        containing_element: Some(get_scroll_parent(el, true)),
+                    },
+                );
+            }
         }
 
         currently_focused

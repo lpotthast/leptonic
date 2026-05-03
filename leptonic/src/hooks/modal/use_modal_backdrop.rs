@@ -1,19 +1,16 @@
 use leptos::{oco::Oco, prelude::*};
 
 use crate::hooks::{
-    interactions::use_prevent_scroll::{use_prevent_scroll, UsePreventScrollInput},
-    overlay::use_overlay::{
-        use_overlay, UseOverlayAttrs, UseOverlayInput, UseOverlayProps, UseOverlayUnderlayAttrs,
-        UseOverlayUnderlayProps,
-    },
     IntoAttrs,
+    interactions::use_prevent_scroll::{UsePreventScrollInput, use_prevent_scroll},
+    overlay::use_overlay::{
+        UseOverlayAttrs, UseOverlayInput, UseOverlayProps, UseOverlayUnderlayAttrs,
+        UseOverlayUnderlayProps, use_overlay,
+    },
 };
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModalOverlay.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## NAMING
 //
@@ -23,9 +20,9 @@ use crate::hooks::{
 //
 // ## OMITTED FEATURES
 //
-// - `ariaHideOutside()`: Not yet implemented. React-aria's `useModalOverlay`
-//   calls `ariaHideOutside()` to hide all content outside the modal from
-//   screen readers. We rely on `aria-modal="true"` (set by `use_modal`) instead.
+// - `ariaHideOutside()`: Implemented. Elements outside the modal are hidden
+//   from assistive technology via `inert` when the modal is open. This works
+//   alongside `aria-modal="true"` (set by `use_modal`) for defense in depth.
 //
 // - `useOverlayFocusContain`: React-aria's `useModalOverlay` calls this to
 //   signal that focus should be contained. In Leptonic, focus containment is
@@ -39,7 +36,6 @@ use crate::hooks::{
 //   topmost overlay closes).
 // - `use_prevent_scroll` for preventing body scroll while the modal is open.
 //
-// =============================================================================
 
 /// Input parameters for the `use_modal_backdrop` hook.
 ///
@@ -173,7 +169,41 @@ pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropRetur
         disabled: Signal::derive(move || !is_open.get()),
     });
 
-    // 3. Future: ariaHideOutside
+    // 3. Hide outside elements from assistive technology.
+    #[cfg(not(feature = "ssr"))]
+    {
+        use crate::utils::aria_hide_outside::{AriaHideOutsideOptions, aria_hide_outside};
+
+        let overlay_element = overlay.overlay_element;
+
+        let hide_cleanup: StoredValue<Option<Box<dyn FnOnce()>>, LocalStorage> =
+            StoredValue::new_local(None);
+
+        Effect::new(move |_| {
+            // Clean up previous hide (if any).
+            hide_cleanup.update_value(|opt| {
+                if let Some(f) = opt.take() {
+                    f();
+                }
+            });
+
+            if is_open.get() {
+                if let Some(el) = overlay_element.get() {
+                    let undo =
+                        aria_hide_outside(&[(*el).clone()], AriaHideOutsideOptions::default());
+                    hide_cleanup.set_value(Some(undo));
+                }
+            }
+        });
+
+        on_cleanup(move || {
+            hide_cleanup.update_value(|opt| {
+                if let Some(f) = opt.take() {
+                    f();
+                }
+            });
+        });
+    }
 
     UseModalBackdropReturn {
         modal_props: UseModalBackdropModalProps(overlay.props),

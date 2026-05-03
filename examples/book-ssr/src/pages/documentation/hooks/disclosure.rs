@@ -1,27 +1,12 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::disclosure::DisclosureDemo;
 
 #[component]
 pub fn PageUseDisclosure() -> impl IntoView {
-    let UseDisclosureStateReturn {
-        is_expanded,
-        toggle,
-        ..
-    } = use_disclosure_state(false);
-
-    let UseDisclosureReturn {
-        trigger_props,
-        content_props,
-        ..
-    } = use_disclosure(UseDisclosureInput {
-        is_expanded: is_expanded.into(),
-        is_disabled: Signal::derive(|| false),
-        on_expanded_change: None,
-    });
-
     view! {
         <Article>
             <h1 id="use_disclosure" class="anchor">
@@ -29,69 +14,28 @@ pub fn PageUseDisclosure() -> impl IntoView {
                 <AnchorLink href="#use_disclosure" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hook for creating collapsible/expandable content sections with proper ARIA attributes for accessibility."</p>
+            <p>"Hook for creating collapsible/expandable content sections with proper ARIA attributes for accessibility. "
+               "See the "<Link href=crate::routes::doc::Collapsible.materialize()>"Collapsible overview"</Link>" for concept guidance."</p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useDisclosure.html" target=LinkTarget::_Blank>
+                    "useDisclosure"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="demo" class="anchor">
                 "Interactive Demo"
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden; margin: 1em 0; max-width: 500px;">
-                <button
-                    {..trigger_props.into_attrs()}
-                    on:click=move |_| toggle.run(())
-                    style="
-                        width: 100%;
-                        padding: 1em;
-                        background: #f5f5f5;
-                        border: none;
-                        cursor: pointer;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        font-size: 1em;
-                        font-weight: 500;
-                    "
-                >
-                    <span>"What is disclosure?"</span>
-                    <span style=move || format!(
-                        "transition: transform 0.2s; {}",
-                        if is_expanded.get() { "transform: rotate(180deg);" } else { "" }
-                    )>"▼"</span>
-                </button>
-
-                <div
-                    {..content_props.into_attrs()}
-                    style=move || format!(
-                        "overflow: hidden; transition: all 0.3s; {}",
-                        if is_expanded.get() { "max-height: 200px; padding: 1em;" } else { "max-height: 0; padding: 0 1em;" }
-                    )
-                >
-                    <p style="margin: 0;">
-                        "A disclosure is a widget that shows or hides content. It consists of a button that toggles the visibility of a panel. This is commonly used for FAQs, accordions, and collapsible sections."
-                    </p>
-                </div>
-            </div>
-
-            <Code>
-                {indoc!(r#"
-                    let UseDisclosureStateReturn { is_expanded, toggle, .. } = use_disclosure_state(false);
-
-                    let UseDisclosureReturn { trigger_attrs, content_attrs } = use_disclosure(UseDisclosureInput {
-                        is_expanded: is_expanded.into(),
-                        on_expanded_change: None,
-                    });
-
-                    view! {
-                        <button {..trigger_attrs} on:click=move |_| toggle.run(())>
-                            "Toggle Content"
-                        </button>
-                        <div {..content_attrs}>
-                            "Hidden content here..."
-                        </div>
-                    }
-                "#)}
-            </Code>
+            <DemoShell
+                source=include_str!("demos/disclosure.rs")
+                description="Collapsible content section"
+            >
+                <DisclosureDemo />
+            </DemoShell>
 
             <h2 id="aria-attributes" class="anchor">
                 "ARIA Attributes"
@@ -131,6 +75,16 @@ pub fn PageUseDisclosure() -> impl IntoView {
                 <li>"ID association between trigger and content"</li>
                 <li>"Hidden attribute for collapsed state"</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Collapsible.materialize()>"Collapsible overview"</Link></li>
+                <li><Link href=crate::routes::doc::collapsible::Component.materialize()>"Collapsible component"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -140,6 +94,7 @@ pub fn PageUseDisclosure() -> impl IntoView {
                 Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
                 Toc::Leaf { title: "Use Cases", link: "#use-cases" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

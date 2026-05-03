@@ -1,8 +1,9 @@
 use indoc::indoc;
-use leptonic::{atoms::focus_scope::FocusScope, components::prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::focus_scope::FocusScopeDemo;
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageAtomFocusScope() -> impl IntoView {
@@ -39,7 +40,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                 "When you Tab through the elements, focus will wrap from the last element back to the first, never leaving the scope."
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     use leptonic::atoms::focus_scope::FocusScope;
 
@@ -64,13 +65,9 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                 "Try pressing Tab repeatedly in the demo below. Focus will cycle through the three inputs and the button, never escaping the scope."
             </p>
 
-            <FocusScope contain=true>
-                <div style="display: flex; flex-direction: column; gap: 0.5em; padding: 1em; border: 2px solid var(--brand-color); border-radius: 0.5em;">
-                    <input type="text" placeholder="First name" />
-                    <input type="text" placeholder="Last name" />
-                    <button>"Submit"</button>
-                </div>
-            </FocusScope>
+            <DemoShell source=include_str!("demos/focus_scope.rs")>
+                <FocusScopeDemo />
+            </DemoShell>
 
             <h2 id="focus-manager" class="anchor">
                 "FocusManager Context"
@@ -82,7 +79,7 @@ pub fn PageAtomFocusScope() -> impl IntoView {
                 "Child components can access this context to programmatically move focus using the FocusManager."
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     use leptonic::atoms::focus_scope::{FocusScope, FocusScopeContext};
 

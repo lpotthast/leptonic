@@ -1,35 +1,33 @@
-use leptos::{attr, attr::Attr, prelude::*};
+use leptos::{attr, attr::Attr};
 use uuid::Uuid;
 
 use crate::hooks::IntoAttrs;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/breadcrumbs/src/useBreadcrumbs.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
-
-// TODO: This tries to reimplement behavior already covered by use_press.
+// NOTE: This hook intentionally has no `disabled` input.
+// `aria-disabled` is meant for interactive elements (buttons, links, inputs),
+// not for structural/landmark elements like `<nav>`. Disabling breadcrumbs is
+// a per-item concern, handled by `use_breadcrumb_item` via `is_disabled`.
+// React-aria's Spectrum `Breadcrumbs` component offers a container-level
+// `isDisabled` prop, but it simply forwards it to each child item — it does
+// not set anything on the `<nav>` element itself.
+//
 
 /// Input parameters for the `use_breadcrumbs` hook.
 #[derive(Debug, Clone)]
 pub struct UseBreadcrumbsInput {
     /// The label for the breadcrumbs navigation.
     pub label: Option<String>,
-
-    /// Whether the breadcrumbs are disabled.
-    pub disabled: Signal<bool>,
 }
 
 impl Default for UseBreadcrumbsInput {
     fn default() -> Self {
         Self {
             label: Some("Breadcrumbs".to_string()),
-            disabled: Signal::derive(|| false),
         }
     }
 }
@@ -85,7 +83,7 @@ pub type UseBreadcrumbsAttrs = (
 /// }
 /// ```
 pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
-    let UseBreadcrumbsInput { label, disabled } = input;
+    let UseBreadcrumbsInput { label } = input;
 
     let nav_id = format!("breadcrumbs-{}", Uuid::new_v4());
 

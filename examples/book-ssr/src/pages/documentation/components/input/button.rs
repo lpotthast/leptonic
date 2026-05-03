@@ -1,34 +1,32 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::button_basic::ButtonBasicDemo;
+use super::demos::button_colors::ButtonColorsDemo;
+use super::demos::button_disabled::ButtonDisabledDemo;
+use super::demos::button_group::ButtonGroupDemo;
+use super::demos::button_variants::ButtonVariantsDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageButton() -> impl IntoView {
-    let (disabled, set_disabled) = signal(false);
     view! {
         <Article>
             <h1 id="button" class="anchor">
-                "Button"
+                "Button component"
                 <AnchorLink href="#button" description="Direct link to article header"/>
             </h1>
 
-            <p>"Buttons are one of the most common input mechanisms with which your users can interact with your software."</p>
-            <p>"Buttons only require an action handler and can therefor be created like in this minimal example."</p>
+            <p>
+                "The fully themed Button component with colors, variants, groups, and 60+ CSS variables. "
+                "See the "<Link href=crate::routes::doc::Button.materialize()>"Button overview"</Link>" for concept guidance."
+            </p>
 
-            <Code>
-                {indoc!(r#"
-                    <Button on_press=move |_| {}>
-                        "My Button"
-                    </Button>
-                "#)}
-            </Code>
-
-            <div>
-                <Button on_press=move |_| {}>"My Button"</Button>
-            </div>
+            <DemoShell source=include_str!("demos/button_basic.rs")>
+                <ButtonBasicDemo />
+            </DemoShell>
 
             <h2 id="colors" class="anchor">
                 "Colors"
@@ -37,23 +35,9 @@ pub fn PageButton() -> impl IntoView {
 
             <p>"Buttons come in different colors. You can overwrite these using theme variables."</p>
 
-            <Code>
-                {indoc!(r#"
-                    <Button on_press=move |_| {} color=ButtonColor::Primary>"Primary"</Button>
-                    <Button on_press=move |_| {} color=ButtonColor::Secondary>"Secondary"</Button>
-                    <Button on_press=move |_| {} color=ButtonColor::Warn>"Warn"</Button>
-                    <Button on_press=move |_| {} color=ButtonColor::Danger>"Danger"</Button>
-                    <Button on_press=move |_| {} color=ButtonColor::Info>"Info"</Button>
-                "#)}
-            </Code>
-
-            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) attr:style="justify-content: flex-start;">
-                <Button on_press=move |_| {} color=ButtonColor::Primary>"Primary"</Button>
-                <Button on_press=move |_| {} color=ButtonColor::Secondary>"Secondary"</Button>
-                <Button on_press=move |_| {} color=ButtonColor::Warn>"Warn"</Button>
-                <Button on_press=move |_| {} color=ButtonColor::Danger>"Danger"</Button>
-                <Button on_press=move |_| {} color=ButtonColor::Info>"Info"</Button>
-            </Stack>
+            <DemoShell source=include_str!("demos/button_colors.rs")>
+                <ButtonColorsDemo />
+            </DemoShell>
 
             <h2 id="variants" class="anchor">
                 "Variants"
@@ -67,19 +51,9 @@ pub fn PageButton() -> impl IntoView {
                 <Code inline=true>"Filled"</Code> ", with the Filled variant being the default, hence the visual of our simple button above."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    <Button on_press=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
-                    <Button on_press=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
-                    <Button on_press=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
-                "#)}
-            </Code>
-
-            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.6) attr:style="justify-content: flex-start;">
-                <Button on_press=move |_| {} variant=ButtonVariant::Flat>"Flat"</Button>
-                <Button on_press=move |_| {} variant=ButtonVariant::Outlined>"Outlined"</Button>
-                <Button on_press=move |_| {} variant=ButtonVariant::Filled>"Filled"</Button>
-            </Stack>
+            <DemoShell source=include_str!("demos/button_variants.rs")>
+                <ButtonVariantsDemo />
+            </DemoShell>
 
             <h2 id="groups" class="anchor">
                 "Groups"
@@ -88,21 +62,9 @@ pub fn PageButton() -> impl IntoView {
 
             <p>"Buttons can be displayed in a group. This lets adjacent buttons snap to each other, creating a seamless row of buttons. It is recommended to only use the Filled button variant when putting buttons inside a group."</p>
 
-            <Code>
-                {indoc!(r#"
-                    <ButtonGroup>
-                        <Button on_press=move |_| {}>"Button 1"</Button>
-                        <Button on_press=move |_| {}>"Button 2"</Button>
-                        <Button on_press=move |_| {}>"Button 3"</Button>
-                    </ButtonGroup>
-                "#)}
-            </Code>
-
-            <ButtonGroup>
-                <Button on_press=move |_| {}>"Button 1"</Button>
-                <Button on_press=move |_| {}>"Button 2"</Button>
-                <Button on_press=move |_| {}>"Button 3"</Button>
-            </ButtonGroup>
+            <DemoShell source=include_str!("demos/button_group.rs")>
+                <ButtonGroupDemo />
+            </DemoShell>
 
             <h2 id="disabled" class="anchor">
                 "Disabled"
@@ -117,23 +79,9 @@ pub fn PageButton() -> impl IntoView {
                 " property. You can supply anything evaluating to a boolean, including signals."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    <Button on_press=move |_| {} disabled=true>"Always Disabled"</Button>
-                    <Button on_press=move |_| {} disabled=disabled>"Disabled"</Button>
-                    <Button on_press=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
-                "#)}
-            </Code>
-
-            <div>
-                "Disable: " <Toggle state=disabled set_state=set_disabled/>
-            </div>
-
-            <ButtonWrapper>
-                <Button on_press=move |_| {} disabled=true>"Always Disabled"</Button>
-                <Button on_press=move |_| {} disabled=disabled>"Disabled"</Button>
-                <Button on_press=move |_| {} disabled=Signal::derive(move || !disabled.get())>"!Disabled"</Button>
-            </ButtonWrapper>
+            <DemoShell source=include_str!("demos/button_disabled.rs")>
+                <ButtonDisabledDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -142,7 +90,7 @@ pub fn PageButton() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Css>
                 {indoc!(r"
                     --button-border-size
                     --button-border-radius
@@ -257,6 +205,17 @@ pub fn PageButton() -> impl IntoView {
                     --button-filled-danger-box-shadow-color
                 ")}
             </Code>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Button.materialize()>"Button overview"</Link></li>
+                <li><Link href=crate::routes::doc::button::Hook.materialize()>"Hook deep-dive: use_button"</Link></li>
+                <li><Link href=crate::routes::doc::button::Atom.materialize()>"Atom deep-dive: Button atom"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -267,6 +226,7 @@ pub fn PageButton() -> impl IntoView {
                 Toc::Leaf { title: "Groups", link: "#groups" },
                 Toc::Leaf { title: "Disabled", link: "#disabled" },
                 Toc::Leaf { title: "Styling", link: "#styling" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

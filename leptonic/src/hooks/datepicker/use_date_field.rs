@@ -8,31 +8,45 @@ use leptos::{
 use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
-use super::use_date_segment::{DateSegment, DateSegmentType};
+use super::{
+    use_date_field_state::{UseDateFieldStateInput, UseDateFieldStateReturn, use_date_field_state},
+    use_date_segment::{DateSegment, DateSegmentType},
+};
 use crate::{
-    hooks::IntoAttrs,
+    hooks::{
+        IntoAttrs,
+        form::use_form_validation_state::{ValidateFn, ValidationBehavior},
+    },
     utils::{
-        aria::{AriaDisabled, AriaRequired, AriaRole},
-        time::whole_days_in,
         EventHandler,
+        aria::{AriaDisabled, AriaInvalid, AriaRequired, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDateField.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// DIFFERENT BEHAVIOR
+// - Hook-owned state: Uses `use_date_field_state` which owns the editing buffer
+//   internally. Callers get read-only signals and semantic mutation callbacks.
+// - Segment mutation callbacks take `DateSegmentType` instead of segment index,
+//   because the state hook operates on field types, not indices.
 //
-// =============================================================================
+// LEPTOS-SPECIFIC ADAPTATIONS
+// - aria-describedby is a reactive `Signal<Option<String>>` that dynamically
+//   includes/excludes the error ID based on validation state (following
+//   `use_text_field` pattern).
+//
 
 /// Input parameters for the `use_date_field` hook.
-#[derive(Debug, Clone)]
+#[allow(clippy::struct_excessive_bools)]
+#[derive(Clone)]
 pub struct UseDateFieldInput {
     /// The current date value.
     pub value: Signal<Option<time::OffsetDateTime>>,
+
+    /// The default value to restore on form reset.
+    pub default_value: Option<time::OffsetDateTime>,
 
     /// The minimum allowed date.
     pub min: Option<time::OffsetDateTime>,
@@ -48,6 +62,15 @@ pub struct UseDateFieldInput {
 
     /// Whether the field is required.
     pub is_required: bool,
+
+    /// Whether the field is explicitly marked as invalid (controlled validation).
+    pub is_invalid: Option<Signal<bool>>,
+
+    /// Custom client-side validation function.
+    pub validate: Option<ValidateFn<Option<time::OffsetDateTime>>>,
+
+    /// Validation behavior mode.
+    pub validation_behavior: ValidationBehavior,
 
     /// The label for the field.
     pub label: Option<String>,
@@ -66,29 +89,40 @@ pub struct UseDateFieldInput {
 
     /// Whether to use 24-hour format.
     pub hour_cycle_24: bool,
+
+    /// Whether this field is inside a date picker (changes role to Presentation).
+    pub is_date_picker: bool,
+
+    /// The field's name for form validation context matching.
+    pub name: Option<String>,
 }
 
 impl Default for UseDateFieldInput {
     fn default() -> Self {
         Self {
             value: Signal::derive(|| None),
+            default_value: None,
             min: None,
             max: None,
             is_disabled: Signal::derive(|| false),
             is_read_only: Signal::derive(|| false),
             is_required: false,
+            is_invalid: None,
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
             label: None,
             description: None,
             error_message: None,
             on_change: None,
             show_time: false,
             hour_cycle_24: true,
+            is_date_picker: false,
+            name: None,
         }
     }
 }
 
 /// The return value of the `use_date_field` hook.
-#[derive(Debug)]
 pub struct UseDateFieldReturn {
     /// Props for the field container element. Call `.into_attrs()` for view spreading.
     pub field_props: UseDateFieldProps,
@@ -120,14 +154,41 @@ pub struct UseDateFieldReturn {
     /// Focus the previous segment.
     pub focus_previous: Callback<()>,
 
-    /// Increment the focused segment.
-    pub increment: Callback<()>,
+    /// Increment a segment by type.
+    pub increment: Callback<DateSegmentType>,
 
-    /// Decrement the focused segment.
-    pub decrement: Callback<()>,
+    /// Decrement a segment by type.
+    pub decrement: Callback<DateSegmentType>,
 
-    /// Set a segment value.
-    pub set_segment: Callback<(usize, i32)>,
+    /// Set a segment value by type.
+    pub set_segment: Callback<(DateSegmentType, i32)>,
+
+    /// Clear a segment (Backspace/Delete).
+    pub clear_segment: Callback<DateSegmentType>,
+
+    /// Increment by page step.
+    pub increment_page: Callback<DateSegmentType>,
+
+    /// Decrement by page step.
+    pub decrement_page: Callback<DateSegmentType>,
+
+    /// Set segment to max value.
+    pub increment_to_max: Callback<DateSegmentType>,
+
+    /// Set segment to min value.
+    pub decrement_to_min: Callback<DateSegmentType>,
+
+    /// Confirm placeholder on blur.
+    pub confirm_placeholder: Callback<()>,
+
+    /// Whether the displayed validation is invalid.
+    pub is_invalid: Signal<bool>,
+
+    /// The displayed validation error messages.
+    pub validation_errors: Signal<Vec<String>>,
+
+    /// The underlying state hook return, for advanced usage.
+    pub state: UseDateFieldStateReturn,
 }
 
 /// Props from `use_date_field` for the field container element.
@@ -136,8 +197,9 @@ pub struct UseDateFieldProps {
     pub id: String,
     pub role: AriaRole,
     pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_required: Option<AriaRequired>,
     pub on_keydown: EventHandler<KeyboardEvent>,
 }
@@ -152,6 +214,7 @@ impl IntoAttrs for UseDateFieldProps {
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaDescribedby, self.aria_describedby),
             Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaInvalid, self.aria_invalid),
             Attr(attr::AriaRequired, self.aria_required),
             self.on_keydown.into_on(ev::keydown),
         )
@@ -163,8 +226,9 @@ pub type UseDateFieldAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
     Attr<attr::AriaRequired, Option<AriaRequired>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
@@ -197,6 +261,8 @@ pub struct UseDateFieldErrorProps {
 /// Provides the behavior and accessibility for a date field.
 ///
 /// A date field allows users to enter a date using editable segments.
+/// Delegates state management to [`use_date_field_state`] and adds ARIA
+/// attributes, keyboard navigation, and form validation integration.
 ///
 /// # Example
 ///
@@ -219,102 +285,60 @@ pub struct UseDateFieldErrorProps {
 ///     </div>
 /// }
 /// ```
-///
-/// # Panics
-///
-/// Panics if the `on` event handler cannot be converted to a cloneable callback.
 #[allow(clippy::too_many_lines, clippy::needless_pass_by_value)]
 pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
     let UseDateFieldInput {
         value,
+        default_value,
         min,
         max,
         is_disabled: disabled,
         is_read_only,
         is_required,
+        is_invalid,
+        validate,
+        validation_behavior,
         label,
         description,
         error_message,
         on_change,
         show_time,
         hour_cycle_24,
+        is_date_picker,
+        name,
     } = input;
 
+    // ---- State hook ----
+    let state = use_date_field_state(UseDateFieldStateInput {
+        value,
+        default_value,
+        min,
+        max,
+        on_change,
+        show_time,
+        hour_cycle_24,
+        is_disabled: disabled,
+        is_read_only,
+        is_required,
+        validate,
+        is_invalid,
+        validation_behavior,
+        name,
+    });
+
+    // ---- IDs ----
     let base_id = Uuid::new_v4();
     let field_id = format!("date-field-{base_id}");
     let label_id = format!("date-field-label-{base_id}");
     let description_id = format!("date-field-desc-{base_id}");
     let error_id = format!("date-field-error-{base_id}");
 
-    // Track focused segment
+    // ---- Track focused segment ----
     let (focused_segment, set_focused_segment) = signal::<Option<usize>>(None);
 
-    // Generate segments from the current value
-    let segments = Signal::derive(move || {
-        let date_opt = value.get();
-        let mut segs = Vec::new();
+    let segments = state.segments;
 
-        if let Some(date) = date_opt {
-            // Year
-            segs.push(DateSegment::year(Some(date.year())));
-            segs.push(DateSegment::literal("-"));
-            // Month
-            segs.push(DateSegment::month(Some(date.month() as u8)));
-            segs.push(DateSegment::literal("-"));
-            // Day
-            let max_day = whole_days_in(date.year(), date.month());
-            segs.push(DateSegment::day(Some(date.day()), max_day));
-
-            if show_time {
-                segs.push(DateSegment::literal(" "));
-                // Hour
-                let hour = date.hour();
-                if hour_cycle_24 {
-                    segs.push(DateSegment::hour(Some(hour), true));
-                } else {
-                    let display_hour = if hour == 0 {
-                        12
-                    } else if hour > 12 {
-                        hour - 12
-                    } else {
-                        hour
-                    };
-                    segs.push(DateSegment::hour(Some(display_hour), false));
-                }
-                segs.push(DateSegment::literal(":"));
-                // Minute
-                segs.push(DateSegment::minute(Some(date.minute())));
-
-                if !hour_cycle_24 {
-                    segs.push(DateSegment::literal(" "));
-                    segs.push(DateSegment::day_period(Some(hour >= 12)));
-                }
-            }
-        } else {
-            // Placeholder segments
-            segs.push(DateSegment::year(None));
-            segs.push(DateSegment::literal("-"));
-            segs.push(DateSegment::month(None));
-            segs.push(DateSegment::literal("-"));
-            segs.push(DateSegment::day(None, 31));
-
-            if show_time {
-                segs.push(DateSegment::literal(" "));
-                segs.push(DateSegment::hour(None, hour_cycle_24));
-                segs.push(DateSegment::literal(":"));
-                segs.push(DateSegment::minute(None));
-
-                if !hour_cycle_24 {
-                    segs.push(DateSegment::literal(" "));
-                    segs.push(DateSegment::day_period(None));
-                }
-            }
-        }
-
-        segs
-    });
-
-    // Get editable segment indices
+    // Get editable segment indices.
     let editable_indices = move || {
         segments.with(|segs| {
             segs.iter()
@@ -325,7 +349,7 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
         })
     };
 
-    // Focus callbacks
+    // ---- Focus callbacks ----
     let focus_segment = Callback::new(move |index: usize| {
         set_focused_segment.set(Some(index));
     });
@@ -358,162 +382,48 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
         }
     });
 
-    // Increment/decrement the focused segment
-    let increment = Callback::new(move |_| {
-        let focused = focused_segment.get_untracked();
-        if focused.is_none() {
-            return;
+    // ---- Reactive ARIA attributes ----
+    let has_description = description.is_some();
+    let has_error = error_message.is_some();
+    let has_label = label.is_some();
+    let validation = state.validation;
+
+    let description_id_for_signal = description_id.clone();
+    let error_id_for_signal = error_id.clone();
+    let aria_describedby = Signal::derive(move || {
+        let mut parts = Vec::new();
+        if has_description {
+            parts.push(description_id_for_signal.clone());
         }
-
-        let current_value = value.get_untracked();
-        if current_value.is_none() {
-            return;
+        if has_error || validation.is_invalid.get() {
+            parts.push(error_id_for_signal.clone());
         }
-
-        let date = current_value.unwrap();
-        let segment_idx = focused.unwrap();
-
-        segments.with_untracked(|segs| {
-            if let Some(seg) = segs.get(segment_idx) {
-                let new_date = match seg.segment_type {
-                    DateSegmentType::Year => date.replace_year(date.year() + 1).ok(),
-                    DateSegmentType::Month => {
-                        let next_month = date.month().next();
-                        if next_month == time::Month::January {
-                            date.replace_year(date.year() + 1)
-                                .and_then(|d| d.replace_month(next_month))
-                                .ok()
-                        } else {
-                            date.replace_month(next_month).ok()
-                        }
-                    }
-                    DateSegmentType::Day => {
-                        let max_day = whole_days_in(date.year(), date.month());
-                        let new_day = if date.day() >= max_day {
-                            1
-                        } else {
-                            date.day() + 1
-                        };
-                        date.replace_day(new_day).ok()
-                    }
-                    DateSegmentType::Hour => {
-                        let new_hour = (date.hour() + 1) % 24;
-                        date.replace_hour(new_hour).ok()
-                    }
-                    DateSegmentType::Minute => {
-                        let new_minute = (date.minute() + 1) % 60;
-                        date.replace_minute(new_minute).ok()
-                    }
-                    _ => None,
-                };
-
-                if let Some(new_date) = new_date {
-                    if let Some(on_change) = on_change {
-                        on_change.run(Some(new_date));
-                    }
-                }
-            }
-        });
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
     });
 
-    let decrement = Callback::new(move |_| {
-        let focused = focused_segment.get_untracked();
-        if focused.is_none() {
-            return;
-        }
-
-        let current_value = value.get_untracked();
-        if current_value.is_none() {
-            return;
-        }
-
-        let date = current_value.unwrap();
-        let segment_idx = focused.unwrap();
-
-        segments.with_untracked(|segs| {
-            if let Some(seg) = segs.get(segment_idx) {
-                let new_date = match seg.segment_type {
-                    DateSegmentType::Year => date.replace_year(date.year() - 1).ok(),
-                    DateSegmentType::Month => {
-                        let prev_month = date.month().previous();
-                        if prev_month == time::Month::December {
-                            date.replace_year(date.year() - 1)
-                                .and_then(|d| d.replace_month(prev_month))
-                                .ok()
-                        } else {
-                            date.replace_month(prev_month).ok()
-                        }
-                    }
-                    DateSegmentType::Day => {
-                        let max_day = whole_days_in(date.year(), date.month());
-                        let new_day = if date.day() <= 1 {
-                            max_day
-                        } else {
-                            date.day() - 1
-                        };
-                        date.replace_day(new_day).ok()
-                    }
-                    DateSegmentType::Hour => {
-                        let new_hour = if date.hour() == 0 {
-                            23
-                        } else {
-                            date.hour() - 1
-                        };
-                        date.replace_hour(new_hour).ok()
-                    }
-                    DateSegmentType::Minute => {
-                        let new_minute = if date.minute() == 0 {
-                            59
-                        } else {
-                            date.minute() - 1
-                        };
-                        date.replace_minute(new_minute).ok()
-                    }
-                    _ => None,
-                };
-
-                if let Some(new_date) = new_date {
-                    if let Some(on_change) = on_change {
-                        on_change.run(Some(new_date));
-                    }
-                }
-            }
-        });
-    });
-
-    // Set a specific segment value
-    let set_segment = Callback::new(move |(_index, _value): (usize, i32)| {
-        // This would need more complex logic to handle typed input
-        // For now, just a placeholder
-    });
-
-    // Build aria-labelledby
-    let aria_labelledby = if label.is_some() {
+    let aria_labelledby = if has_label {
         Some(label_id.clone())
     } else {
         None
     };
 
-    // Build aria-describedby
-    let aria_describedby = if description.is_some() || error_message.is_some() {
-        let mut ids = Vec::new();
-        if description.is_some() {
-            ids.push(description_id.clone());
-        }
-        if error_message.is_some() {
-            ids.push(error_id.clone());
-        }
-        Some(ids.join(" "))
-    } else {
-        None
-    };
-
-    // Compute aria-disabled
     let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
-
+    let aria_invalid =
+        Signal::derive(move || validation.is_invalid.get().then_some(AriaInvalid::True));
     let aria_required = is_required.then_some(AriaRequired::True);
 
-    // Handle keyboard navigation
+    // Role depends on whether this is inside a date picker.
+    let role = if is_date_picker {
+        AriaRole::Presentation
+    } else {
+        AriaRole::Group
+    };
+
+    // ---- Keyboard handler (field-level, for navigation) ----
     let handle_keydown = move |e: KeyboardEvent| {
         if disabled.get_untracked() || is_read_only.get_untracked() {
             return;
@@ -522,10 +432,10 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
         let key = e.key();
         match key.as_str() {
             "ArrowRight" | "Tab" if !e.shift_key() => {
-                // Focus next segment handled by individual segments
+                // Navigation handled by individual segments.
             }
             "ArrowLeft" | "Tab" if e.shift_key() => {
-                // Focus previous segment handled by individual segments
+                // Navigation handled by individual segments.
             }
             _ => {}
         }
@@ -534,10 +444,11 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
     UseDateFieldReturn {
         field_props: UseDateFieldProps {
             id: field_id.clone(),
-            role: AriaRole::Group,
+            role,
             aria_labelledby,
             aria_describedby,
             aria_disabled,
+            aria_invalid,
             aria_required,
             on_keydown: EventHandler::new(handle_keydown),
         },
@@ -554,8 +465,17 @@ pub fn use_date_field(input: UseDateFieldInput) -> UseDateFieldReturn {
         focus_segment,
         focus_next,
         focus_previous,
-        increment,
-        decrement,
-        set_segment,
+        increment: state.increment,
+        decrement: state.decrement,
+        set_segment: state.set_segment,
+        clear_segment: state.clear_segment,
+        increment_page: state.increment_page,
+        decrement_page: state.decrement_page,
+        increment_to_max: state.increment_to_max,
+        decrement_to_min: state.decrement_to_min,
+        confirm_placeholder: state.confirm_placeholder,
+        is_invalid: validation.is_invalid,
+        validation_errors: validation.validation_errors,
+        state,
     }
 }

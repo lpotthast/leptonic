@@ -1,13 +1,14 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::toggle_basic::ToggleBasicDemo;
+use super::demos::toggle_icons::ToggleIconsDemo;
+use super::demos::toggle_stationary::ToggleStationaryDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageToggle() -> impl IntoView {
-    let (state, set_state) = signal(false);
-
     view! {
         <Article>
             <h1 id="toggle" class="anchor">
@@ -17,17 +18,9 @@ pub fn PageToggle() -> impl IntoView {
 
             <p>"A toggle is a representation of a boolean value."</p>
 
-            <Code>
-                {indoc!(r"
-                    let (state, set_state) = signal(false);
-
-                    view! {
-                        <Toggle state=state set_state=set_state/>
-                    }
-                ")}
-            </Code>
-
-            <Toggle state=state set_state=set_state/>
+            <DemoShell source=include_str!("demos/toggle_basic.rs")>
+                <ToggleBasicDemo />
+            </DemoShell>
 
             <h2 id="icons" class="anchor">
                 "Icons"
@@ -36,23 +29,9 @@ pub fn PageToggle() -> impl IntoView {
 
             <p>"A toggle can be configured with a pair of icons. One icon being rendered in the off position, the other being rendered in the on position."</p>
 
-            <Code>
-                {indoc!(r"
-                    let (state, set_state) = signal(false);
-
-                    view! {
-                        <Toggle state=state set_state=set_state icons=ToggleIcons {
-                            on: icondata::BsFolderFill,
-                            off: icondata::BsFolder,
-                        }/>
-                    }
-                ")}
-            </Code>
-
-            <Toggle state=state set_state=set_state icons=ToggleIcons {
-                on: icondata::BsFolderFill,
-                off: icondata::BsFolder,
-            }/>
+            <DemoShell source=include_str!("demos/toggle_icons.rs")>
+                <ToggleIconsDemo />
+            </DemoShell>
 
             <h2 id="variations" class="anchor">
                 "Variations"
@@ -62,10 +41,9 @@ pub fn PageToggle() -> impl IntoView {
             <p>"The toggle comes in two variants: Sliding and Stationary. Sliding toggles are the default and the ones we have used so far."</p>
             <p>"Stationary toggles are not animated and only consist of a single circle."</p>
 
-            <Toggle state=state set_state=set_state variant=ToggleVariant::Stationary icons=ToggleIcons {
-                on: icondata::BsFolderFill,
-                off: icondata::BsFolder,
-            }/>
+            <DemoShell source=include_str!("demos/toggle_stationary.rs")>
+                <ToggleStationaryDemo />
+            </DemoShell>
         </Article>
 
         <Toc toc=Toc::List {

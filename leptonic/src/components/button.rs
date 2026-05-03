@@ -9,6 +9,7 @@ use crate::{
     utils::{
         aria::{AriaExpanded, AriaHasPopup},
         classes::Classes,
+        styles::Styles,
     },
 };
 
@@ -100,6 +101,7 @@ pub fn Button(
     #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
     #[prop(into, optional)] aria_expanded: Signal<Option<AriaExpanded>>,
     #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     children: Children,
 ) -> impl IntoView {
     view! {
@@ -109,6 +111,7 @@ pub fn Button(
             aria_haspopup=aria_haspopup
             aria_expanded=aria_expanded
             classes=classes.add("leptonic-btn")
+            styles=styles
             attr:data-variant=move || variant.get().as_str()
             attr:data-color=move || color.get().as_str()
             attr:data-size=move || size.get().as_str()
@@ -119,13 +122,21 @@ pub fn Button(
 }
 
 #[component]
-pub fn ButtonGroup(children: Children) -> impl IntoView {
-    view! { <div class="leptonic-btn-group">{children()}</div> }
+pub fn ButtonGroup(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <div class=classes.add("leptonic-btn-group") style=styles>{children()}</div> }
 }
 
 #[component]
-pub fn ButtonWrapper(children: Children) -> impl IntoView {
-    view! { <div class="leptonic-btn-wrapper">{children()}</div> }
+pub fn ButtonWrapper(
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    view! { <div class=classes.add("leptonic-btn-wrapper") style=styles>{children()}</div> }
 }
 
 #[component]
@@ -144,6 +155,7 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
     #[prop(into, optional)] aria_expanded: Option<Signal<Option<AriaExpanded>>>,
     #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
     /// If `true`, the link is marked active when the location matches exactly;
     /// if false, link is marked active if the current route starts with it.
     #[prop(optional)]
@@ -164,6 +176,7 @@ where
         on_hover_start,
         on_hover_end,
         classes: classes.add("leptonic-btn"),
+        styles,
     })
     .into_view()
     .attr("data-variant", move || {

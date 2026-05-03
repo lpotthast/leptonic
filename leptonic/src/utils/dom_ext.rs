@@ -1,5 +1,7 @@
+#![cfg_attr(feature = "ssr", allow(dead_code))]
+
 use leptos::prelude::document;
-use wasm_bindgen::{convert::FromWasmAbi, JsCast};
+use wasm_bindgen::{JsCast, convert::FromWasmAbi};
 
 /// Extension trait for accessing event targets inside DOM event handler closures,
 /// where `.target()` and `.current_target()` are guaranteed to be `Some`.
@@ -23,9 +25,9 @@ impl<T: AsRef<web_sys::Event>> EventAccessors for T {
 }
 
 pub(crate) trait ElementExt {
-    #[expect(unused)]
+    #[allow(dead_code)]
     fn is_link(&self) -> bool;
-    #[expect(unused)]
+    #[allow(dead_code)]
     fn has_link_role(&self) -> bool;
     fn is_anchor_link(&self) -> bool;
     fn disable_text_selection(&self);
@@ -104,7 +106,7 @@ impl EventTargetExt for web_sys::EventTarget {
     where
         E: FromWasmAbi + 'static,
     {
-        use wasm_bindgen::{closure::Closure, JsCast};
+        use wasm_bindgen::{JsCast, closure::Closure};
 
         let boxed: Box<dyn FnOnce(E)> = Box::new(callback);
         let closure = Closure::once(boxed);

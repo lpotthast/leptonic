@@ -1,118 +1,13 @@
-use std::collections::HashSet;
-
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
-/// A single option component that uses the `use_option` hook.
-#[component]
-fn ListboxOption(
-    /// The key/label for this option.
-    item_key: String,
-    /// The display label for this option.
-    label: &'static str,
-    /// The selection state from the parent listbox.
-    state: UseSelectionStateReturn<String>,
-    /// The currently focused key from the parent listbox.
-    focused_key: Signal<Option<String>>,
-) -> impl IntoView {
-    let UseOptionReturn {
-        option_props,
-        is_selected,
-        is_focused: _,
-        is_disabled,
-        is_focus_visible,
-        ..
-    } = use_option(UseOptionInput {
-        key: item_key.clone(),
-        state,
-        is_disabled: Signal::derive(|| false),
-        should_select_on_press_up: false,
-        should_use_virtual_focus: false,
-        on_focus: None,
-        on_press: None,
-        text_value: Some(label.to_string()),
-        focused_key,
-    });
-
-    view! {
-        <div
-            {..option_props.into_attrs()}
-            style=move || {
-                format!(
-                    "padding: 0.75em 1em; cursor: {}; transition: all 0.15s; display: flex; align-items: center; gap: 0.5em; {}{}",
-                    if is_disabled.get() { "not-allowed" } else { "pointer" },
-                    if is_selected.get() {
-                        "background: var(--brand-color); color: white;"
-                    } else {
-                        "background: transparent;"
-                    },
-                    if is_focus_visible.get() {
-                        "outline: 2px solid #0066cc; outline-offset: -2px;"
-                    } else {
-                        ""
-                    },
-                )
-            }
-        >
-            <span style=move || {
-                format!(
-                    "width: 16px; height: 16px; border: 2px solid {}; border-radius: 3px; display: flex; align-items: center; justify-content: center;",
-                    if is_selected.get() { "white" } else { "currentColor" },
-                )
-            }>
-                <Show when=move || is_selected.get()>"✓"</Show>
-            </span>
-            {label}
-        </div>
-    }
-}
+use super::demos::listbox::ListboxDemo;
 
 #[component]
 pub fn PageUseListbox() -> impl IntoView {
-    let items: Vec<(&'static str, &'static str)> = vec![
-        ("apple", "Apple"),
-        ("banana", "Banana"),
-        ("cherry", "Cherry"),
-        ("date", "Date"),
-        ("elderberry", "Elderberry"),
-    ];
-
-    // Create a signal for the items (just the keys)
-    let item_keys: Vec<String> = items.iter().map(|(k, _)| k.to_string()).collect();
-    let items_signal = Signal::derive({
-        let keys = item_keys.clone();
-        move || keys.clone()
-    });
-
-    // Set up the listbox with selection
-    let listbox = use_listbox(UseListBoxInput {
-        selection_mode: SelectionMode::Multiple,
-        selection_behavior: SelectionBehavior::Toggle,
-        is_disabled: Signal::derive(|| false),
-        selected_keys: None,
-        default_selected_keys: None,
-        on_selection_change: None,
-        disabled_keys: Signal::derive(HashSet::new),
-        disallow_empty_selection: false,
-        items: items_signal,
-        should_focus_wrap: true,
-        auto_focus: false,
-        select_on_focus: false,
-        aria_label: Some("Fruits"),
-        aria_labelledby: None,
-        get_text_value: Some(Callback::new(|k: String| k)),
-        is_virtualized: false,
-        orientation: ListBoxOrientation::Vertical,
-    });
-
-    // Get selection state for displaying and for options
-    let selection_state = listbox.state.collection.selection_state;
-    let selected_keys = selection_state.selected_keys;
-    let focused_key = listbox.state.collection.focused_key;
-
     view! {
         <Article>
             <h1 id="listbox" class="anchor">
@@ -122,6 +17,18 @@ pub fn PageUseListbox() -> impl IntoView {
 
             <p>
                 "Hooks for creating accessible listboxes with single or multiple selection, keyboard navigation, and type-ahead."
+            </p>
+
+            <p>
+                "See the "<Link href=crate::routes::doc::Listbox.materialize()>"Listbox overview"</Link>" for concept guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useListBox.html" target=LinkTarget::_Blank>
+                    "useListBox"
+                </LinkExt>
+                "."
             </p>
 
             <h2 id="demo" class="anchor">
@@ -145,45 +52,16 @@ pub fn PageUseListbox() -> impl IntoView {
                 <li>"Type a letter (e.g., " <kbd>"B"</kbd> ") to jump to matching items"</li>
             </ul>
 
-            <div
-                {..listbox.listbox_props.into_attrs()}
-                style="
-                border: 2px solid var(--brand-color);
-                border-radius: 8px;
-                max-width: 250px;
-                margin: 1em 0;
-                overflow: hidden;
-                "
-            >
-                {items
-                    .into_iter()
-                    .map(|(key, label)| {
-                        let state = selection_state.clone();
-                        view! { <ListboxOption item_key=key.to_string() label=label state=state focused_key=focused_key /> }
-                    })
-                    .collect_view()}
-            </div>
-
-            <p>
-                "Selected: "
-                {move || {
-                    match selected_keys.get() {
-                        Selection::Keys(keys) => {
-                            let mut keys_vec: Vec<_> = keys.into_iter().collect();
-                            keys_vec.sort();
-                            format!("{:?}", keys_vec)
-                        }
-                        Selection::All => "All".to_string(),
-                    }
-                }}
-            </p>
+            <DemoShell source=include_str!("demos/listbox.rs")>
+                <ListboxDemo />
+            </DemoShell>
 
             <h2 id="use_listbox" class="anchor">
                 "use_listbox"
                 <AnchorLink href="#use_listbox" description="Direct link to use_listbox" />
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let items_signal = Signal::derive(|| vec!["apple", "banana", "cherry"]);
 
@@ -218,7 +96,7 @@ pub fn PageUseListbox() -> impl IntoView {
                 <AnchorLink href="#use_option" description="Direct link to use_option" />
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let option = use_option(UseOptionInput {
                         key: "apple".to_string(),
@@ -255,7 +133,7 @@ pub fn PageUseListbox() -> impl IntoView {
 
             <p>"Groups options with optional headings:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseListBoxSectionReturn { group_props, heading_props, items_props } =
                         use_listbox_section(UseListBoxSectionInput {
@@ -331,6 +209,17 @@ pub fn PageUseListbox() -> impl IntoView {
                 <li>"Proper ARIA attributes"</li>
                 <li>"Focus ring for keyboard navigation"</li>
             </ul>
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Listbox.materialize()>"Listbox overview"</Link></li>
+                <li><Link href=crate::routes::doc::Select.materialize()>"Select overview"</Link></li>
+                <li><Link href=crate::routes::doc::Combobox.materialize()>"Combobox overview"</Link></li>
+                <li><Link href=crate::routes::doc::hooks::Selection.materialize()>"Selection hooks"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -366,6 +255,10 @@ pub fn PageUseListbox() -> impl IntoView {
                 Toc::Leaf {
                     title: "Features",
                     link: "#features",
+                },
+                Toc::Leaf {
+                    title: "See Also",
+                    link: "#see-also",
                 },
             ],
         } />

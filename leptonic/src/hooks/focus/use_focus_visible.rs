@@ -1,7 +1,7 @@
 #[cfg(not(feature = "ssr"))]
 use std::sync::{
-    atomic::{AtomicBool, Ordering},
     OnceLock, RwLock,
+    atomic::{AtomicBool, Ordering},
 };
 
 use atomic_enum::atomic_enum;
@@ -13,18 +13,14 @@ use web_sys::{KeyboardEvent, PointerEvent};
 
 #[cfg(not(feature = "ssr"))]
 use crate::{
-    utils::{
-        focusability, platform::device::is_mac, virtual_click::is_virtual_click, EventAccessors,
-    },
     Out,
+    utils::{
+        EventAccessors, focusability, platform::device::is_mac, virtual_click::is_virtual_click,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/interactions/src/useFocusVisible.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## DIFFERENT BEHAVIOR
 //
 // - No `mousedown` fallback handler
@@ -46,8 +42,6 @@ use crate::{
 //   React-aria always calls `triggerChangeHandlers` without dedup.
 //   We match this: `set_modality_and_notify` always notifies subscribers.
 //   Signal-level dedup in subscribers handles redundant updates.
-//
-// =============================================================================
 
 /// Input parameters for the `use_focus_visible` hook.
 #[derive(Debug, Clone, Copy)]
@@ -341,10 +335,6 @@ impl FocusState {
         }
     }
 }
-
-// =============================================================================
-// Per-window listener management
-// =============================================================================
 
 /// Stores listener data for a single window's focus tracking setup.
 #[cfg(not(feature = "ssr"))]
@@ -847,8 +837,8 @@ pub fn set_modality(modality: Modality) {
 #[cfg(test)]
 mod tests {
     use std::sync::{
-        atomic::{AtomicU32, Ordering},
         Arc,
+        atomic::{AtomicU32, Ordering},
     };
 
     use super::*;

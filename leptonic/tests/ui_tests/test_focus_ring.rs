@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use assertr::prelude::*;
-use thirtyfour::{prelude::*, TimeoutConfiguration, WebDriver};
+use thirtyfour::{TimeoutConfiguration, WebDriver, prelude::*};
 
 use crate::{pages::focus_ring::FocusRingPage, ui_tests::UiTest};
 

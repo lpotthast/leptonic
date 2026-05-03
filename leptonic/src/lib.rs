@@ -12,16 +12,11 @@
     clippy::type_complexity
 )]
 
-use std::fmt::Display;
-
 use leptos::prelude::*;
-use leptos_use::{core::IntoElementMaybeSignal, use_window, UseElementBoundingReturn};
-
-use crate::utils::EventTargetExt;
+use leptos_use::use_window;
 
 pub mod atoms;
 pub mod components;
-pub mod contexts;
 pub mod hooks;
 pub mod utils;
 
@@ -35,22 +30,17 @@ pub mod prelude {
     pub use leptos_tiptap::*;
 
     pub use super::{
+        FontWeight, Height, Margin, Mount, OptionDeref, Out, Padding, Width,
         utils::{
             aria::{AriaExpanded, AriaHasPopup},
             callback::{ViewCallback, ViewProducer},
         },
-        FontWeight, Height, Margin, Mount, OptionDeref, Out, Size, Width,
     };
     //pub use crate::atoms::prelude::*;
     //pub use crate::components::prelude::*;
     //pub use crate::hooks::prelude::*;
     pub use crate::hooks::IntoAttrs;
-    pub use crate::{
-        contexts::{
-            global_click_event::GlobalClickEvent, global_keyboard_event::GlobalKeyboardEvent,
-        },
-        signal_ls,
-    };
+    pub use crate::signal_ls;
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -247,219 +237,8 @@ impl<T: std::ops::Deref> OptionDeref<T> for Option<T> {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum Size {
-    Zero,
-    Px(i32),
-    Em(f32),
-    Rem(f32),
-    Percent(f32),
-    Auto,
-}
+pub type Width = utils::css::CssDimension;
+pub type Height = utils::css::CssDimension;
 
-impl Display for Size {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Zero => f.write_str("0px"), // Having a unit is relevant here. Using it inside a calc() functions would otherwise not work!
-            Self::Px(px) => f.write_fmt(format_args!("{px}px")),
-            Self::Em(em) => f.write_fmt(format_args!("{em}em")),
-            Self::Rem(rem) => f.write_fmt(format_args!("{rem}rem")),
-            Self::Percent(percent) => f.write_fmt(format_args!("{percent}%")),
-            Self::Auto => f.write_str("auto"),
-        }
-    }
-}
-
-pub type Width = Size;
-pub type Height = Size;
-
-#[derive(Debug, Clone, Copy)]
-pub enum FontWeight {
-    W100,
-    W200,
-    W300,
-    W400,
-    W500,
-    W600,
-    W700,
-    W800,
-    W900,
-    WLighter,
-    WNormal,
-    WBold,
-    WBolder,
-}
-
-impl Display for FontWeight {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::W100 => f.write_str("100"),
-            Self::W200 => f.write_str("200"),
-            Self::W300 => f.write_str("300"),
-            Self::W400 => f.write_str("400"),
-            Self::W500 => f.write_str("500"),
-            Self::W600 => f.write_str("600"),
-            Self::W700 => f.write_str("700"),
-            Self::W800 => f.write_str("800"),
-            Self::W900 => f.write_str("900"),
-            Self::WLighter => f.write_str("lighter"),
-            Self::WNormal => f.write_str("normal"),
-            Self::WBold => f.write_str("bold"),
-            Self::WBolder => f.write_str("bolder"),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum Margin {
-    Top(Size),
-    Right(Size),
-    Bottom(Size),
-    Left(Size),
-    All(Size),
-    Double(Size, Size),
-    Full(Size, Size, Size, Size),
-}
-
-impl Display for Margin {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Top(size) => f.write_fmt(format_args!("{size} 0 0 0")),
-            Self::Right(size) => f.write_fmt(format_args!("0 {size} 0 0")),
-            Self::Bottom(size) => f.write_fmt(format_args!("0 0 {size} 0")),
-            Self::Left(size) => f.write_fmt(format_args!("0 0 0 {size}")),
-            Self::All(size) => f.write_fmt(format_args!("{size}")),
-            Self::Double(vertical, horizontal) => {
-                f.write_fmt(format_args!("{vertical} {horizontal}"))
-            }
-            Self::Full(top, right, bottom, left) => {
-                f.write_fmt(format_args!("{top} {right} {bottom} {left}"))
-            }
-        }
-    }
-}
-
-/// Keep track of an elements position and size.
-/// Call `track_client_rect` to update the signal state.
-#[derive(Debug, Clone, Copy)]
-struct TrackedElementClientBoundingRect {
-    el: StoredValue<leptos_use::core::ElementMaybeSignal<web_sys::Element>>,
-    /// Distance of the tracked element to the left of the viewport.
-    pub(crate) left: ReadSignal<f64>,
-    /// Distance of the tracked element to the top of the viewport.
-    pub(crate) top: ReadSignal<f64>,
-    /// Width of the tracked element.
-    pub(crate) width: ReadSignal<f64>,
-    /// Height of the tracked element.
-    pub(crate) height: ReadSignal<f64>,
-    set_left: WriteSignal<f64>,
-    set_top: WriteSignal<f64>,
-    set_width: WriteSignal<f64>,
-    set_height: WriteSignal<f64>,
-}
-
-impl TrackedElementClientBoundingRect {
-    pub(crate) fn new<El, M>(el: El) -> Self
-    where
-        El: IntoElementMaybeSignal<web_sys::Element, M>,
-    {
-        let (left, set_left) = signal(0.0);
-        let (top, set_top) = signal(0.0);
-        let (width, set_width) = signal(0.0);
-        let (height, set_height) = signal(0.0);
-
-        Self {
-            el: StoredValue::new(el.into_element_maybe_signal()),
-            left,
-            set_left,
-            top,
-            set_top,
-            width,
-            set_width,
-            height,
-            set_height,
-        }
-    }
-
-    pub(crate) fn track_client_rect(&self) {
-        self.el.with_value(|maybe_signal| {
-            if let Some(el) = maybe_signal.get_untracked() {
-                let el: web_sys::Element = el.to_element().unwrap();
-                let rect = el.get_bounding_client_rect();
-                self.set_left.set(rect.left());
-                self.set_top.set(rect.top());
-                self.set_width.set(rect.width());
-                self.set_height.set(rect.height());
-            }
-        });
-    }
-}
-
-struct RelativeMousePosition {
-    rel_mouse_pos: Memo<(f64, f64)>,
-}
-
-impl RelativeMousePosition {
-    pub(crate) fn new(client_bounding_rect: TrackedElementClientBoundingRect) -> Self {
-        let leptos_use::UseMouseReturn {
-            x: cursor_x,
-            y: cursor_y,
-            ..
-        } = leptos_use::use_mouse();
-
-        let (x, set_x) = signal(0.0);
-        let (y, set_y) = signal(0.0);
-
-        let _ = leptos_use::watch_throttled_with_options(
-            move || (cursor_x.get(), cursor_y.get()),
-            move |(cursor_x, cursor_y), _, _| {
-                set_x.set(*cursor_x);
-                set_y.set(*cursor_y);
-            },
-            5.0, // Limit to 200 updates / sec.
-            leptos_use::WatchThrottledOptions::default()
-                .leading(true)
-                .trailing(true),
-        );
-
-        Self {
-            rel_mouse_pos: Memo::new(move |_| {
-                let x = x.get() - client_bounding_rect.left.get();
-                let y = y.get() - client_bounding_rect.top.get();
-                let px = (x / client_bounding_rect.width.get()).clamp(0.0, 1.0);
-                let py = (y / client_bounding_rect.height.get()).clamp(0.0, 1.0);
-                (px, py)
-            }),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-/// A read-only, non-generic, copyable form of leptos-use's `UseElementBoundingReturn` type.
-pub struct UseElementBoundingReturnReadOnly {
-    pub height: Signal<f64>,
-    pub width: Signal<f64>,
-    pub left: Signal<f64>,
-    pub right: Signal<f64>,
-    pub top: Signal<f64>,
-    pub bottom: Signal<f64>,
-    pub x: Signal<f64>,
-    pub y: Signal<f64>,
-}
-
-impl<F: Fn() + Send + Sync + Clone> From<UseElementBoundingReturn<F>>
-    for UseElementBoundingReturnReadOnly
-{
-    fn from(value: UseElementBoundingReturn<F>) -> Self {
-        UseElementBoundingReturnReadOnly {
-            height: value.height,
-            width: value.width,
-            left: value.left,
-            right: value.right,
-            top: value.top,
-            bottom: value.bottom,
-            x: value.x,
-            y: value.y,
-        }
-    }
-}
+// Re-export CSS shorthand value types from leptos-styles.
+pub use utils::css::{FontWeight, Margin, Padding};

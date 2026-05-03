@@ -1,11 +1,23 @@
 use leptos::prelude::*;
 
-use crate::Height;
+use crate::{
+    Height,
+    utils::{classes::Classes, styles::Styles},
+};
 
 #[component]
-pub fn AppBar(#[prop(into, optional)] height: Option<Height>, children: Children) -> impl IntoView {
+pub fn AppBar(
+    #[prop(into, optional)] height: Option<Height>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+    children: Children,
+) -> impl IntoView {
+    let styles = match height {
+        Some(h) => styles.add("--app-bar-height", h),
+        None => styles,
+    };
     view! {
-        <div class="leptonic-app-bar" style=height.map(|it| ("--app-bar-height", format!("{it}")))>
+        <div class=classes.add("leptonic-app-bar") style=styles>
             {children()}
         </div>
     }

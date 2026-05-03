@@ -1,8 +1,8 @@
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
@@ -10,30 +10,31 @@ use leptos::{
 };
 use web_sys::{Event, FocusEvent};
 
-use super::use_field::ValidationState;
+use super::{
+    use_form_reset::{UseFormResetInput, use_form_reset},
+    use_form_validation::{UseFormValidationInput, use_form_validation},
+    use_form_validation_state::{
+        UseFormValidationStateInput, ValidateFn, ValidationBehavior, ValidityStateSnapshot,
+        use_form_validation_state,
+    },
+};
 use crate::{
     hooks::{
-        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
+        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
     },
     utils::{
+        CapturedElement, ElementCaptureAttr, EventHandler,
         aria::{AriaInvalid, AriaRequired},
-        EventHandler,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckbox.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_checkbox` hook.
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct UseCheckboxInput {
     /// Whether the checkbox is selected (controlled).
     pub is_selected: Signal<bool>,
@@ -53,8 +54,25 @@ pub struct UseCheckboxInput {
     /// Whether the checkbox is required.
     pub is_required: bool,
 
-    /// The validation state of the checkbox.
-    pub validation_state: ValidationState,
+    /// Whether the checkbox is explicitly marked as invalid (controlled validation).
+    ///
+    /// - `None` — not controlled; validation comes from `validate`, server errors,
+    ///   or native constraint validation.
+    /// - `Some(signal)` — controlled; the signal value determines valid/invalid
+    ///   and overrides all other validation sources.
+    pub is_invalid: Option<Signal<bool>>,
+
+    /// Custom client-side validation function.
+    ///
+    /// Returns `Ok(())` for valid, `Err(messages)` for invalid.
+    pub validate: Option<ValidateFn<bool>>,
+
+    /// Validation behavior mode.
+    pub validation_behavior: ValidationBehavior,
+
+    /// The default value to restore on form reset.
+    /// If `None`, the initial value of `is_selected` at hook creation time is used.
+    pub default_value: Option<bool>,
 
     /// An accessibility label for the checkbox.
     pub aria_label: Option<&'static str>,
@@ -75,7 +93,10 @@ impl Default for UseCheckboxInput {
             is_disabled: Signal::derive(|| false),
             is_read_only: Signal::derive(|| false),
             is_required: false,
-            validation_state: ValidationState::Valid,
+            is_invalid: None,
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
+            default_value: None,
             aria_label: None,
             name: None,
             value: None,
@@ -99,10 +120,19 @@ pub struct UseCheckboxReturn {
 
     /// Whether the focus ring should be visible (keyboard navigation only).
     pub is_focus_visible: Signal<bool>,
+
+    /// Whether the displayed validation is invalid.
+    pub is_invalid: Signal<bool>,
+
+    /// The displayed validation error messages.
+    pub validation_errors: Signal<Vec<String>>,
+
+    /// Detailed validity state (mirrors native `ValidityState`).
+    pub validation_details: Signal<ValidityStateSnapshot>,
 }
 
 /// Props from `use_checkbox` that can be extracted and merged programmatically.
-#[derive(Clone)]
+#[derive(Debug)]
 pub struct UseCheckboxInputProps {
     pub r#type: &'static str,
     pub name: Option<&'static str>,
@@ -110,9 +140,10 @@ pub struct UseCheckboxInputProps {
     pub checked: Signal<bool>,
     pub disabled: Signal<bool>,
     pub aria_label: Option<&'static str>,
-    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub aria_required: Option<AriaRequired>,
     pub data_focus_visible: Signal<Option<&'static str>>,
+    pub element_capture: ElementCaptureAttr,
     pub on_change: EventHandler<Event>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
@@ -134,6 +165,7 @@ impl IntoAttrs for UseCheckboxInputProps {
             Attr(attr::AriaInvalid, self.aria_invalid),
             Attr(attr::AriaRequired, self.aria_required),
             custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.element_capture,
             self.on_change.into_on(ev::change),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
@@ -151,9 +183,10 @@ pub type UseCheckboxInputAttrs = (
     Attr<attr::Checked, Signal<bool>>,
     Attr<attr::Disabled, Signal<bool>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
-    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
     Attr<attr::AriaRequired, Option<AriaRequired>>,
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    ElementCaptureAttr,
     On<ev::change, SharedEventCallback<Event>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
@@ -187,6 +220,7 @@ pub type UseCheckboxInputAttrs = (
 ///     </label>
 /// }
 /// ```
+#[allow(clippy::needless_pass_by_value)]
 pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
     let UseCheckboxInput {
         is_selected,
@@ -195,11 +229,45 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
         is_disabled,
         is_read_only,
         is_required,
-        validation_state,
+        is_invalid,
+        validate,
+        validation_behavior,
+        default_value,
         aria_label,
         name,
         value,
     } = input;
+
+    // ---- Element capture for DOM access ----
+    let element = CapturedElement::new();
+
+    // ---- Form validation state ----
+    let validation = use_form_validation_state(UseFormValidationStateInput {
+        is_invalid,
+        value: is_selected,
+        validate,
+        validation_behavior,
+        name: name.map(ToString::to_string),
+    });
+
+    // ---- Form reset (restores value on form reset) ----
+    let initial_value = default_value.unwrap_or_else(|| is_selected.get_untracked());
+    use_form_reset(UseFormResetInput {
+        element,
+        initial_value,
+        on_reset: Callback::new(move |val: bool| {
+            if let Some(on_change) = on_change {
+                on_change.run(val);
+            }
+        }),
+    });
+
+    // ---- Form validation DOM connection ----
+    use_form_validation(UseFormValidationInput {
+        element,
+        state: validation,
+        validation_behavior,
+    });
 
     let (is_pressed, _set_is_pressed) = signal(false);
 
@@ -216,8 +284,9 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
         }
     };
 
-    // Compute aria-invalid
-    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    // Compute aria-invalid reactively from validation state
+    let aria_invalid =
+        Signal::derive(move || validation.is_invalid.get().then_some(AriaInvalid::True));
 
     // Compute aria-required
     let aria_required = is_required.then_some(AriaRequired::True);
@@ -236,6 +305,10 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
         on_focus_change: None,
     });
 
+    // ---- Validation details convenience signal ----
+    let validation_details =
+        Signal::derive(move || validation.display_validation.get().validation_details);
+
     UseCheckboxReturn {
         input_props: UseCheckboxInputProps {
             r#type: "checkbox",
@@ -247,6 +320,7 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
             aria_invalid,
             aria_required,
             data_focus_visible: focus_ring_props.data_focus_visible,
+            element_capture: element.attr(),
             on_change: EventHandler::new(handle_change),
             on_focus: focus_ring_props.on_focus,
             on_blur: focus_ring_props.on_blur,
@@ -257,5 +331,8 @@ pub fn use_checkbox(input: UseCheckboxInput) -> UseCheckboxReturn {
         is_indeterminate,
         is_pressed: is_pressed.into(),
         is_focus_visible,
+        is_invalid: validation.is_invalid,
+        validation_errors: validation.validation_errors,
+        validation_details,
     }
 }

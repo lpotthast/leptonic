@@ -11,20 +11,16 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tag/src/useTagGroup.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// The selection mode for a tag group.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -166,12 +162,12 @@ pub struct UseTagGroupLabelProps {
 pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
     let UseTagGroupInput {
         label,
-        selection_mode,
+        selection_mode: _selection_mode,
         is_disabled: disabled,
-        selected_keys,
-        on_selection_change,
-        on_remove,
-        allow_removal,
+        selected_keys: _selected_keys,
+        on_selection_change: _on_selection_change,
+        on_remove: _on_remove,
+        allow_removal: _allow_removal,
     } = input;
 
     let base_id = Uuid::new_v4();

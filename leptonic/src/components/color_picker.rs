@@ -1,128 +1,114 @@
-use indoc::formatdoc;
-use leptos::{html, prelude::*};
+use leptos::prelude::*;
 
 use crate::{
+    atoms::color_swatch::ColorSwatch,
     components::{
         field::{Field, FieldLabel},
         input::NumberInput,
         prelude::{Slider, SliderMarks},
     },
-    contexts::global_mouseup_event::GlobalMouseupEvent,
+    hooks::{IntoAttrs, MoveConstraint, NormalizedPosition, UseMoveInput, use_move},
     prelude::*,
-    utils::color::{HSV, RGB8},
-    RelativeMousePosition, TrackedElementClientBoundingRect,
+    utils::{
+        classes::Classes,
+        color::{HSV, RGB8},
+        css::pct,
+        styles::{
+            AlignItems, Background, Bottom, Display, FlexDirection, Height, JustifyContent, Left,
+            MarginRight, Styles, Width,
+        },
+    },
 };
 
 #[component]
-pub fn ColorPreview(#[prop(into)] rgb: Signal<RGB8>) -> impl IntoView {
-    let background_color = move || {
-        let RGB8 { r, g, b } = rgb.get();
-        format!("rgb({r}, {g}, {b})")
-    };
-
-    view! { <div class="leptonic-color-preview" style:background-color=background_color></div> }
+pub fn ColorPreview(
+    #[prop(into)] rgb: Signal<RGB8>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+) -> impl IntoView {
+    view! {
+        <ColorSwatch<RGB8> color=rgb classes=classes.add("leptonic-color-preview") styles=styles />
+    }
 }
 
+/// 2D color gradient area for selecting saturation (X) and brightness (Y).
+///
+/// Uses `use_move` with `MoveConstraint` for pointer/touch/keyboard interaction.
+/// The `hsv` prop is the single source of truth — all visuals are derived from it.
+/// Move callbacks write to the parent imperatively (no signal-writing Effects).
 #[component]
 pub fn ColorPalette(
     #[prop(into)] hsv: Signal<HSV>,
     #[prop(into)] set_saturation: Out<f64>,
     #[prop(into)] set_value: Out<f64>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
-    let rgb_from_hue_only = Signal::derive(move || {
-        let hsv = hsv.get();
-        RGB8::from(HSV {
-            hue: hsv.hue,
+    let initial_sat = hsv.get_untracked().saturation;
+    let initial_val = hsv.get_untracked().value;
+
+    let move_return = use_move(UseMoveInput {
+        disabled: Signal::derive(|| false),
+        axis: Signal::derive(|| None),
+        is_rtl: false,
+        on_move_start: None,
+        on_move: None,
+        on_move_end: None,
+        on_position_change: Some(Callback::new(move |pos: NormalizedPosition| {
+            set_saturation.set(pos.x.clamp(0.0, 1.0));
+            set_value.set((1.0 - pos.y).clamp(0.0, 1.0));
+        })),
+        constraint: Some(MoveConstraint::Center),
+        allow_container_click: true,
+        initial_position: Some(NormalizedPosition {
+            x: initial_sat,
+            y: 1.0 - initial_val,
+        }),
+    });
+
+    let constraint_return = move_return.constraint.expect("MoveConstraint was provided");
+
+    let norm_pos = constraint_return.normalized_position;
+
+    let styles = styles.add(Background, move || {
+        let color = hsv.get();
+        let rgb = RGB8::from(HSV {
+            hue: color.hue,
             saturation: 1.0,
             value: 1.0,
-        })
-    });
-
-    let background_simple = move || {
-        let RGB8 { r, g, b } = rgb_from_hue_only.get();
-        formatdoc!(
-            r"
-            linear-gradient(to top,
-                rgb(0, 0, 0) 0%,
-                rgba(255, 255, 255, 0) 100%
-            ),
-            linear-gradient(to right,
-                rgb(255, 255, 255) 0%,
-                rgb({r}, {g}, {b}) 100%
-            ),
-            rgb({r}, {g}, {b})
-        "
+        });
+        let top_right = format!("rgb({}, {}, {})", rgb.r, rgb.g, rgb.b);
+        format!(
+            "linear-gradient(to top, rgb(0, 0, 0) 0%, transparent 100%), \
+             linear-gradient(to right, rgb(255, 255, 255) 0%, {top_right} 100%)"
         )
-    };
-
-    let knob_background_color = move || {
-        let RGB8 { r, g, b } = rgb_from_hue_only.get();
-        format!("rgb({r}, {g}, {b})")
-    };
-
-    let palette_el: NodeRef<html::Div> = NodeRef::new();
-    let palette = TrackedElementClientBoundingRect::new(palette_el);
-    let cursor = RelativeMousePosition::new(palette);
-    let (knob_listening, set_knob_listening) = signal(false);
-
-    let knob_left = move || format!("{}%", hsv.get().saturation * 100.0);
-    let knob_bottom = move || format!("{}%", hsv.get().value * 100.0);
-
-    // Stop listening whenever any mouseup event got fired.
-    let GlobalMouseupEvent {
-        read_signal: mouse_up,
-        ..
-    } = expect_context();
-    Effect::new(move |_| {
-        if mouse_up.get().is_some() {
-            set_knob_listening.set(false);
-        }
     });
 
-    // Project the relative cursor position into the sliders value range.
-    let projected_value_from_cursor_x = Memo::new(move |_| cursor.rel_mouse_pos.get().0);
-    let projected_value_from_cursor_y = Memo::new(move |_| 1.0 - cursor.rel_mouse_pos.get().1);
-
-    // While this knob is "listening", propagate the projected values.
-    Effect::new(move |_| {
-        if knob_listening.get() {
-            set_saturation.set(projected_value_from_cursor_x.get());
-            set_value.set(projected_value_from_cursor_y.get());
-        }
-    });
+    let knob_styles = Styles::new()
+        .add(Left, move || pct(norm_pos.get().x * 100.0))
+        .add(Bottom, move || pct((1.0 - norm_pos.get().y) * 100.0))
+        .add("--color-palette-knob-background-color", move || {
+            let color = hsv.get();
+            let rgb = RGB8::from(HSV {
+                hue: color.hue,
+                saturation: 1.0,
+                value: 1.0,
+            });
+            format!("rgb({}, {}, {})", rgb.r, rgb.g, rgb.b)
+        });
 
     view! {
         <div
-            class="leptonic-color-palette"
-            node_ref=palette_el
-            style:background=background_simple
-            // Note(lukas): Setting set_listening to false is handled though capturing a global mouseup event,
-            // as the user may click, drag and move the cursor outside of this element.
-            on:mousedown=move |_e| {
-                palette.track_client_rect();
-                set_knob_listening.set(true);
-            }
-            on:touchstart=move |e| {
-                palette.track_client_rect();
-                set_knob_listening.set(true);
-                e.prevent_default();
-                e.stop_propagation();
-            }
-            on:touchmove=move |e| {
-                if knob_listening.get_untracked() {
-                    e.prevent_default();
-                    e.stop_propagation();
-                }
-            }
-            on:touchend=move |_e| set_knob_listening.set(false)
+            class=classes.add("leptonic-color-palette")
+            {..constraint_return.container_props.into_attrs()}
+            style=styles
         >
-            <div class="leptonic-color-palette-knob-wrapper" style="">
+            <div class="leptonic-color-palette-knob-wrapper">
                 <div
                     class="leptonic-color-palette-knob"
                     data-variant="round"
-                    style:left=knob_left
-                    style:bottom=knob_bottom
-                    style=("--color-palette-knob-background-color", knob_background_color)
+                    {..move_return.props.into_attrs()}
+                    style=knob_styles
                 ></div>
             </div>
         </div>
@@ -130,7 +116,12 @@ pub fn ColorPalette(
 }
 
 #[component]
-pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>) -> impl IntoView {
+pub fn HueSlider(
+    #[prop(into)] hue: Signal<f64>,
+    #[prop(into)] set_hue: Out<f64>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
+) -> impl IntoView {
     let rgb = Signal::derive(move || {
         RGB8::from(HSV {
             hue: hue.get(),
@@ -142,22 +133,19 @@ pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>
         let RGB8 { r, g, b } = rgb.get();
         format!("rgb({r}, {g}, {b})")
     };
-    let style = move || {
-        format!(
-            "--slider-thumb-background-color: {0}; --slider-thumb-halo-background-color: {0};",
-            rgb_css()
-        )
-    };
+    let slider_styles = Styles::new()
+        .add("--slider-thumb-background-color", rgb_css)
+        .add("--slider-thumb-halo-background-color", rgb_css);
     view! {
-        <div class="leptonic-hue-slider">
+        <div class=classes.add("leptonic-hue-slider") style=styles>
             <Slider
                 min=0.0
                 max=360.0
                 value=hue
                 set_value=set_hue
                 marks=SliderMarks::None
-                attr:class="hue-slider"
-                attr:style=style
+                classes="hue-slider"
+                styles=slider_styles
             />
         </div>
     }
@@ -167,6 +155,8 @@ pub fn HueSlider(#[prop(into)] hue: Signal<f64>, #[prop(into)] set_hue: Out<f64>
 pub fn ColorPicker(
     #[prop(into)] hsv: Signal<HSV>,
     #[prop(into)] set_hsv: Out<HSV>,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let hue = Signal::derive(move || hsv.get().hue);
     let saturation = Signal::derive(move || hsv.get().saturation);
@@ -182,37 +172,54 @@ pub fn ColorPicker(
 
     let rgb = Signal::derive(move || RGB8::from(hsv.get()));
 
+    let flex_row_styles = Styles::from([(Display, "flex"), (FlexDirection, "row")]);
+
+    let flex_row_centered_styles = Styles::from([
+        (Display, "flex"),
+        (FlexDirection, "row"),
+        (JustifyContent, "center"),
+        (AlignItems, "center"),
+        (Height, "20em"),
+    ]);
+
+    let field_styles = Styles::from([(Width, "32%"), (MarginRight, "2%")]);
+
+    let field_styles_last = Styles::from([(Width, "32%"), (MarginRight, "0%")]);
+
     view! {
-        <div class="leptonic-color-picker">
-            <div style="display: flex; flex-direction: row; justify-content: center; align-items: center; height: 20em;">
-                <ColorPreview rgb=rgb attr:style="width: 20%; height: 100%;" />
+        <div class=classes.add("leptonic-color-picker") style=styles>
+            <div style=flex_row_centered_styles>
+                <ColorPreview
+                    rgb=rgb
+                    styles=Styles::from([(Width, "20%"), (Height, "100%")])
+                />
                 <ColorPalette
                     hsv=hsv
                     set_saturation=set_saturation
                     set_value=set_value
-                    attr:style="width: 80%; height: 100%;"
+                    styles=Styles::from([(Width, "80%"), (Height, "100%")])
                 />
             </div>
 
             <HueSlider hue=hue set_hue=set_hue />
 
-            <div style="display: flex; flex-direction: row;">
-                <Field attr:style="width: 32%; margin-right: 2%;">
+            <div style=flex_row_styles.clone()>
+                <Field styles=field_styles.clone()>
                     <FieldLabel>"Hue"</FieldLabel>
                     <NumberInput min=0.0 max=360.0 step=1.0 get=hue set=set_hue />
                 </Field>
-                <Field attr:style="width: 32%; margin-right: 2%;">
+                <Field styles=field_styles.clone()>
                     <FieldLabel>"Saturation"</FieldLabel>
                     <NumberInput min=0.0 max=1.0 step=0.01 get=saturation set=set_saturation />
                 </Field>
-                <Field attr:style="width: 32%; margin-right: 0%;">
+                <Field styles=field_styles_last.clone()>
                     <FieldLabel>"Value"</FieldLabel>
                     <NumberInput min=0.0 max=1.0 step=0.01 get=value set=set_value />
                 </Field>
             </div>
 
-            <div style="display: flex; flex-direction: row;">
-                <Field attr:style="width: 32%; margin-right: 2%;">
+            <div style=flex_row_styles>
+                <Field styles=field_styles.clone()>
                     <FieldLabel>"R"</FieldLabel>
                     <NumberInput
                         min=0.0
@@ -221,7 +228,7 @@ pub fn ColorPicker(
                         get=Signal::derive(move || f64::from(rgb.get().r))
                     />
                 </Field>
-                <Field attr:style="width: 32%; margin-right: 2%;">
+                <Field styles=field_styles>
                     <FieldLabel>"G"</FieldLabel>
                     <NumberInput
                         min=0.0
@@ -230,7 +237,7 @@ pub fn ColorPicker(
                         get=Signal::derive(move || f64::from(rgb.get().g))
                     />
                 </Field>
-                <Field attr:style="width: 32%; margin-right: 0%;">
+                <Field styles=field_styles_last>
                     <FieldLabel>"B"</FieldLabel>
                     <NumberInput
                         min=0.0

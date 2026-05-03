@@ -1,11 +1,12 @@
-use indoc::{formatdoc, indoc};
-use leptonic::{components::prelude::*, hooks::LinkTarget, prelude::*};
+use indoc::indoc;
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::{
-    pages::documentation::{article::Article, toc::Toc},
-    routes,
+use super::demos::{
+    link_button::LinkButtonDemo, link_external::LinkExternalDemo, link_internal::LinkInternalDemo,
+    link_rel::LinkRelDemo,
 };
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageAtomLink() -> impl IntoView {
@@ -25,15 +26,9 @@ pub fn PageAtomLink() -> impl IntoView {
 
             <p>"These links, created with the "<Code inline=true>"<Link>"</Code>" component, use the leptos router under the hood and are meant to direct users to a different location inside your app, as the given "<Code inline=true>"href"</Code>" prop is always considered to be relative to your site."</p>
 
-            <Code>
-                {formatdoc!(r#"
-                    <Link href="{}">
-                        "This is a link to the current route."
-                    </Link>
-                "#, routes::doc::atoms::Link.materialize())}
-            </Code>
-
-            <Link href=routes::doc::atoms::Link.materialize()>"This is a link to the current route."</Link>
+            <DemoShell source=include_str!("demos/link_internal.rs")>
+                <LinkInternalDemo />
+            </DemoShell>
 
             <h2 id="external-links" class="anchor">
                 "External links"
@@ -42,17 +37,9 @@ pub fn PageAtomLink() -> impl IntoView {
 
             <p>"These links, created with the "<Code inline=true>"<LinkExt>"</Code>" component, do not use the leptos router and must be used when directing users to external sources."</p>
 
-            <Code>
-                {indoc!(r#"
-                    <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank>
-                        <Icon id="github-icon" icon=icondata::BsGithub style="font-size: 3em;"/>
-                    </LinkExt>
-                "#)}
-            </Code>
-
-            <LinkExt href="https://github.com/lpotthast/leptonic" target=LinkTarget::_Blank>
-                <Icon attr:id="github-icon" icon=icondata::BsGithub attr:style="font-size: 3em;"/>
-            </LinkExt>
+            <DemoShell source=include_str!("demos/link_external.rs")>
+                <LinkExternalDemo />
+            </DemoShell>
 
             <h2 id="rel-attribute" class="anchor">
                 "Rel Attribute"
@@ -66,25 +53,9 @@ pub fn PageAtomLink() -> impl IntoView {
                 <Code inline=true>"LinkRel::NoOpener"</Code>" is automatically added for security."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    <LinkExt
-                        href="https://example.com"
-                        target=LinkTarget::_Blank
-                        rel=vec![LinkRel::NoFollow, LinkRel::NoReferrer]
-                    >
-                        "Link with nofollow and noreferrer"
-                    </LinkExt>
-                "#)}
-            </Code>
-
-            <LinkExt
-                href="https://example.com"
-                target=LinkTarget::_Blank
-                rel=vec![LinkRel::NoFollow, LinkRel::NoReferrer]
-            >
-                "Link with nofollow and noreferrer"
-            </LinkExt>
+            <DemoShell source=include_str!("demos/link_rel.rs")>
+                <LinkRelDemo />
+            </DemoShell>
 
             <h2 id="link-buttons" class="anchor">
                 "Link Buttons"
@@ -97,17 +68,9 @@ pub fn PageAtomLink() -> impl IntoView {
 
             <p>"The \"Read the docs\" button on the welcome page was implemented this way!"</p>
 
-            <Code>
-                {indoc!(r#"
-                    <LinkButton href=DocRoutes::Overview>
-                        "Read the docs"
-                    </LinkButton>
-                "#)}
-            </Code>
-
-            <LinkButton href=routes::doc::Overview.materialize()>
-                "Read the docs"
-            </LinkButton>
+            <DemoShell source=include_str!("demos/link_button.rs")>
+                <LinkButtonDemo />
+            </DemoShell>
 
             <h2 id="styling" class="anchor">
                 "Styling"
@@ -116,7 +79,7 @@ pub fn PageAtomLink() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --link-color
                 ")}

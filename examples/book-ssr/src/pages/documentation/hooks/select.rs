@@ -2,20 +2,12 @@ use indoc::indoc;
 use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::select::SelectDemo;
 
 #[component]
 pub fn PageUseSelectHook() -> impl IntoView {
-    let (is_open, set_is_open) = signal(false);
-    let (selected, set_selected) = signal::<Option<String>>(None);
-
-    let options: &[(&str, &str)] = &[
-        ("apple", "Apple"),
-        ("banana", "Banana"),
-        ("cherry", "Cherry"),
-        ("date", "Date"),
-    ];
-
     view! {
         <Article>
             <h1 id="select" class="anchor">
@@ -25,107 +17,33 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
             <p>"Hooks for creating accessible dropdown select menus with keyboard navigation and hidden native select for form submission."</p>
 
+            <p>
+                "See the "<Link href=crate::routes::doc::Select.materialize()>"Select overview"</Link>" for concept guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useSelect.html" target=LinkTarget::_Blank>
+                    "useSelect"
+                </LinkExt>
+                "."
+            </p>
+
             <h2 id="demo" class="anchor">
                 "Interactive Demo"
                 <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <div style="position: relative; display: inline-block; min-width: 200px; margin: 1em 0;">
-                // Trigger button
-                <button
-                    on:click=move |_| set_is_open.update(|v| *v = !*v)
-                    aria-haspopup="listbox"
-                    aria-expanded=move || is_open.get()
-                    style="
-                        width: 100%;
-                        padding: 0.75em 1em;
-                        border: 2px solid var(--brand-color);
-                        border-radius: 8px;
-                        background: white;
-                        cursor: pointer;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                        font-size: 1em;
-                    "
-                >
-                    <span>{ move || selected.get().unwrap_or_else(|| "Select a fruit...".to_string()) }</span>
-                    <span style=move || format!(
-                        "transition: transform 0.2s; {}",
-                        if is_open.get() { "transform: rotate(180deg);" } else { "" }
-                    )>"▼"</span>
-                </button>
-
-                // Dropdown listbox
-                <Show when=move || is_open.get()>
-                    <div
-                        role="listbox"
-                        style="
-                            position: absolute;
-                            top: 100%;
-                            left: 0;
-                            right: 0;
-                            margin-top: 4px;
-                            background: white;
-                            border: 1px solid #ddd;
-                            border-radius: 8px;
-                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                            z-index: 100;
-                            overflow: hidden;
-                        "
-                    >
-                        {options.iter().map(|(_key, label)| {
-                            let label_owned = label.to_string();
-                            let label_for_click = label_owned.clone();
-                            let label_for_check = label_owned.clone();
-                            let label_for_style = label_owned.clone();
-                            view! {
-                                <div
-                                    role="option"
-                                    aria-selected=move || selected.get().as_ref() == Some(&label_for_check)
-                                    on:click=move |_| {
-                                        set_selected.set(Some(label_for_click.clone()));
-                                        set_is_open.set(false);
-                                    }
-                                    style=move || format!(
-                                        "padding: 0.75em 1em; cursor: pointer; transition: background 0.15s; {}",
-                                        if selected.get().as_ref() == Some(&label_for_style) {
-                                            "background: var(--brand-color); color: white;"
-                                        } else {
-                                            "background: transparent;"
-                                        }
-                                    )
-                                >
-                                    { *label }
-                                </div>
-                            }
-                        }).collect::<Vec<_>>()}
-                    </div>
-                </Show>
-
-                // Hidden native select for forms
-                <select
-                    style="position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden;"
-                    aria-hidden="true"
-                    tabindex="-1"
-                >
-                    <option value="">"Select a fruit..."</option>
-                    {options.iter().map(|(key, label)| {
-                        view! {
-                            <option value=*key>{ *label }</option>
-                        }
-                    }).collect::<Vec<_>>()}
-                </select>
-            </div>
-
-            <p>"Selected: " <strong>{ move || selected.get().unwrap_or_else(|| "None".to_string()) }</strong></p>
+            <DemoShell source=include_str!("demos/select.rs")>
+                <SelectDemo />
+            </DemoShell>
 
             <h2 id="use_select" class="anchor">
                 "use_select"
                 <AnchorLink href="#use_select" description="Direct link to use_select"/>
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseSelectReturn {
                         trigger_attrs,
@@ -160,7 +78,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
 
             <p>"Creates a hidden native select element for form submission:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseHiddenSelectReturn { container_attrs, select_attrs, input_attrs } =
                         use_hidden_select(UseHiddenSelectInput {
@@ -206,6 +124,17 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 <li>"Disabled and required states"</li>
                 <li>"Custom trigger and option rendering"</li>
             </ul>
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Select.materialize()>"Select overview"</Link></li>
+                <li><Link href=crate::routes::doc::select::Component.materialize()>"Select component"</Link></li>
+                <li><Link href=crate::routes::doc::Listbox.materialize()>"Listbox overview"</Link></li>
+                <li><Link href=crate::routes::doc::Combobox.materialize()>"Combobox overview"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -216,6 +145,7 @@ pub fn PageUseSelectHook() -> impl IntoView {
                 Toc::Leaf { title: "use_hidden_select", link: "#use_hidden_select" },
                 Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

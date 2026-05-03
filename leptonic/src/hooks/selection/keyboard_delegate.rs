@@ -1,25 +1,21 @@
-use std::hash::Hash;
+use super::SelectionKey;
 
 // This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-types/shared/src/collections.d.ts
 // Specifically the `KeyboardDelegate` interface.
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## API DIFFERENCES
 //
 // - Uses generic `K` key type instead of React-aria's `Key` (string | number).
 // - No `getCollator()` method — collation for search is left to implementors.
-//
-// =============================================================================
 
 /// A delegate that provides keyboard navigation logic for collections.
 ///
 /// Used by keyboard-navigable collections (grids, lists, trees) to abstract
 /// navigation behavior. Implementations define how to move between items
 /// based on keyboard input.
-pub trait KeyboardDelegate<K: Hash + Eq> {
+pub trait KeyboardDelegate<K: SelectionKey> {
     /// Returns the key visually below the given one, or `None` if none.
     fn get_key_below(&self, key: &K) -> Option<K>;
 

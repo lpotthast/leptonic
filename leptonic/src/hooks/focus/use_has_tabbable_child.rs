@@ -1,11 +1,13 @@
 use leptos::prelude::*;
-use wasm_bindgen::{prelude::*, JsCast};
+
+#[cfg(not(feature = "ssr"))]
+use wasm_bindgen::prelude::*;
 
 use crate::{
     hooks::IntoAttrs,
     utils::{
         element_capture::{CapturedElement, ElementCaptureAttr},
-        focusability, shadow_tree_walker,
+        focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
     },
 };
 
@@ -21,10 +23,6 @@ use crate::{
 // This is a deliberate deviation for better ergonomics - users don't need to manually create
 // and wire up NodeRefs. The element is captured automatically when attributes are spread.
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## DIFFERENT BEHAVIOR
 //
 // - Element capture pattern vs caller-provided ref
@@ -38,8 +36,6 @@ use crate::{
 //   `focusability::is_tabbable_radio` is now available but is not used here because
 //   at least one radio in any group is always tabbable, so the boolean result of
 //   `has_tabbable_child` is unaffected.
-//
-// =============================================================================
 
 /// Input parameters for the `use_has_tabbable_child` hook.
 #[derive(Debug, Clone, Copy)]
@@ -200,25 +196,19 @@ pub fn use_has_tabbable_child(input: UseHasTabbableChildInput) -> UseHasTabbable
 
 /// Check if an element has any tabbable descendant elements.
 ///
-/// Uses a `ShadowTreeWalker` to lazily iterate descendant elements (descending into
-/// shadow roots), stopping at the first tabbable match. This mirrors react-aria's
-/// approach of using `getFocusableTreeWalker` with `{tabbable: true}` followed by
-/// `!!walker.nextNode()`.
+/// Uses `get_focusable_tree_walker` with `tabbable: true` to create a walker that
+/// only visits tabbable elements. If `next_node()` returns anything, a tabbable
+/// child exists. This mirrors react-aria's `getFocusableTreeWalker({tabbable: true})`
+/// followed by `!!walker.nextNode()`.
 fn has_tabbable_element(element: &web_sys::Element) -> bool {
-    // 0x1 = NodeFilter.SHOW_ELEMENT
-    let Some(mut walker) =
-        shadow_tree_walker::create_shadow_tree_walker(element.as_ref(), 0x1, None)
-    else {
+    let Some(mut walker) = get_focusable_tree_walker(
+        element,
+        FocusableTreeWalkerOptions {
+            tabbable: true,
+            ..Default::default()
+        },
+    ) else {
         return false;
     };
-
-    while let Some(node) = walker.next_node() {
-        if let Some(el) = node.dyn_ref::<web_sys::Element>() {
-            if focusability::is_tabbable(el) {
-                return true;
-            }
-        }
-    }
-
-    false
+    walker.next_node().is_some()
 }

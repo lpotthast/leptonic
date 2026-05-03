@@ -1,63 +1,16 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::label_basic::LabelBasicDemo;
+use super::demos::label_invalid::LabelInvalidDemo;
+use super::demos::label_span::LabelSpanDemo;
+use super::demos::label_valid::LabelValidDemo;
 
 #[component]
 pub fn PageUseLabel() -> impl IntoView {
-    // Basic label hook
-    let UseLabelReturn {
-        label_props,
-        field_props,
-    } = use_label(UseLabelInput {
-        id: None,
-        label_element_type: Some(LabelElementType::Label),
-    });
-
-    // Span label for non-native controls
-    let UseLabelReturn {
-        label_props: span_label_props,
-        field_props: span_field_props,
-    } = use_label(UseLabelInput {
-        id: None,
-        label_element_type: Some(LabelElementType::Span),
-    });
-
-    // Complete field setup
-    let UseFieldReturn {
-        label_props: field_label_props,
-        field_props: field_input_props,
-        description_props,
-        error_message_props: _,
-    } = use_field(UseFieldInput {
-        id: None,
-        label: Some("Email Address".into()),
-        description: Some("We'll never share your email.".into()),
-        error_message: None,
-        validation_state: ValidationState::Valid,
-        is_required: false,
-        is_disabled: false,
-        is_read_only: false,
-    });
-
-    // Invalid field
-    let UseFieldReturn {
-        label_props: error_label_props,
-        field_props: error_field_props,
-        description_props: error_description_props,
-        error_message_props,
-    } = use_field(UseFieldInput {
-        id: None,
-        label: Some("Password".into()),
-        description: Some("Minimum 8 characters.".into()),
-        error_message: Some("Password is too short.".into()),
-        validation_state: ValidationState::Invalid,
-        is_required: false,
-        is_disabled: false,
-        is_read_only: false,
-    });
-
     view! {
         <Article>
             <h1 id="use_label" class="anchor">
@@ -65,7 +18,17 @@ pub fn PageUseLabel() -> impl IntoView {
                 <AnchorLink href="#use_label" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hooks for creating accessible form labels and fields with proper ARIA associations."</p>
+            <p>
+                "The "<Code inline=true>"use_label"</Code>" and "<Code inline=true>"use_field"</Code>" hooks are standalone hooks for creating accessible form labels and fields with proper ARIA associations."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useLabel.html" target=LinkTarget::_Blank>
+                    "useLabel"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="basic-label" class="anchor">
                 "use_label"
@@ -74,7 +37,7 @@ pub fn PageUseLabel() -> impl IntoView {
 
             <p>"Associates a label with a form field using matching IDs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseLabelReturn { label_props, field_props } = use_label(UseLabelInput {
                         id: None, // Auto-generated
@@ -88,42 +51,17 @@ pub fn PageUseLabel() -> impl IntoView {
                 "#)}
             </Code>
 
-            <div style="margin: 1.5em 0; padding: 1em; border: 1px solid #ddd; border-radius: 8px;">
-                <div style="margin-bottom: 0.5em;">
-                    <label
-                        {..label_props.into_attrs()}
-                        style="display: block; margin-bottom: 0.25em; font-weight: 500;"
-                    >
-                        "Username"
-                    </label>
-                    <input
-                        type="text"
-                        {..field_props.into_attrs()}
-                        style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 200px;"
-                    />
-                </div>
-            </div>
+            <DemoShell source=include_str!("demos/label_basic.rs")>
+                <LabelBasicDemo />
+            </DemoShell>
 
             <h3>"Span Labels (for non-native controls)"</h3>
 
             <p>"Use " <code>"LabelElementType::Span"</code> " for custom controls that don't support native labels:"</p>
 
-            <div style="margin: 1.5em 0; padding: 1em; border: 1px solid #ddd; border-radius: 8px;">
-                <span
-                    {..span_label_props.into_attrs()}
-                    style="display: block; margin-bottom: 0.25em; font-weight: 500;"
-                >
-                    "Non-native control"
-                </span>
-                <div
-                    role="slider"
-                    tabindex="0"
-                    {..span_field_props.into_attrs()}
-                    style="width: 200px; height: 20px; background: #ddd; border-radius: 10px; cursor: pointer;"
-                >
-                    <div style="width: 50%; height: 100%; background: var(--brand-color); border-radius: 10px;"></div>
-                </div>
-            </div>
+            <DemoShell source=include_str!("demos/label_span.rs")>
+                <LabelSpanDemo />
+            </DemoShell>
 
             <h2 id="use_field" class="anchor">
                 "use_field"
@@ -132,7 +70,7 @@ pub fn PageUseLabel() -> impl IntoView {
 
             <p>"Complete field setup with label, description, and error message associations."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseFieldReturn {
                         label_props,
@@ -151,62 +89,15 @@ pub fn PageUseLabel() -> impl IntoView {
 
             <h3>"Valid Field"</h3>
 
-            <div style="margin: 1.5em 0; padding: 1em; border: 1px solid #ddd; border-radius: 8px;">
-                <label
-                    id=field_label_props.id.clone()
-                    for=field_label_props.html_for.clone()
-                    style="display: block; margin-bottom: 0.25em; font-weight: 500;"
-                >
-                    "Email Address"
-                </label>
-                <input
-                    type="email"
-                    id=field_input_props.id.clone()
-                    aria-labelledby=field_input_props.aria_labelledby.clone()
-                    aria-describedby=field_input_props.aria_describedby.clone()
-                    aria-invalid=field_input_props.aria_invalid
-                    aria-required=field_input_props.aria_required
-                    style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 250px;"
-                />
-                <p
-                    id=description_props.id.clone()
-                    style="margin: 0.25em 0 0 0; font-size: 0.85em; color: #666;"
-                >
-                    "We'll never share your email."
-                </p>
-            </div>
+            <DemoShell source=include_str!("demos/label_valid.rs")>
+                <LabelValidDemo />
+            </DemoShell>
 
             <h3>"Invalid Field"</h3>
 
-            <div style="margin: 1.5em 0; padding: 1em; border: 1px solid #ddd; border-radius: 8px;">
-                <label
-                    id=error_label_props.id.clone()
-                    for=error_label_props.html_for.clone()
-                    style="display: block; margin-bottom: 0.25em; font-weight: 500;"
-                >
-                    "Password"
-                </label>
-                <input
-                    type="password"
-                    {..error_field_props.into_attrs()}
-                    value="short"
-                    style="padding: 0.5em; border: 2px solid #dc3545; border-radius: 4px; width: 250px;"
-                />
-                <p
-                    id=error_description_props.id.clone()
-                    style="margin: 0.25em 0 0 0; font-size: 0.85em; color: #666;"
-                >
-                    "Minimum 8 characters."
-                </p>
-                <p
-                    id=error_message_props.id.clone()
-                    role=error_message_props.role
-                    aria-live=error_message_props.aria_live
-                    style="margin: 0.25em 0 0 0; font-size: 0.85em; color: #dc3545; font-weight: 500;"
-                >
-                    "Password is too short."
-                </p>
-            </div>
+            <DemoShell source=include_str!("demos/label_invalid.rs")>
+                <LabelInvalidDemo />
+            </DemoShell>
 
             <h2 id="aria-attributes" class="anchor">
                 "ARIA Attributes"
@@ -234,6 +125,17 @@ pub fn PageUseLabel() -> impl IntoView {
                 <li>"Validation state support (valid/invalid)"</li>
                 <li>"Description and error message integration"</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::InputCategory.materialize()>"Input domain"</Link></li>
+                <li><Link href=crate::routes::doc::text_field::Hook.materialize()>"use_text_field"</Link></li>
+                <li><Link href=crate::routes::doc::checkbox::Hook.materialize()>"use_checkbox"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -243,6 +145,7 @@ pub fn PageUseLabel() -> impl IntoView {
                 Toc::Leaf { title: "use_field", link: "#use_field" },
                 Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

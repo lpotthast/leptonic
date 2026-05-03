@@ -1,5 +1,3 @@
-use std::hash::Hash;
-
 use leptos::{
     attr,
     attr::Attr,
@@ -13,26 +11,23 @@ use web_sys::{FocusEvent, MouseEvent};
 use super::use_grid::UseGridState;
 use crate::{
     hooks::{
+        IntoAttrs, PropsWithStyles,
         selection::{
-            use_selectable_item::{use_selectable_item, UseSelectableItemInput},
+            SelectionKey,
+            use_selectable_item::{UseSelectableItemInput, use_selectable_item},
             use_selection_state::SelectionMode,
         },
-        IntoAttrs,
     },
     utils::{
+        EventHandler,
         aria::{AriaDisabled, AriaRole, AriaSelected},
         element_capture::{CapturedElement, ElementCaptureAttr},
         focus::focus_element,
-        EventHandler,
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridRow.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## OMITTED FEATURES
 // - `isVirtualized` — no virtualization support.
 // - `shouldSelectOnPressUp` — not configurable per-row; always selects on press down.
@@ -46,13 +41,11 @@ use crate::{
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 // - `EventHandler<E>` for composable event handler chaining.
-//
-// =============================================================================
 
 /// Input for a grid row.
 pub struct UseGridRowInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Shared grid state from `use_grid`.
     pub state: UseGridState<K>,
@@ -67,7 +60,7 @@ where
 /// Return value for a grid row.
 pub struct UseGridRowReturn {
     /// Props for the row element.
-    pub props: UseGridRowProps,
+    pub props: PropsWithStyles<UseGridRowProps>,
 
     /// Whether the row is selected.
     pub is_selected: Signal<bool>,
@@ -80,7 +73,7 @@ pub struct UseGridRowReturn {
 }
 
 /// Props from `use_grid_row` that can be extracted and merged programmatically.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct UseGridRowProps {
     pub role: AriaRole,
     pub tabindex: Signal<&'static str>,
@@ -152,7 +145,7 @@ pub type UseGridRowAttrs = (
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_grid_row<K>(input: UseGridRowInput<K>) -> UseGridRowReturn
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseGridRowInput {
         state,
@@ -179,14 +172,23 @@ where
         selection_behavior: state.selection_behavior,
         selected_keys: state.selection.selected_keys,
         focused_key: state.focused_key,
+        is_collection_focused: Signal::derive(|| true),
         is_disabled: state.is_disabled,
+        disabled_behavior: state.selection.disabled_behavior,
+        disallow_empty_selection: false,
         on_toggle: state.selection.toggle,
-        on_select: state.selection.select,
+        on_replace: state.selection.select,
+        on_extend: None,
         on_focus: state.set_focused_key,
         should_select_on_press_up: false,
+        should_focus_on_hover: false,
         allow_drag: false,
+        allows_different_press_origin: false,
+        on_action: None,
         on_double_click: state.on_row_action,
+        on_selection_behavior_change: None,
         focus: Some(focus_fn),
+        data_key: None,
     });
 
     let is_selected = selectable.is_selected;
@@ -208,24 +210,30 @@ where
     let aria_rowindex = (row_index + 1).to_string();
 
     // --- Compose handlers from selectable_item ---
-    let on_click = selectable.props.on_click;
-    let on_dblclick = selectable.props.on_dblclick;
-    let on_focus = selectable.props.on_focus;
-    let on_mouseenter = selectable.props.on_mouseenter;
+    let (selectable_props, selectable_styles) = selectable.props.into_inner();
+    let on_click = selectable_props.press.on_click;
+    let on_dblclick = selectable_props.press.on_dblclick;
+    let on_focus = selectable_props.on_focus;
+    let on_mouseenter = selectable_props.on_mouseenter;
 
     UseGridRowReturn {
-        props: UseGridRowProps {
-            role: AriaRole::Row,
-            tabindex,
-            aria_rowindex,
-            aria_selected,
-            aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
-            element_capture: row_element.attr(),
-            on_click,
-            on_dblclick,
-            on_focus,
-            on_mouseenter,
-        },
+        props: PropsWithStyles::new(
+            UseGridRowProps {
+                role: AriaRole::Row,
+                tabindex,
+                aria_rowindex,
+                aria_selected,
+                aria_disabled: Signal::derive(move || {
+                    is_disabled.get().then_some(AriaDisabled::True)
+                }),
+                element_capture: row_element.attr(),
+                on_click,
+                on_dblclick,
+                on_focus,
+                on_mouseenter,
+            },
+            selectable_styles,
+        ),
         is_selected,
         is_focused,
         is_disabled,

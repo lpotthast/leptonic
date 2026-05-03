@@ -1,142 +1,157 @@
 use indoc::indoc;
-use leptonic::{
-    atoms::focus_ring::FocusRing, components::prelude::*, hooks::*, utils::Propagation,
-};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
-use ringbuf::{
-    traits::{Consumer, Observer, RingBuffer},
-    HeapRb,
-};
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::keyboard::KeyboardDemo;
 
 #[component]
 pub fn PageUseKeyboard() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<String>::new(20));
-    let (disabled, set_disabled) = signal(false);
-
-    let string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
-
-    let UseKeyboardReturn { props } = use_keyboard(UseKeyboardInput {
-        disabled: disabled.into(),
-        on_key_down: Some(Callback::new(move |e: KeyboardEventWrapper| {
-            set_events.update(|events| {
-                events.push_overwrite(format!(
-                    "KeyDown: key={}, code={}, shift={}, ctrl={}, alt={}, meta={}",
-                    e.key(),
-                    e.code(),
-                    e.shift_key(),
-                    e.ctrl_key(),
-                    e.alt_key(),
-                    e.meta_key()
-                ));
-            });
-            // Allow propagation so other handlers can also receive the event
-            e.continue_propagation();
-        })),
-        on_key_up: Some(Callback::new(move |e: KeyboardEventWrapper| {
-            set_events.update(|events| {
-                events.push_overwrite(format!("KeyUp: key={}, code={}", e.key(), e.code()));
-            });
-            e.continue_propagation();
-        })),
-    });
-
     view! {
         <Article>
-            <h1 id="use_keyboard" class="anchor">
+            <h1 id="use-keyboard" class="anchor">
                 "use_keyboard"
-                <AnchorLink href="#use_keyboard" description="Direct link to article header"/>
+                <AnchorLink href="#use-keyboard" description="Direct link to section: use_keyboard"/>
             </h1>
 
-            <p>"Handle keyboard events with support for disabling and controlling event propagation."</p>
+            <p>
+                "The "<Code inline=true>"use_keyboard"</Code>" hook handles keyboard events with support for disabling and controlling event propagation. "
+                "See the "<Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link>" for domain guidance."
+            </p>
 
-            <Code>
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useKeyboard.html" target=LinkTarget::_Blank>
+                    "useKeyboard"
+                </LinkExt>
+                "."
+            </p>
+
+            <h2 id="input" class="anchor">
+                "Input"
+                <AnchorLink href="#input" description="Direct link to section: Input"/>
+            </h2>
+
+            <p><Code inline=true>"UseKeyboardInput"</Code>" fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"disabled"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Disables all keyboard event handling when true."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"on_key_down"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Callback<KeyboardEventWrapper>>"</Code></TableCell>
+                            <TableCell>"Called when a key is pressed down."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"on_key_up"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Callback<KeyboardEventWrapper>>"</Code></TableCell>
+                            <TableCell>"Called when a key is released."</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            <h2 id="return" class="anchor">
+                "Return"
+                <AnchorLink href="#return" description="Direct link to section: Return"/>
+            </h2>
+
+            <p><Code inline=true>"UseKeyboardReturn"</Code>" fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"props"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseKeyboardProps"</Code></TableCell>
+                            <TableCell>"Spread onto the target element via "<Code inline=true>"props.into_attrs()"</Code>" to wire up keydown/keyup listeners."</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            <h2 id="demo" class="anchor">
+                "Demo"
+                <AnchorLink href="#demo" description="Direct link to section: Demo"/>
+            </h2>
+
+            <Code language=Language::Rust>
                 {indoc!(r#"
-                    let UseKeyboardReturn { attrs } = use_keyboard(UseKeyboardInput {
+                    let UseKeyboardReturn { props } = use_keyboard(UseKeyboardInput {
                         disabled: disabled.into(),
                         on_key_down: Some(Callback::new(|e: KeyboardEventWrapper| {
-                            // Handle key press
-                            e.continue_propagation(); // Allow parent handlers
+                            // e.key(), e.code(), e.shift_key(), e.ctrl_key(), ...
+                            e.continue_propagation(); // stops propagation by default
                         })),
                         on_key_up: Some(Callback::new(|e: KeyboardEventWrapper| {
-                            // Handle key release
+                            e.continue_propagation();
                         })),
                     });
 
                     view! {
-                        <div tabindex="0" {..attrs}>
+                        <div tabindex="0" {..props.into_attrs()}>
                             "Focus me and press keys"
                         </div>
                     }
                 "#)}
             </Code>
 
-            <p>"Focus the box below and press any key to see keyboard events:"</p>
-
-            <FocusRing disabled within=true>
-                <div
-                    {..props.into_attrs()}
-                    tabindex="0"
-                    style="
-                        display: inline-flex;
-                        border: 2px solid var(--brand-color);
-                        padding: 1em 2em;
-                        cursor: pointer;
-                        border-radius: 4px;
-                        outline: none;
-                    "
-                >
-                    "Focus me and press keys"
-                </div>
-            </FocusRing>
-
-            <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em; margin-top: 1em;">
-                <Checkbox checked=disabled set_checked=set_disabled />
-                <Label>"Disabled"</Label>
-            </FormControl>
-
-            <p>"Last " { move || events.with(|events| events.occupied_len()) } " events:"</p>
-
-            <pre style="
-                width: 100%;
-                height: 12em;
-                overflow: auto;
-                padding: var(--typography-code-padding);
-                border: none;
-                border-radius: var(--typography-code-border-radius);
-                background-color: var(--typography-code-background-color);
-                color: var(--typography-code-color);
-            ">
-                { move || string.get() }
-            </pre>
+            <DemoShell source=include_str!("demos/keyboard.rs")>
+                <KeyboardDemo />
+            </DemoShell>
 
             <h2 id="features" class="anchor">
                 "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
+                <AnchorLink href="#features" description="Direct link to section: Features"/>
             </h2>
 
             <ul>
                 <li>"Handles keydown and keyup events"</li>
                 <li>"Supports disabling via signal"</li>
-                <li>"Controls event propagation (stops by default, call continue_propagation() to allow)"</li>
-                <li>"Wraps KeyboardEvent with convenient accessors"</li>
+                <li>"Controls event propagation (stops by default, call "<Code inline=true>"continue_propagation()"</Code>" to allow)"</li>
+                <li>"Wraps "<Code inline=true>"KeyboardEvent"</Code>" with convenient accessors via "<Code inline=true>"KeyboardEventWrapper"</Code></li>
+            </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Interactions.materialize()>"Interactions overview"</Link></li>
+                <li><Link href=crate::routes::doc::interactions::UsePress.materialize()>"use_press"</Link></li>
+                <li><Link href=crate::routes::doc::interactions::UseHover.materialize()>"use_hover"</Link></li>
             </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_keyboard", link: "#use_keyboard" },
+                Toc::Leaf { title: "use_keyboard", link: "#use-keyboard" },
+                Toc::Leaf { title: "Input", link: "#input" },
+                Toc::Leaf { title: "Return", link: "#return" },
+                Toc::Leaf { title: "Demo", link: "#demo" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

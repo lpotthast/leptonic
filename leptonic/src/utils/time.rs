@@ -1,19 +1,23 @@
 use uuid::Uuid;
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Year {
     pub number: i32,
-    pub is_staging: bool,
+    pub is_focused: bool,
+    pub is_selected: bool,
     pub is_now: bool,
     pub disabled: bool,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Month {
     /// base 1
     pub index: u8,
     pub name: String,
-    pub is_staging: bool,
+    pub is_focused: bool,
+    pub is_selected: bool,
     pub is_now: bool,
     pub disabled: bool,
 }
@@ -40,8 +44,10 @@ pub struct Day {
     pub in_month: InMonth,
     pub date_time: time::OffsetDateTime,
     pub disabled: bool,
+    pub unavailable: bool,
     pub highlighted: bool,
-    pub is_staging: bool,
+    pub is_focused: bool,
+    pub is_selected: bool,
     pub is_now: bool,
 }
 

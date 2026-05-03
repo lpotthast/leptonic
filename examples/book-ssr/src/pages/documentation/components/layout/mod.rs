@@ -1,3 +1,5 @@
+pub mod demos;
+
 pub mod app_bar;
 pub mod collapsible;
 pub mod drawer;

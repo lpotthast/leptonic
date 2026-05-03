@@ -1,50 +1,12 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
-use ringbuf::{
-    traits::{Consumer, Observer, RingBuffer},
-    HeapRb,
-};
 
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::focus::FocusDemo;
 
 #[component]
 pub fn PageUseFocus() -> impl IntoView {
-    let (events, set_events) = signal(HeapRb::<Oco<'static, str>>::new(50));
-    let (disabled, set_disabled) = signal(false);
-    let (is_focused, set_is_focused) = signal(false);
-
-    let string = Memo::new(move |_| {
-        events.with(|events| {
-            let mut result = String::new();
-            for e in events.iter().rev() {
-                result.push_str(e.as_str());
-                result.push('\n');
-            }
-            result
-        })
-    });
-
-    let UseFocusReturn { props } = use_focus(UseFocusInput {
-        disabled: disabled.into(),
-        on_focus: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Focus: {e:?}")));
-            });
-        })),
-        on_blur: Some(Callback::new(move |e| {
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Blur: {e:?}")));
-            });
-        })),
-        on_focus_change: Some(Callback::new(move |focused: bool| {
-            set_is_focused.set(focused);
-            set_events.update(|events| {
-                events.push_overwrite(Oco::Owned(format!("Changed: {focused}")));
-            });
-        })),
-    });
-
     view! {
         <Article>
             <h1 id="use-focus" class="anchor">
@@ -52,71 +14,32 @@ pub fn PageUseFocus() -> impl IntoView {
                 <AnchorLink href="#use-focus" description="Direct link to section: use_focus"/>
             </h1>
 
-            <p>"Track element focus. Fires callbacks when the element itself receives or loses focus (not descendants — see " <code>"use_focus_within"</code> " for that)."</p>
+            <p>
+                "The "<Code inline=true>"use_focus"</Code>" hook tracks element focus. It fires callbacks when the element itself receives or loses focus (not descendants \u{2014} see "
+                <Link href=crate::routes::doc::focus::UseFocusWithin.materialize()><Code inline=true>"use_focus_within"</Code></Link>
+                " for that). "
+                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+            </p>
 
-            <h2 id="basic-usage" class="anchor">
-                "Basic Usage"
-                <AnchorLink href="#basic-usage" description="Direct link to basic usage"/>
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useFocus.html" target=LinkTarget::_Blank>
+                    "useFocus"
+                </LinkExt>
+                "."
+            </p>
+
+            <h2 id="demo" class="anchor">
+                "Interactive Demo"
+                <AnchorLink href="#demo" description="Direct link to demo"/>
             </h2>
 
-            <Code>
-                {indoc!(r#"
-                    let UseFocusReturn { props } = use_focus(UseFocusInput {
-                        disabled: Signal::derive(|| false),
-                        on_focus: None,
-                        on_blur: None,
-                        on_focus_change: Some(Callback::new(|focused: bool| {
-                            // React to focus changes
-                        })),
-                    });
-
-                    view! {
-                        <div tabindex=0 {..props.into_attrs()}>
-                            "Focusable element"
-                        </div>
-                    }
-                "#)}
-            </Code>
-
-            <p>"Click the element below or use Tab to focus it:"</p>
-
-            <div
-                tabindex=0
-                {..props.into_attrs()}
-                style=move || if is_focused.get() { demo_container_active() } else { demo_container_inactive() }
+            <DemoShell
+                source=include_str!("demos/focus.rs")
+                description="Focus event tracking"
             >
-                <strong style=move || if is_focused.get() { state_active() } else { state_inactive() }>
-                    { move || if is_focused.get() { "Focused" } else { "Not focused" } }
-                </strong>
-                " — click here or press Tab"
-            </div>
-
-            <h2 id="event-callbacks" class="anchor">
-                "Event Callbacks"
-                <AnchorLink href="#event-callbacks" description="Direct link to event callbacks"/>
-            </h2>
-
-            <p>"The hook provides three callbacks: " <code>"on_focus"</code> " fires when the element receives focus, "
-                <code>"on_blur"</code> " fires when focus leaves, and " <code>"on_focus_change"</code>
-                " fires on every transition with a " <code>"bool"</code> " indicating the new state. All three are demonstrated in the log below:"</p>
-
-            <p>"Last " { move || events.with(|events| events.occupied_len()) } " events: "</p>
-
-            <pre style=event_log()>
-                { move || string.get() }
-            </pre>
-
-            <h2 id="disabled" class="anchor">
-                "Disabled State"
-                <AnchorLink href="#disabled" description="Direct link to disabled state"/>
-            </h2>
-
-            <p>"When " <code>"disabled"</code> " is true, all event handlers are suppressed. Toggle the checkbox to see the effect:"</p>
-
-            <FormControl attr:style=form_control_row()>
-                <Checkbox checked=disabled set_checked=set_disabled />
-                <Label>"Disabled"</Label>
-            </FormControl>
+                <FocusDemo />
+            </DemoShell>
 
             <h2 id="input" class="anchor">
                 "Input"
@@ -197,21 +120,32 @@ pub fn PageUseFocus() -> impl IntoView {
 
             <ul>
                 <li>"Fires only when the element itself is focused/blurred (not descendants)."</li>
-                <li>"Verifies " <code>"document.activeElement"</code> " matches the target before firing."</li>
+                <li>"Verifies "<Code inline=true>"document.activeElement"</Code>" matches the target before firing."</li>
                 <li>"Synthetic blur support for Firefox (form elements disabled while focused)."</li>
-                <li>"Respects disabled state — handlers are suppressed when disabled."</li>
+                <li>"Respects disabled state \u{2014} handlers are suppressed when disabled."</li>
+            </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocusWithin.materialize()>"use_focus_within"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
             </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "use_focus", link: "#use-focus" },
-                Toc::Leaf { title: "Basic Usage", link: "#basic-usage" },
-                Toc::Leaf { title: "Event Callbacks", link: "#event-callbacks" },
-                Toc::Leaf { title: "Disabled State", link: "#disabled" },
+                Toc::Leaf { title: "Interactive Demo", link: "#demo" },
                 Toc::Leaf { title: "Input", link: "#input" },
                 Toc::Leaf { title: "Return Value", link: "#return-value" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

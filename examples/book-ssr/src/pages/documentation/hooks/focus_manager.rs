@@ -1,47 +1,15 @@
 use indoc::indoc;
-use leptonic::{atoms::prelude::FocusScope, components::prelude::*, hooks::*, prelude::Size};
-use leptos::{prelude::*, web_sys};
-use send_wrapper::SendWrapper;
-use wasm_bindgen::JsCast;
+use leptonic::components::prelude::*;
+use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::{
+    focus_manager_basic::FocusManagerBasicDemo, focus_manager_scope::FocusManagerScopeDemo,
+};
 
 #[component]
 pub fn PageUseFocusManager() -> impl IntoView {
-    let (wrap, set_wrap) = signal(true);
-    let (tabbable_only, set_tabbable_only) = signal(false);
-
-    // Track the last focused element within the scope.
-    // This is needed because when control buttons are clicked, they become
-    // document.activeElement, which is outside the scope.
-    let last_focused: StoredValue<Option<SendWrapper<web_sys::Element>>> = StoredValue::new(None);
-
-    let UseFocusManagerReturn {
-        focus_manager,
-        props,
-    } = use_focus_manager(UseFocusManagerInput::default());
-
-    // Helper to build options from current signal state.
-    let build_opts = {
-        let last = last_focused;
-        move || {
-            let from = last.with_value(|el| el.as_ref().map(|sw| sw.clone().take()));
-            FocusManagerOptions {
-                from,
-                wrap: wrap.get_untracked(),
-                tabbable: tabbable_only.get_untracked(),
-                ..Default::default()
-            }
-        }
-    };
-
-    // Helper to store a focus result.
-    let store_result = move |result: Option<web_sys::Element>| {
-        if let Some(el) = result {
-            last_focused.set_value(Some(SendWrapper::new(el)));
-        }
-    };
-
     view! {
         <Article>
             <h1 id="use_focus_manager" class="anchor">
@@ -49,30 +17,19 @@ pub fn PageUseFocusManager() -> impl IntoView {
                 <AnchorLink href="#use_focus_manager" description="Direct link to article header"/>
             </h1>
 
-            <p>"Programmatically navigate focus within a container. Provides methods to move focus to next, previous, first, or last focusable element."</p>
+            <p>
+                "The "<code>"use_focus_manager"</code>" hook programmatically navigates focus within a container. "
+                "Provides methods to move focus to next, previous, first, or last focusable element. "
+                "See the "<Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link>" for domain guidance."
+            </p>
 
-            <h2 id="basic-usage" class="anchor">
-                "Basic Usage"
-                <AnchorLink href="#basic-usage" description="Direct link to basic usage"/>
-            </h2>
-
-            <Code>
-                {indoc!(r#"
-                    let UseFocusManagerReturn { focus_manager, props } =
-                        use_focus_manager(UseFocusManagerInput::default());
-
-                    // Move to the next focusable element:
-                    focus_manager.focus_next(FocusManagerOptions::default());
-
-                    view! {
-                        <div {..props.into_attrs()}>
-                            <button>"First"</button>
-                            <button>"Second"</button>
-                            <button>"Third"</button>
-                        </div>
-                    }
-                "#)}
-            </Code>
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/FocusScope.html" target=LinkTarget::_Blank>
+                    "useFocusManager"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="demo" class="anchor">
                 "Interactive Demo"
@@ -81,97 +38,12 @@ pub fn PageUseFocusManager() -> impl IntoView {
 
             <p>"Use the control buttons to move focus within the scope container:"</p>
 
-            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5) attr:style="margin-bottom: 1em;">
-                <button
-                    style=demo_button()
-                    on:click={
-                        let fm = focus_manager.clone();
-                        let opts = build_opts;
-                        move |_| store_result(fm.focus_first(opts()))
-                    }
-                >
-                    "Focus First"
-                </button>
-                <button
-                    style=demo_button()
-                    on:click={
-                        let fm = focus_manager.clone();
-                        let opts = build_opts;
-                        move |_| store_result(fm.focus_previous(opts()))
-                    }
-                >
-                    "Focus Previous"
-                </button>
-                <button
-                    style=demo_button()
-                    on:click={
-                        let fm = focus_manager.clone();
-                        let opts = build_opts;
-                        move |_| store_result(fm.focus_next(opts()))
-                    }
-                >
-                    "Focus Next"
-                </button>
-                <button
-                    style=demo_button()
-                    on:click={
-                        let fm = focus_manager.clone();
-                        let opts = build_opts;
-                        move |_| store_result(fm.focus_last(opts()))
-                    }
-                >
-                    "Focus Last"
-                </button>
-            </Stack>
-
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Em(0.5) attr:style="margin-bottom: 1em;">
-                <FormControl attr:style=form_control_row()>
-                    <Checkbox checked=wrap set_checked=set_wrap />
-                    <Label>"Wrap around"</Label>
-                </FormControl>
-                <FormControl attr:style=form_control_row()>
-                    <Checkbox checked=tabbable_only set_checked=set_tabbable_only />
-                    <Label>"Tabbable only (tabindex >= 0)"</Label>
-                </FormControl>
-            </Stack>
-
-            <style>
-                {format!(
-                    ".focus-scope-demo button:focus, .focus-scope-demo input:focus {{ {} }}",
-                    FOCUS_OUTLINE_CSS
-                )}
-            </style>
-
-            <div
-                {..props.into_attrs()}
-                class="focus-scope-demo"
-                style=demo_container_active()
-                on:focusin=move |ev| {
-                    if let Some(target) = ev.target() {
-                        if let Some(el) = target.dyn_ref::<web_sys::Element>() {
-                            last_focused.set_value(Some(SendWrapper::new(el.clone())));
-                        }
-                    }
-                }
+            <DemoShell
+                source=include_str!("demos/focus_manager_basic.rs")
+                description="Programmatic focus navigation"
             >
-                <p style=demo_container_title()>"Focus Scope Container"</p>
-                <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
-                    <button style=demo_button_solid()>
-                        "Button 1"
-                    </button>
-                    <button style=demo_button_solid()>
-                        "Button 2"
-                    </button>
-                    <input
-                        type="text"
-                        placeholder="Input field"
-                        style=demo_input_solid()
-                    />
-                    <button style=demo_button_solid()>
-                        "Button 3"
-                    </button>
-                </Stack>
-            </div>
+                <FocusManagerBasicDemo />
+            </DemoShell>
 
             <h2 id="tabbable" class="anchor">
                 "Tabbable Option"
@@ -180,7 +52,7 @@ pub fn PageUseFocusManager() -> impl IntoView {
 
             <p>"By default, " <code>"focus_next"</code> "/" <code>"focus_previous"</code> " navigate to all focusable elements including those with " <code>"tabindex=\"-1\""</code> ". Set " <code>"tabbable: true"</code> " to restrict navigation to elements with " <code>"tabindex >= 0"</code> " (those reachable via Tab):"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     focus_manager.focus_next(FocusManagerOptions {
                         tabbable: true, // Skip elements with tabindex=-1
@@ -198,7 +70,7 @@ pub fn PageUseFocusManager() -> impl IntoView {
 
             <p>"The " <code>"accept"</code> " option takes a filter function to skip specific elements during navigation. This is useful when you need to exclude certain elements programmatically:"</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     use std::sync::Arc;
 
@@ -219,7 +91,7 @@ pub fn PageUseFocusManager() -> impl IntoView {
 
             <p>"The " <code>"use_focus_manager"</code> " hook provides " <em>"programmatic"</em> " focus control only. It does not trap focus or intercept Tab key presses. For focus trapping (preventing Tab from leaving the container), use the " <code>"FocusScope"</code> " component which combines focus management with keyboard event handling."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     <FocusScope contain=true auto_focus=true restore_focus=true>
                         <button>"First"</button>
@@ -231,42 +103,12 @@ pub fn PageUseFocusManager() -> impl IntoView {
 
             <p>"Try tabbing through the container below. Focus will wrap from the last element back to the first, and vice versa with Shift+Tab:"</p>
 
-            <style>
-                ".focus-trap-demo button:focus, .focus-trap-demo input:focus {
-                    outline: 3px solid #4a9eff;
-                    outline-offset: 2px;
-                }"
-            </style>
-
-            <FocusScope contain=true>
-                <div
-                    class="focus-trap-demo"
-                    style="
-                        border: 3px solid #4a9eff;
-                        padding: 1.5em;
-                        border-radius: 8px;
-                        background: rgba(74, 158, 255, 0.1);
-                    "
-                >
-                    <p style=demo_container_title()>"Focus Trap Container (Tab cycles within)"</p>
-                    <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
-                        <button style=demo_button_solid()>
-                            "Trapped 1"
-                        </button>
-                        <button style=demo_button_solid()>
-                            "Trapped 2"
-                        </button>
-                        <input
-                            type="text"
-                            placeholder="Trapped input"
-                            style=demo_input_solid()
-                        />
-                        <button style=demo_button_solid()>
-                            "Trapped 3"
-                        </button>
-                    </Stack>
-                </div>
-            </FocusScope>
+            <DemoShell
+                source=include_str!("demos/focus_manager_scope.rs")
+                description="Focus trapping with FocusScope"
+            >
+                <FocusManagerScopeDemo />
+            </DemoShell>
 
             <h3>"FocusScope Props"</h3>
 
@@ -394,12 +236,23 @@ pub fn PageUseFocusManager() -> impl IntoView {
                 <li>"Optional wrap-around, tabbable-only, and custom filter support."</li>
                 <li>"Automatic element capture via prop spreading."</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Focus.materialize()>"Focus overview"</Link></li>
+                <li><Link href=crate::routes::doc::focus::FocusScope.materialize()>"FocusScope atom"</Link>" \u{2014} provides focus containment and restoration"</li>
+                <li><Link href=crate::routes::doc::focus::UseHasTabbableChild.materialize()>"use_has_tabbable_child"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocusable.materialize()>"use_focusable"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
                 Toc::Leaf { title: "use_focus_manager", link: "#use_focus_manager" },
-                Toc::Leaf { title: "Basic Usage", link: "#basic-usage" },
                 Toc::Leaf { title: "Interactive Demo", link: "#demo" },
                 Toc::Leaf { title: "Tabbable Option", link: "#tabbable" },
                 Toc::Leaf { title: "Custom Filter (accept)", link: "#accept" },
@@ -407,6 +260,7 @@ pub fn PageUseFocusManager() -> impl IntoView {
                 Toc::Leaf { title: "Input", link: "#input" },
                 Toc::Leaf { title: "Return Value", link: "#return-value" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use leptos::prelude::*;
 
@@ -9,15 +9,12 @@ use crate::{
 
 /// Private context struct sharing grid state between `Grid`, `GridRow`, and `GridCell`.
 #[derive(Clone)]
-struct GridCtx<K>
-where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
-{
+struct GridCtx<K: SelectionKey> {
     state: UseGridState<K>,
 }
 
 // Manual Copy impl to avoid derive adding `K: Copy` bound.
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Copy for GridCtx<K> {}
+impl<K: SelectionKey> Copy for GridCtx<K> {}
 
 /// A headless 2D grid container atom.
 ///
@@ -85,7 +82,7 @@ pub fn Grid<K>(
     children: Children,
 ) -> impl IntoView
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let disabled_keys = disabled_keys.unwrap_or_else(|| Signal::derive(HashSet::new));
     let is_disabled = disabled.unwrap_or_else(|| Signal::derive(|| false));
@@ -162,7 +159,7 @@ pub fn GridRow<K>(
     children: Children,
 ) -> impl IntoView
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let ctx = expect_context::<GridCtx<K>>();
 
@@ -190,9 +187,12 @@ where
         }
     });
 
+    let (row_props, row_styles) = row.props.into_inner();
+    let styles = row_styles.merge(styles);
+
     view! {
         <div
-            {..row.props.into_attrs()}
+            {..row_props.into_attrs()}
             class=classes
             style=styles
             attr:data-selected=data_selected
@@ -230,7 +230,7 @@ pub fn GridCell<K>(
     children: Children,
 ) -> impl IntoView
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let ctx = expect_context::<GridCtx<K>>();
 
@@ -260,9 +260,12 @@ where
         }
     });
 
+    let (cell_attrs, cell_styles) = cell.props.into_inner();
+    let styles = cell_styles.merge(styles);
+
     view! {
         <div
-            {..cell.props.into_attrs()}
+            {..cell_attrs.into_attrs()}
             class=classes
             style=styles
             attr:data-selected=data_selected

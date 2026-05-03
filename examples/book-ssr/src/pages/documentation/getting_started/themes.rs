@@ -36,7 +36,7 @@ pub fn PageThemes() -> impl IntoView {
                 "A simple " <Code inline=true>"ThemeToggle"</Code>" component is provided, which you can embed like this:"
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     <ThemeToggle off=LeptonicTheme::Light on=LeptonicTheme::Dark/>
                 ")}
@@ -67,7 +67,7 @@ pub fn PageThemes() -> impl IntoView {
                 "and overwrite a few variables to meet our design needs."
             </p>
 
-            <Code>
+            <Code language=Language::Css>
                 {indoc!(r#"
                     @use "../generated/leptonic/leptonic-themes";
 

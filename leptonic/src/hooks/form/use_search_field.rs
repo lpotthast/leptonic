@@ -1,8 +1,8 @@
 use leptos::{
     attr,
     attr::{
-        custom::{custom_attribute, CustomAttr},
         Attr,
+        custom::{CustomAttr, custom_attribute},
     },
     ev,
     ev::{On, SharedEventCallback},
@@ -12,33 +12,38 @@ use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 
-use super::use_field::ValidationState;
+use super::{
+    use_form_reset::{UseFormResetInput, use_form_reset},
+    use_form_validation::{UseFormValidationInput, use_form_validation},
+    use_form_validation_state::{
+        UseFormValidationStateInput, ValidateFn, ValidationBehavior, ValidityStateSnapshot,
+        use_form_validation_state,
+    },
+};
 use crate::{
     hooks::{
-        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
+        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
     },
     utils::{
-        aria::{AriaInvalid, AriaRole},
-        EventAccessors, EventHandler,
+        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
+        aria::{AriaInvalid, AriaLive, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/searchfield/src/useSearchField.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_search_field` hook.
 #[derive(Clone)]
 pub struct UseSearchFieldInput {
     /// The current value (controlled).
     pub value: Signal<String>,
+
+    /// The default value to restore on form reset.
+    /// If `None`, the initial value of `value` at hook creation time is used.
+    pub default_value: Option<String>,
 
     /// Callback when the value changes.
     pub on_change: Option<Callback<String>>,
@@ -61,8 +66,21 @@ pub struct UseSearchFieldInput {
     /// Whether the field is read-only.
     pub is_read_only: Signal<bool>,
 
-    /// The validation state of the field.
-    pub validation_state: ValidationState,
+    /// Whether the field is explicitly marked as invalid (controlled validation).
+    ///
+    /// - `None` — not controlled; validation comes from `validate`, server errors,
+    ///   or native constraint validation.
+    /// - `Some(signal)` — controlled; the signal value determines valid/invalid
+    ///   and overrides all other validation sources.
+    pub is_invalid: Option<Signal<bool>>,
+
+    /// Custom client-side validation function.
+    ///
+    /// Returns `Ok(())` for valid, `Err(messages)` for invalid.
+    pub validate: Option<ValidateFn<String>>,
+
+    /// Validation behavior mode.
+    pub validation_behavior: ValidationBehavior,
 
     /// Placeholder text.
     pub placeholder: Option<&'static str>,
@@ -90,6 +108,7 @@ impl Default for UseSearchFieldInput {
     fn default() -> Self {
         Self {
             value: Signal::derive(String::new),
+            default_value: None,
             on_change: None,
             on_clear: None,
             on_submit: None,
@@ -97,7 +116,9 @@ impl Default for UseSearchFieldInput {
             on_blur: None,
             is_disabled: Signal::derive(|| false),
             is_read_only: Signal::derive(|| false),
-            validation_state: ValidationState::Valid,
+            is_invalid: None,
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
             placeholder: None,
             aria_label: None,
             name: None,
@@ -123,11 +144,23 @@ pub struct UseSearchFieldReturn {
     /// Props for the description element. Call `.into_attrs()` for view spreading.
     pub description_props: UseSearchFieldDescriptionProps,
 
+    /// Props for the error message element. Call `.into_attrs()` for view spreading.
+    pub error_props: UseSearchFieldErrorProps,
+
     /// Whether there is a value to clear.
     pub show_clear_button: Signal<bool>,
 
     /// Whether the focus ring should be visible (keyboard navigation only).
     pub is_focus_visible: Signal<bool>,
+
+    /// Whether the displayed validation is invalid.
+    pub is_invalid: Signal<bool>,
+
+    /// The displayed validation error messages.
+    pub validation_errors: Signal<Vec<String>>,
+
+    /// Detailed validity state (mirrors native `ValidityState`).
+    pub validation_details: Signal<ValidityStateSnapshot>,
 }
 
 /// Props from `use_search_field` for the input element.
@@ -143,11 +176,12 @@ pub struct UseSearchFieldInputProps {
     pub readonly: Signal<bool>,
     pub aria_label: Option<&'static str>,
     pub aria_labelledby: Option<String>,
-    pub aria_describedby: Option<String>,
-    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_describedby: Signal<Option<String>>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
     pub maxlength: Option<u32>,
     pub autofocus: bool,
     pub data_focus_visible: Signal<Option<&'static str>>,
+    pub element_capture: ElementCaptureAttr,
     pub on_input: EventHandler<web_sys::Event>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<web_sys::FocusEvent>,
@@ -176,6 +210,7 @@ impl IntoAttrs for UseSearchFieldInputProps {
             Attr(attr::Maxlength, self.maxlength),
             Attr(attr::Autofocus, self.autofocus),
             custom_attribute("data-focus-visible", self.data_focus_visible),
+            self.element_capture,
             self.on_input.into_on(ev::input),
             self.on_keydown.into_on(ev::keydown),
             self.on_focus.into_on(ev::focus),
@@ -198,11 +233,12 @@ pub type UseSearchFieldInputAttrs = (
     Attr<attr::Readonly, Signal<bool>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
     Attr<attr::Maxlength, Option<u32>>,
     Attr<attr::Autofocus, bool>,
     CustomAttr<&'static str, Signal<Option<&'static str>>>,
+    ElementCaptureAttr,
     On<ev::input, SharedEventCallback<web_sys::Event>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<web_sys::FocusEvent>>,
@@ -283,6 +319,38 @@ impl IntoAttrs for UseSearchFieldDescriptionProps {
 /// Attributes for the search field description element.
 pub type UseSearchFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
+/// Props for the error message element.
+#[derive(Debug)]
+pub struct UseSearchFieldErrorProps {
+    /// The id of the error message element.
+    pub id: String,
+
+    /// The role attribute.
+    pub role: AriaRole,
+
+    /// The aria-live attribute.
+    pub aria_live: AriaLive,
+}
+
+impl IntoAttrs for UseSearchFieldErrorProps {
+    type Attrs = UseSearchFieldErrorAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        (
+            Attr(attr::Id, self.id),
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaLive, self.aria_live),
+        )
+    }
+}
+
+/// Attributes for the search field error message element.
+pub type UseSearchFieldErrorAttrs = (
+    Attr<attr::Id, String>,
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaLive, AriaLive>,
+);
+
 /// Provides the behavior and accessibility implementation for a search field.
 ///
 /// Search fields allow users to search with a clear button and submit functionality.
@@ -321,6 +389,7 @@ pub type UseSearchFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     let UseSearchFieldInput {
         value,
+        default_value,
         on_change,
         on_clear,
         on_submit,
@@ -328,7 +397,9 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
         on_blur,
         is_disabled,
         is_read_only,
-        validation_state,
+        is_invalid,
+        validate,
+        validation_behavior,
         placeholder,
         aria_label,
         name,
@@ -338,10 +409,43 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
         auto_focus,
     } = input;
 
+    // ---- Element capture for DOM access ----
+    let element = CapturedElement::new();
+
+    // ---- Form validation state ----
+    let validation = use_form_validation_state(UseFormValidationStateInput {
+        is_invalid,
+        value,
+        validate,
+        validation_behavior,
+        name: name.map(ToString::to_string),
+    });
+
+    // ---- Form reset (restores value on form reset) ----
+    let initial_value = default_value.unwrap_or_else(|| value.get_untracked());
+    use_form_reset(UseFormResetInput {
+        element,
+        initial_value,
+        on_reset: Callback::new(move |val: String| {
+            if let Some(on_change) = on_change {
+                on_change.run(val);
+            }
+        }),
+    });
+
+    // ---- Form validation DOM connection ----
+    use_form_validation(UseFormValidationInput {
+        element,
+        state: validation,
+        validation_behavior,
+    });
+
+    // ---- IDs ----
     let base_id = Uuid::new_v4();
     let input_id = format!("searchfield-{base_id}");
     let label_id = format!("searchfield-label-{base_id}");
     let description_id = format!("searchfield-description-{base_id}");
+    let error_id = format!("searchfield-error-{base_id}");
 
     // Whether to show the clear button
     let show_clear_button = Signal::derive(move || !value.get().is_empty());
@@ -418,22 +522,42 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
         }
     };
 
+    // ---- Reactive ARIA attributes ----
+    let has_description = description.is_some();
+    let has_label = label.is_some();
+
     // Build aria-labelledby
-    let aria_labelledby = if label.is_some() {
+    let aria_labelledby = if has_label {
         Some(label_id.clone())
     } else {
         None
     };
 
-    // Build aria-describedby
-    let aria_describedby = if description.is_some() {
-        Some(description_id.clone())
-    } else {
-        None
-    };
+    // Build reactive aria-describedby
+    let description_id_for_signal = description_id.clone();
+    let error_id_for_signal = error_id.clone();
+    let aria_describedby = Signal::derive(move || {
+        let mut parts = Vec::new();
+        if has_description {
+            parts.push(description_id_for_signal.clone());
+        }
+        if validation.is_invalid.get() {
+            parts.push(error_id_for_signal.clone());
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
+    });
 
-    // Compute aria-invalid
-    let aria_invalid = (validation_state == ValidationState::Invalid).then_some(AriaInvalid::True);
+    // Compute reactive aria-invalid
+    let aria_invalid =
+        Signal::derive(move || validation.is_invalid.get().then_some(AriaInvalid::True));
+
+    // ---- Validation details convenience signal ----
+    let validation_details =
+        Signal::derive(move || validation.display_validation.get().validation_details);
 
     UseSearchFieldReturn {
         input_props: UseSearchFieldInputProps {
@@ -452,6 +576,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
             maxlength: max_length,
             autofocus: auto_focus,
             data_focus_visible: focus_ring_props.data_focus_visible,
+            element_capture: element.attr(),
             on_input: EventHandler::new(handle_input),
             on_keydown: EventHandler::new(handle_keydown),
             on_focus: focus_ring_props.on_focus,
@@ -471,7 +596,15 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
             html_for: input_id,
         },
         description_props: UseSearchFieldDescriptionProps { id: description_id },
+        error_props: UseSearchFieldErrorProps {
+            id: error_id,
+            role: AriaRole::Alert,
+            aria_live: AriaLive::Polite,
+        },
         show_clear_button,
         is_focus_visible,
+        is_invalid: validation.is_invalid,
+        validation_errors: validation.validation_errors,
+        validation_details,
     }
 }

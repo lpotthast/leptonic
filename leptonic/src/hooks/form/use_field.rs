@@ -8,13 +8,7 @@ use crate::{
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useField.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Validation state for a field.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -27,7 +21,7 @@ pub enum ValidationState {
 }
 
 /// Input parameters for the `use_field` hook.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct UseFieldInput {
     /// A custom id for the field element.
     pub id: Option<String>,
@@ -146,7 +140,7 @@ pub type UseFieldAttrs = (
 );
 
 /// Props for the description element.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UseFieldDescriptionProps {
     /// The id of the description element.
     pub id: String,
@@ -165,7 +159,7 @@ impl IntoAttrs for UseFieldDescriptionProps {
 pub type UseFieldDescriptionAttrs = (Attr<attr::Id, String>,);
 
 /// Props for the error message element.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UseFieldErrorMessageProps {
     /// The id of the error message element.
     pub id: String,

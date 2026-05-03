@@ -162,6 +162,14 @@ impl ShadowTreeWalker {
         None
     }
 
+    /// Check whether the given node passes the filter (without advancing the walker).
+    pub fn matches_filter(&self, node: &web_sys::Node) -> bool {
+        match &self.filter {
+            Some(f) => f(node),
+            None => true,
+        }
+    }
+
     /// If the node has a shadow root, descend into it and get the first descendant.
     /// Also applies the filter. If the filter rejects, advance to next.
     fn check_shadow_and_filter(&mut self, node: web_sys::Node) -> Option<web_sys::Node> {

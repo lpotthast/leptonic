@@ -10,18 +10,14 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaRole, AriaSelected},
         EventHandler,
+        aria::{AriaDisabled, AriaRole, AriaSelected},
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_tag` hook.
 #[derive(Debug, Clone)]

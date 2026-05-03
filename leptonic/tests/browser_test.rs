@@ -3,8 +3,8 @@ mod pages;
 mod test_app;
 mod ui_tests;
 
-use chrome_for_testing_manager::prelude::*;
-use thirtyfour::ChromiumLikeCapabilities;
+use chrome_for_testing_manager::{Channel, Chromedriver, PortRequest, VersionRequest};
+use thirtyfour::{ChromeCapabilities, ChromiumLikeCapabilities};
 use ui_tests::UiTest;
 
 /// Set to `true` to pause before running tests, allowing manual inspection
@@ -15,8 +15,8 @@ const DELAY_TEST_EXECUTION: bool = false;
 async fn browser_tests() -> anyhow::Result<()> {
     common::tracing::init_subscriber();
 
-    // 1. Start test-app via `cargo leptos watch`.
-    let fe = test_app::start_frontend().await;
+    // 1. Start test-app via `cargo leptos serve`.
+    let fe = test_app::start_frontend().await?;
 
     // 2. Optional: pause for manual debugging.
     if DELAY_TEST_EXECUTION {
@@ -63,7 +63,7 @@ async fn browser_tests() -> anyhow::Result<()> {
         #[allow(clippy::redundant_closure_for_method_calls)]
         chromedriver
             .with_custom_session(
-                |caps| {
+                |caps: &mut ChromeCapabilities| {
                     if std::env::var("BROWSER_TEST_VISIBLE").is_ok() {
                         caps.unset_headless()?;
                     }

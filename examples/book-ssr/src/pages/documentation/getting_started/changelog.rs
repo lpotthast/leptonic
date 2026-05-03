@@ -4,7 +4,6 @@ use leptos::prelude::*;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn PageChangelog() -> impl IntoView {
     view! {
         <Article>

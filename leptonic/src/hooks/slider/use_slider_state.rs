@@ -8,13 +8,9 @@ use crate::{
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// The orientation of a slider.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

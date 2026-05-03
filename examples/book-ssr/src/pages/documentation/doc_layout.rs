@@ -1,21 +1,16 @@
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{
+    components::prelude::*,
+    prelude::*,
+    utils::css::{CssDimension, em},
+};
 use leptos::prelude::*;
 use leptos_router::components::Outlet;
 
-use crate::{
-    app::{AppLayoutContext, APP_BAR_HEIGHT},
-    routes,
-};
+use crate::{app::AppLayoutContext, routes};
 
 #[component]
-#[allow(clippy::too_many_lines)]
 pub fn DocLayout() -> impl IntoView {
     let app_layout_context = expect_context::<AppLayoutContext>();
-
-    let drawer_class = move || match app_layout_context.is_small.get() {
-        true => "mobile",
-        false => "",
-    };
 
     let close_doc_drawer_on_mobile = move || {
         if app_layout_context.is_small.get_untracked() {
@@ -25,252 +20,202 @@ pub fn DocLayout() -> impl IntoView {
 
     let drawer_content = view! {
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsBook margin=Margin::Right(Size::Em(1.0))></Icon> "Getting started"
+            <Icon icon=icondata::BsBook margin=Margin::Right(em(1.0))></Icon> "Getting started"
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::Overview.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
-                <Link href=routes::doc::Installation.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
-                <Link href=routes::doc::Themes.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
-                <Link href=routes::doc::Changelog.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
-                <Link href=routes::doc::EventPropagation.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()>"Event Propagation"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                <Link href=routes::doc::Overview.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
+                <Link href=routes::doc::Installation.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Installation"</Link>
+                <Link href=routes::doc::Themes.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Themes"</Link>
+                <Link href=routes::doc::Changelog.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Changelog"</Link>
+                <Link href=routes::doc::EventPropagation.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Event Propagation"</Link>
+                <Link href=routes::doc::Architecture.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Hooks, Atoms & Components"</Link>
+                <Link href=routes::doc::ClassesAndStyles.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Classes & Styles"</Link>
             </Stack>
         </DrawerSection>
 
         // ── Interactions ──────────────────────────────────────────
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsCursor margin=Margin::Right(Size::Em(1.0))></Icon> "Interactions"
+            <Link href=routes::doc::Interactions.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsCursor margin=Margin::Right(em(1.0))/>
+                "Interactions"
+            </Link>
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::hooks::UsePress.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_press"</Link>
-                <Link href=routes::doc::hooks::UseHover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_hover"</Link>
-                <Link href=routes::doc::hooks::UseMove.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_move"</Link>
-                <Link href=routes::doc::hooks::UseKeyboard.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_keyboard"</Link>
-                <Link href=routes::doc::hooks::UseInteractOutside.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_interact_outside"</Link>
-                <Link href=routes::doc::hooks::UseScrollWheel.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_scroll_wheel"</Link>
-                <Link href=routes::doc::hooks::UsePreventScroll.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_prevent_scroll"</Link>
-                <Link href=routes::doc::hooks::Dnd.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "Drag & Drop"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                <Link href=routes::doc::interactions::UsePress.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_press"</Link>
+                <Link href=routes::doc::interactions::PressResponder.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"PressResponder"</Link>
+                <Link href=routes::doc::interactions::UseHover.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_hover"</Link>
+                <Link href=routes::doc::interactions::UseMove.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_move"</Link>
+                <Link href=routes::doc::interactions::UseKeyboard.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_keyboard"</Link>
+                <Link href=routes::doc::interactions::UseInteractOutside.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_interact_outside"</Link>
+                <Link href=routes::doc::interactions::UseScrollWheel.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_scroll_wheel"</Link>
+                <Link href=routes::doc::interactions::UsePreventScroll.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_prevent_scroll"</Link>
+                <Link href=routes::doc::interactions::Dnd.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Drag & Drop"</Link>
             </Stack>
         </DrawerSection>
 
         // ── Focus ─────────────────────────────────────────────────
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsEye margin=Margin::Right(Size::Em(1.0))></Icon> "Focus"
+            <Link href=routes::doc::Focus.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsEye margin=Margin::Right(em(1.0))/>
+                "Focus"
+            </Link>
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::atoms::FocusScope.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "FocusScope"</Link>
-                <Link href=routes::doc::hooks::UseFocus.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_focus"</Link>
-                <Link href=routes::doc::hooks::UseFocusWithin.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_focus_within"</Link>
-                <Link href=routes::doc::hooks::UseFocusable.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_focusable"</Link>
-                <Link href=routes::doc::hooks::UseFocusManager.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_focus_manager"</Link>
-                <Link href=routes::doc::hooks::UseHasTabbableChild.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_has_tabbable_child"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                <Link href=routes::doc::focus::UseFocus.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus"</Link>
+                <Link href=routes::doc::focus::UseFocusWithin.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus_within"</Link>
+                <Link href=routes::doc::focus::UseFocusable.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focusable"</Link>
+                <Link href=routes::doc::focus::UseFocusManager.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus_manager"</Link>
+                <Link href=routes::doc::focus::UseHasTabbableChild.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_has_tabbable_child"</Link>
+                <Link href=routes::doc::focus::UseFocusRing.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus_ring"</Link>
+                <Link href=routes::doc::focus::UseFocusVisible.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_focus_visible"</Link>
+                <Link href=routes::doc::focus::FocusScope.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"FocusScope"</Link>
+                <Link href=routes::doc::focus::FocusRing.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"FocusRing"</Link>
             </Stack>
-            <DrawerSection level=3 header=move || "Focus Ring">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::atoms::FocusRing.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "FocusRing"</Link>
-                    <Link href=routes::doc::hooks::UseFocusRing.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_focus_ring"</Link>
-                    <Link href=routes::doc::hooks::UseFocusVisible.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_focus_visible"</Link>
-                </Stack>
-            </DrawerSection>
         </DrawerSection>
 
         // ── Overlays ──────────────────────────────────────────────
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsWindowStack margin=Margin::Right(Size::Em(1.0))></Icon> "Overlays"
+            <Link href=routes::doc::Overlays.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsWindowStack margin=Margin::Right(em(1.0))/>
+                "Overlays"
+            </Link>
         }>
-            <DrawerSection level=3 header=move || "Overlay">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::atoms::DismissButton.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "DismissButton"</Link>
-                    <Link href=routes::doc::hooks::UseOverlay.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_overlay"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Popover">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Popover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Popover"</Link>
-                    <Link href=routes::doc::atoms::Popover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "Popover"</Link>
-                    <Link href=routes::doc::hooks::UsePopover.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_popover"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Tooltip">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::hooks::UseTooltip.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_tooltip"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Modal">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Modal.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Modal"</Link>
-                    <Link href=routes::doc::hooks::UseModal.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_modal"</Link>
-                </Stack>
-            </DrawerSection>
-        </DrawerSection>
-
-        // ── Input ─────────────────────────────────────────────────
-        <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsToggles margin=Margin::Right(Size::Em(1.0))></Icon> "Input"
-        }>
-            <DrawerSection level=3 header=move || "Button">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Button.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Button"</Link>
-                    <Link href=routes::doc::atoms::Button.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "Button"</Link>
-                    <Link href=routes::doc::hooks::UseButton.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_button"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Text Field">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Input.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Input"</Link>
-                    <Link href=routes::doc::hooks::UseTextField.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_text_field"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Checkbox">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Checkbox.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Checkbox"</Link>
-                    <Link href=routes::doc::hooks::UseCheckbox.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_checkbox"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Radio">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Radio.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Radio"</Link>
-                    <Link href=routes::doc::hooks::UseRadio.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_radio"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Toggle">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Toggle.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Toggle"</Link>
-                    <Link href=routes::doc::hooks::UseSwitch.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_switch"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Slider">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Slider.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Slider"</Link>
-                    <Link href=routes::doc::atoms::Slider.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "Slider"</Link>
-                    <Link href=routes::doc::hooks::UseSlider.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_slider"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Select">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Select.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Select"</Link>
-                    <Link href=routes::doc::hooks::UseSelect.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_select"</Link>
-                </Stack>
-            </DrawerSection>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::hooks::UseLabel.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_label"</Link>
-                <Link href=routes::doc::hooks::UseCombobox.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_combobox"</Link>
-                <Link href=routes::doc::hooks::UseListbox.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_listbox"</Link>
-                <Link href=routes::doc::hooks::UseMenu.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_menu"</Link>
-                <Link href=routes::doc::hooks::Selection.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "selection"</Link>
-                <Link href=routes::doc::components::ColorPicker.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Color Picker"</Link>
-                <Link href=routes::doc::components::DateTime.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Date & Time"</Link>
-                <Link href=routes::doc::components::TiptapEditor.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Tiptap Editor"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                <Link href=routes::doc::overlays::UseOverlay.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"use_overlay"</Link>
+                <Link href=routes::doc::overlays::DismissButton.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"DismissButton"</Link>
             </Stack>
         </DrawerSection>
 
-        // ── Data Display ──────────────────────────────────────────
-        <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsGrid margin=Margin::Right(Size::Em(1.0))></Icon> "Data Display"
-        }>
-            <DrawerSection level=3 header=move || "Grid">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Grid.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Grid"</Link>
-                    <Link href=routes::doc::atoms::Grid.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "Grid"</Link>
-                    <Link href=routes::doc::hooks::UseGrid.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_grid"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Table">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Table.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Table"</Link>
-                    <Link href=routes::doc::hooks::UseTable.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_table"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Tree">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::hooks::UseTree.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_tree"</Link>
-                </Stack>
-            </DrawerSection>
-        </DrawerSection>
+        // ── Selection ─────────────────────────────────────────────
+        <div class="drawer-section" data-level="1">
+            <Link href=routes::doc::SelectionDomain.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsCheckSquare margin=Margin::Right(em(1.0))/>
+                "Selection"
+            </Link>
+        </div>
 
-        // ── Layout ────────────────────────────────────────────────
+        // ── Input ───────────────────────────────────────────────
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsColumnsGap margin=Margin::Right(Size::Em(1.0))></Icon> "Layout"
+            <Link href=routes::doc::InputCategory.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsToggles margin=Margin::Right(em(1.0))/>
+                "Input"
+            </Link>
         }>
-            <DrawerSection level=3 header=move || "Separator">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Separator.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Separator"</Link>
-                    <Link href=routes::doc::hooks::UseSeparator.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_separator"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Tabs">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Tabs.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Tabs"</Link>
-                    <Link href=routes::doc::hooks::UseTabs.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_tabs"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Collapsible">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Collapsible.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Collapsible"</Link>
-                    <Link href=routes::doc::hooks::UseDisclosure.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_disclosure"</Link>
-                </Stack>
-            </DrawerSection>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::components::Stack.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Stack"</Link>
-                <Link href=routes::doc::components::Skeleton.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Skeleton"</Link>
-                <Link href=routes::doc::components::AppBar.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "App Bar"</Link>
-                <Link href=routes::doc::components::Drawer.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Drawer"</Link>
-                <Link href=routes::doc::hooks::UseToolbar.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_toolbar"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                // Concepts (alphabetical)
+                <Link href=routes::doc::Button.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Button"</Link>
+                <Link href=routes::doc::Checkbox.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Checkbox"</Link>
+                <Link href=routes::doc::Color.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Color"</Link>
+                <Link href=routes::doc::Combobox.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Combobox"</Link>
+                <Link href=routes::doc::Listbox.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Listbox"</Link>
+                <Link href=routes::doc::Radio.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Radio"</Link>
+                <Link href=routes::doc::Select.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Select"</Link>
+                <Link href=routes::doc::Slider.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Slider"</Link>
+                <Link href=routes::doc::TextField.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Text Field"</Link>
+                <Link href=routes::doc::Toggle.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Toggle"</Link>
+                // Standalone items (alphabetical, with badges)
+                <Link href=routes::doc::components::DateTime.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Date & Time"</Link>
+                <Link href=routes::doc::components::TiptapEditor.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Tiptap Editor"</Link>
+                <Link href=routes::doc::hooks::UseLabel.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_label"</Link>
             </Stack>
         </DrawerSection>
 
-        // ── Feedback ──────────────────────────────────────────────
+        // ── Data Display ────────────────────────────────────────
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsChatSquare margin=Margin::Right(Size::Em(1.0))></Icon> "Feedback"
+            <Link href=routes::doc::DataDisplay.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsGrid margin=Margin::Right(em(1.0))/>
+                "Data Display"
+            </Link>
         }>
-            <DrawerSection level=3 header=move || "Progress">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Progress.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Progress"</Link>
-                    <Link href=routes::doc::hooks::UseProgressBar.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_progress_bar"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Chip">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::components::Chip.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Chip"</Link>
-                    <Link href=routes::doc::hooks::UseTag.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_tag"</Link>
-                </Stack>
-            </DrawerSection>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::components::Alert.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Alert"</Link>
-                <Link href=routes::doc::components::Toast.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Toast"</Link>
-                <Link href=routes::doc::components::Kbd.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Kbd"</Link>
-                <Link href=routes::doc::hooks::UseMeter.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_meter"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                // Concepts (alphabetical)
+                <Link href=routes::doc::Grid.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Grid"</Link>
+                <Link href=routes::doc::Table.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Table"</Link>
+                // Standalone items
+                <Link href=routes::doc::hooks::UseTree.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_tree"</Link>
             </Stack>
         </DrawerSection>
 
-        // ── Navigation ────────────────────────────────────────────
+        // ── Layout ──────────────────────────────────────────────
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsSignpost margin=Margin::Right(Size::Em(1.0))></Icon> "Navigation"
+            <Link href=routes::doc::LayoutCategory.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsColumnsGap margin=Margin::Right(em(1.0))/>
+                "Layout"
+            </Link>
         }>
-            <DrawerSection level=3 header=move || "Link">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::atoms::Link.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "Link"</Link>
-                    <Link href=routes::doc::hooks::UseLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_link"</Link>
-                </Stack>
-            </DrawerSection>
-            <DrawerSection level=3 header=move || "Anchor Link">
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                    <Link href=routes::doc::atoms::AnchorLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="atom"/> "AnchorLink"</Link>
-                    <Link href=routes::doc::hooks::UseAnchorLink.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_anchor_link"</Link>
-                </Stack>
-            </DrawerSection>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::hooks::UseBreadcrumbs.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_breadcrumbs"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                // Concepts (alphabetical)
+                <Link href=routes::doc::Collapsible.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Collapsible"</Link>
+                <Link href=routes::doc::Separator.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Separator"</Link>
+                <Link href=routes::doc::Tabs.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tabs"</Link>
+                // Standalone items (alphabetical, with badges)
+                <Link href=routes::doc::components::AppBar.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "App Bar"</Link>
+                <Link href=routes::doc::components::Drawer.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Drawer"</Link>
+                <Link href=routes::doc::components::Skeleton.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Skeleton"</Link>
+                <Link href=routes::doc::components::Stack.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Stack"</Link>
+                <Link href=routes::doc::hooks::UseToolbar.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_toolbar"</Link>
             </Stack>
         </DrawerSection>
 
-        // ── General ───────────────────────────────────────────────
+        // ── Feedback ────────────────────────────────────────────
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsCircleSquare margin=Margin::Right(Size::Em(1.0))></Icon> "General"
+            <Link href=routes::doc::Feedback.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsChatSquare margin=Margin::Right(em(1.0))/>
+                "Feedback"
+            </Link>
         }>
-            <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="link-stack">
-                <Link href=routes::doc::components::Typography.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Typography"</Link>
-                <Link href=routes::doc::components::Icon.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Icon"</Link>
-                <Link href=routes::doc::components::Callback.materialize() attr:class="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Callback"</Link>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                // Concepts (alphabetical)
+                <Link href=routes::doc::Chip.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Chip"</Link>
+                <Link href=routes::doc::Modal.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Modal"</Link>
+                <Link href=routes::doc::Popover.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Popover"</Link>
+                <Link href=routes::doc::Progress.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Progress"</Link>
+                <Link href=routes::doc::Tooltip.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Tooltip"</Link>
+                // Standalone items (alphabetical, with badges)
+                <Link href=routes::doc::components::Alert.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Alert"</Link>
+                <Link href=routes::doc::components::Kbd.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Kbd"</Link>
+                <Link href=routes::doc::components::Toast.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Toast"</Link>
+                <Link href=routes::doc::hooks::UseMeter.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_meter"</Link>
+            </Stack>
+        </DrawerSection>
+
+        // ── Navigation ──────────────────────────────────────────
+        <DrawerSection level=1 header=move || view! {
+            <Link href=routes::doc::Navigation.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsSignpost margin=Margin::Right(em(1.0))/>
+                "Navigation"
+            </Link>
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                // Concepts (alphabetical)
+                <Link href=routes::doc::Link.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Link"</Link>
+                <Link href=routes::doc::Menu.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Menu"</Link>
+                // Standalone items
+                <Link href=routes::doc::hooks::UseBreadcrumbs.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_breadcrumbs"</Link>
+            </Stack>
+        </DrawerSection>
+
+        // ── General ─────────────────────────────────────────────
+        <DrawerSection level=1 header=move || view! {
+            <Link href=routes::doc::General.materialize() classes="drawer-domain-link"
+                on:click=move |_| close_doc_drawer_on_mobile()>
+                <Icon icon=icondata::BsCircleSquare margin=Margin::Right(em(1.0))/>
+                "General"
+            </Link>
+        }>
+            <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
+                <Link href=routes::doc::components::Typography.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Typography"</Link>
+                <Link href=routes::doc::components::Icon.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Icon"</Link>
+                <Link href=routes::doc::components::Callback.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Callback"</Link>
             </Stack>
         </DrawerSection>
     };
@@ -278,23 +223,19 @@ pub fn DocLayout() -> impl IntoView {
     view! {
         <div id="doc-layout" style=move || format!(
             "margin-left: {}em; margin-right: {}em;",
-            match app_layout_context.doc_drawer_closed.get() {
-                true => 0,
-                false => 16,
+            if !app_layout_context.is_small.get() && !app_layout_context.doc_drawer_closed.get() {
+                16 // desktop: drawer open
+            } else {
+                0 // mobile: drawer overlays, or desktop: drawer closed
             },
-            match app_layout_context.is_medium.get() {
-                true => 0,
-                false => 12,
-            },
+            if app_layout_context.is_medium.get() { 0 } else { 12 },
         )>
             <Drawer
                 side=DrawerSide::Left
                 attr:id="doc-drawer"
                 shown=Signal::derive(move || !app_layout_context.doc_drawer_closed.get())
-                attr:class=drawer_class
-                attr:style=format!("position: fixed; left: 0; top: {APP_BAR_HEIGHT}; bottom: 0;")
             >
-                <Stack orientation=StackOrientation::Vertical spacing=Size::Zero attr:class="menu">
+                <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="menu">
                     { drawer_content }
                 </Stack>
             </Drawer>
@@ -313,6 +254,7 @@ fn DocBadge(#[prop(into)] kind: &'static str) -> impl IntoView {
 }
 
 #[component]
+#[allow(clippy::needless_pass_by_value)]
 pub fn DrawerSection(
     level: u32,
     #[prop(into)] header: ViewFn,
@@ -325,15 +267,5 @@ pub fn DrawerSection(
             </div>
             { children() }
         </div>
-    }
-}
-
-#[component]
-#[allow(dead_code)]
-pub fn New() -> impl IntoView {
-    view! {
-        <Chip attr:style="color: var(--primary-color); background-color: transparent; margin: 0; padding: 0;">
-            "NEW"
-        </Chip>
     }
 }

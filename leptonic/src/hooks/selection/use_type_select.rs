@@ -1,5 +1,3 @@
-use std::hash::Hash;
-
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
@@ -7,23 +5,27 @@ use leptos::{
 };
 use web_sys::KeyboardEvent;
 
-use crate::{hooks::IntoAttrs, utils::EventHandler};
+use super::SelectionKey;
+use crate::{
+    hooks::IntoAttrs,
+    utils::{
+        EventHandler,
+        filter::{CollatorOptions, CollatorSensitivity, Filter},
+        i18n::use_locale_or_default,
+    },
+};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useTypeSelect.ts
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_type_select` hook.
 #[derive(Clone)]
 pub struct UseTypeSelectInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Whether type select is disabled.
     pub disabled: Signal<bool>,
@@ -40,11 +42,11 @@ where
     /// Callback to set the focused key.
     pub on_focus: Callback<Option<K>>,
 
-    /// Timeout for resetting the search string (default: 500ms).
+    /// Timeout for resetting the search string (default: 1000ms, matching react-aria).
     pub timeout_ms: u64,
 }
 
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseTypeSelectInput<K> {
+impl<K: SelectionKey> Default for UseTypeSelectInput<K> {
     fn default() -> Self {
         Self {
             disabled: Signal::derive(|| false),
@@ -52,7 +54,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseTypeSelectInpu
             get_key_label: Callback::new(|_| String::new()),
             focused_key: Signal::derive(|| None),
             on_focus: Callback::new(|_| {}),
-            timeout_ms: 500,
+            timeout_ms: 1000,
         }
     }
 }
@@ -119,7 +121,7 @@ pub type UseTypeSelectAttrs = (On<ev::keydown, SharedEventCallback<KeyboardEvent
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_type_select<K>(input: UseTypeSelectInput<K>) -> UseTypeSelectReturn
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     // Get current time in milliseconds using wasm-bindgen
     fn now_ms() -> f64 {
@@ -147,7 +149,7 @@ where
     let (search_string, set_search_string) = signal(String::new());
 
     // Last keypress timestamp for timeout
-    let last_keypress: StoredValue<f64, LocalStorage> = StoredValue::new_local(0.0);
+    let last_keypress: StoredValue<f64> = StoredValue::new(0.0);
 
     // Clear search string
     let clear_search = Callback::new(move |_: ()| {
@@ -172,14 +174,31 @@ where
             return;
         }
 
-        e.prevent_default();
-
-        // Check if timeout has elapsed
+        // Check if timeout has elapsed (needed for space handling below).
         let current_time = now_ms();
         let last_time = last_keypress.get_value();
         #[allow(clippy::cast_precision_loss)]
         let timeout = timeout_ms as f64;
         let should_reset = current_time - last_time > timeout;
+
+        // Determine if the search is effectively active. If the timeout has elapsed,
+        // the search buffer will be reset by the current keystroke, so it's effectively empty.
+        let search_active = !search_string.get_untracked().is_empty() && !should_reset;
+
+        // Ignore space when there's no active search — let it bubble so the
+        // selection handler can use it. Space is only consumed by type-ahead when
+        // there's already accumulated text from recent keystrokes.
+        if key == " " && !search_active {
+            return;
+        }
+
+        // When Space is part of an active search, prevent it from triggering selection
+        // and stop propagation so the collection's keyboard handler doesn't see it.
+        if key == " " && search_active {
+            e.stop_propagation();
+        }
+
+        e.prevent_default();
 
         // Update last keypress time
         last_keypress.set_value(current_time);
@@ -193,7 +212,15 @@ where
         };
         set_search_string.set(new_search.clone());
 
-        // Find matching item
+        // Find matching item using locale-aware comparison
+        let locale_filter = Filter::new(
+            &use_locale_or_default(),
+            &CollatorOptions {
+                sensitivity: CollatorSensitivity::Base,
+                ..CollatorOptions::default()
+            },
+        );
+
         let keys = all_keys.get_untracked();
         let current_focused = focused_key.get_untracked();
 
@@ -208,9 +235,9 @@ where
         for i in 0..len {
             let idx = (current_idx + i) % len;
             let item_key = &keys[idx];
-            let label = get_key_label.run(item_key.clone()).to_lowercase();
+            let label = get_key_label.run(item_key.clone());
 
-            if label.starts_with(&new_search) {
+            if locale_filter.starts_with(&label, &new_search) {
                 on_focus.run(Some(item_key.clone()));
                 return;
             }
@@ -219,8 +246,8 @@ where
         // If single character and no match found from current, search from beginning
         if new_search.len() == 1 {
             for item_key in &keys {
-                let label = get_key_label.run(item_key.clone()).to_lowercase();
-                if label.starts_with(&new_search) {
+                let label = get_key_label.run(item_key.clone());
+                if locale_filter.starts_with(&label, &new_search) {
                     on_focus.run(Some(item_key.clone()));
                     return;
                 }

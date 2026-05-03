@@ -2,13 +2,7 @@ use leptos::prelude::*;
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/checkbox/src/useCheckboxGroupState.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// State for managing checkbox state.
 #[derive(Clone, Copy)]

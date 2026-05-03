@@ -505,7 +505,21 @@
   --typography-code-border-radius: 0.25em;
   --typography-code-background-color: #2d2f34;
   --typography-code-color: #fff5e2;
+  --typography-code-font-family: monospace;
   --typography-inline-code-margin: 0;
   --typography-inline-code-padding: 0.28em;
   --typography-inline-code-line-height: 1em;
+  --typography-inline-code-font-family: var(--typography-code-font-family);
+
+  // Syntax highlighting (Monokai Pro)
+  --syntax-keyword: #ff6188;
+  --syntax-comment: #717171;
+  --syntax-string: #ffd866;
+  --syntax-storage: #ff6188;
+  --syntax-entity: #a9dc76;
+  --syntax-variable: #fc9867;
+  --syntax-constant: #ab9df2;
+  --syntax-support: #78dce8;
+  --syntax-function: #71cc5c;
+  --syntax-punctuation: #fcfcfa;
 }

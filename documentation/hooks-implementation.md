@@ -68,7 +68,7 @@ Hooks expose (through `*Props`):
 
 - their attributes as `Signal`s
 - their event handlers as `EventHandler<E>`s
-- special attributes like `ElementCaptureAttr`
+- special attributes like `ElementCaptureAttr` from the standalone `leptos-element-capture` crate
 
 Every `*Props` type support conversion to the `*Attrs` type.
 
@@ -144,6 +144,43 @@ fn main() {
 
 `*Props` types store event handlers as `EventHandler` instances. This allows easy merges of different hook return
 values.
+
+## Event Propagation Control
+
+Leptonic events stop propagation by default. User handlers call `continue_propagation()` to opt in to
+bubbling.
+
+### The Propagation Trait (Sealed)
+
+All user-facing event types (e.g., `PressEvent`, `HoverEvent`) must implement the sealed `Propagation` trait
+from `utils/propagation_control.rs`:
+
+- `continue_propagation()` — opt in to letting the native DOM event bubble.
+- `stop_propagation()` — explicit no-op (propagation is already stopped by default). Emits a compile-time
+  deprecation warning to educate callers.
+- `is_propagation_stopped() -> bool` — check current state.
+
+### How It Works
+
+1. Hook creates a `PropagationControl` (wraps `Arc<AtomicBool>` + callback).
+2. Hook constructs the event (e.g., `PressEvent`) with a shared reference to the `PropagationControl`.
+3. Hook runs the user's `on_press` handler, passing the event.
+4. After the handler returns, the hook checks `is_propagation_stopped()` on the shared control.
+5. If propagation was not continued, the hook calls `stop_propagation()` on the native DOM event.
+
+### For Raw DOM Events
+
+`EventWrapper<E>` from `utils/event_wrapper.rs` wraps any `E: AsRef<web_sys::Event>` and implements
+`Propagation`. Use this when exposing raw DOM events through hook APIs.
+
+### When to Implement
+
+Every user-facing event type must implement `Propagation`. If adding a new event type to a hook, implement
+the sealed trait via `PropagationControl`.
+
+**Reference**: `PressEvent` in `hooks/interactions/use_press.rs`
+
+---
 
 ## Merging Props from Multiple Hooks
 
@@ -444,6 +481,32 @@ Some("false")       // aria-selected="false"
 });
 ```
 
+### Typed ARIA Roles
+
+`utils/aria.rs` provides an `AriaRole` enum covering all WAI-ARIA roles, plus typed enums for other ARIA
+attributes (`AriaDisabled`, `AriaExpanded`, `AriaCheckedTristate`, etc.).
+
+**Integration with Leptos:** The `impl_attribute_value_via_str!` macro implements `AttributeValue` for each
+type, enabling direct use in attribute tuples:
+
+```rust
+// In Props
+pub role: Signal<AriaRole>,
+
+// In Attrs type
+Attr<attr::Role, Signal<AriaRole> >,
+```
+
+**Other typed ARIA types:**
+
+- Boolean: `AriaDisabled`, `AriaExpanded`, `AriaHidden`, `AriaPressed`, `AriaRequired`, `AriaSelected`, etc.
+- Tristate: `AriaCheckedTristate` (`True`, `False`, `Mixed`)
+- Multi-value enums: `AriaOrientation`, `AriaSort`, `AriaAutoComplete`, etc.
+- Reference IDs: `String` or `Signal<String>` for `aria-labelledby`, `aria-describedby`, etc.
+
+**Design principle:** No `Undefined` variants — optionality is expressed via `Option<T>`. An `Option<AriaRole>`
+that is `None` produces no `role` attribute in the DOM.
+
 ### Element Capture Pattern
 
 Many hooks cannot solely rely on returning spreadable props. They often need direct programmatic access to DOM
@@ -451,13 +514,13 @@ element, e.g. for focus management or dimension retrieval.
 
 Hooks should NOT require users to manually declare and bind `NodeRef`s to the element to which props are spread as well.
 
-Hooks should use `CapturedElement`, which bundles a `StoredValue` for the DOM element with a `Trigger` for reactive
-tracking. This ensures that Effects reading the element via `CapturedElement::get()` automatically re-run when the
-element is captured — which is critical when the element lives inside a reactive boundary like `<Show>` or is rendered
-during client-side navigation:
+Hooks should use `CapturedElement` from the standalone `leptos-element-capture` crate. It bundles a `StoredValue` for
+the DOM element with a `Trigger` for reactive tracking. This ensures that Effects reading the element via
+`CapturedElement::get()` automatically re-run when the element is captured — which is critical when the element lives
+inside a reactive boundary like `<Show>` or is rendered during client-side navigation:
 
 ```rust
-use leptonic::utils::element_capture::{CapturedElement, ElementCaptureAttr};
+use leptos_element_capture::{CapturedElement, ElementCaptureAttr};
 
 fn use_foo() -> UseFooReturn {
     let element = CapturedElement::new();
@@ -485,6 +548,24 @@ navigation, the element may be captured *after* Effects have already run once. `
 notifying a `Trigger`, causing dependent Effects to re-run.
 
 **Reference**: `use_menu_item`
+
+### CapturedElement vs IntoElementMaybeSignal
+
+**Always strongly prefer `CapturedElement`.** It gives hooks a shared, crate-level element-capture abstraction and
+frees users from having to create and bind a `NodeRef` manually — the hook captures the element automatically via
+attribute spreading.
+
+`IntoElementMaybeSignal` (generic element input) is a **last resort**, only required when ALL of these are true:
+
+1. The hook does NOT spread props onto the element (so it cannot capture the element itself).
+2. No other hook being used alongside could provide the element via its own `CapturedElement`.
+
+Even when a hook doesn't spread props, if it's typically used alongside another hook that does spread (and
+thus captures the element), the non-spreading hook should accept a `CapturedElement` from the spreading hook
+rather than forcing the user to create a `NodeRef`.
+
+**Reference**: `use_overlay_position` accepts a `CapturedElement` from the trigger hook rather than requiring
+a separate `NodeRef`.
 
 ### Element Reference Pattern
 
@@ -586,6 +667,7 @@ hook's mutation path. This breaks invariants and prevents the hook from intercep
 (e.g., firing `on_open_change`, resetting related state).
 
 **Convention:** Hooks always create and own their internal `WriteSignal`. They expose:
+
 - A read-only `Signal<T>` for observation
 - Semantic mutation callbacks (`open`, `close`, `toggle`, `set_open`, etc.)
 - An `on_X_change` callback that fires on every mutation
@@ -596,6 +678,94 @@ external signal to control the state.
 When porting a React Aria hook that accepts both `isOpen` and `defaultOpen` via `useControlledState`,
 we automatically deviate by only supporting `default_open` and hook-owned state. This is a
 **project-wide pattern**, not a per-hook deviation.
+
+## Animation Lifecycle Hooks
+
+The animation hooks (`hooks/animation/`) manage CSS animation lifecycles using the Web Animations API.
+
+### `use_enter_animation`
+
+- **Input**: `CapturedElement` + `is_ready: Signal<bool>`
+- **Output**: `is_entering: Signal<bool>`
+- Watches for CSS animations on the element when `is_ready` becomes true. Reports `true` while animations
+  are running, `false` when complete.
+
+### `use_exit_animation`
+
+- **Input**: `CapturedElement` + `is_open: Signal<bool>`
+- **Output**: `is_exiting: Signal<bool>`, `exit_state: Signal<ExitState>`
+- `ExitState` transitions: `Open` → `Exiting` → `Closed`.
+- When `is_open` becomes `false`, transitions to `Exiting` and watches animations. Transitions to `Closed`
+  when animations complete.
+
+### Internal: `watch_animations()`
+
+Uses `Element.getAnimations()` + `Promise.all(animation.finished)` to detect animation completion. This is
+a Web Animations API feature — during SSR, no API calls are made; enter reports `false`, exit follows
+`is_open` directly.
+
+### Usage Pattern (Overlays)
+
+Exit animations require the element to stay mounted during the animation:
+
+```rust
+let exit = use_exit_animation(UseExitAnimationInput {
+element: captured_element.clone(),
+is_open: is_open.into(),
+});
+
+// Keep element mounted until exit animation completes
+let is_mounted = Signal::derive(move | | {
+is_open.get() | | exit.exit_state.get() == ExitState::Exiting
+});
+```
+
+**Reference**: `hooks/animation/use_enter_animation.rs`, `hooks/animation/use_exit_animation.rs`
+
+---
+
+## Form Validation Hooks
+
+Three cooperating hooks handle form validation, typically composed internally by field hooks.
+
+### `use_form_validation_state`
+
+State management for multiple validation sources:
+
+- Controlled validation, server errors (via `FormValidationContext`), client-side `validate` functions,
+  and native HTML5 validation.
+- `ValidationBehavior::Aria` — validation surfaced via ARIA attributes (accessible, non-intrusive).
+- `ValidationBehavior::Native` — validation surfaced via native constraint validation API (`setCustomValidity()`).
+- Returns `ValidationResult` aggregating `is_invalid`, `validation_errors`, and `validation_details`
+  (`ValidityStateSnapshot`).
+
+### `use_form_validation`
+
+DOM connection hook (side-effectual, no return value):
+
+- Calls `setCustomValidity()` on the form element to surface validation errors.
+- Listens for native validation events.
+
+### `use_form_reset`
+
+Detects parent `<form>` reset events:
+
+- Uses element capture to find the parent `<form>`.
+- Listens for `reset` events and triggers the provided callback.
+
+### Integration Pattern
+
+Field hooks compose all three internally:
+
+```rust
+let validation_state = use_form_validation_state(UseFormValidationStateInput { .. });
+use_form_validation(UseFormValidationInput { element, validation_state,..});
+use_form_reset(UseFormResetInput { element, on_reset: reset_callback,..});
+```
+
+**Reference**: `hooks/form/use_form_validation_state.rs`
+
+---
 
 ## Based On React-Aria
 
@@ -661,13 +831,20 @@ Register in `hooks/mod.rs`, add route definition in `lib.rs`, routing in `app.rs
 
 ## Reference Implementations
 
-| Pattern                           | File                                                 |
-|-----------------------------------|------------------------------------------------------|
-| Hook composition, attrs           | `leptonic/src/hooks/button.rs`                       |
-| Props pattern, mergeable handlers | `leptonic/src/hooks/interactions/use_press.rs`       |
-| Props merging (`MergeWith`)       | `leptonic/src/hooks/merged/mod.rs`                   |
-| CustomAttr                        | `leptonic/src/hooks/focus/use_focus_ring.rs`         |
-| Element reference                 | `leptonic/src/hooks/overlay/use_overlay_position.rs` |
-| Element capture                   | `leptonic/src/hooks/menu/use_menu_item.rs`           |
-| Dynamic listeners, drag           | `leptonic/src/hooks/interactions/use_press.rs`       |
-| Slider drag                       | `leptonic/src/hooks/form/use_slider.rs`              |
+| Pattern                           | File                                                        |
+|-----------------------------------|-------------------------------------------------------------|
+| Hook composition, attrs           | `leptonic/src/hooks/button.rs`                              |
+| Props pattern, mergeable handlers | `leptonic/src/hooks/interactions/use_press.rs`              |
+| Props merging (`MergeWith`)       | `leptonic/src/hooks/merged/mod.rs`                          |
+| CustomAttr                        | `leptonic/src/hooks/focus/use_focus_ring.rs`                |
+| Element reference                 | `leptonic/src/hooks/overlay/use_overlay_position.rs`        |
+| Element capture                   | `leptonic/src/hooks/menu/use_menu_item.rs`                  |
+| Dynamic listeners, drag           | `leptonic/src/hooks/interactions/use_press.rs`              |
+| Slider drag                       | `leptonic/src/hooks/form/use_slider.rs`                     |
+| Animation lifecycle (enter)       | `leptonic/src/hooks/animation/use_enter_animation.rs`       |
+| Animation lifecycle (exit)        | `leptonic/src/hooks/animation/use_exit_animation.rs`        |
+| Form validation state             | `leptonic/src/hooks/form/use_form_validation_state.rs`      |
+| DOM validation binding            | `leptonic/src/hooks/form/use_form_validation.rs`            |
+| Form reset detection              | `leptonic/src/hooks/form/use_form_reset.rs`                 |
+| Event propagation control         | `leptonic/src/hooks/interactions/use_press.rs` (PressEvent) |
+| Keyboard DnD                      | `leptonic/src/hooks/dnd/drag_manager.rs`                    |

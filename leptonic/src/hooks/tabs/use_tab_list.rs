@@ -11,20 +11,16 @@ use super::use_tabs::TabsOrientation;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaOrientation, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaOrientation, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_tab_list` hook.
 #[derive(Debug, Clone)]

@@ -1,5 +1,8 @@
-.leptonic-modal-host {
-  display: none;
+.leptonic-modal-backdrop {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
   position: fixed;
   top: 0;
   left: 0;
@@ -7,31 +10,8 @@
   bottom: 0;
   z-index: 9000;
   padding: 0.5em;
-
-  &[data-has-modals="true"] {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-  }
-}
-
-.leptonic-modal-backdrop {
-  display: block;
-  position: absolute;
-  width: 100%;
-  height: 100%;
   background: rgba(92, 92, 92, 0.5);
   backdrop-filter: blur(5px);
-}
-
-.leptonic-modals {
-  display: block;
-  z-index: 1;
-
-  > :not(:last-child) {
-    display: none;
-  }
 }
 
 .leptonic-modal {

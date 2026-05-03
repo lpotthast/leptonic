@@ -11,20 +11,16 @@ use web_sys::KeyboardEvent;
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaOrientation, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaOrientation, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toolbar/src/useToolbar.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// The orientation of a toolbar.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]

@@ -1,9 +1,13 @@
 use leptos::prelude::*;
 
 use crate::{
-    hooks::{use_calendar_state, UseCalendarStateInput},
-    utils::time::{GuideMode, InMonth},
     Out,
+    hooks::{UseCalendarStateInput, use_calendar_state},
+    utils::{
+        classes::Classes,
+        styles::Styles,
+        time::{GuideMode, InMonth},
+    },
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -24,14 +28,20 @@ pub fn DateSelector(
     #[prop(into, optional, default = GuideMode::CalendarFirst.into())] guide_mode: Signal<
         GuideMode,
     >,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let calendar = use_calendar_state(UseCalendarStateInput {
-        initial_value: value,
+        default_value: Some(value),
         min,
         max,
+        on_change: Some(Callback::new(move |val: Option<time::OffsetDateTime>| {
+            if let Some(v) = val {
+                on_change.set(v);
+            }
+        })),
+        ..Default::default()
     });
-
-    Effect::new(move |_| on_change.set(calendar.selected.get()));
 
     let (show, set_show) = signal(match guide_mode.get() {
         GuideMode::CalendarFirst => Selection::Day,
@@ -42,7 +52,7 @@ pub fn DateSelector(
     let (short_weekday_names, _) = signal(create_week_day_names());
 
     view! {
-        <div class="leptonic-datetime">
+        <div class=classes.add("leptonic-datetime") style=styles>
             <div class="leptonic-date-selector">
                 <div class="leptonic-calender-month">
                     <div class="actions">
@@ -50,7 +60,7 @@ pub fn DateSelector(
                             Selection::Year => {
                                 view! {
                                     <div
-                                        on:click=move |_| calendar.select_previous_years()
+                                        on:click=move |_| calendar.navigate_years_backward.run(())
                                         class="previous arrow-left"
                                     ></div>
                                     <div
@@ -62,7 +72,7 @@ pub fn DateSelector(
                                         {calendar.years_range}
                                     </div>
                                     <div
-                                        on:click=move |_| calendar.select_next_years()
+                                        on:click=move |_| calendar.navigate_years_forward.run(())
                                         class="next arrow-right"
                                     ></div>
                                 }
@@ -71,7 +81,7 @@ pub fn DateSelector(
                             Selection::Month => {
                                 view! {
                                     <div
-                                        on:click=move |_| calendar.select_previous_year()
+                                        on:click=move |_| calendar.focus_previous_section.run(true)
                                         class="previous arrow-left"
                                     ></div>
                                     <div
@@ -80,10 +90,10 @@ pub fn DateSelector(
                                         }
                                         class="current-date"
                                     >
-                                        {move || calendar.staging.get().year()}
+                                        {move || calendar.focused_date.get().year()}
                                     </div>
                                     <div
-                                        on:click=move |_| calendar.select_next_year()
+                                        on:click=move |_| calendar.focus_next_section.run(true)
                                         class="next arrow-right"
                                     ></div>
                                 }
@@ -92,7 +102,7 @@ pub fn DateSelector(
                             Selection::Day => {
                                 view! {
                                     <div
-                                        on:click=move |_| calendar.select_previous_month()
+                                        on:click=move |_| calendar.focus_previous_page.run(())
                                         class="previous arrow-left"
                                     ></div>
                                     <div
@@ -101,12 +111,12 @@ pub fn DateSelector(
                                         }
                                         class="current-date"
                                     >
-                                        {move || calendar.staging_month_name.get()}
+                                        {move || calendar.focused_month_name.get()}
                                         " "
-                                        {move || calendar.staging_year.get()}
+                                        {move || calendar.focused_year.get()}
                                     </div>
                                     <div
-                                        on:click=move |_| calendar.select_next_month()
+                                        on:click=move |_| calendar.focus_next_page.run(())
                                         class="next arrow-right"
                                     ></div>
                                 }
@@ -125,12 +135,12 @@ pub fn DateSelector(
                                         <div
                                             on:click=move |_| {
                                                 if !year.disabled {
-                                                    calendar.select_year(year);
+                                                    calendar.focus_year.run(year.number);
                                                     set_show.update(|show| *show = Selection::Month);
                                                 }
                                             }
                                             class="year"
-                                            class:is-staging=year.is_staging
+                                            class:is-staging=year.is_focused
                                             class:is-now=year.is_now
                                             class:disabled=year.disabled
                                         >
@@ -148,17 +158,17 @@ pub fn DateSelector(
                                 each=move || calendar.months.get()
                                 key=|month| month.index
                                 children=move |month| {
-                                    let month_clone = month.clone();
+                                    let month_index = month.index;
                                     view! {
                                         <div
                                             on:click=move |_| {
                                                 if !month.disabled {
-                                                    calendar.select_month(month_clone.clone());
+                                                    calendar.focus_month.run(month_index);
                                                     set_show.update(|show| *show = Selection::Day);
                                                 }
                                             }
                                             class="month"
-                                            class:is-staging=month.is_staging
+                                            class:is-staging=month.is_focused
                                             class:is-now=month.is_now
                                             class:disabled=month.disabled
                                         >
@@ -197,11 +207,11 @@ pub fn DateSelector(
                                                         <div
                                                             on:click=move |_| {
                                                                 if !day.disabled {
-                                                                    calendar.select_day(day);
+                                                                    calendar.select_date.run(day.date_time);
                                                                 }
                                                             }
                                                             class="day"
-                                                            class:is-staging=day.is_staging
+                                                            class:is-staging=day.is_focused || day.is_selected
                                                             class:is-now=day.is_now
                                                             class:not-in-month=day.in_month != InMonth::Current
                                                             class:disabled=day.disabled
@@ -225,7 +235,7 @@ pub fn DateSelector(
 }
 
 pub fn create_week_day_names() -> Vec<String> {
-    //let day_in_month = value.date().day(); // 1 based
+    //let day_in_month = value.date().day(); // 0 based
     //let days_from_monday = value.date().weekday().num_days_from_monday(); // 0 based
     //let monday = value.date().with_day(day_in_month - days_from_monday).format("%a").to_string();
 

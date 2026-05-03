@@ -1,16 +1,16 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, utils::color::HSV};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
+use super::demos::color_palette::ColorPaletteDemo;
+use super::demos::color_picker_full::ColorPickerFullDemo;
+use super::demos::color_preview::ColorPreviewDemo;
+use super::demos::hue_slider::HueSliderDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
 pub fn PageColorPicker() -> impl IntoView {
-    let (hsv, set_hsv) = signal(HSV::new());
-
-    let (hsv_test, set_hsv_test) = signal(HSV::new());
-    let hsv_test_rgb_preview = Signal::derive(move || hsv_test.get().into_rgb8());
-
     view! {
         <Article>
             <h1 id="color-picker" class="anchor">
@@ -20,16 +20,9 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <p>"Select colors using the "<Code inline=true>"<ColorPicker>"</Code>" component."</p>
 
-            <Code>
-                {indoc!(r"
-                    let (hsv, set_hsv) = signal(HSV::new());
-                    view! {
-                        <ColorPicker hsv=hsv set_hsv=set_hsv/>
-                    }
-                ")}
-            </Code>
-
-            <ColorPicker hsv=hsv set_hsv=set_hsv/>
+            <DemoShell source=include_str!("demos/color_picker_full.rs")>
+                <ColorPickerFullDemo />
+            </DemoShell>
 
             <h2 id="parts" class="anchor">
                 "Parts"
@@ -38,15 +31,6 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <p>"The "<Code inline=true>"<ColorPicker>"</Code>" build on top of a few other components build to help work with colors. You may use them directly and build your own color picker."</p>
 
-            <p>"Let's define a HSV color with a derived RGB representation. We will use them for the next component on this page."</p>
-
-            <Code>
-                {indoc!(r"
-                    let (hsv, set_hsv) = signal(HSV::new());
-                    let rgb = Signal::derive(move || hsv.get().into_rgb8());
-                ")}
-            </Code>
-
             <h3 id="part-color-preview" class="anchor">
                 "ColorPreview"
                 <AnchorLink href="#part-color-preview" description="Direct link to section: Part - ColorPreview"/>
@@ -54,15 +38,9 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <p>"The "<Code inline=true>"<ColorPreview>"</Code>" component simply displays a reactive color patch based on the given RGB color signal."</p>
 
-            <Code>
-                {indoc!(r#"
-                    view! {
-                        <ColorPreview rgb=rgb style="width: 5em%; height: 5em;"/>
-                    }
-                "#)}
-            </Code>
-
-            <ColorPreview rgb=hsv_test_rgb_preview attr:style="width: 5em%; height: 5em;"/>
+            <DemoShell source=include_str!("demos/color_preview.rs")>
+                <ColorPreviewDemo />
+            </DemoShell>
 
             <h3 id="part-color-palette" class="anchor">
                 "ColorPalette"
@@ -75,25 +53,9 @@ pub fn PageColorPicker() -> impl IntoView {
                 "saturation (S, x-axis) and value (V, y-axis) of the HSV color by dragging a handle on the displayed surface."
             </p>
 
-            <Code>
-                {indoc!(r#"
-                    view! {
-                        <ColorPalette
-                            hsv=hsv_test
-                            set_saturation=move |s| set_hsv.update(|hsv| hsv.saturation = s)
-                            set_value=move |v| set_hsv.update(|hsv| hsv.value = v)
-                            style="width: 10em; height: 5em;"
-                        />
-                    }
-                "#)}
-            </Code>
-
-            <ColorPalette
-                hsv=hsv_test
-                set_saturation=move |s| set_hsv_test.update(|hsv| hsv.saturation = s)
-                set_value=move |v| set_hsv_test.update(|hsv| hsv.value = v)
-                attr:style="width: 10em; height: 5em;"
-            />
+            <DemoShell source=include_str!("demos/color_palette.rs")>
+                <ColorPaletteDemo />
+            </DemoShell>
 
             <h3 id="part-hue-slider" class="anchor">
                 "HueSlider"
@@ -106,21 +68,9 @@ pub fn PageColorPicker() -> impl IntoView {
                 "The slider background displays the hue range as a color band, the knob displays the currently selected hue value at maximum saturation and value."
             </p>
 
-            <Code>
-                {indoc!(r"
-                    view! {
-                        <HueSlider
-                            hue=Signal::derive(move || hsv.get().hue)
-                            set_hue=move |hue| set_hsv.update(|hsv| hsv.hue = hue)
-                        />
-                    }
-                ")}
-            </Code>
-
-            <HueSlider
-                hue=Signal::derive(move || hsv_test.get().hue)
-                set_hue=move |hue| set_hsv_test.update(|hsv| hsv.hue = hue)
-            />
+            <DemoShell source=include_str!("demos/hue_slider.rs")>
+                <HueSliderDemo />
+            </DemoShell>
 
             <p>"If you look at the source of Leptonic's <ColorPicker>, you will see that there is not much more to it as what you saw here!"</p>
 
@@ -131,7 +81,7 @@ pub fn PageColorPicker() -> impl IntoView {
 
             <p>"You may overwrite any of the following CSS variables to meet your styling needs."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     --color-palette-knob-size
                     --color-palette-knob-border-width

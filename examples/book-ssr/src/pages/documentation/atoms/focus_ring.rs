@@ -1,8 +1,9 @@
 use indoc::indoc;
-use leptonic::{atoms::focus_ring::FocusRing, components::prelude::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use super::demos::focus_ring::FocusRingDemo;
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageAtomFocusRing() -> impl IntoView {
@@ -41,7 +42,7 @@ pub fn PageAtomFocusRing() -> impl IntoView {
                 "Wrap any focusable element with FocusRing. The element will receive a "<Code inline=true>"data-focus-visible"</Code>" attribute when focused via keyboard."
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     use leptonic::atoms::focus_ring::FocusRing;
 
@@ -63,7 +64,7 @@ pub fn PageAtomFocusRing() -> impl IntoView {
                 "This attribute is only present when the element is focused via keyboard navigation."
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     .my-button {
                         outline: none;
@@ -86,28 +87,9 @@ pub fn PageAtomFocusRing() -> impl IntoView {
                 "Click on it first - no ring appears. Then Tab to it - the focus ring becomes visible."
             </p>
 
-            <style>
-                "
-                .demo-focus-ring-button {
-                    padding: 0.75em 1.5em;
-                    font-size: 1em;
-                    cursor: pointer;
-                    background-color: var(--brand-color);
-                    color: white;
-                    border: none;
-                    border-radius: 0.25em;
-                    outline: none;
-                }
-                .demo-focus-ring-button[data-focus-visible] {
-                    outline: 3px solid var(--brand-color);
-                    outline-offset: 3px;
-                }
-                "
-            </style>
-
-            <FocusRing>
-                <button class="demo-focus-ring-button">"Focus me with Tab"</button>
-            </FocusRing>
+            <DemoShell source=include_str!("demos/focus_ring.rs")>
+                <FocusRingDemo />
+            </DemoShell>
 
             <h2 id="context" class="anchor">
                 "FocusRingContext"
@@ -119,7 +101,7 @@ pub fn PageAtomFocusRing() -> impl IntoView {
                 "Child components can access this context to read the current focus state."
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     use leptonic::atoms::focus_ring::{FocusRing, FocusRingContext};
 

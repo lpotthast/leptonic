@@ -1,5 +1,5 @@
 use leptos::{
-    attr::custom::{custom_attribute, CustomAttr},
+    attr::custom::{CustomAttr, custom_attribute},
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
@@ -8,22 +8,18 @@ use web_sys::FocusEvent;
 
 use crate::{
     hooks::{
-        focus::{
-            use_focus::{use_focus, UseFocusInput},
-            use_focus_visible::{use_focus_visible, UseFocusVisibleInput},
-            use_focus_within::{use_focus_within, FocusWithinEvent, UseFocusWithinInput},
-        },
         IntoAttrs, UseFocusVisibleReturn,
+        focus::{
+            use_focus::{UseFocusInput, use_focus},
+            use_focus_visible::{UseFocusVisibleInput, use_focus_visible},
+            use_focus_within::{FocusWithinEvent, UseFocusWithinInput, use_focus_within},
+        },
     },
     utils::EventHandler,
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/useFocusRing.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## ADDITIONAL FUNCTIONALITY
 //
 // - Additional `disabled`, `on_focus`, `on_blur`, `on_focus_change` props
@@ -36,8 +32,6 @@ use crate::{
 //   React-aria does not output any data attributes; consumers style based on the
 //   `isFocusVisible` boolean. Leptonic outputs a `data-focus-visible="true"`
 //   custom attribute for CSS-only styling. This is an ergonomic addition.
-//
-// =============================================================================
 
 /// Input parameters for the `use_focus_ring` hook.
 #[derive(Debug, Clone, Copy)]

@@ -1,41 +1,14 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::text_field_basic::TextFieldBasicDemo;
+use super::demos::text_field_search::TextFieldSearchDemo;
 
 #[component]
 pub fn PageUseTextField() -> impl IntoView {
-    // Simple signals for demo
-    let (text_value, set_text_value) = signal(String::new());
-    let (search_value, set_search_value) = signal(String::new());
-    let (number_value, set_number_value) = signal(50.0f64);
-
-    // Use the label hook for proper label associations
-    let UseLabelReturn {
-        label_props: username_label_props,
-        field_props: username_field_props,
-    } = use_label(UseLabelInput {
-        id: None,
-        label_element_type: Some(LabelElementType::Label),
-    });
-
-    let UseLabelReturn {
-        label_props: search_label_props,
-        field_props: search_field_props,
-    } = use_label(UseLabelInput {
-        id: None,
-        label_element_type: Some(LabelElementType::Label),
-    });
-
-    let UseLabelReturn {
-        label_props: quantity_label_props,
-        field_props: quantity_field_props,
-    } = use_label(UseLabelInput {
-        id: None,
-        label_element_type: Some(LabelElementType::Label),
-    });
-
     view! {
         <Article>
             <h1 id="text_field" class="anchor">
@@ -43,14 +16,25 @@ pub fn PageUseTextField() -> impl IntoView {
                 <AnchorLink href="#text_field" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hooks for creating accessible text inputs, search fields, and number fields with validation support."</p>
+            <p>
+                "Hooks for creating accessible text inputs, search fields, and number fields with validation support. "
+                "See the "<Link href=crate::routes::doc::TextField.materialize()>"Text Field overview"</Link>" for concept guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useTextField.html" target=LinkTarget::_Blank>
+                    "useTextField"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="use_text_field" class="anchor">
                 "use_text_field"
                 <AnchorLink href="#use_text_field" description="Direct link to use_text_field"/>
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseTextFieldStateReturn { value, set_value } = use_text_field_state(String::new());
 
@@ -72,29 +56,9 @@ pub fn PageUseTextField() -> impl IntoView {
                 "#)}
             </Code>
 
-            <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-                <label
-                    {..username_label_props.into_attrs()}
-                    style="display: block; font-weight: 500; margin-bottom: 0.25em;"
-                >
-                    "Username"
-                </label>
-                <input
-                    type="text"
-                    {..username_field_props.into_attrs()}
-                    placeholder="Enter username"
-                    prop:value=move || text_value.get()
-                    on:input=move |ev| set_text_value.set(event_target_value(&ev))
-                    maxlength="20"
-                    style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 250px;"
-                />
-                <p style="margin: 0.25em 0 0 0; font-size: 0.85em; color: #666;">
-                    "Choose a unique username."
-                </p>
-                <p style="margin: 0.5em 0 0 0; font-size: 0.85em;">
-                    "Value: " { move || text_value.get() } " (" { move || text_value.get().len() } "/20)"
-                </p>
-            </div>
+            <DemoShell source=include_str!("demos/text_field_basic.rs")>
+                <TextFieldBasicDemo />
+            </DemoShell>
 
             <h2 id="use_search_field" class="anchor">
                 "use_search_field"
@@ -103,7 +67,7 @@ pub fn PageUseTextField() -> impl IntoView {
 
             <p>"Search field with clear button and Enter/Escape handling."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseSearchFieldStateReturn { value, set_value, clear } =
                         use_search_field_state(String::new());
@@ -120,97 +84,21 @@ pub fn PageUseTextField() -> impl IntoView {
                 "#)}
             </Code>
 
-            <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-                <label
-                    {..search_label_props.into_attrs()}
-                    style="display: block; font-weight: 500; margin-bottom: 0.25em;"
-                >
-                    "Search"
-                </label>
-                <div style="display: flex; gap: 0.5em;">
-                    <input
-                        type="search"
-                        {..search_field_props.into_attrs()}
-                        placeholder="Search..."
-                        prop:value=move || search_value.get()
-                        on:input=move |ev| set_search_value.set(event_target_value(&ev))
-                        style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 250px;"
-                    />
-                    <button
-                        on:click=move |_| set_search_value.set(String::new())
-                        style="padding: 0.5em 1em; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;"
-                    >
-                        "Clear"
-                    </button>
-                </div>
-                <p style="margin: 0.5em 0 0 0; font-size: 0.85em;">
-                    "Press Enter to submit, Escape to clear"
-                </p>
-            </div>
+            <DemoShell source=include_str!("demos/text_field_search.rs")>
+                <TextFieldSearchDemo />
+            </DemoShell>
 
             <h2 id="use_number_field" class="anchor">
                 "use_number_field"
                 <AnchorLink href="#use_number_field" description="Direct link to use_number_field"/>
             </h2>
 
-            <p>"Numeric input with increment/decrement buttons and min/max/step validation."</p>
-
-            <Code>
-                {indoc!(r"
-                    let UseNumberFieldStateReturn { value, set_value, increment, decrement, .. } =
-                        use_number_field_state(50.0);
-
-                    let UseNumberFieldReturn { input_props, increment_props, decrement_props, label_props, .. } =
-                        use_number_field(UseNumberFieldInput {
-                            value: value.into(),
-                            min_value: 0.0,
-                            max_value: 100.0,
-                            step: 1.0,
-                            on_change: Some(Callback::new(move |v| set_value.run(v))),
-                            ..Default::default()
-                        });
-                ")}
-            </Code>
-
-            <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-                <label
-                    {..quantity_label_props.into_attrs()}
-                    style="display: block; font-weight: 500; margin-bottom: 0.25em;"
-                >
-                    "Quantity (0-100)"
-                </label>
-                <div style="display: flex; gap: 0.25em;">
-                    <button
-                        on:click=move |_| set_number_value.update(|v| *v = (*v - 1.0).max(0.0))
-                        style="padding: 0.5em 1em; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;"
-                    >
-                        "-"
-                    </button>
-                    <input
-                        type="number"
-                        {..quantity_field_props.into_attrs()}
-                        min="0"
-                        max="100"
-                        step="1"
-                        prop:value=move || number_value.get()
-                        on:input=move |ev| {
-                            if let Ok(v) = event_target_value(&ev).parse::<f64>() {
-                                set_number_value.set(v.clamp(0.0, 100.0));
-                            }
-                        }
-                        style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 80px; text-align: center;"
-                    />
-                    <button
-                        on:click=move |_| set_number_value.update(|v| *v = (*v + 1.0).min(100.0))
-                        style="padding: 0.5em 1em; border: 1px solid #ccc; border-radius: 4px; cursor: pointer;"
-                    >
-                        "+"
-                    </button>
-                </div>
-                <p style="margin: 0.5em 0 0 0; font-size: 0.85em;">
-                    "Value: " { move || format!("{:.0}", number_value.get()) }
-                </p>
-            </div>
+            <p>
+                "Numeric input with increment/decrement buttons, locale-aware formatting, "
+                "and floating-point precision handling. See the dedicated "
+                <Link href="/doc/text-field/number-field-hook">"Number Field Hook"</Link>
+                " page for full documentation and examples."
+            </p>
 
             <h2 id="keyboard" class="anchor">
                 "Keyboard Navigation"
@@ -237,6 +125,16 @@ pub fn PageUseTextField() -> impl IntoView {
                 <li>"Keyboard navigation support"</li>
                 <li>"Disabled and read-only states"</li>
             </ul>
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::TextField.materialize()>"Text Field overview"</Link></li>
+                <li><Link href=crate::routes::doc::text_field::Component.materialize()>"Text Field component"</Link></li>
+                <li><Link href=crate::routes::doc::Select.materialize()>"Select concept"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -247,6 +145,7 @@ pub fn PageUseTextField() -> impl IntoView {
                 Toc::Leaf { title: "use_number_field", link: "#use_number_field" },
                 Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

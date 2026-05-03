@@ -1,36 +1,31 @@
+#![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
+
 use leptos::prelude::*;
-use leptos_use::{use_event_listener_with_options, UseEventListenerOptions};
+use leptos_use::{UseEventListenerOptions, use_event_listener_with_options};
 use send_wrapper::SendWrapper;
 use wasm_bindgen::JsCast;
 use web_sys::PointerEvent;
 
 use crate::{
     hooks::IntoAttrs,
-    utils::{CapturedElement, ElementCaptureAttr, EventAccessors},
+    utils::{CapturedElement, ElementCaptureAttr, EventAccessors, dom_ext::node_contains},
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useInteractOutside.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // ## OMITTED FEATURES
 //
 // - Legacy mouse/touch fallback (`process.env.NODE_ENV === 'test'` branch) — WASM always has `PointerEvent`.
 //
 // ## DIFFERENT BEHAVIOR
 //
-// - Click handler passes `MouseEvent` as `PointerEvent` via `unchecked_into` (matches react-aria's
-//   JS loose typing — PointerEvent-specific fields return defaults).
-// - Document containment uses native `Node.contains()` instead of react-aria's shadow-DOM-aware
-//   `nodeContains()`. The `composedPath()` check handles the primary shadow DOM case.
+// - `on_interact_outside` callback receives `MouseEvent` (from the click event) rather than
+//   react-aria's loose `PointerEvent` typing. `on_interact_outside_start` receives a real
+//   `PointerEvent` from the pointerdown listener.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //
 // - Uses `ElementCaptureAttr` instead of `RefObject`.
-//
-// =============================================================================
 
 /// Input parameters for the `use_interact_outside` hook.
 #[derive(Debug, Clone)]
@@ -42,7 +37,8 @@ pub struct UseInteractOutsideInput {
     pub on_interact_outside_start: Option<Callback<PointerEvent>>,
 
     /// Handler called when an interaction completes outside the element.
-    pub on_interact_outside: Option<Callback<PointerEvent>>,
+    /// Receives a `MouseEvent` from the click listener (not `PointerEvent`).
+    pub on_interact_outside: Option<Callback<web_sys::MouseEvent>>,
 }
 
 #[derive(Debug)]
@@ -101,75 +97,95 @@ pub type UseInteractOutsideAttrs = (ElementCaptureAttr,);
 /// ```
 #[allow(clippy::needless_pass_by_value)]
 pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsideReturn {
-    let UseInteractOutsideInput {
-        disabled,
-        on_interact_outside_start,
-        on_interact_outside,
-    } = input;
-
-    let element = CapturedElement::new();
-
-    let is_pointer_down: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
-
-    // Set up pointer down listener to track interaction start.
-    // Uses `element.get()` (reactive) so the Effect re-runs when the element
-    // is captured — critical for client-side navigation where the element may
-    // not exist yet when the Effect first runs.
-    Effect::new(move |_| {
-        if disabled.get() {
-            return;
-        }
-
-        // Get document from the captured element's owner document.
-        // This correctly handles elements in iframes or shadow DOM.
-        let document = element.get().as_ref().and_then(|el| el.owner_document());
-
-        let Some(document) = document else {
-            return;
+    #[cfg(feature = "ssr")]
+    {
+        let _ = input;
+        let element = CapturedElement::new();
+        return UseInteractOutsideReturn {
+            props: UseInteractOutsideProps {
+                element_capture: element.attr(),
+            },
         };
+    }
 
-        let _cleanup_pointerdown = use_event_listener_with_options(
-            document.clone(),
-            leptos::ev::pointerdown,
-            move |e: PointerEvent| {
-                if disabled.get_untracked() {
-                    return;
-                }
+    #[cfg(not(feature = "ssr"))]
+    {
+        let UseInteractOutsideInput {
+            disabled,
+            on_interact_outside_start,
+            on_interact_outside,
+        } = input;
 
-                if on_interact_outside.is_some()
-                    && is_valid_event(&e, element.get_untracked().as_ref())
-                {
-                    if let Some(on_interact_outside_start) = on_interact_outside_start {
-                        on_interact_outside_start.run(e);
+        let element = CapturedElement::new();
+
+        let is_pointer_down: StoredValue<bool, LocalStorage> = StoredValue::new_local(false);
+
+        // Set up pointer down listener to track interaction start.
+        // Uses `element.get()` (reactive) so the Effect re-runs when the element
+        // is captured — critical for client-side navigation where the element may
+        // not exist yet when the Effect first runs.
+        Effect::new(move |_| {
+            // Reset pointer-down tracking when listeners are re-created.
+            // Prevents stale state from a previous overlay lifecycle (e.g., if
+            // the overlay closed via Escape while the pointer was down, the old
+            // click handler is cleaned up before it can reset is_pointer_down).
+            is_pointer_down.set_value(false);
+
+            if disabled.get() {
+                return;
+            }
+
+            // Get document from the captured element's owner document.
+            // This correctly handles elements in iframes or shadow DOM.
+            let document = element.get().as_ref().and_then(|el| el.owner_document());
+
+            let Some(document) = document else {
+                return;
+            };
+
+            let _cleanup_pointerdown = use_event_listener_with_options(
+                document.clone(),
+                leptos::ev::pointerdown,
+                move |e: PointerEvent| {
+                    if disabled.get_untracked() {
+                        return;
                     }
-                    is_pointer_down.set_value(true);
-                }
-            },
-            UseEventListenerOptions::default().capture(true),
-        );
 
-        let _cleanup_click = use_event_listener_with_options(
-            document,
-            leptos::ev::click,
-            move |e: web_sys::MouseEvent| {
-                if !disabled.get_untracked()
-                    && is_pointer_down.get_value()
-                    && is_valid_event(&e, element.get_untracked().as_ref())
-                {
-                    if let Some(on_interact_outside) = on_interact_outside {
-                        on_interact_outside.run(e.unchecked_into::<PointerEvent>());
+                    if on_interact_outside.is_some()
+                        && is_valid_event(&e, element.get_untracked().as_ref())
+                    {
+                        if let Some(on_interact_outside_start) = on_interact_outside_start {
+                            on_interact_outside_start.run(e);
+                        }
+                        is_pointer_down.set_value(true);
                     }
-                }
-                is_pointer_down.set_value(false);
-            },
-            UseEventListenerOptions::default().capture(true),
-        );
-    });
+                },
+                UseEventListenerOptions::default().capture(true),
+            );
 
-    UseInteractOutsideReturn {
-        props: UseInteractOutsideProps {
-            element_capture: element.attr(),
-        },
+            let _cleanup_click = use_event_listener_with_options(
+                document,
+                leptos::ev::click,
+                move |e: web_sys::MouseEvent| {
+                    if !disabled.get_untracked()
+                        && is_pointer_down.get_value()
+                        && is_valid_event(&e, element.get_untracked().as_ref())
+                    {
+                        if let Some(on_interact_outside) = on_interact_outside {
+                            on_interact_outside.run(e);
+                        }
+                    }
+                    is_pointer_down.set_value(false);
+                },
+                UseEventListenerOptions::default().capture(true),
+            );
+        });
+
+        UseInteractOutsideReturn {
+            props: UseInteractOutsideProps {
+                element_capture: element.attr(),
+            },
+        }
     }
 }
 
@@ -177,6 +193,9 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
 ///
 /// Works for both `PointerEvent` (from pointerdown) and `MouseEvent` (from click) because
 /// `PointerEvent` derefs to `MouseEvent` in the web-sys type hierarchy.
+///
+/// Uses shadow-DOM-aware `node_contains` for containment checks, matching react-aria's
+/// `nodeContains` behavior.
 fn is_valid_event(
     event: &web_sys::MouseEvent,
     element: Option<&SendWrapper<web_sys::Element>>,
@@ -186,13 +205,13 @@ fn is_valid_event(
         return false;
     }
 
-    // Check if target is still in the document
+    // Check if target is still in the document (shadow-DOM-aware)
     let target = event.expect_target();
     if let Some(target_node) = target.dyn_ref::<web_sys::Node>() {
         let owner_document = target_node.owner_document();
         if let Some(doc) = owner_document {
             if let Some(doc_element) = doc.document_element() {
-                if !doc_element.contains(Some(target_node)) {
+                if !node_contains(Some(doc_element.as_ref()), Some(target_node)).unwrap_or(false) {
                     return false;
                 }
             }
@@ -218,19 +237,10 @@ fn is_valid_event(
     // Dereference SendWrapper to get the actual element
     let el: &web_sys::Element = el;
 
-    // Check if the event target is outside our element using composedPath
-    // This handles shadow DOM correctly
-    let composed_path = event.composed_path();
-    for i in 0..composed_path.length() {
-        let path_el = composed_path.get(i);
-        if !path_el.is_undefined() && !path_el.is_null() {
-            if let Some(path_node) = path_el.dyn_ref::<web_sys::Element>() {
-                if path_node == el {
-                    // Event target is inside the element
-                    return false;
-                }
-            }
-        }
+    // Check if the event target is inside our element (shadow-DOM-aware).
+    // node_contains traverses shadow DOM boundaries via slot assignments and shadow root hosts.
+    if node_contains(Some(el.as_ref()), target.dyn_ref::<web_sys::Node>()).unwrap_or(false) {
+        return false;
     }
 
     // Event is outside the element

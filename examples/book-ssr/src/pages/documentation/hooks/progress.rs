@@ -1,41 +1,14 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*, prelude::Size};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::progress_determinate::ProgressDeterminateDemo;
+use super::demos::progress_indeterminate::ProgressIndeterminateDemo;
 
 #[component]
 pub fn PageUseProgressBar() -> impl IntoView {
-    let (value, set_value) = signal(65.0);
-
-    let UseProgressBarReturn {
-        progress_props,
-        label_props,
-        percentage: _,
-        value_label: _,
-        is_indeterminate: _,
-        progress_id: _,
-    } = use_progress_bar(UseProgressBarInput {
-        label: Some("Loading progress".into()),
-        value: Signal::derive(move || Some(value.get())),
-        min_value: 0.0,
-        max_value: 100.0,
-        show_value_label: true,
-        is_indeterminate: false,
-    });
-
-    let UseProgressBarReturn {
-        progress_props: indeterminate_props,
-        ..
-    } = use_progress_bar(UseProgressBarInput {
-        label: Some("Loading".into()),
-        value: Signal::derive(|| None),
-        min_value: 0.0,
-        max_value: 100.0,
-        show_value_label: false,
-        is_indeterminate: true,
-    });
-
     view! {
         <Article>
             <h1 id="use_progress_bar" class="anchor">
@@ -43,7 +16,16 @@ pub fn PageUseProgressBar() -> impl IntoView {
                 <AnchorLink href="#use_progress_bar" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hook for creating accessible progress indicators with support for determinate and indeterminate states."</p>
+            <p>"Hook for creating accessible progress indicators with support for determinate and indeterminate states. "
+               "See the "<Link href=crate::routes::doc::Progress.materialize()>"Progress overview"</Link>" for concept guidance."</p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useProgressBar.html" target=LinkTarget::_Blank>
+                    "useProgressBar"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="determinate" class="anchor">
                 "Determinate Progress"
@@ -52,38 +34,11 @@ pub fn PageUseProgressBar() -> impl IntoView {
 
             <p>"Shows a specific progress value:"</p>
 
-            <div style="margin: 1em 0; max-width: 400px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 0.5em;">
-                    <label id=label_props.id.clone()>"Loading progress"</label>
-                    <span>{ move || format!("{}%", value.get() as i32) }</span>
-                </div>
-                <div
-                    {..progress_props.into_attrs()}
-                    style="height: 8px; background: #ddd; border-radius: 4px; overflow: hidden;"
-                >
-                    <div style=move || format!(
-                        "height: 100%; background: var(--brand-color); transition: width 0.3s; width: {}%;",
-                        value.get()
-                    )></div>
-                </div>
-            </div>
+            <DemoShell source=include_str!("demos/progress_determinate.rs")>
+                <ProgressDeterminateDemo />
+            </DemoShell>
 
-            <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
-                <button
-                    on:click=move |_| set_value.update(|v| *v = (*v - 10.0).max(0.0))
-                    style="padding: 0.5em 1em; border-radius: 4px; cursor: pointer; border: 1px solid #ccc;"
-                >
-                    "-10%"
-                </button>
-                <button
-                    on:click=move |_| set_value.update(|v| *v = (*v + 10.0).min(100.0))
-                    style="padding: 0.5em 1em; border-radius: 4px; cursor: pointer; border: 1px solid #ccc;"
-                >
-                    "+10%"
-                </button>
-            </Stack>
-
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseProgressBarReturn { progress_props, label_props, .. } = use_progress_bar(
                         UseProgressBarInput {
@@ -105,29 +60,11 @@ pub fn PageUseProgressBar() -> impl IntoView {
 
             <p>"For unknown progress duration:"</p>
 
-            <div style="margin: 1em 0; max-width: 400px;">
-                <div
-                    {..indeterminate_props.into_attrs()}
-                    style="height: 8px; background: #ddd; border-radius: 4px; overflow: hidden; position: relative;"
-                >
-                    <div style="
-                        position: absolute;
-                        width: 40%;
-                        height: 100%;
-                        background: var(--brand-color);
-                        animation: indeterminate 1.5s infinite ease-in-out;
-                    "></div>
-                </div>
-            </div>
+            <DemoShell source=include_str!("demos/progress_indeterminate.rs")>
+                <ProgressIndeterminateDemo />
+            </DemoShell>
 
-            <style>
-                r"@keyframes indeterminate {
-                    0% { left: -40%; }
-                    100% { left: 100%; }
-                }"
-            </style>
-
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseProgressBarReturn { progress_props, .. } = use_progress_bar(
                         UseProgressBarInput {
@@ -169,6 +106,17 @@ pub fn PageUseProgressBar() -> impl IntoView {
                 <li>"Label association"</li>
                 <li>"Proper ARIA progressbar attributes"</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Progress.materialize()>"Progress overview"</Link></li>
+                <li><Link href=crate::routes::doc::progress::Component.materialize()>"Progress component"</Link></li>
+                <li><Link href=crate::routes::doc::hooks::UseMeter.materialize()>"use_meter"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -178,6 +126,7 @@ pub fn PageUseProgressBar() -> impl IntoView {
                 Toc::Leaf { title: "Indeterminate Progress", link: "#indeterminate" },
                 Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

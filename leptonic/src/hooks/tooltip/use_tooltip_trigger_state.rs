@@ -1,3 +1,4 @@
+#[cfg(not(feature = "ssr"))]
 use std::time::Duration;
 
 use leptos::prelude::*;
@@ -8,9 +9,6 @@ use super::tooltip_registry::{TOOLTIP_COOLDOWN, TOOLTIP_DELAY};
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/tooltip/src/useTooltipTriggerState.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //
@@ -30,7 +28,6 @@ use super::tooltip_registry::{TOOLTIP_COOLDOWN, TOOLTIP_DELAY};
 // - SSR branch: When `#[cfg(feature = "ssr")]`, `open`/`close` simply toggle
 //   the signal immediately with no timers or global state.
 //
-// =============================================================================
 
 /// Input parameters for the `use_tooltip_trigger_state` hook.
 #[derive(Debug, Clone, Copy)]

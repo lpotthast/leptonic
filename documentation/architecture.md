@@ -1,35 +1,11 @@
 # Leptonic Architecture
 
-Leptonic follows a three-layer architecture that provides flexibility for different use cases.
+See CLAUDE.md for the layer overview (hooks → atoms → components), feature flags, theme system, and build
+system. This document covers architectural patterns not captured there.
 
-## Layer Overview
+## Layer Examples
 
-| Layer          | Purpose                  | Design Tokens                                                                      | Feature    |
-|----------------|--------------------------|------------------------------------------------------------------------------------|------------|
-| **Hooks**      | Pure logic, no rendering | None                                                                               | hooks      |
-| **Atoms**      | Hook wrappers, headless  | Minimal (absolutely necessary inline styles)                                       | atoms      |
-| **Components** | Full Leptonic experience | Full (classes (`leptonic-btn`), additional data attributes (`data-variant`), etc.) | components |
-
-## User Options
-
-1. **Hooks only** - Maximum control, user handles everything
-2. **Atoms** - Convenience components for easy compositing with full control over style system
-3. **Components** - Ready- and easy-to-use, fully styled components (via additional `leptonic-theme` crate)
-
----
-
-## Hooks (`leptonic/src/hooks/`)
-
-Low-level interaction and accessibility logic.
-
-- Pure functions returning props/attributes to spread on elements.
-- Handle accessibility (e.g. by providing correct ARIA attributes, etc.).
-- No rendering: You control the DOM.
-- No CSS classes or other design tokens.
-
-**Use when:** You need maximum flexibility and control over your elements.
-
-### Example
+### Hooks
 
 ```rust
 use leptos::prelude::*;
@@ -49,20 +25,7 @@ fn MyButton(children: Children) -> impl IntoView {
 }
 ```
 
----
-
-## Atoms (`leptonic/src/atoms/`)
-
-Headless, single-element components that wrap hooks. Multiple atoms may be provided for one capability.
-
-- Provide accessibility and interaction behavior out of the box without requiring manual hook setup.
-- Only render one HTML element each: Easy control over the DOM hierarchy, easily (re-)composable and stylable.
-- Only minimal design tokens (no classes or custom styling-related data attributes, just minimal inline styles).
-- Easy to integrate into custom design systems.
-
-**Use when:** Building custom design systems that need accessibility without Leptonic's visual design.
-
-### Example
+### Atoms
 
 ```rust
 use leptos::prelude::*;
@@ -81,20 +44,7 @@ fn MyButton(
 }
 ```
 
----
-
-## Components (`leptonic/src/components/`)
-
-Pre-built, styled components ready for production use.
-
-- Include CSS classes for leptonic-theme (`leptonic-btn`, etc.)
-- Include design tokens (`data-variant`, `data-color`, `data-size`)
-- Feature-rich with complex behavior
-- Built on atoms and hooks
-
-**Use when:** You want Leptonic's design system with minimal configuration.
-
-### Example
+### Components
 
 ```rust
 use leptonic::components::button::{Button, ButtonVariant, ButtonColor};
@@ -110,15 +60,34 @@ view! {
 }
 ```
 
----
+## Form Validation Hooks
 
-## Feature Flags
+Three cooperating hooks handle form validation:
 
-The library supports feature flags to control which layers are included:
+- `use_form_validation_state` — state management for multiple validation sources (controlled, server,
+  client-side, native). `ValidationBehavior::Aria` vs `::Native` determines how validation is surfaced.
+  Returns `ValidationResult` aggregating all sources.
+- `use_form_validation` — DOM connection (side-effectual, no return value). Calls `setCustomValidity()` on
+  the form element and listens for native validation events.
+- `use_form_reset` — detects parent `<form>` reset events via `CapturedElement` from
+  `leptos-element-capture`.
 
-- `hooks` - Low-level interaction hooks (default)
-- `atoms` - Headless base components (requires hooks)
-- `components` - Full pre-built components (requires atoms)
-- `full` - All features combined
+Field hooks (e.g., `use_text_field`, `use_checkbox`) compose these three internally.
 
-Feature hierarchy: `hooks` -> `atoms` -> `components`
+## Animation System (`leptonic/src/hooks/animation/`)
+
+CSS animation lifecycle hooks using the Web Animations API.
+
+- `use_enter_animation` — accepts `CapturedElement` from `leptos-element-capture` plus an `is_ready` signal,
+  returns `is_entering: Signal<bool>`.
+  Watches element animations on mount and reports when they complete.
+- `use_exit_animation` — accepts `CapturedElement` from `leptos-element-capture` plus an `is_open` signal,
+  returns `is_exiting: Signal<bool>` and `exit_state: Signal<ExitState>`.
+- `ExitState` enum: `Open` → `Exiting` → `Closed`.
+
+Internally, `watch_animations()` uses `Element.getAnimations()` and `Promise.all(animation.finished)` to
+detect animation completion. During SSR, no Web Animations API calls are made; enter reports `false`, exit
+follows `is_open` directly.
+
+**Purpose:** Coordinated enter/exit transitions for overlays, popovers, modals — keeping the element mounted
+during exit animations.

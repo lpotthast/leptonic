@@ -1,4 +1,4 @@
-use std::{collections::HashSet, hash::Hash};
+use std::collections::HashSet;
 
 use leptos::{
     attr,
@@ -12,28 +12,42 @@ use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::{
-    hooks::IntoAttrs,
+    hooks::{IntoAttrs, selection::SelectionKey},
     utils::{
+        CapturedElement, ElementCaptureAttr, EventAccessors, EventHandler,
         aria::{AriaExpanded, AriaRequired, AriaRole},
-        EventAccessors, EventHandler,
+        filter::{CollatorOptions, CollatorSensitivity, Filter},
+        i18n::use_locale_or_default,
+        node_contains,
     },
 };
+
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/combobox/src/useComboBox.ts
 
-// =============================================================================
 // REACT-ARIA DEVIATIONS
-// =============================================================================
 //
-// No intentional deviations from the react-aria implementation.
+// 1. Item keys must implement `Display` for stable option DOM IDs.
+//    React-aria uses string/number keys natively.
 //
-// =============================================================================
+// 2. No link item support (`href` on options).
+//
+// 3. No iOS VoiceOver virtual touch detection.
+//
+// 4. No form validation integration or `useFormReset` equivalent.
+//
+// 5. Live announcements are simplified (English only, no i18n).
+//
+// 6. Button uses `on_click` instead of press events with pointer type
+//    differentiation. Touch-specific behavior is not implemented.
+//
+// 7. Collection freezing during close animation is not implemented.
 
 /// Input parameters for the `use_combobox` hook.
-#[allow(clippy::type_complexity)]
+#[allow(clippy::type_complexity, clippy::struct_excessive_bools)]
 #[derive(Clone)]
 pub struct UseComboBoxInput<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// The input value (controlled).
     pub input_value: Option<Signal<String>>,
@@ -100,6 +114,9 @@ where
 
     /// The menu trigger behavior.
     pub menu_trigger: MenuTriggerAction,
+
+    /// Whether keyboard navigation should wrap from last to first item (and vice versa).
+    pub should_focus_wrap: bool,
 }
 
 /// When to show the combobox menu.
@@ -114,7 +131,7 @@ pub enum MenuTriggerAction {
     Manual,
 }
 
-impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseComboBoxInput<K> {
+impl<K: SelectionKey> Default for UseComboBoxInput<K> {
     fn default() -> Self {
         Self {
             input_value: None,
@@ -139,6 +156,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseComboBoxInput<
             placeholder: None,
             allows_custom_value: false,
             menu_trigger: MenuTriggerAction::Input,
+            should_focus_wrap: false,
         }
     }
 }
@@ -146,7 +164,7 @@ impl<K: Hash + Eq + Clone + Send + Sync + 'static> Default for UseComboBoxInput<
 /// The return value of the `use_combobox` hook.
 pub struct UseComboBoxReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     /// Props for the input element.
     pub input_props: UseComboBoxInputProps,
@@ -156,6 +174,11 @@ where
 
     /// Props for the listbox element.
     pub listbox_props: UseComboBoxListBoxProps,
+
+    /// Props for the popover container wrapping the listbox.
+    /// Spread these onto the popover element to enable `ariaHideOutside`
+    /// and correct blur detection.
+    pub popover_props: UseComboBoxPopoverProps,
 
     /// The ID of the input element.
     pub input_id: String,
@@ -172,7 +195,9 @@ where
     /// The currently selected key.
     pub selected_key: Signal<Option<K>>,
 
-    /// The filtered items based on input.
+    /// The items to display in the listbox.
+    /// When the menu is opened via the button or focus trigger, this returns
+    /// all items (bypassing the input filter). Otherwise, returns filtered items.
     pub filtered_items: Signal<Vec<K>>,
 
     /// The currently focused key in the listbox.
@@ -195,9 +220,14 @@ where
 
     /// Clear the input and selection.
     pub clear: Callback<()>,
+
+    /// Returns the stable DOM element ID for a listbox option with the given key.
+    /// Use this as the `id` attribute on each rendered option element so that
+    /// `aria-activedescendant` correctly references the focused option.
+    pub get_option_id: Callback<K, String>,
 }
 
-/// Props from `use_combobox` for the input element that can be extracted and merged programmatically.
+/// Props from `use_combobox` for the input element.
 #[derive(Debug)]
 pub struct UseComboBoxInputProps {
     pub id: String,
@@ -210,15 +240,17 @@ pub struct UseComboBoxInputProps {
     pub aria_autocomplete: &'static str,
     pub aria_haspopup: &'static str,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
-    pub aria_controls: String,
+    pub aria_controls: Signal<Option<String>>,
     pub aria_label: Option<&'static str>,
     pub aria_labelledby: Option<String>,
     pub aria_required: Option<AriaRequired>,
     pub aria_activedescendant: Signal<Option<String>>,
+    pub spellcheck: &'static str,
     pub on_input: EventHandler<Event>,
     pub on_keydown: EventHandler<KeyboardEvent>,
     pub on_focus: EventHandler<FocusEvent>,
     pub on_blur: EventHandler<FocusEvent>,
+    pub element_capture: ElementCaptureAttr,
 }
 
 impl IntoAttrs for UseComboBoxInputProps {
@@ -241,15 +273,17 @@ impl IntoAttrs for UseComboBoxInputProps {
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaRequired, self.aria_required),
             Attr(attr::AriaActivedescendant, self.aria_activedescendant),
+            Attr(attr::Spellcheck, self.spellcheck),
             self.on_input.into_on(ev::input),
             self.on_keydown.into_on(ev::keydown),
             self.on_focus.into_on(ev::focus),
             self.on_blur.into_on(ev::blur),
+            self.element_capture,
         )
     }
 }
 
-/// Props from `use_combobox` for the button element that can be extracted and merged programmatically.
+/// Props from `use_combobox` for the button element.
 #[derive(Debug)]
 pub struct UseComboBoxButtonProps {
     pub id: String,
@@ -291,15 +325,17 @@ pub type UseComboBoxInputAttrs = (
     Attr<attr::AriaAutocomplete, &'static str>,
     Attr<attr::AriaHaspopup, &'static str>,
     Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-    Attr<attr::AriaControls, String>,
+    Attr<attr::AriaControls, Signal<Option<String>>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaRequired, Option<AriaRequired>>,
     Attr<attr::AriaActivedescendant, Signal<Option<String>>>,
+    Attr<attr::Spellcheck, &'static str>,
     On<ev::input, SharedEventCallback<Event>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
     On<ev::focus, SharedEventCallback<FocusEvent>>,
     On<ev::blur, SharedEventCallback<FocusEvent>>,
+    ElementCaptureAttr,
 );
 
 /// Attributes for the combobox button element.
@@ -330,6 +366,80 @@ pub struct UseComboBoxListBoxProps {
     pub tabindex: &'static str,
 }
 
+/// Props for the popover container wrapping the listbox.
+/// Spread onto the popover element to enable `ariaHideOutside`
+/// and correct blur detection.
+pub struct UseComboBoxPopoverProps {
+    /// Element capture attribute.
+    pub element_capture: ElementCaptureAttr,
+}
+
+impl std::fmt::Debug for UseComboBoxPopoverProps {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("UseComboBoxPopoverProps").finish()
+    }
+}
+
+impl IntoAttrs for UseComboBoxPopoverProps {
+    type Attrs = UseComboBoxPopoverAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        self.element_capture
+    }
+}
+
+/// Attributes for the combobox popover element.
+pub type UseComboBoxPopoverAttrs = ElementCaptureAttr;
+
+/// Find the next or previous non-disabled key relative to `current` in `items`.
+///
+/// - `forward`: search direction (`true` = towards end, `false` = towards start)
+/// - `wrap`: whether to wrap around boundaries
+///
+/// When `current` is `None`, returns the first (forward) or last (backward)
+/// non-disabled key.
+fn find_adjacent_enabled<K: SelectionKey>(
+    items: &[K],
+    current: Option<&K>,
+    disabled: &HashSet<K>,
+    forward: bool,
+    wrap: bool,
+) -> Option<K> {
+    if items.is_empty() {
+        return None;
+    }
+
+    let current_idx = current.and_then(|k| items.iter().position(|item| item == k));
+    let len = items.len();
+
+    let indices: Box<dyn Iterator<Item = usize>> = match (current_idx, forward) {
+        (Some(idx), true) => {
+            if wrap {
+                Box::new((1..len).map(move |i| (idx + i) % len))
+            } else {
+                Box::new((idx + 1)..len)
+            }
+        }
+        (Some(idx), false) => {
+            if wrap {
+                Box::new((1..len).map(move |i| (idx + len - i) % len))
+            } else {
+                Box::new((0..idx).rev())
+            }
+        }
+        (None, true) => Box::new(0..len),
+        (None, false) => Box::new((0..len).rev()),
+    };
+
+    for i in indices {
+        if !disabled.contains(&items[i]) {
+            return Some(items[i].clone());
+        }
+    }
+
+    None
+}
+
 /// Provides the behavior and accessibility implementation for a combobox.
 ///
 /// A combobox combines a text input with a listbox, allowing users to filter
@@ -353,13 +463,22 @@ pub struct UseComboBoxListBoxProps {
 ///         <input {..combobox.input_props.into_attrs()} />
 ///         <button {..combobox.button_props.into_attrs()}>"▼"</button>
 ///         <Show when=move || combobox.is_open.get()>
-///             <ul {..combobox.listbox_props}>
-///                 <For
-///                     each=move || combobox.filtered_items.get()
-///                     key=|item| item.to_string()
-///                     children=|item| view! { <li>{item}</li> }
-///                 />
-///             </ul>
+///             <div {..combobox.popover_props.into_attrs()}>
+///                 <ul id=combobox.listbox_id.clone()
+///                     role="listbox"
+///                     aria-labelledby=combobox.input_id.clone()
+///                     tabindex="-1"
+///                 >
+///                     <For
+///                         each=move || combobox.filtered_items.get()
+///                         key=|item| item.to_string()
+///                         children=move |item| {
+///                             let id = combobox.get_option_id.run(item.clone());
+///                             view! { <li id=id role="option">{item.to_string()}</li> }
+///                         }
+///                     />
+///                 </ul>
+///             </div>
 ///         </Show>
 ///     </div>
 /// }
@@ -367,7 +486,7 @@ pub struct UseComboBoxListBoxProps {
 #[allow(clippy::too_many_lines)]
 pub fn use_combobox<K>(input: UseComboBoxInput<K>) -> UseComboBoxReturn<K>
 where
-    K: Hash + Eq + Clone + Send + Sync + 'static,
+    K: SelectionKey,
 {
     let UseComboBoxInput {
         input_value,
@@ -388,18 +507,27 @@ where
         aria_labelledby,
         get_text_value,
         filter,
-        name,
+        name: _name,
         placeholder,
         allows_custom_value,
         menu_trigger,
+        should_focus_wrap,
     } = input;
+
+    // ─── IDs ────────────────────────────────────────────────────────────
 
     let base_id = Uuid::new_v4();
     let input_id = format!("combobox-input-{base_id}");
     let button_id = format!("combobox-button-{base_id}");
     let listbox_id = format!("combobox-listbox-{base_id}");
 
-    // Internal state
+    // ─── Element captures (for ariaHideOutside and blur detection) ──────
+
+    let input_element = CapturedElement::new();
+    let popover_element = CapturedElement::new();
+
+    // ─── Internal state ─────────────────────────────────────────────────
+
     let (internal_input_value, set_internal_input_value) =
         signal(default_input_value.unwrap_or_default());
     let input_value = input_value.unwrap_or_else(|| internal_input_value.into());
@@ -411,12 +539,22 @@ where
     let selected_key = selected_key.unwrap_or_else(|| internal_selected.into());
 
     let (focused_key, set_focused_key) = signal::<Option<K>>(None);
+    let focused_key_signal: Signal<Option<K>> = focused_key.into();
 
-    // Filter items based on input value
+    // Whether to bypass filtering and show all items (set when opened via button/focus).
+    let (show_all, set_show_all) = signal(false);
+
+    // ─── Filtered / displayed items ─────────────────────────────────────
+
     let filtered_items = Signal::derive(move || {
         let current_items = items.get();
-        let current_input = input_value.get();
 
+        // Show all items when opened via button or focus trigger.
+        if show_all.get() {
+            return current_items;
+        }
+
+        let current_input = input_value.get();
         if current_input.is_empty() {
             return current_items;
         }
@@ -424,13 +562,19 @@ where
         if let Some(filter_fn) = filter {
             filter_fn.run((current_input, current_items))
         } else if let Some(get_text) = get_text_value {
-            // Default filter: case-insensitive contains
-            let search_lower = current_input.to_lowercase();
+            // Default filter: locale-aware, case- and accent-insensitive substring match.
+            let locale_filter = Filter::new(
+                &use_locale_or_default(),
+                &CollatorOptions {
+                    sensitivity: CollatorSensitivity::Base,
+                    ..CollatorOptions::default()
+                },
+            );
             current_items
                 .into_iter()
                 .filter(|item| {
                     let text = get_text.run(item.clone());
-                    text.to_lowercase().contains(&search_lower)
+                    locale_filter.contains(&text, &current_input)
                 })
                 .collect()
         } else {
@@ -438,7 +582,95 @@ where
         }
     });
 
-    // Open the menu
+    // Clear focused key when displayed items change and focused key is no longer present.
+    Effect::new(move |_| {
+        let current_items = filtered_items.get();
+        if let Some(key) = focused_key.get_untracked() {
+            if !current_items.contains(&key) {
+                set_focused_key.set(None);
+            }
+        }
+    });
+
+    // ─── Internal helpers ───────────────────────────────────────────────
+
+    // All captured values are Copy (signals, Option<Callback>), so these closures are Copy.
+
+    let close_menu = move || {
+        set_internal_open.set(false);
+        set_focused_key.set(None);
+        set_show_all.set(false);
+        if let Some(on_change) = on_open_change {
+            on_change.run(false);
+        }
+    };
+
+    let update_input = move |text: String| {
+        set_internal_input_value.set(text.clone());
+        if let Some(on_change) = on_input_change {
+            on_change.run(text);
+        }
+    };
+
+    // Get the text for the currently selected key, or empty string if none.
+    let get_selected_text = move || -> String {
+        selected_key
+            .get_untracked()
+            .and_then(|key| get_text_value.map(|get_text| get_text.run(key)))
+            .unwrap_or_default()
+    };
+
+    // Reset input to the selected item's text and close the menu.
+    let commit_selection = move || {
+        let text = get_selected_text();
+        update_input(text);
+        close_menu();
+    };
+
+    // Clear the selection (keep custom input value) and close the menu.
+    let commit_custom_value = move || {
+        set_internal_selected.set(None);
+        if let Some(on_change) = on_selection_change {
+            on_change.run(None);
+        }
+        close_menu();
+    };
+
+    // If `allows_custom_value`, decide whether to commit the selection or the custom value.
+    // Otherwise, always commit the selection (resetting input).
+    let commit_value = move || {
+        if allows_custom_value {
+            let item_text = get_selected_text();
+            if input_value.get_untracked() == item_text {
+                commit_selection();
+            } else {
+                commit_custom_value();
+            }
+        } else {
+            commit_selection();
+        }
+    };
+
+    let select_and_close = move |key: K| {
+        if is_disabled.get_untracked() {
+            return;
+        }
+
+        set_internal_selected.set(Some(key.clone()));
+        if let Some(on_change) = on_selection_change {
+            on_change.run(Some(key.clone()));
+        }
+
+        if let Some(get_text) = get_text_value {
+            let text = get_text.run(key);
+            update_input(text);
+        }
+
+        close_menu();
+    };
+
+    // ─── Public callbacks ───────────────────────────────────────────────
+
     let open = Callback::new(move |_| {
         if is_disabled.get_untracked() {
             return;
@@ -449,63 +681,33 @@ where
         }
     });
 
-    // Close the menu
     let close = Callback::new(move |_| {
-        set_internal_open.set(false);
-        set_focused_key.set(None);
-        if let Some(on_change) = on_open_change {
-            on_change.run(false);
-        }
+        close_menu();
     });
 
-    // Toggle the menu
     let toggle = Callback::new(move |_| {
         if is_disabled.get_untracked() {
             return;
         }
-        let new_state = !is_open.get_untracked();
-        set_internal_open.set(new_state);
-        if let Some(on_change) = on_open_change {
-            on_change.run(new_state);
-        }
-    });
-
-    // Select a key
-    let select = Callback::new(move |key: K| {
-        if is_disabled.get_untracked() {
-            return;
-        }
-
-        set_internal_selected.set(Some(key.clone()));
-        if let Some(on_change) = on_selection_change {
-            on_change.run(Some(key.clone()));
-        }
-
-        // Update input value to match selection
-        if let Some(get_text) = get_text_value {
-            let text = get_text.run(key);
-            set_internal_input_value.set(text.clone());
-            if let Some(on_input_change) = on_input_change {
-                on_input_change.run(text);
+        if is_open.get_untracked() {
+            close_menu();
+        } else {
+            set_show_all.set(true);
+            set_internal_open.set(true);
+            if let Some(on_change) = on_open_change {
+                on_change.run(true);
             }
         }
-
-        // Close after selection
-        set_internal_open.set(false);
-        if let Some(on_open_change) = on_open_change {
-            on_open_change.run(false);
-        }
     });
 
-    // Set input value
+    let select = Callback::new(move |key: K| {
+        select_and_close(key);
+    });
+
     let set_input_value = Callback::new(move |value: String| {
-        set_internal_input_value.set(value.clone());
-        if let Some(on_change) = on_input_change {
-            on_change.run(value);
-        }
+        update_input(value);
     });
 
-    // Clear
     let clear = Callback::new(move |_| {
         set_internal_input_value.set(String::new());
         set_internal_selected.set(None);
@@ -517,6 +719,12 @@ where
         }
     });
 
+    let listbox_id_for_option = listbox_id.clone();
+    let get_option_id =
+        Callback::new(move |key: K| format!("{listbox_id_for_option}-option-{key}"));
+
+    // ─── Event handlers ─────────────────────────────────────────────────
+
     // Handle input event
     let handle_input = move |e: Event| {
         if is_disabled.get_untracked() || is_read_only.get_untracked() {
@@ -525,14 +733,16 @@ where
 
         if let Ok(input_el) = e.expect_target().dyn_into::<web_sys::HtmlInputElement>() {
             let new_value = input_el.value();
-            set_internal_input_value.set(new_value.clone());
+            update_input(new_value);
 
-            if let Some(on_change) = on_input_change {
-                on_change.run(new_value);
-            }
+            // Reset show-all when the user types.
+            set_show_all.set(false);
 
-            // Open menu on input
-            if menu_trigger == MenuTriggerAction::Input && !is_open.get_untracked() {
+            // Clear focused key when input changes.
+            set_focused_key.set(None);
+
+            // Open menu on input (unless manual trigger mode).
+            if menu_trigger != MenuTriggerAction::Manual && !is_open.get_untracked() {
                 set_internal_open.set(true);
                 if let Some(on_open_change) = on_open_change {
                     on_open_change.run(true);
@@ -547,90 +757,126 @@ where
             return;
         }
 
+        // Ignore events during IME composition.
+        if e.is_composing() {
+            return;
+        }
+
         let filtered = filtered_items.get_untracked();
+        let disabled = disabled_keys.get_untracked();
 
         match e.key().as_str() {
             "ArrowDown" => {
                 e.prevent_default();
                 if !is_open.get_untracked() {
+                    // Open menu and focus first non-disabled item.
                     set_internal_open.set(true);
                     if let Some(on_change) = on_open_change {
                         on_change.run(true);
                     }
+                    let first = find_adjacent_enabled(&filtered, None, &disabled, true, false);
+                    set_focused_key.set(first);
                 } else if !filtered.is_empty() {
-                    // Move focus down
                     let current = focused_key.get_untracked();
-                    let next_index = if let Some(ref current_key) = current {
-                        filtered
-                            .iter()
-                            .position(|k| k == current_key)
-                            .map_or(0, |i| (i + 1).min(filtered.len() - 1))
-                    } else {
-                        0
-                    };
-                    set_focused_key.set(filtered.get(next_index).cloned());
+                    let next = find_adjacent_enabled(
+                        &filtered,
+                        current.as_ref(),
+                        &disabled,
+                        true,
+                        should_focus_wrap,
+                    );
+                    if let Some(next) = next {
+                        set_focused_key.set(Some(next));
+                    }
                 }
             }
             "ArrowUp" => {
                 e.prevent_default();
-                if is_open.get_untracked() && !filtered.is_empty() {
-                    // Move focus up
+                if !is_open.get_untracked() {
+                    // Open menu and focus last non-disabled item.
+                    set_internal_open.set(true);
+                    if let Some(on_change) = on_open_change {
+                        on_change.run(true);
+                    }
+                    let last = find_adjacent_enabled(&filtered, None, &disabled, false, false);
+                    set_focused_key.set(last);
+                } else if !filtered.is_empty() {
                     let current = focused_key.get_untracked();
-                    let prev_index = if let Some(ref current_key) = current {
-                        filtered
-                            .iter()
-                            .position(|k| k == current_key)
-                            .map_or(filtered.len().saturating_sub(1), |i| i.saturating_sub(1))
-                    } else {
-                        filtered.len().saturating_sub(1)
-                    };
-                    set_focused_key.set(filtered.get(prev_index).cloned());
+                    let prev = find_adjacent_enabled(
+                        &filtered,
+                        current.as_ref(),
+                        &disabled,
+                        false,
+                        should_focus_wrap,
+                    );
+                    if let Some(prev) = prev {
+                        set_focused_key.set(Some(prev));
+                    }
                 }
             }
+            "ArrowLeft" | "ArrowRight" => {
+                // Clear virtual focus, returning to input cursor navigation.
+                set_focused_key.set(None);
+            }
             "Enter" => {
+                // Prevent form submission when menu is open.
                 if is_open.get_untracked() {
                     e.prevent_default();
+                }
+                // Commit: select the focused item, or commit current value.
+                if is_open.get_untracked() {
                     if let Some(key) = focused_key.get_untracked() {
-                        set_internal_selected.set(Some(key.clone()));
-                        if let Some(on_change) = on_selection_change {
-                            on_change.run(Some(key.clone()));
+                        if selected_key.get_untracked().as_ref() == Some(&key) {
+                            commit_selection();
+                        } else {
+                            select_and_close(key);
                         }
-
-                        if let Some(get_text) = get_text_value {
-                            let text = get_text.run(key);
-                            set_internal_input_value.set(text.clone());
-                            if let Some(on_input_change) = on_input_change {
-                                on_input_change.run(text);
-                            }
-                        }
-
-                        set_internal_open.set(false);
-                        if let Some(on_open_change) = on_open_change {
-                            on_open_change.run(false);
-                        }
+                    } else {
+                        commit_value();
                     }
+                } else {
+                    commit_value();
+                }
+            }
+            "Tab" => {
+                // Commit without preventing default (allow normal tab navigation).
+                if is_open.get_untracked() {
+                    if let Some(key) = focused_key.get_untracked() {
+                        if selected_key.get_untracked().as_ref() == Some(&key) {
+                            commit_selection();
+                        } else {
+                            select_and_close(key);
+                        }
+                    } else {
+                        commit_value();
+                    }
+                } else {
+                    commit_value();
                 }
             }
             "Escape" => {
                 if is_open.get_untracked() {
                     e.prevent_default();
-                    set_internal_open.set(false);
-                    set_focused_key.set(None);
-                    if let Some(on_change) = on_open_change {
-                        on_change.run(false);
-                    }
+                }
+                // Revert: reset input to selected item text (or commit custom value).
+                if allows_custom_value && selected_key.get_untracked().is_none() {
+                    commit_custom_value();
+                } else {
+                    commit_selection();
                 }
             }
             "Home" => {
                 if is_open.get_untracked() && !filtered.is_empty() {
                     e.prevent_default();
-                    set_focused_key.set(filtered.first().cloned());
+                    let first = find_adjacent_enabled(&filtered, None, &disabled, true, false);
+                    set_focused_key.set(first);
                 }
             }
             "End" => {
                 if is_open.get_untracked() && !filtered.is_empty() {
                     e.prevent_default();
-                    set_focused_key.set(filtered.last().cloned());
+                    let last = find_adjacent_enabled(&filtered, None, &disabled, false, false);
+                    set_focused_key.set(last);
                 }
             }
             _ => {}
@@ -639,7 +885,11 @@ where
 
     // Handle focus
     let handle_focus = move |_e: FocusEvent| {
-        if menu_trigger == MenuTriggerAction::Focus && !is_open.get_untracked() {
+        if menu_trigger == MenuTriggerAction::Focus
+            && !is_open.get_untracked()
+            && !is_read_only.get_untracked()
+        {
+            set_show_all.set(true);
             set_internal_open.set(true);
             if let Some(on_change) = on_open_change {
                 on_change.run(true);
@@ -648,29 +898,191 @@ where
     };
 
     // Handle blur
-    let handle_blur = move |_e: FocusEvent| {
-        // Close menu on blur (with a small delay to allow click on listbox)
-        // In a real implementation, you'd check if focus moved to the listbox
+    let button_id_for_blur = button_id.clone();
+    let handle_blur = move |e: FocusEvent| {
+        // When relatedTarget is null, focus is lost to the body (e.g., tab switch).
+        // We don't close on null — interact_outside handles that case.
+        let Some(related_target) = e.related_target() else {
+            return;
+        };
+
+        // Ignore blur if focus moved to the button.
+        if let Some(el) = related_target.dyn_ref::<web_sys::Element>() {
+            if el.id() == button_id_for_blur {
+                return;
+            }
+        }
+
+        // Ignore blur if focus moved into the popover.
+        if let Some(popover_el) = popover_element.get_untracked() {
+            if node_contains(
+                Some(popover_el.unchecked_ref::<web_sys::Node>()),
+                related_target.dyn_ref::<web_sys::Node>(),
+            )
+            .unwrap_or(false)
+            {
+                return;
+            }
+        }
+
+        // Focus left the combobox — commit value.
+        commit_value();
     };
 
     // Handle button click
-    let toggle_button = toggle;
     let handle_button_click = move |_e: MouseEvent| {
-        toggle_button.run(());
+        if is_disabled.get_untracked() {
+            return;
+        }
+        if is_open.get_untracked() {
+            close_menu();
+        } else {
+            set_show_all.set(true);
+            set_internal_open.set(true);
+            if let Some(on_change) = on_open_change {
+                on_change.run(true);
+            }
+        }
     };
 
-    // Compute aria-expanded
-    let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_open.get())));
+    // ─── ARIA attributes ────────────────────────────────────────────────
 
-    // Compute aria-required
+    let aria_expanded = Signal::derive(move || Some(AriaExpanded::from(is_open.get())));
     let aria_required = is_required.then_some(AriaRequired::True);
 
-    // Compute aria-activedescendant
+    // aria-controls: only reference the listbox when it exists in the DOM (i.e., when open).
+    let listbox_id_for_controls = listbox_id.clone();
+    let aria_controls = Signal::derive(move || {
+        if is_open.get() {
+            Some(listbox_id_for_controls.clone())
+        } else {
+            None
+        }
+    });
+
+    // aria-activedescendant: stable ID matching the focused option element.
+    let listbox_id_for_aria = listbox_id.clone();
     let aria_activedescendant = Signal::derive(move || {
         focused_key
             .get()
-            .map(|_| format!("option-{}", Uuid::new_v4()))
+            .map(|key| format!("{listbox_id_for_aria}-option-{key}"))
     });
+
+    // ─── ariaHideOutside ────────────────────────────────────────────────
+
+    #[cfg(not(feature = "ssr"))]
+    {
+        use crate::utils::aria_hide_outside::{AriaHideOutsideOptions, aria_hide_outside};
+
+        let hide_cleanup: StoredValue<Option<Box<dyn FnOnce()>>, LocalStorage> =
+            StoredValue::new_local(None);
+
+        Effect::new(move |_| {
+            // Clean up previous hide (if any).
+            hide_cleanup.update_value(|opt| {
+                if let Some(f) = opt.take() {
+                    f();
+                }
+            });
+
+            if is_open.get() {
+                let mut targets = Vec::new();
+                if let Some(el) = input_element.get() {
+                    targets.push((*el).clone());
+                }
+                if let Some(el) = popover_element.get() {
+                    targets.push((*el).clone());
+                }
+                if !targets.is_empty() {
+                    let undo = aria_hide_outside(&targets, AriaHideOutsideOptions::default());
+                    hide_cleanup.set_value(Some(undo));
+                }
+            }
+        });
+
+        on_cleanup(move || {
+            hide_cleanup.update_value(|opt| {
+                if let Some(f) = opt.take() {
+                    f();
+                }
+            });
+        });
+    }
+
+    // ─── Live announcements for screen readers ──────────────────────────
+
+    {
+        use crate::utils::live_announcer::announce_polite;
+
+        let last_open_state = StoredValue::new(false);
+        let last_option_count = StoredValue::new(0usize);
+
+        // Announce option count when menu opens or count changes while open.
+        Effect::new(move |_| {
+            let open = is_open.get();
+            let count = filtered_items.get().len();
+            let was_open = last_open_state.get_value();
+            let was_count = last_option_count.get_value();
+
+            if open && (!was_open || count != was_count) {
+                let msg = match count {
+                    0 => "No options available.".to_string(),
+                    1 => "1 option available.".to_string(),
+                    n => format!("{n} options available."),
+                };
+                announce_polite(msg);
+            }
+
+            last_open_state.set_value(open);
+            last_option_count.set_value(count);
+        });
+
+        // Announce focused item changes.
+        let last_focused: StoredValue<Option<K>> = StoredValue::new(None);
+        Effect::new(move |_| {
+            let current = focused_key_signal.get();
+            let prev = last_focused.get_value();
+
+            if current != prev {
+                if let Some(ref key) = current {
+                    if is_open.get_untracked() {
+                        if let Some(get_text) = get_text_value {
+                            let text = get_text.run(key.clone());
+                            let is_selected = selected_key.get_untracked().as_ref() == Some(key);
+                            let msg = if is_selected {
+                                format!("{text}, selected")
+                            } else {
+                                text
+                            };
+                            announce_polite(msg);
+                        }
+                    }
+                }
+            }
+
+            last_focused.set_value(current);
+        });
+
+        // Announce selection changes.
+        let last_selected: StoredValue<Option<K>> = StoredValue::new(None);
+        Effect::new(move |_| {
+            let current = selected_key.get();
+            let prev = last_selected.get_value();
+
+            if current != prev {
+                if let Some(ref key) = current {
+                    if let Some(get_text) = get_text_value {
+                        let text = get_text.run(key.clone());
+                        announce_polite(format!("{text}, selected"));
+                    }
+                }
+            }
+
+            last_selected.set_value(current);
+        });
+    }
+
+    // ─── Return ─────────────────────────────────────────────────────────
 
     UseComboBoxReturn {
         input_props: UseComboBoxInputProps {
@@ -684,15 +1096,17 @@ where
             aria_autocomplete: "list",
             aria_haspopup: "listbox",
             aria_expanded,
-            aria_controls: listbox_id.clone(),
+            aria_controls,
             aria_label,
             aria_labelledby,
             aria_required,
             aria_activedescendant,
+            spellcheck: "false",
             on_input: EventHandler::new(handle_input),
             on_keydown: EventHandler::new(handle_keydown),
             on_focus: EventHandler::new(handle_focus),
             on_blur: EventHandler::new(handle_blur),
+            element_capture: input_element.attr(),
         },
         button_props: UseComboBoxButtonProps {
             id: button_id,
@@ -710,18 +1124,22 @@ where
             aria_labelledby: input_id.clone(),
             tabindex: "-1",
         },
+        popover_props: UseComboBoxPopoverProps {
+            element_capture: popover_element.attr(),
+        },
         input_id,
         listbox_id,
         is_open,
         input_value,
         selected_key,
         filtered_items,
-        focused_key: focused_key.into(),
+        focused_key: focused_key_signal,
         open,
         close,
         toggle,
         select,
         set_input_value,
         clear,
+        get_option_id,
     }
 }

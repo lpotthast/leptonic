@@ -6,13 +6,13 @@ pub use crate::atoms::slider::SliderPopover;
 // Re-export mark types from hooks for backward compatibility.
 pub use crate::hooks::{SliderMark, SliderMarkValue, SliderMarks};
 use crate::{
+    Out,
     atoms::slider::{
         Slider as SliderAtom, SliderMark, SliderMarks, SliderThumb, SliderThumbTooltip,
         SliderTrack, SliderTrackFill,
     },
     hooks::SliderValues,
     utils::{classes::Classes, styles::Styles},
-    Out,
 };
 
 #[derive(Default, Debug, Clone, Copy, PartialEq, Eq)]
@@ -122,8 +122,8 @@ pub fn Slider(
     #[prop(into, optional)] disabled: Signal<bool>,
     #[prop(optional)] marks: SliderMarks,
     #[prop(into, optional)] value_display: Option<Callback<f64, String>>,
-    #[prop(optional)] classes: Classes,
-    #[prop(optional)] styles: Styles,
+    #[prop(into, optional)] classes: Classes,
+    #[prop(into, optional)] styles: Styles,
 ) -> impl IntoView {
     let values = Signal::derive(move || vec![value.get()]);
     let on_change = Callback::new(move |vals: Vec<f64>| {

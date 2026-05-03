@@ -1,0 +1,54 @@
+/* Demo utility classes
+ *
+ * These classes style the interactive demos in the documentation.
+ * They are not part of leptonic itself — when copying demo code,
+ * replace these classes with your own project's styles.
+ */
+
+/* Buttons */
+.demo-btn           { padding: 0.5em 1em; border-radius: 4px; border: 1px solid #ccc; cursor: pointer; }
+.demo-btn-solid     { padding: 0.75em 1.5em; border-radius: 4px; border: 2px solid #333; cursor: pointer; background: white; }
+.demo-btn-primary   { padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; background: var(--brand-color); color: white; border: none; font-size: 1em; }
+.demo-btn-danger    { padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; background: #dc3545; color: white; border: none; font-size: 1em; }
+.demo-btn-secondary { padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; background: #6c757d; color: white; border: none; font-size: 1em; }
+.demo-btn-dark      { padding: 0.5em 1em; border-radius: 6px; cursor: pointer; background: #555; color: white; border: none; font-size: 0.9em; }
+
+/* Inputs */
+.demo-input         { padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; }
+.demo-input-solid   { padding: 0.75em; border: 2px solid #333; border-radius: 4px; width: 150px; background: white; }
+
+/* Layout */
+.demo-form-row        { flex-direction: row; align-items: center; gap: 0.5em; }
+.demo-flex-gap        { display: flex; gap: 2em; flex-wrap: wrap; margin-top: 0.5em; }
+.demo-flex-center-row { display: flex; gap: 1em; align-items: center; }
+.demo-flex-center     { display: flex; justify-content: center; padding: 2em; }
+.demo-mt-1            { margin-top: 1em; }
+
+/* State indicators */
+.demo-state-active   { color: green; }
+.demo-state-inactive { color: gray; }
+
+/* Containers */
+.demo-container-active   { border: 2px solid var(--brand-color); padding: 1.5em; border-radius: 8px; background: var(--brand-color-light, rgba(230, 105, 86, 0.1)); }
+.demo-container-inactive { border: 2px solid #ccc; padding: 1.5em; border-radius: 8px; background: transparent; }
+.demo-container-title    { margin: 0 0 1em 0; font-weight: bold; }
+
+/* Modal */
+.demo-modal-backdrop     { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.demo-modal-panel        { background: white; padding: 2em; border-radius: 12px; max-width: 400px; width: 90%; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3); }
+.demo-modal-title        { margin: 0 0 0.5em 0; color: #333; }
+.demo-modal-title-danger { margin: 0 0 0.5em 0; color: #dc3545; }
+.demo-modal-description  { margin: 0 0 1.5em 0; color: #666; }
+.demo-modal-btn-primary  { padding: 0.5em 1em; border-radius: 4px; cursor: pointer; background: var(--brand-color); color: white; border: none; }
+.demo-modal-btn-danger   { padding: 0.5em 1em; border-radius: 4px; cursor: pointer; background: #dc3545; color: white; border: none; }
+
+/* Popover & Overlay */
+.demo-popover-panel { background: white; border: 1px solid #ccc; border-radius: 8px; padding: 1em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 1000; max-width: 300px; }
+.demo-overlay-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 1px solid #ccc; border-radius: 8px; padding: 1.5em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 1000; max-width: 300px; }
+
+/* Color */
+.demo-color-swatch { width: 4em; height: 4em; border-radius: 0.5em; cursor: pointer; border: 2px solid rgba(128, 128, 128, 0.3); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); }
+.demo-color-picker-panel { padding: 0.75em; border-radius: 0.5em; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); background: var(--surface); }
+
+/* Event log */
+.demo-event-log { width: 100%; height: 15em; overflow: auto; padding: var(--typography-code-padding); border: none; border-radius: var(--typography-code-border-radius); background-color: var(--typography-code-background-color); color: var(--typography-code-color); }

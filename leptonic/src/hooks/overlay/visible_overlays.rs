@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "ssr", allow(dead_code))]
+
 //! Thread-local stack of visible overlays.
 //!
 //! This mirrors react-aria's module-level `visibleOverlays: RefObject<Element | null>[]`

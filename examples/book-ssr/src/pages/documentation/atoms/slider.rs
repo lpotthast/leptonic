@@ -1,66 +1,16 @@
 use indoc::indoc;
-use leptonic::{
-    atoms::slider::{
-        Slider as SliderAtom, SliderOutput, SliderThumb, SliderTrack, SliderTrackFill,
-    },
-    components::prelude::*,
-    hooks::{SliderOrientation, SliderValues},
-    utils::styles::{Style::*, Styles},
-};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
-
-fn track_style(orientation: SliderOrientation) -> Styles {
-    Styles::from([
-        (Display, "flex"),
-        (
-            Width,
-            match orientation {
-                SliderOrientation::Horizontal => "100%",
-                SliderOrientation::Vertical => "8px",
-            },
-        ),
-        (
-            Height,
-            match orientation {
-                SliderOrientation::Horizontal => "8px",
-                SliderOrientation::Vertical => "100%",
-            },
-        ),
-        (Background, "#ddd"),
-        (BorderRadius, "4px"),
-        (Position, "relative"),
-        (Cursor, "pointer"),
-    ])
-}
-
-fn thumb_style(color: &'static str) -> Styles {
-    Styles::builder()
-        .with((Width, "20px"))
-        .with((Height, "20px"))
-        .with((BackgroundColor, color))
-        .with((BorderRadius, "50%"))
-        .with((Border, "2px solid white"))
-        .with((BoxShadow, "0 2px 4px rgba(0,0,0,0.2)"))
-        .with((Cursor, "grab"))
-        .build()
-}
-
-#[component]
-fn SliderDemo(children: Children) -> impl IntoView {
-    view! {
-        <div style="padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-            { children() }
-        </div>
-    }
-}
+use super::demos::{
+    slider_basic::SliderBasicDemo, slider_callbacks::SliderCallbacksDemo,
+    slider_disabled::SliderDisabledDemo, slider_range::SliderRangeDemo,
+    slider_vertical::SliderVerticalDemo,
+};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageAtomSlider() -> impl IntoView {
-    let (change_log, set_change_log) = signal(String::new());
-    let (change_end_log, set_change_end_log) = signal(String::new());
-
     view! {
         <Article>
             <h1 id="slider" class="anchor">
@@ -80,7 +30,7 @@ pub fn PageAtomSlider() -> impl IntoView {
                 <AnchorLink href="#basic" description="Direct link to basic slider"/>
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     use leptonic::atoms::slider::*;
 
@@ -100,22 +50,9 @@ pub fn PageAtomSlider() -> impl IntoView {
                 "#)}
             </Code>
 
-            <SliderDemo>
-                <SliderAtom values=SliderValues::Uncontrolled(vec![50.0]) styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
-                    <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
-                        <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
-                        <SliderThumb styles=thumb_style("var(--brand-color)")/>
-                    </SliderTrack>
-                    <SliderOutput let:attrs let:values>
-                        <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
-                            { move || {
-                                let val = values.get().first().map(|it| *it as i32).unwrap_or(0);
-                                format!("{val}%")
-                            } }
-                        </output>
-                    </SliderOutput>
-                </SliderAtom>
-            </SliderDemo>
+            <DemoShell>
+                <SliderBasicDemo />
+            </DemoShell>
 
             <h2 id="range" class="anchor">
                 "Range Slider"
@@ -124,25 +61,9 @@ pub fn PageAtomSlider() -> impl IntoView {
 
             <p>"Pass two values via "<code>"SliderValues::Uncontrolled(vec![...])"</code>" and render two "<code>"SliderThumb"</code>" components. Thumbs are automatically constrained and cannot cross each other."</p>
 
-            <SliderDemo>
-                <SliderAtom values=SliderValues::Uncontrolled(vec![20.0, 80.0]) styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
-                    <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
-                        <SliderTrackFill styles=[(BackgroundColor, "#4a90d9"), (BorderRadius, "4px")]/>
-                        <SliderThumb aria_label="Minimum" styles=thumb_style("#4a90d9")/>
-                        <SliderThumb aria_label="Maximum" styles=thumb_style("#4a90d9")/>
-                    </SliderTrack>
-                    <SliderOutput let:attrs let:values>
-                        <output {..attrs} style=Styles::from([(MinWidth, "80px"), (TextAlign, "right")])>
-                            { move || {
-                                let vals = values.get();
-                                let v1 = vals.first().map(|it| *it as i32).unwrap_or(0);
-                                let v2 = vals.get(1).map(|it| *it as i32).unwrap_or(0);
-                                format!("{v1}% - {v2}%")
-                            } }
-                        </output>
-                    </SliderOutput>
-                </SliderAtom>
-            </SliderDemo>
+            <DemoShell source=include_str!("demos/slider_range.rs")>
+                <SliderRangeDemo />
+            </DemoShell>
 
             <h2 id="callbacks" class="anchor">
                 "Callbacks"
@@ -154,7 +75,7 @@ pub fn PageAtomSlider() -> impl IntoView {
                 <code>"on_change_end"</code>" fires once when the user finishes dragging."
             </p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     <Slider
                         values=SliderValues::Uncontrolled(vec![50.0])
@@ -168,35 +89,9 @@ pub fn PageAtomSlider() -> impl IntoView {
                 ")}
             </Code>
 
-            <SliderDemo>
-                <SliderAtom
-                    values=SliderValues::Uncontrolled(vec![50.0])
-                    on_change=Callback::new(move |values: Vec<f64>| {
-                        set_change_log.set(format!("on_change: {:?}", values.iter().map(|v| *v as i32).collect::<Vec<_>>()));
-                    })
-                    on_change_end=Callback::new(move |values: Vec<f64>| {
-                        set_change_end_log.set(format!("on_change_end: {:?}", values.iter().map(|v| *v as i32).collect::<Vec<_>>()));
-                    })
-                    styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]
-                >
-                    <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
-                        <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
-                        <SliderThumb styles=thumb_style("var(--brand-color)")/>
-                    </SliderTrack>
-                    <SliderOutput let:attrs let:values>
-                        <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
-                            { move || {
-                                let val = values.get().first().map(|it| *it as i32).unwrap_or(0);
-                                format!("{val}%")
-                            } }
-                        </output>
-                    </SliderOutput>
-                </SliderAtom>
-                <div style="margin-top: 0.5em; font-size: 0.9em; font-family: monospace;">
-                    <div>{ move || change_log.get() }</div>
-                    <div>{ move || change_end_log.get() }</div>
-                </div>
-            </SliderDemo>
+            <DemoShell source=include_str!("demos/slider_callbacks.rs")>
+                <SliderCallbacksDemo />
+            </DemoShell>
 
             <h2 id="vertical" class="anchor">
                 "Vertical Slider"
@@ -205,44 +100,18 @@ pub fn PageAtomSlider() -> impl IntoView {
 
             <p>"Set "<code>"orientation=SliderOrientation::Vertical"</code>" for a vertical layout."</p>
 
-            <SliderDemo>
-                <SliderAtom values=SliderValues::Uncontrolled(vec![60.0]) orientation=SliderOrientation::Vertical styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em"), (Height, "150px")]>
-                    <SliderTrack styles=track_style(SliderOrientation::Vertical)>
-                        <SliderTrackFill styles=[(BackgroundColor, "#9b59b6"), (BorderRadius, "4px")]/>
-                        <SliderThumb styles=thumb_style("#9b59b6")/>
-                    </SliderTrack>
-                    <SliderOutput let:attrs let:values>
-                        <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
-                            { move || {
-                                let val = values.get().first().map(|it| *it as i32).unwrap_or(0);
-                                format!("{val}%")
-                            } }
-                        </output>
-                    </SliderOutput>
-                </SliderAtom>
-            </SliderDemo>
+            <DemoShell source=include_str!("demos/slider_vertical.rs")>
+                <SliderVerticalDemo />
+            </DemoShell>
 
             <h2 id="disabled" class="anchor">
                 "Disabled Slider"
                 <AnchorLink href="#disabled" description="Direct link to disabled slider"/>
             </h2>
 
-            <SliderDemo>
-                <SliderAtom values=SliderValues::Uncontrolled(vec![30.0]) disabled=true styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "1em")]>
-                    <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
-                        <SliderTrackFill styles=[(BackgroundColor, "#999"), (BorderRadius, "4px")]/>
-                        <SliderThumb styles=thumb_style("#999")/>
-                    </SliderTrack>
-                    <SliderOutput let:attrs let:values>
-                        <output {..attrs} style=Styles::from([(MinWidth, "50px"), (TextAlign, "right")])>
-                            { move || {
-                                let val = values.get().first().map(|it| *it as i32).unwrap_or(0);
-                                format!("{val}%")
-                            } }
-                        </output>
-                    </SliderOutput>
-                </SliderAtom>
-            </SliderDemo>
+            <DemoShell source=include_str!("demos/slider_disabled.rs")>
+                <SliderDisabledDemo />
+            </DemoShell>
 
             <h2 id="form-name" class="anchor">
                 "Form Submission"
@@ -251,7 +120,7 @@ pub fn PageAtomSlider() -> impl IntoView {
 
             <p>"Pass a "<code>"name"</code>" prop to "<code>"SliderThumb"</code>" to include the value in form submissions via a hidden input."</p>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     <Slider values=SliderValues::Uncontrolled(vec![50.0])>
                         <SliderTrack>

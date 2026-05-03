@@ -15,9 +15,22 @@ opt-level = 'z'
 lto = true
 codegen-units = 1
 
-# overrides
+[workspace.lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(web_sys_unstable_apis)'] }
+
 [workspace.lints.clippy]
-option_if_let_else = { level = "allow", priority = 1 }
+all = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
+# overrides
+doc_markdown = { level = "allow", priority = 1 }
+float_cmp = { level = "allow", priority = 1 }
+missing_errors_doc = { level = "allow", priority = 1 }
+missing_panics_doc = { level = "allow", priority = 1 }
 module_name_repetitions = { level = "allow", priority = 1 }
 must_use_candidate = { level = "allow", priority = 1 }
+needless_pass_by_value = { level = "allow", priority = 1 }
+option_if_let_else = { level = "allow", priority = 1 }
+similar_names = { level = "allow", priority = 1 }
+too_many_lines = { level = "allow", priority = 1 }
+used_underscore_binding = { level = "allow", priority = 1 }
 wildcard_imports = { level = "allow", priority = 1 }

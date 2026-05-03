@@ -1,117 +1,198 @@
-use std::collections::HashSet;
-
-use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*, prelude::Size};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::{checkbox_basic::CheckboxBasicDemo, checkbox_group::CheckboxGroupDemo};
 
 #[component]
 pub fn PageUseCheckboxHook() -> impl IntoView {
-    // Simple checkbox
-    let (is_checked, set_is_checked) = signal(false);
-    let (is_indeterminate, set_is_indeterminate) = signal(false);
-    let (is_disabled, set_is_disabled) = signal(false);
-
-    let UseCheckboxReturn { input_props, .. } = use_checkbox(UseCheckboxInput {
-        is_selected: is_checked.into(),
-        is_indeterminate: is_indeterminate.into(),
-        is_disabled: is_disabled.into(),
-        is_read_only: false.into(),
-        is_required: false,
-        name: Some("example-checkbox".into()),
-        value: Some("example".into()),
-        validation_state: ValidationState::Valid,
-        aria_label: None,
-        on_change: Some(Callback::new(move |checked| {
-            set_is_checked.set(checked);
-            if checked {
-                set_is_indeterminate.set(false);
-            }
-        })),
-    });
-
-    // Checkbox group
-    let (group_value, _set_group_value) = signal(HashSet::<String>::new());
-    let UseCheckboxGroupReturn {
-        group_props,
-        label_props: group_label_props,
-        state: group_state,
-    } = use_checkbox_group(UseCheckboxGroupInput {
-        value: group_value.into(),
-        label: Some("Fruits".into()),
-        description: None,
-        error_message: None,
-        is_disabled: false.into(),
-        is_read_only: false.into(),
-        is_required: false,
-        validation_state: ValidationState::Valid,
-        orientation: Orientation::Vertical,
-        on_change: None,
-    });
-
     view! {
         <Article>
-            <h1 id="use_checkbox" class="anchor">
+            <h1 id="use-checkbox" class="anchor">
                 "use_checkbox & use_checkbox_group"
-                <AnchorLink href="#use_checkbox" description="Direct link to article header"/>
+                <AnchorLink href="#use-checkbox" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hooks for creating accessible checkboxes with support for indeterminate state and checkbox groups."</p>
+            <p>
+                "Hooks for creating accessible checkboxes with support for indeterminate state and checkbox groups. "
+                "See the "<Link href=crate::routes::doc::Checkbox.materialize()>"Checkbox overview"</Link>" for concept guidance."
+            </p>
 
-            <h2 id="single-checkbox" class="anchor">
-                "use_checkbox"
-                <AnchorLink href="#single-checkbox" description="Direct link to single checkbox"/>
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useCheckbox.html" target=LinkTarget::_Blank>
+                    "useCheckbox"
+                </LinkExt>
+                "."
+            </p>
+
+            // ── use_checkbox Input ──────────────────────────────────
+
+            <h2 id="input" class="anchor">
+                "Input"
+                <AnchorLink href="#input" description="Direct link to section: Input"/>
             </h2>
 
-            <Code>
-                {indoc!(r#"
-                    let (is_checked, set_is_checked) = signal(false);
+            <p><Code inline=true>"UseCheckboxInput"</Code>" fields:"</p>
 
-                    let UseCheckboxReturn { input_attrs, .. } = use_checkbox(UseCheckboxInput {
-                        is_selected: is_checked.into(),
-                        is_indeterminate: false.into(),
-                        is_disabled: false.into(),
-                        is_read_only: false.into(),
-                        is_required: false.into(),
-                        name: Some("my-checkbox".into()),
-                        value: Some("value".into()),
-                        validation_state: ValidationState::Valid.into(),
-                        on_change: Some(Callback::new(move |checked| set_is_checked.set(checked))),
-                    });
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_selected"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the checkbox is selected (controlled)"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_indeterminate"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the checkbox is in an indeterminate state"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"on_change"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Callback<bool>>"</Code></TableCell>
+                            <TableCell>"Callback when the selection changes"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_disabled"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the checkbox is disabled"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_read_only"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the checkbox is read-only"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_required"</Code></TableCell>
+                            <TableCell><Code inline=true>"bool"</Code></TableCell>
+                            <TableCell>"Whether the checkbox is required"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_invalid"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Signal<bool>>"</Code></TableCell>
+                            <TableCell>"Controlled invalid state; overrides all other validation when set"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"validate"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<ValidateFn<bool>>"</Code></TableCell>
+                            <TableCell>"Custom client-side validation function"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"validation_behavior"</Code></TableCell>
+                            <TableCell><Code inline=true>"ValidationBehavior"</Code></TableCell>
+                            <TableCell>"Validation behavior mode"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"default_value"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<bool>"</Code></TableCell>
+                            <TableCell>"Default value to restore on form reset"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"aria_label"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<&'static str>"</Code></TableCell>
+                            <TableCell>"Accessibility label for the checkbox"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"name"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<&'static str>"</Code></TableCell>
+                            <TableCell>"Name attribute for form submission"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"value"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<&'static str>"</Code></TableCell>
+                            <TableCell>"Value attribute for form submission"</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
 
-                    view! {
-                        <input type="checkbox" {..input_attrs} />
-                    }
-                "#)}
-            </Code>
+            // ── use_checkbox Return ─────────────────────────────────
 
-            <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-                <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer;">
-                    <input type="checkbox" {..input_props.into_attrs()} />
-                    <span>"Accept terms and conditions"</span>
-                </label>
+            <h2 id="return" class="anchor">
+                "Return"
+                <AnchorLink href="#return" description="Direct link to section: Return"/>
+            </h2>
 
-                <p style="margin: 1em 0 0.5em 0; font-size: 0.9em;">
-                    "Checked: " <strong>{ move || is_checked.get().to_string() }</strong>
-                    " | Indeterminate: " <strong>{ move || is_indeterminate.get().to_string() }</strong>
-                </p>
+            <p><Code inline=true>"UseCheckboxReturn"</Code>" fields:"</p>
 
-                <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
-                    <button
-                        on:click=move |_| set_is_indeterminate.update(|v| *v = !*v)
-                        style="padding: 0.4em 0.8em; border-radius: 4px; cursor: pointer; border: 1px solid #ccc;"
-                    >
-                        "Toggle Indeterminate"
-                    </button>
-                    <button
-                        on:click=move |_| set_is_disabled.update(|v| *v = !*v)
-                        style="padding: 0.4em 0.8em; border-radius: 4px; cursor: pointer; border: 1px solid #ccc;"
-                    >
-                        { move || if is_disabled.get() { "Enable" } else { "Disable" } }
-                    </button>
-                </Stack>
-            </div>
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"input_props"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseCheckboxInputProps"</Code></TableCell>
+                            <TableCell>"ARIA attributes and event handlers to spread onto the input element"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_selected"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the checkbox is currently selected"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_indeterminate"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the checkbox is currently indeterminate"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_pressed"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the checkbox is pressed (during interaction)"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_focus_visible"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the focus ring should be visible"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_invalid"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the displayed validation is invalid"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"validation_errors"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<Vec<String>>"</Code></TableCell>
+                            <TableCell>"The displayed validation error messages"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"validation_details"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<ValidityStateSnapshot>"</Code></TableCell>
+                            <TableCell>"Detailed validity state (mirrors native ValidityState)"</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            // ── use_checkbox Demo ───────────────────────────────────
+
+            <h2 id="demo" class="anchor">
+                "Demo"
+                <AnchorLink href="#demo" description="Direct link to section: Demo"/>
+            </h2>
+
+            <DemoShell
+                source=include_str!("demos/checkbox_basic.rs")
+                description="Checkbox with controlled state"
+            >
+                <CheckboxBasicDemo />
+            </DemoShell>
+
+            // ── Checkbox Group ──────────────────────────────────────
 
             <h2 id="checkbox-group" class="anchor">
                 "use_checkbox_group"
@@ -120,58 +201,153 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
 
             <p>"Manages a group of checkboxes with shared state."</p>
 
-            <Code>
-                {indoc!(r#"
-                    let UseCheckboxGroupReturn { group_attrs, label_props, state } =
-                        use_checkbox_group(UseCheckboxGroupInput {
-                            label: Some("Fruits".into()),
-                            description: None,
-                            error_message: None,
-                            is_disabled: false.into(),
-                            is_read_only: false.into(),
-                            validation_state: ValidationState::Valid.into(),
-                            orientation: Orientation::Vertical,
-                            on_change: None,
-                        });
+            <h3 id="group-input" class="anchor">
+                "Checkbox Group Input"
+                <AnchorLink href="#group-input" description="Direct link to section: Checkbox Group Input"/>
+            </h3>
 
-                    // Use state.add_value, state.remove_value, state.toggle_value
-                    // state.is_selected to check individual items
-                "#)}
-            </Code>
+            <p><Code inline=true>"UseCheckboxGroupInput<T>"</Code>" fields:"</p>
 
-            <div style="padding: 1em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-                <fieldset
-                    role=group_props.role
-                    aria-labelledby=group_props.aria_labelledby.clone()
-                    style="border: none; padding: 0; margin: 0;"
-                >
-                    <legend id=group_label_props.id.clone() style="font-weight: bold; margin-bottom: 0.5em;">
-                        "Select your favorite fruits"
-                    </legend>
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"value"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<HashSet<T>>"</Code></TableCell>
+                            <TableCell>"The current selected values (controlled)"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"on_change"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Callback<HashSet<T>>>"</Code></TableCell>
+                            <TableCell>"Callback when the selection changes"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_disabled"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the group is disabled"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_read_only"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the group is read-only"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_required"</Code></TableCell>
+                            <TableCell><Code inline=true>"bool"</Code></TableCell>
+                            <TableCell>"Whether the group is required"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_invalid"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<Signal<bool>>"</Code></TableCell>
+                            <TableCell>"Controlled invalid state; overrides other validation when set"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"validate"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<ValidateFn<HashSet<T>>>"</Code></TableCell>
+                            <TableCell>"Custom client-side validation function"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"validation_behavior"</Code></TableCell>
+                            <TableCell><Code inline=true>"ValidationBehavior"</Code></TableCell>
+                            <TableCell>"Validation behavior mode"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"name"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<&'static str>"</Code></TableCell>
+                            <TableCell>"Name attribute for form submission"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"label"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<String>"</Code></TableCell>
+                            <TableCell>"The label for the group"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"description"</Code></TableCell>
+                            <TableCell><Code inline=true>"Option<String>"</Code></TableCell>
+                            <TableCell>"A description for the group"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"orientation"</Code></TableCell>
+                            <TableCell><Code inline=true>"Orientation"</Code></TableCell>
+                            <TableCell>"The orientation of the group (Horizontal or Vertical)"</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
 
-                    {["Apple", "Banana", "Cherry", "Date"].into_iter().map(|fruit| {
-                        let fruit_value = fruit.to_string();
-                        let fruit_for_check = fruit_value.clone();
-                        let fruit_for_toggle = fruit_value.clone();
-                        let state = group_state.clone();
-                        let state_for_check = group_state.clone();
-                        view! {
-                            <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer; margin: 0.25em 0;">
-                                <input
-                                    type="checkbox"
-                                    checked=move || state_for_check.is_selected.run(fruit_for_check.clone())
-                                    on:change=move |_| { state.toggle_value.run(fruit_for_toggle.clone()); }
-                                />
-                                <span>{ fruit }</span>
-                            </label>
-                        }
-                    }).collect::<Vec<_>>()}
-                </fieldset>
+            <h3 id="group-return" class="anchor">
+                "Checkbox Group Return"
+                <AnchorLink href="#group-return" description="Direct link to section: Checkbox Group Return"/>
+            </h3>
 
-                <p style="margin-top: 1em; font-size: 0.9em;">
-                    "Selected: " { move || format!("{:?}", group_state.value.get()) }
-                </p>
-            </div>
+            <p><Code inline=true>"UseCheckboxGroupReturn<T>"</Code>" fields:"</p>
+
+            <TableContainer>
+                <Table bordered=true hoverable=true>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHeaderCell min_width=true>"Field"</TableHeaderCell>
+                            <TableHeaderCell min_width=true>"Type"</TableHeaderCell>
+                            <TableHeaderCell>"Description"</TableHeaderCell>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"group_props"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseCheckboxGroupProps"</Code></TableCell>
+                            <TableCell>"ARIA attributes for the group container element"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"label_props"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseCheckboxGroupLabelProps"</Code></TableCell>
+                            <TableCell>"Props for the label element (contains generated id)"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"state"</Code></TableCell>
+                            <TableCell><Code inline=true>"UseCheckboxGroupState<T>"</Code></TableCell>
+                            <TableCell>"Group state with is_selected, add_value, remove_value, toggle_value"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"is_invalid"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<bool>"</Code></TableCell>
+                            <TableCell>"Whether the displayed validation is invalid"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"validation_errors"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<Vec<String>>"</Code></TableCell>
+                            <TableCell>"The displayed validation error messages"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"validation_details"</Code></TableCell>
+                            <TableCell><Code inline=true>"Signal<ValidityStateSnapshot>"</Code></TableCell>
+                            <TableCell>"Detailed validity state (mirrors native ValidityState)"</TableCell>
+                        </TableRow>
+                    </TableBody>
+                </Table>
+            </TableContainer>
+
+            // ── Checkbox Group Demo ─────────────────────────────────
+
+            <h3 id="group-demo" class="anchor">
+                "Checkbox Group Demo"
+                <AnchorLink href="#group-demo" description="Direct link to section: Checkbox Group Demo"/>
+            </h3>
+
+            <DemoShell
+                source=include_str!("demos/checkbox_group.rs")
+                description="Checkbox group with multiple options"
+            >
+                <CheckboxGroupDemo />
+            </DemoShell>
+
+            // ── Indeterminate State ─────────────────────────────────
 
             <h2 id="indeterminate" class="anchor">
                 "Indeterminate State"
@@ -184,6 +360,8 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                 <li>"Indeterminate when some children are selected"</li>
                 <li>"Checked when all children are selected"</li>
             </ul>
+
+            // ── Features ────────────────────────────────────────────
 
             <h2 id="features" class="anchor">
                 "Features"
@@ -199,15 +377,34 @@ pub fn PageUseCheckboxHook() -> impl IntoView {
                 <li>"Group management with add/remove/toggle operations"</li>
                 <li>"Horizontal and vertical orientations for groups"</li>
             </ul>
+
+            // ── See Also ────────────────────────────────────────────
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Checkbox.materialize()>"Checkbox overview"</Link></li>
+                <li><Link href=crate::routes::doc::checkbox::Component.materialize()>"Checkbox component"</Link></li>
+                <li><Link href=crate::routes::doc::focus::UseFocusRing.materialize()>"use_focus_ring"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_checkbox", link: "#use_checkbox" },
-                Toc::Leaf { title: "Single Checkbox", link: "#single-checkbox" },
-                Toc::Leaf { title: "Checkbox Group", link: "#checkbox-group" },
+                Toc::Leaf { title: "use_checkbox", link: "#use-checkbox" },
+                Toc::Leaf { title: "Input", link: "#input" },
+                Toc::Leaf { title: "Return", link: "#return" },
+                Toc::Leaf { title: "Demo", link: "#demo" },
+                Toc::Leaf { title: "use_checkbox_group", link: "#checkbox-group" },
+                Toc::Leaf { title: "Group Input", link: "#group-input" },
+                Toc::Leaf { title: "Group Return", link: "#group-return" },
+                Toc::Leaf { title: "Group Demo", link: "#group-demo" },
                 Toc::Leaf { title: "Indeterminate State", link: "#indeterminate" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

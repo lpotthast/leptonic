@@ -1,6 +1,3 @@
-// =============================================================================
-// GLOBAL REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // The following deviations apply to all hooks in this module:
 //
@@ -39,11 +36,15 @@
 //   Rationale: Uses `Callback<T>` from Leptos instead of React event handlers.
 //   React-aria: Uses React's (event: E) => void function signatures.
 //
-// =============================================================================
 
+use crate::utils::{merge::MergeWith, styles::Styles};
+use std::fmt::Debug;
+
+mod animation;
 mod breadcrumbs;
 mod button;
 mod calendar;
+mod color;
 mod combobox;
 mod datepicker;
 mod dialog;
@@ -65,6 +66,7 @@ mod select;
 mod selection;
 mod separator;
 mod slider;
+mod spinbutton;
 mod table;
 mod tabs;
 mod tag;
@@ -72,9 +74,11 @@ mod toolbar;
 mod tooltip;
 mod tree;
 
+pub use animation::*;
 pub use breadcrumbs::*;
 pub use button::*;
 pub use calendar::*;
+pub use color::*;
 pub use combobox::*;
 pub use datepicker::*;
 pub use dialog::*;
@@ -96,6 +100,7 @@ pub use select::*;
 pub use selection::*;
 pub use separator::*;
 pub use slider::*;
+pub use spinbutton::*;
 pub use table::*;
 pub use tabs::*;
 pub use tag::*;
@@ -108,11 +113,56 @@ pub use tree::*;
 /// All `*Props` types returned by hooks implement this trait. Call `.into_attrs()`
 /// to convert props into an attribute tuple that can be spread onto elements
 /// using Leptos's spreading syntax (`<div {..props.into_attrs()}/>`).
-pub trait IntoAttrs {
+pub trait IntoAttrs: Debug {
     /// The concrete attributes tuple type produced by this conversion.
     type Attrs;
 
     /// Convert to spreadable attributes for Leptos views, consuming self.
     #[must_use]
     fn into_attrs(self) -> Self::Attrs;
+}
+
+/// Wrapper for hook props that include styles.
+///
+/// Does **not** implement [`IntoAttrs`] or any Leptos `Attribute` trait,
+/// so it cannot be spread directly. Callers must call [`.into_parts()`](Self::into_parts)
+/// to obtain both the spreadable attributes and the [`Styles`] that must be
+/// merged with any user-provided styles before being applied via `style=`.
+#[derive(Debug)]
+pub struct PropsWithStyles<P: IntoAttrs> {
+    props: P,
+    styles: Styles,
+}
+
+impl<P: IntoAttrs> PropsWithStyles<P> {
+    pub fn new(props: P, styles: Styles) -> Self {
+        Self { props, styles }
+    }
+
+    /// Consume self, converting the inner props to spreadable attributes
+    /// and returning them alongside the hook's styles.
+    // TODO: Deprecate this? Remove and rename into_inner to into_parts.
+    pub fn into_parts(self) -> (P::Attrs, Styles) {
+        (self.props.into_attrs(), self.styles)
+    }
+
+    /// Extract the inner props and styles.
+    pub fn into_inner(self) -> (P, Styles) {
+        (self.props, self.styles)
+    }
+}
+
+/// Blanket impl: if `P` can merge with `Other`, then `PropsWithStyles<P>` can too,
+/// preserving styles through the merge chain.
+impl<P, Other> MergeWith<Other> for PropsWithStyles<P>
+where
+    P: IntoAttrs + MergeWith<Other>,
+    P::Output: IntoAttrs,
+{
+    type Output = PropsWithStyles<P::Output>;
+
+    fn merge_with(self, other: Other) -> Self::Output {
+        let (props, styles) = self.into_inner();
+        PropsWithStyles::new(props.merge_with(other), styles)
+    }
 }

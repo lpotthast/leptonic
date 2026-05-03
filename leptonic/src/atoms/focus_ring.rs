@@ -1,4 +1,4 @@
-use leptos::prelude::*;
+use leptos::{attr::custom::custom_attribute, ev, prelude::*};
 use web_sys::FocusEvent;
 
 use crate::hooks::*;
@@ -33,8 +33,22 @@ pub fn FocusRing(
         on_blur,
         on_focus_change,
     });
-    let (on_focus, on_blur, on_focusin, on_focusout, data_focus_visible) =
-        focus_ring_props.into_attrs();
+
+    // Extract the data_focus_visible signal before consuming the props,
+    // then wrap it in a plain closure using `try_get()` for the DOM binding.
+    //
+    // Why: `Signal::derive` stores its value in an `ArenaItem` tied to the
+    // component's reactive owner. When `FocusRing` is used inside reactive
+    // iteration (`{move || items.get().map(...)}`), old components are dropped
+    // on re-run, disposing the `ArenaItem`. The Leptos rendering engine then
+    // calls `.get()` on the disposed signal during DOM reconciliation, which
+    // panics. A plain closure is NOT arena-allocated and survives disposal;
+    // `try_get()` returns `None` for disposed inner signals instead of panicking.
+    let data_focus_visible_signal = focus_ring_props.data_focus_visible;
+    let on_focus_attr = focus_ring_props.on_focus.into_on(ev::focus);
+    let on_blur_attr = focus_ring_props.on_blur.into_on(ev::blur);
+    let on_focusin_attr = focus_ring_props.on_focusin.into_on(ev::focusin);
+    let on_focusout_attr = focus_ring_props.on_focusout.into_on(ev::focusout);
 
     provide_context(FocusRingContext {
         is_focused,
@@ -43,9 +57,11 @@ pub fn FocusRing(
 
     children()
         .into_view()
-        .add_any_attr(on_focus)
-        .add_any_attr(on_blur)
-        .add_any_attr(on_focusin)
-        .add_any_attr(on_focusout)
-        .add_any_attr(data_focus_visible)
+        .add_any_attr(on_focus_attr)
+        .add_any_attr(on_blur_attr)
+        .add_any_attr(on_focusin_attr)
+        .add_any_attr(on_focusout_attr)
+        .add_any_attr(custom_attribute("data-focus-visible", move || {
+            data_focus_visible_signal.try_get().flatten()
+        }))
 }

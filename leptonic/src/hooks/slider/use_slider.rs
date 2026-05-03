@@ -46,7 +46,6 @@ use leptos::{
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
-    tachys::html::style::{style, Style},
 };
 use leptos_use::use_event_listener;
 use uuid::Uuid;
@@ -54,24 +53,22 @@ use web_sys::PointerEvent;
 
 use crate::{
     hooks::{
+        IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, PropsWithStyles, UseMoveInput,
         interactions::use_move::MoveAxis,
         slider::{SliderOrientation, UseSliderStateReturn},
-        use_move, IntoAttrs, MoveEndEvent, MoveEvent, MoveStartEvent, UseMoveInput,
+        use_move,
     },
     utils::{
+        EventAccessors, EventHandler, EventTargetExt,
         aria::{AriaDisabled, AriaLive, AriaRole},
         element_capture::{CapturedElement, ElementCaptureAttr},
-        EventAccessors, EventHandler, EventTargetExt,
+        styles::Styles,
     },
 };
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // No intentional deviations from the react-aria implementation.
 //
-// =============================================================================
 
 /// Input parameters for the `use_slider` hook.
 #[derive(Debug, Clone)]
@@ -103,7 +100,7 @@ pub struct UseSliderReturn {
 
     /// Props for the slider track element.
     /// Includes an `ElementCaptureAttr` that captures the DOM element.
-    pub track_props: UseSliderTrackProps,
+    pub track_props: PropsWithStyles<UseSliderTrackProps>,
 
     /// Reactive handle to the captured track element.
     /// Pass this to `use_slider_thumb`.
@@ -145,7 +142,6 @@ pub type UseSliderGroupAttrs = (
 #[derive(Debug)]
 pub struct UseSliderTrackProps {
     role: AriaRole,
-    style_touch_action: &'static str,
     on_pointerdown: EventHandler<PointerEvent>,
     element_capture: ElementCaptureAttr,
 }
@@ -156,7 +152,6 @@ impl IntoAttrs for UseSliderTrackProps {
     fn into_attrs(self) -> Self::Attrs {
         (
             Attr(attr::Role, self.role),
-            style(("touch-action", self.style_touch_action)),
             self.on_pointerdown.into_on(ev::pointerdown),
             self.element_capture,
         )
@@ -166,7 +161,6 @@ impl IntoAttrs for UseSliderTrackProps {
 /// Attributes for the slider track element.
 pub type UseSliderTrackAttrs = (
     Attr<attr::Role, AriaRole>,
-    Style<(&'static str, &'static str)>, // touch-action: none
     On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
     ElementCaptureAttr,
 );
@@ -303,8 +297,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
 
     // Cleanup functions for the global pointerup/pointercancel listeners registered
     // in on_track_pointerdown. Stored so we can remove them in the handler or on_cleanup.
-    let track_cleanup: StoredValue<Option<Box<dyn Fn() + Send + Sync>>, LocalStorage> =
-        StoredValue::new_local(None);
+    let track_cleanup: StoredValue<Option<Box<dyn Fn() + Send + Sync>>> = StoredValue::new(None);
 
     // Handle track clicks immediately on pointerdown (before use_move processes the event).
     // This is the react-aria "onDownTrack" pattern: click-to-position happens here,
@@ -325,8 +318,8 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             let scroll_y = web_sys::window()
                 .and_then(|w| w.scroll_y().ok())
                 .unwrap_or(0.0);
-            let client_x = f64::from(e.page_x()) - scroll_x;
-            let client_y = f64::from(e.page_y()) - scroll_y;
+            let client_x = e.page_x() - scroll_x;
+            let client_y = e.page_y() - scroll_y;
 
             let (position, size): (f64, f64) = match orientation.get_untracked() {
                 SliderOrientation::Horizontal => {
@@ -421,6 +414,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             SliderOrientation::Horizontal => Some(MoveAxis::Horizontal),
             SliderOrientation::Vertical => Some(MoveAxis::Vertical),
         }),
+        is_rtl: false,
         on_move_start: Some(Callback::new(move |_: MoveStartEvent| {})),
         on_move: Some(Callback::new(move |e: MoveEvent| {
             if let Some(idx) = dragging_thumb_index.get_value() {
@@ -468,7 +462,10 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             dragging_thumb_index.set_value(None);
             current_position_px.set_value(None);
         })),
+        on_position_change: None,
         constraint: None,
+        allow_container_click: false,
+        initial_position: None,
     });
 
     on_cleanup(move || {
@@ -493,13 +490,15 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
             html_for,
             aria_live: AriaLive::Off,
         },
-        track_props: UseSliderTrackProps {
-            role: AriaRole::Presentation,
-            style_touch_action: "none",
-            on_pointerdown: EventHandler::new(handle_track_pointerdown)
-                .chain(track_move_return.props.on_pointerdown),
-            element_capture: track_element.attr(),
-        },
+        track_props: PropsWithStyles::new(
+            UseSliderTrackProps {
+                role: AriaRole::Presentation,
+                on_pointerdown: EventHandler::new(handle_track_pointerdown)
+                    .chain(track_move_return.props.on_pointerdown),
+                element_capture: track_element.attr(),
+            },
+            Styles::new().add("touch-action", "none"),
+        ),
         track_ref: track_element,
     }
 }

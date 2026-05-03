@@ -1,4 +1,4 @@
-use leptonic::{components::prelude::*, prelude::*};
+use leptonic::{components::prelude::*, utils::css::CssDimension};
 use leptos::prelude::*;
 
 use crate::routes;
@@ -6,7 +6,7 @@ use crate::routes;
 #[component]
 pub(crate) fn PageErr404() -> impl IntoView {
     view! {
-        <Grid gap=Size::Zero attr:class="err-404">
+        <Grid gap=CssDimension::Zero attr:class="err-404">
             <Row>
                 <Col sm=6 xs=12 attr:class="info" h_align=ColAlign::Center>
                     <h1 id="error">"404"</h1>

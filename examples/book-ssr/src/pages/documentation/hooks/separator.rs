@@ -1,26 +1,15 @@
 use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, toc::Toc};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
+
+use super::demos::separator_decorative::SeparatorDecorativeDemo;
+use super::demos::separator_horizontal::SeparatorHorizontalDemo;
+use super::demos::separator_vertical::SeparatorVerticalDemo;
 
 #[component]
 pub fn PageUseSeparatorHook() -> impl IntoView {
-    let horizontal_sep = use_separator(UseSeparatorInput {
-        orientation: SeparatorOrientation::Horizontal,
-        element_type: SeparatorElementType::Hr,
-    });
-
-    let vertical_sep = use_separator(UseSeparatorInput {
-        orientation: SeparatorOrientation::Vertical,
-        element_type: SeparatorElementType::Div,
-    });
-
-    let div_sep = use_separator(UseSeparatorInput {
-        orientation: SeparatorOrientation::Horizontal,
-        element_type: SeparatorElementType::Div,
-    });
-
     view! {
         <Article>
             <h1 id="use_separator" class="anchor">
@@ -28,7 +17,18 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                 <AnchorLink href="#use_separator" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hook for creating accessible separators that divide content visually and semantically."</p>
+            <p>
+                "The "<Code inline=true>"use_separator"</Code>" hook creates accessible separators that divide content visually and semantically. "
+                "See the "<Link href=crate::routes::doc::Separator.materialize()>"Separator overview"</Link>" for concept guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useSeparator.html" target=LinkTarget::_Blank>
+                    "useSeparator"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="demo" class="anchor">
                 "Interactive Demo"
@@ -36,33 +36,21 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
             </h2>
 
             <h3>"Horizontal Separator (hr element)"</h3>
-            <div style="margin: 1em 0;">
-                <p>"Content above the separator"</p>
-                <hr {..horizontal_sep.separator_props.into_attrs()} style="border: none; border-top: 1px solid #ccc; margin: 1em 0;"/>
-                <p>"Content below the separator"</p>
-            </div>
+            <DemoShell source=include_str!("demos/separator_horizontal.rs")>
+                <SeparatorHorizontalDemo />
+            </DemoShell>
 
             <h3>"Vertical Separator"</h3>
-            <div style="display: flex; align-items: center; gap: 1em; margin: 1em 0;">
-                <span>"Left content"</span>
-                <div
-                    {..vertical_sep.separator_props.into_attrs()}
-                    style="width: 1px; height: 24px; background: #ccc;"
-                ></div>
-                <span>"Right content"</span>
-            </div>
+            <DemoShell source=include_str!("demos/separator_vertical.rs")>
+                <SeparatorVerticalDemo />
+            </DemoShell>
 
             <h3>"Decorative Separator (div element)"</h3>
-            <div style="margin: 1em 0;">
-                <p>"This separator is rendered as a div with role=\"separator\""</p>
-                <div
-                    {..div_sep.separator_props.into_attrs()}
-                    style="height: 2px; background: linear-gradient(90deg, transparent, #ccc, transparent); margin: 1em 0;"
-                ></div>
-                <p>"Content continues..."</p>
-            </div>
+            <DemoShell source=include_str!("demos/separator_decorative.rs")>
+                <SeparatorDecorativeDemo />
+            </DemoShell>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     // Using <hr> element (no role needed)
                     let hr_sep = use_separator(UseSeparatorInput {
@@ -132,6 +120,17 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                 <li>"Horizontal and vertical orientations"</li>
                 <li>"Minimal, focused API"</li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Separator.materialize()>"Separator overview"</Link></li>
+                <li><Link href=crate::routes::doc::separator::Component.materialize()>"Separator component"</Link></li>
+                <li><Link href=crate::routes::doc::LayoutCategory.materialize()>"Layout domain"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -142,6 +141,7 @@ pub fn PageUseSeparatorHook() -> impl IntoView {
                 Toc::Leaf { title: "Orientations", link: "#orientations" },
                 Toc::Leaf { title: "ARIA Attributes", link: "#aria-attributes" },
                 Toc::Leaf { title: "Features", link: "#features" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
     }

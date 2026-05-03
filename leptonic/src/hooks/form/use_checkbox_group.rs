@@ -3,7 +3,10 @@ use std::{collections::HashSet, hash::Hash};
 use leptos::{attr, attr::Attr, prelude::*};
 use uuid::Uuid;
 
-use super::use_field::ValidationState;
+use super::use_form_validation_state::{
+    UseFormValidationStateInput, ValidateFn, ValidationBehavior, ValidityStateSnapshot,
+    use_form_validation_state,
+};
 use crate::{
     hooks::IntoAttrs,
     utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired, AriaRole},
@@ -11,13 +14,7 @@ use crate::{
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckboxGroup.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_checkbox_group` hook.
 #[derive(Clone)]
@@ -40,8 +37,24 @@ where
     /// Whether the group is required.
     pub is_required: bool,
 
-    /// The validation state of the group.
-    pub validation_state: ValidationState,
+    /// Whether the group is explicitly marked as invalid (controlled validation).
+    ///
+    /// - `None` — not controlled; validation comes from `validate`, server errors,
+    ///   or native constraint validation.
+    /// - `Some(signal)` — controlled; the signal value determines valid/invalid
+    ///   and overrides all other validation sources.
+    pub is_invalid: Option<Signal<bool>>,
+
+    /// Custom client-side validation function.
+    ///
+    /// Returns `Ok(())` for valid, `Err(messages)` for invalid.
+    pub validate: Option<ValidateFn<HashSet<T>>>,
+
+    /// Validation behavior mode.
+    pub validation_behavior: ValidationBehavior,
+
+    /// The name attribute for form submission, used to match server errors.
+    pub name: Option<&'static str>,
 
     /// The label for the group.
     pub label: Option<String>,
@@ -49,11 +62,30 @@ where
     /// A description for the group.
     pub description: Option<String>,
 
-    /// An error message for the group.
-    pub error_message: Option<String>,
-
     /// The orientation of the group.
     pub orientation: Orientation,
+}
+
+impl<T> Default for UseCheckboxGroupInput<T>
+where
+    T: Hash + Eq + Clone + Send + Sync + 'static,
+{
+    fn default() -> Self {
+        Self {
+            value: Signal::derive(HashSet::new),
+            on_change: None,
+            is_disabled: Signal::derive(|| false),
+            is_read_only: Signal::derive(|| false),
+            is_required: false,
+            is_invalid: None,
+            validate: None,
+            validation_behavior: ValidationBehavior::default(),
+            name: None,
+            label: None,
+            description: None,
+            orientation: Orientation::default(),
+        }
+    }
 }
 
 /// The orientation of a group.
@@ -88,6 +120,15 @@ where
 
     /// The group state for use by individual checkboxes.
     pub state: UseCheckboxGroupState<T>,
+
+    /// Whether the displayed validation is invalid.
+    pub is_invalid: Signal<bool>,
+
+    /// The displayed validation error messages.
+    pub validation_errors: Signal<Vec<String>>,
+
+    /// Detailed validity state (mirrors native `ValidityState`).
+    pub validation_details: Signal<ValidityStateSnapshot>,
 }
 
 /// Props from `use_checkbox_group` for the checkbox group container.
@@ -100,10 +141,10 @@ pub struct UseCheckboxGroupProps {
     pub aria_labelledby: Option<String>,
 
     /// The aria-describedby attribute.
-    pub aria_describedby: Option<String>,
+    pub aria_describedby: Signal<Option<String>>,
 
     /// The aria-invalid attribute.
-    pub aria_invalid: Option<AriaInvalid>,
+    pub aria_invalid: Signal<Option<AriaInvalid>>,
 
     /// The aria-required attribute.
     pub aria_required: Option<AriaRequired>,
@@ -136,8 +177,8 @@ impl IntoAttrs for UseCheckboxGroupProps {
 pub type UseCheckboxGroupAttrs = (
     Attr<attr::Role, AriaRole>,
     Attr<attr::AriaLabelledby, Option<String>>,
-    Attr<attr::AriaDescribedby, Option<String>>,
-    Attr<attr::AriaInvalid, Option<AriaInvalid>>,
+    Attr<attr::AriaDescribedby, Signal<Option<String>>>,
+    Attr<attr::AriaInvalid, Signal<Option<AriaInvalid>>>,
     Attr<attr::AriaRequired, Option<AriaRequired>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
@@ -218,7 +259,7 @@ where
 ///     </fieldset>
 /// }
 /// ```
-#[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::needless_pass_by_value, clippy::too_many_lines)]
 pub fn use_checkbox_group<T>(input: UseCheckboxGroupInput<T>) -> UseCheckboxGroupReturn<T>
 where
     T: Hash + Eq + Clone + Send + Sync + 'static,
@@ -229,39 +270,64 @@ where
         is_disabled,
         is_read_only,
         is_required,
-        validation_state,
+        is_invalid,
+        validate,
+        validation_behavior,
+        name,
         label,
         description,
-        error_message,
         orientation,
     } = input;
 
+    // ---- Form validation state ----
+    let validation = use_form_validation_state(UseFormValidationStateInput {
+        is_invalid,
+        value,
+        validate,
+        validation_behavior,
+        name: name.map(ToString::to_string),
+    });
+
+    // ---- IDs ----
     let base_id = Uuid::new_v4();
     let label_id = format!("checkbox-group-label-{base_id}");
     let description_id = format!("checkbox-group-description-{base_id}");
     let error_id = format!("checkbox-group-error-{base_id}");
 
-    // Build aria-describedby
-    let mut describedby_parts = Vec::new();
-    if description.is_some() {
-        describedby_parts.push(description_id.clone());
-    }
-    if validation_state == ValidationState::Invalid && error_message.is_some() {
-        describedby_parts.push(error_id.clone());
-    }
+    // ---- Reactive ARIA attributes ----
+    let has_description = description.is_some();
+    let has_label = label.is_some();
 
-    let aria_describedby = if describedby_parts.is_empty() {
-        None
-    } else {
-        Some(describedby_parts.join(" "))
-    };
+    let description_id_for_signal = description_id.clone();
+    let error_id_for_signal = error_id.clone();
+    let aria_describedby = Signal::derive(move || {
+        let mut parts = Vec::new();
+        if has_description {
+            parts.push(description_id_for_signal.clone());
+        }
+        if validation.is_invalid.get() {
+            parts.push(error_id_for_signal.clone());
+        }
+        if parts.is_empty() {
+            None
+        } else {
+            Some(parts.join(" "))
+        }
+    });
 
     // Build aria-labelledby
-    let aria_labelledby = if label.is_some() {
+    let aria_labelledby = if has_label {
         Some(label_id.clone())
     } else {
         None
     };
+
+    let aria_invalid =
+        Signal::derive(move || validation.is_invalid.get().then_some(AriaInvalid::True));
+
+    // ---- Validation details convenience signal ----
+    let validation_details =
+        Signal::derive(move || validation.display_validation.get().validation_details);
 
     // Check if a value is selected
     let is_selected = Callback::new(move |v: T| -> bool { value.get_untracked().contains(&v) });
@@ -317,8 +383,7 @@ where
             role: AriaRole::Group,
             aria_labelledby,
             aria_describedby,
-            aria_invalid: (validation_state == ValidationState::Invalid)
-                .then_some(AriaInvalid::True),
+            aria_invalid,
             aria_required: is_required.then_some(AriaRequired::True),
             aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
             aria_orientation: AriaOrientation::from(orientation),
@@ -333,5 +398,8 @@ where
             remove_value,
             toggle_value,
         },
+        is_invalid: validation.is_invalid,
+        validation_errors: validation.validation_errors,
+        validation_details,
     }
 }

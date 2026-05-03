@@ -71,6 +71,34 @@ pub fn snap_value_to_step(value: f64, min: f64, max: f64, step: f64, precision: 
     }
 }
 
+/// Performs a decimal arithmetic operation (add or subtract) with precision handling.
+///
+/// Avoids floating-point errors by computing in integer space when possible.
+/// For example, `handle_decimal_operation('+', 0.1, 0.2)` returns `0.3`
+/// instead of the naive `0.30000000000000004`.
+///
+/// Based on react-aria's `handleDecimalOperation` from `@react-stately/utils/src/number.ts`.
+///
+/// # Panics
+/// Panics if `op` is not `'+'` or `'-'`.
+#[must_use]
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+pub fn handle_decimal_operation(op: char, value1: f64, value2: f64) -> f64 {
+    let precision = decimal_precision(value1).max(decimal_precision(value2));
+    let multiplier = 10_f64.powi(precision as i32);
+
+    let int1 = (value1 * multiplier).round();
+    let int2 = (value2 * multiplier).round();
+
+    let result = match op {
+        '+' => int1 + int2,
+        '-' => int1 - int2,
+        _ => panic!("handle_decimal_operation: unsupported operation '{op}'"),
+    };
+
+    result / multiplier
+}
+
 /// Calculate page size: (max-min)/10, snapped to step, minimum is step.
 /// This follows react-aria's behavior for slider keyboard navigation.
 #[must_use]
@@ -87,8 +115,8 @@ mod tests {
     use assertr::prelude::*;
 
     use super::{
-        calculate_page_size, decimal_precision, percentage_in_range, round_to_precision,
-        snap_value_to_step, value_in_range,
+        calculate_page_size, decimal_precision, handle_decimal_operation, percentage_in_range,
+        round_to_precision, snap_value_to_step, value_in_range,
     };
 
     #[test]
@@ -193,6 +221,33 @@ mod tests {
         // Steps from 9: 9, 5, 1, -3, -7 (next would be -11, past max=-9)
         assert_that(snap_value_to_step(6.0, 9.0, -9.0, 4.0, 0)).is_equal_to(5.0);
         assert_that(snap_value_to_step(-2.0, 9.0, -9.0, 4.0, 0)).is_equal_to(-3.0);
+    }
+
+    #[test]
+    fn test_handle_decimal_operation_add() {
+        // Classic floating-point issue: 0.1 + 0.2 should be 0.3
+        assert_that(handle_decimal_operation('+', 0.1, 0.2)).is_equal_to(0.3);
+        assert_that(handle_decimal_operation('+', 0.01, 0.02)).is_equal_to(0.03);
+
+        // Integer addition
+        assert_that(handle_decimal_operation('+', 1.0, 2.0)).is_equal_to(3.0);
+
+        // Mixed precision
+        assert_that(handle_decimal_operation('+', 1.0, 0.1)).is_equal_to(1.1);
+        assert_that(handle_decimal_operation('+', 1_000_000.001, 0.002)).is_equal_to(1_000_000.003);
+    }
+
+    #[test]
+    fn test_handle_decimal_operation_subtract() {
+        assert_that(handle_decimal_operation('-', 0.3, 0.1)).is_equal_to(0.2);
+        assert_that(handle_decimal_operation('-', 1.0, 0.1)).is_equal_to(0.9);
+        assert_that(handle_decimal_operation('-', 0.03, 0.01)).is_equal_to(0.02);
+
+        // Subtraction resulting in zero
+        assert_that(handle_decimal_operation('-', 0.1, 0.1)).is_equal_to(0.0);
+
+        // Subtraction resulting in negative
+        assert_that(handle_decimal_operation('-', 0.1, 0.3)).is_equal_to(-0.2);
     }
 
     #[test]

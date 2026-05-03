@@ -25,7 +25,7 @@ pub fn PageAtomDismissButton() -> impl IntoView {
                 <AnchorLink href="#usage" description="Direct link to usage"/>
             </h2>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     use leptonic::atoms::dismiss_button::DismissButton;
 
@@ -64,7 +64,7 @@ pub fn PageAtomDismissButton() -> impl IntoView {
                 "Based on react-aria's "
                 <code>"DismissButton"</code>
                 " component. See the "
-                <LinkExt href="https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/DismissButton.tsx" target=leptonic::hooks::LinkTarget::_Blank>
+                <LinkExt href="https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/DismissButton.tsx" target=LinkTarget::_Blank>
                     "source"
                 </LinkExt>
                 " for reference."

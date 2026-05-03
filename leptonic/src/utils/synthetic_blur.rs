@@ -1,3 +1,5 @@
+#![cfg_attr(feature = "ssr", allow(dead_code))]
+
 //! Synthetic blur event support for Firefox compatibility.
 //!
 //! Firefox does not fire `blur`/`focusout` events when a focused form element
@@ -44,7 +46,7 @@ pub fn setup_synthetic_blur_observer(_element: &web_sys::Element) -> Box<dyn Fn(
 pub fn setup_synthetic_blur_observer(element: &web_sys::Element) -> Box<dyn Fn()> {
     use std::{cell::Cell, rc::Rc};
 
-    use wasm_bindgen::{prelude::*, JsCast};
+    use wasm_bindgen::{JsCast, prelude::*};
 
     // Only observe form elements that support the `disabled` attribute.
     let is_form_element = element.dyn_ref::<web_sys::HtmlButtonElement>().is_some()

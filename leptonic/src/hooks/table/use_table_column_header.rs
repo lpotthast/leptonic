@@ -10,24 +10,18 @@ use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 use super::use_table::SortDirection;
 use crate::{
     hooks::{
-        focus::use_focus_ring::{use_focus_ring, UseFocusRingInput, UseFocusRingReturn},
         IntoAttrs,
+        focus::use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
     },
     utils::{
-        aria::{AriaDisabled, AriaRole},
         EventHandler,
+        aria::{AriaDisabled, AriaRole},
     },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableColumnHeader.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
-//
 // No intentional deviations from the react-aria implementation.
-//
-// =============================================================================
 
 /// Input parameters for the `use_table_column_header` hook.
 #[derive(Debug, Clone)]

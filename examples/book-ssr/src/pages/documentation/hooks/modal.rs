@@ -1,8 +1,12 @@
 use indoc::indoc;
-use leptonic::{atoms::focus_scope::FocusScope, components::prelude::*, hooks::*, prelude::Size};
+use leptonic::components::prelude::*;
 use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
+use super::demos::{
+    modal_alert::AlertDialogDemo, modal_basic::BasicModalDemo,
+    modal_confirmation::ConfirmationDialogDemo, modal_non_dismissable::NonDismissableModalDemo,
+};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
 #[component]
 pub fn PageUseModalHook() -> impl IntoView {
@@ -13,7 +17,22 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <AnchorLink href="#modal" description="Direct link to article header"/>
             </h1>
 
-            <p>"Hooks for creating accessible modal dialogs with proper focus management, dismiss handling, and ARIA attributes."</p>
+            <p>
+                "Hooks for creating accessible modal dialogs with proper focus management, dismiss handling, and ARIA attributes. "
+                "See the "<Link href=crate::routes::doc::Modal.materialize()>"Modal overview"</Link>" for concept guidance."
+            </p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useDialog.html" target=LinkTarget::_Blank>
+                    "useDialog"
+                </LinkExt>
+                " and "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useModalOverlay.html" target=LinkTarget::_Blank>
+                    "useModalOverlay"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="hook-composition" class="anchor">
                 "Hook Composition"
@@ -135,7 +154,9 @@ pub fn PageUseModalHook() -> impl IntoView {
 
             <p>"A complete modal with scroll prevention, backdrop dismiss, Escape key handling, and focus trapping:"</p>
 
-            <BasicModalDemo />
+            <DemoShell source=include_str!("demos/modal_basic.rs")>
+                <BasicModalDemo />
+            </DemoShell>
 
             <h2 id="alert-dialog-demo" class="anchor">
                 "Alert Dialog Demo"
@@ -145,7 +166,9 @@ pub fn PageUseModalHook() -> impl IntoView {
             <p>"An alert dialog is used for important messages that require user acknowledgment. "
                "It uses "<code>"role=\"alertdialog\""</code>" and typically cannot be dismissed with Escape:"</p>
 
-            <AlertDialogDemo />
+            <DemoShell source=include_str!("demos/modal_alert.rs")>
+                <AlertDialogDemo />
+            </DemoShell>
 
             <h2 id="non-dismissable-demo" class="anchor">
                 "Non-Dismissable Modal Demo"
@@ -155,7 +178,9 @@ pub fn PageUseModalHook() -> impl IntoView {
             <p>"A modal that cannot be dismissed by clicking outside or pressing Escape. "
                "Users must complete an action (like filling a form) to close it:"</p>
 
-            <NonDismissableModalDemo />
+            <DemoShell source=include_str!("demos/modal_non_dismissable.rs")>
+                <NonDismissableModalDemo />
+            </DemoShell>
 
             <h2 id="confirmation-demo" class="anchor">
                 "Confirmation Dialog Demo"
@@ -165,7 +190,9 @@ pub fn PageUseModalHook() -> impl IntoView {
             <p>"A confirmation dialog using "<code>"use_dialog_state"</code>" to track whether the user confirmed or cancelled. "
                "Watch the status text below to see the result:"</p>
 
-            <ConfirmationDialogDemo />
+            <DemoShell source=include_str!("demos/modal_confirmation.rs")>
+                <ConfirmationDialogDemo />
+            </DemoShell>
 
             <h2 id="api" class="anchor">
                 "API"
@@ -177,7 +204,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <AnchorLink href="#use_modal_state" description="Direct link to use_modal_state"/>
             </h3>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     let UseModalStateReturn { is_open, set_open, open, close, toggle } =
                         use_modal_state(UseModalStateInput::default());
@@ -275,7 +302,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <AnchorLink href="#use_modal_backdrop" description="Direct link to use_modal_backdrop"/>
             </h3>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseModalBackdropReturn { modal_props, backdrop_props, id: _ } =
                         use_modal_backdrop(UseModalBackdropInput {
@@ -402,7 +429,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <AnchorLink href="#use_modal" description="Direct link to use_modal"/>
             </h3>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseModalReturn { modal_props } = use_modal(UseModalInput {
                         is_disabled: false,
@@ -477,7 +504,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <AnchorLink href="#use_dialog" description="Direct link to use_dialog"/>
             </h3>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r#"
                     let UseDialogReturn { dialog_props, title_props, description_props, dialog_id } =
                         use_dialog(UseDialogInput {
@@ -602,7 +629,7 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <AnchorLink href="#use_dialog_state" description="Direct link to use_dialog_state"/>
             </h3>
 
-            <Code>
+            <Code language=Language::Rust>
                 {indoc!(r"
                     let UseDialogStateReturn {
                         is_open, set_open, open, close, toggle, confirm, is_confirmed,
@@ -761,17 +788,19 @@ pub fn PageUseModalHook() -> impl IntoView {
                 <li>"Dismissable and non-dismissable modes"</li>
             </ul>
 
-            <h2 id="related-hooks" class="anchor">
-                "Related Hooks"
-                <AnchorLink href="#related-hooks" description="Direct link to related hooks"/>
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
             </h2>
 
             <ul>
-                <li><code>"use_overlay"</code>" — Internal dismiss/stacking logic used by "<code>"use_modal_backdrop"</code>"."</li>
-                <li><code>"use_popover"</code>" — Use instead when the overlay should be anchored to a trigger element."</li>
-                <li><code>"use_prevent_scroll"</code>" — Internal scroll prevention used by "<code>"use_modal_backdrop"</code>"."</li>
-                <li><code>"use_interact_outside"</code>" — Internal outside-click detection used by "<code>"use_overlay"</code>"."</li>
-                <li><code>"FocusScope"</code>" (atom) — Focus trapping and restoration, compose with modal hooks."</li>
+                <li><Link href=crate::routes::doc::Modal.materialize()>"Modal overview"</Link></li>
+                <li><Link href=crate::routes::doc::modal::Component.materialize()>"Modal component"</Link></li>
+                <li><Link href=crate::routes::doc::overlays::UseOverlay.materialize()>"use_overlay"</Link>" \u{2014} internal dismiss/stacking logic"</li>
+                <li><Link href=crate::routes::doc::Popover.materialize()>"Popover"</Link>" \u{2014} for trigger-anchored overlays"</li>
+                <li><Link href=crate::routes::doc::interactions::UsePreventScroll.materialize()>"use_prevent_scroll"</Link>" \u{2014} used internally"</li>
+                <li><Link href=crate::routes::doc::interactions::UseInteractOutside.materialize()>"use_interact_outside"</Link>" \u{2014} used internally"</li>
+                <li><Link href=crate::routes::doc::focus::FocusScope.materialize()>"FocusScope atom"</Link>" \u{2014} focus trapping and restoration"</li>
             </ul>
 
             <h2 id="deviations" class="anchor">
@@ -811,439 +840,9 @@ pub fn PageUseModalHook() -> impl IntoView {
                 Toc::Leaf { title: "API", link: "#api" },
                 Toc::Leaf { title: "Accessibility", link: "#accessibility" },
                 Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "Related Hooks", link: "#related-hooks" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
                 Toc::Leaf { title: "React Aria Deviations", link: "#deviations" },
             ]
         }/>
-    }
-}
-
-/// Basic modal demo with scroll prevention via use_modal_backdrop.
-/// Uses use_dialog for proper ARIA labeling and focus-on-mount.
-#[component]
-fn BasicModalDemo() -> impl IntoView {
-    // State layer
-    let UseModalStateReturn {
-        is_open,
-        set_open: _,
-        open,
-        close,
-        toggle: _,
-    } = use_modal_state(UseModalStateInput::default());
-
-    // Backdrop layer - dismiss behavior (Escape, outside click) + scroll prevention
-    let UseModalBackdropReturn {
-        modal_props,
-        backdrop_props,
-        id: _,
-    } = use_modal_backdrop(UseModalBackdropInput {
-        is_open,
-        on_close: close,
-        is_dismissable: true,
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
-    });
-
-    // Aria-modal layer
-    let UseModalReturn {
-        modal_props: aria_modal_props,
-    } = use_modal(UseModalInput { is_disabled: false });
-
-    // Dialog layer - ARIA labeling and focus on mount
-    let UseDialogReturn {
-        dialog_props,
-        title_props,
-        description_props,
-        dialog_id: _,
-    } = use_dialog(UseDialogInput {
-        title: Some("Basic Modal".to_string()),
-        description: Some("This modal has scroll prevention enabled.".to_string()),
-        aria_label: None,
-        role: DialogRole::Dialog,
-    });
-
-    // Convert Props to Attrs before storing in StoredValue (Props is non-Clone, Attrs is Clone)
-    let title_id = StoredValue::new(title_props.id.clone());
-    let description_id = StoredValue::new(description_props.id.clone());
-    let modal_attrs = StoredValue::new(modal_props.into_attrs());
-    let aria_modal_attrs = StoredValue::new(aria_modal_props.into_attrs());
-    let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
-    let backdrop_attrs = StoredValue::new(backdrop_props.into_attrs());
-
-    view! {
-        <button
-            on:click=move |_| open.run(())
-            style=demo_button_primary()
-        >
-            "Open Modal"
-        </button>
-
-        <Show when=move || is_open.get()>
-            // Backdrop with backdrop_props (pointerdown Firefox fix)
-            <div
-                {..backdrop_attrs.get_value()}
-                style=modal_backdrop()
-            >
-                // FocusScope traps focus within the modal and restores it on close
-                <FocusScope contain=true restore_focus=true auto_focus=true>
-                    // Modal - spread modal_props (overlay behavior) + aria_modal_props + dialog_props
-                    <div
-                        {..modal_attrs.get_value()}
-                        {..aria_modal_attrs.get_value()}
-                        {..dialog_attrs.get_value()}
-                        style=modal_panel()
-                    >
-                        <h2 id=title_id.get_value() style=modal_title()>
-                            "Basic Modal"
-                        </h2>
-                        <p id=description_id.get_value() style=modal_description()>
-                            "This modal has scroll prevention enabled. Try scrolling the page - it won't work! "
-                            "Press Escape or click outside to close."
-                        </p>
-                        <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
-                            <button
-                                on:click=move |_| close.run(())
-                                style=demo_button()
-                            >
-                                "Cancel"
-                            </button>
-                            <button
-                                on:click=move |_| close.run(())
-                                style=modal_action_button_primary()
-                            >
-                                "Confirm"
-                            </button>
-                        </Stack>
-                    </div>
-                </FocusScope>
-            </div>
-        </Show>
-    }
-}
-
-/// Alert dialog demo with AlertDialog role.
-/// Composes use_modal_backdrop (for dismiss behavior) + use_modal (for aria-modal)
-/// + use_dialog (for ARIA semantics + focus).
-#[component]
-fn AlertDialogDemo() -> impl IntoView {
-    let UseModalStateReturn {
-        is_open,
-        set_open: _,
-        open,
-        close,
-        toggle: _,
-    } = use_modal_state(UseModalStateInput::default());
-
-    // Backdrop layer - non-dismissable for alert dialogs
-    let UseModalBackdropReturn {
-        modal_props,
-        backdrop_props,
-        id: _,
-    } = use_modal_backdrop(UseModalBackdropInput {
-        is_open,
-        on_close: close,
-        is_dismissable: false,
-        is_keyboard_dismiss_disabled: true,
-        should_close_on_interact_outside: None,
-    });
-
-    // Aria-modal layer
-    let UseModalReturn {
-        modal_props: aria_modal_props,
-    } = use_modal(UseModalInput { is_disabled: false });
-
-    // Dialog layer - ARIA labeling, alertdialog role, focus on mount
-    let UseDialogReturn {
-        dialog_props,
-        title_props,
-        description_props,
-        dialog_id: _,
-    } = use_dialog(UseDialogInput {
-        title: Some("Delete Item".to_string()),
-        description: Some("This action cannot be undone. Are you sure?".to_string()),
-        aria_label: None,
-        role: DialogRole::AlertDialog,
-    });
-
-    let title_id = StoredValue::new(title_props.id.clone());
-    let description_id = StoredValue::new(description_props.id.clone());
-    let modal_attrs = StoredValue::new(modal_props.into_attrs());
-    let aria_modal_attrs = StoredValue::new(aria_modal_props.into_attrs());
-    let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
-    let backdrop_attrs = StoredValue::new(backdrop_props.into_attrs());
-
-    view! {
-        <button
-            on:click=move |_| open.run(())
-            style=demo_button_danger()
-        >
-            "Delete Item (Alert Dialog)"
-        </button>
-
-        <Show when=move || is_open.get()>
-            <div
-                {..backdrop_attrs.get_value()}
-                style=modal_backdrop()
-            >
-                <FocusScope contain=true restore_focus=true auto_focus=true>
-                    <div
-                        {..modal_attrs.get_value()}
-                        {..aria_modal_attrs.get_value()}
-                        {..dialog_attrs.get_value()}
-                        style=modal_panel()
-                    >
-                        <h2 id=title_id.get_value() style=modal_title_danger()>
-                            "Delete Item"
-                        </h2>
-                        <p id=description_id.get_value() style=modal_description()>
-                            "This action cannot be undone. Are you sure you want to delete this item?"
-                        </p>
-                        <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
-                            <button
-                                on:click=move |_| close.run(())
-                                style=demo_button()
-                            >
-                                "Cancel"
-                            </button>
-                            <button
-                                on:click=move |_| close.run(())
-                                style=modal_action_button_danger()
-                            >
-                                "Delete"
-                            </button>
-                        </Stack>
-                    </div>
-                </FocusScope>
-            </div>
-        </Show>
-    }
-}
-
-/// Non-dismissable modal demo.
-/// Uses use_dialog for proper ARIA labeling and focus-on-mount.
-#[component]
-fn NonDismissableModalDemo() -> impl IntoView {
-    let UseModalStateReturn {
-        is_open,
-        set_open: _,
-        open,
-        close,
-        toggle: _,
-    } = use_modal_state(UseModalStateInput::default());
-
-    // Backdrop layer - non-dismissable configuration
-    let UseModalBackdropReturn {
-        modal_props,
-        backdrop_props,
-        id: _,
-    } = use_modal_backdrop(UseModalBackdropInput {
-        is_open,
-        on_close: close,
-        is_dismissable: false,
-        is_keyboard_dismiss_disabled: true,
-        should_close_on_interact_outside: None,
-    });
-
-    // Aria-modal layer
-    let UseModalReturn {
-        modal_props: aria_modal_props,
-    } = use_modal(UseModalInput { is_disabled: false });
-
-    // Dialog layer - ARIA labeling and focus on mount
-    let UseDialogReturn {
-        dialog_props,
-        title_props,
-        description_props,
-        dialog_id: _,
-    } = use_dialog(UseDialogInput {
-        title: Some("Non-Dismissable Modal".to_string()),
-        description: Some(
-            "This modal cannot be closed by pressing Escape or clicking outside.".to_string(),
-        ),
-        aria_label: None,
-        role: DialogRole::Dialog,
-    });
-
-    let title_id = StoredValue::new(title_props.id.clone());
-    let description_id = StoredValue::new(description_props.id.clone());
-    let modal_attrs = StoredValue::new(modal_props.into_attrs());
-    let aria_modal_attrs = StoredValue::new(aria_modal_props.into_attrs());
-    let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
-    let backdrop_attrs = StoredValue::new(backdrop_props.into_attrs());
-
-    view! {
-        <button
-            on:click=move |_| open.run(())
-            style=demo_button_secondary()
-        >
-            "Open Non-Dismissable Modal"
-        </button>
-
-        <Show when=move || is_open.get()>
-            <div
-                {..backdrop_attrs.get_value()}
-                style=modal_backdrop()
-            >
-                <FocusScope contain=true restore_focus=true auto_focus=true>
-                    <div
-                        {..modal_attrs.get_value()}
-                        {..aria_modal_attrs.get_value()}
-                        {..dialog_attrs.get_value()}
-                        style=modal_panel()
-                    >
-                        <h2 id=title_id.get_value() style=modal_title()>
-                            "Non-Dismissable Modal"
-                        </h2>
-                        <p id=description_id.get_value() style=modal_description()>
-                            "This modal cannot be closed by pressing Escape or clicking outside. "
-                            "You must click the button below to close it."
-                        </p>
-                        <button
-                            on:click=move |_| close.run(())
-                            style=modal_action_button_primary()
-                        >
-                            "I Understand"
-                        </button>
-                    </div>
-                </FocusScope>
-            </div>
-        </Show>
-    }
-}
-
-/// Confirmation dialog demo using use_dialog_state.
-/// Composes use_modal_backdrop (for dismiss behavior) + use_modal (for aria-modal)
-/// + use_dialog (for ARIA semantics + focus).
-#[component]
-fn ConfirmationDialogDemo() -> impl IntoView {
-    // Use dialog state with confirmation tracking
-    let UseDialogStateReturn {
-        is_open,
-        set_open: _,
-        open,
-        close,
-        toggle: _,
-        confirm,
-        is_confirmed,
-    } = use_dialog_state(UseDialogStateInput::default());
-
-    // Track the last action result
-    let (last_result, set_last_result) = signal::<Option<bool>>(None);
-
-    // Update last_result when dialog closes
-    Effect::new(move || {
-        if !is_open.get() && last_result.get().is_none() {
-            // Dialog just closed, check confirmation status
-            set_last_result.set(Some(is_confirmed.get()));
-        }
-    });
-
-    // Backdrop layer - dismissable confirmation dialog
-    let UseModalBackdropReturn {
-        modal_props,
-        backdrop_props,
-        id: _,
-    } = use_modal_backdrop(UseModalBackdropInput {
-        is_open,
-        on_close: close,
-        is_dismissable: true,
-        is_keyboard_dismiss_disabled: false,
-        should_close_on_interact_outside: None,
-    });
-
-    // Aria-modal layer
-    let UseModalReturn {
-        modal_props: aria_modal_props,
-    } = use_modal(UseModalInput { is_disabled: false });
-
-    // Dialog layer - ARIA labeling and focus on mount
-    let UseDialogReturn {
-        dialog_props,
-        title_props,
-        description_props,
-        dialog_id: _,
-    } = use_dialog(UseDialogInput {
-        title: Some("Confirm Action".to_string()),
-        description: Some("Do you want to proceed with this action?".to_string()),
-        aria_label: None,
-        role: DialogRole::Dialog,
-    });
-
-    let title_id = StoredValue::new(title_props.id.clone());
-    let description_id = StoredValue::new(description_props.id.clone());
-    let modal_attrs = StoredValue::new(modal_props.into_attrs());
-    let aria_modal_attrs = StoredValue::new(aria_modal_props.into_attrs());
-    let dialog_attrs = StoredValue::new(dialog_props.into_attrs());
-    let backdrop_attrs = StoredValue::new(backdrop_props.into_attrs());
-
-    view! {
-        <div style=flex_row_center()>
-            <button
-                on:click=move |_| {
-                    set_last_result.set(None);
-                    open.run(());
-                }
-                style=demo_button_primary()
-            >
-                "Open Confirmation Dialog"
-            </button>
-
-            <span style=move || {
-                match last_result.get() {
-                    Some(true) => state_active(),
-                    _ => state_inactive(),
-                }
-            }>
-                {move || match last_result.get() {
-                    None => "No action taken yet".to_string(),
-                    Some(true) => "Confirmed!".to_string(),
-                    Some(false) => "Cancelled".to_string(),
-                }}
-            </span>
-        </div>
-
-        <Show when=move || is_open.get()>
-            <div
-                {..backdrop_attrs.get_value()}
-                style=modal_backdrop()
-            >
-                <FocusScope contain=true restore_focus=true auto_focus=true>
-                    <div
-                        {..modal_attrs.get_value()}
-                        {..aria_modal_attrs.get_value()}
-                        {..dialog_attrs.get_value()}
-                        style=modal_panel()
-                    >
-                        <h2 id=title_id.get_value() style=modal_title()>
-                            "Confirm Action"
-                        </h2>
-                        <p id=description_id.get_value() style=modal_description()>
-                            "Do you want to proceed with this action? "
-                            "Click Confirm to accept or Cancel to decline."
-                        </p>
-                        <Stack orientation=StackOrientation::Horizontal spacing=Size::Em(0.5)>
-                            <button
-                                on:click=move |_| {
-                                    set_last_result.set(Some(false));
-                                    close.run(());
-                                }
-                                style=demo_button()
-                            >
-                                "Cancel"
-                            </button>
-                            <button
-                                on:click=move |_| {
-                                    set_last_result.set(Some(true));
-                                    confirm.run(());
-                                }
-                                style=modal_action_button_primary()
-                            >
-                                "Confirm"
-                            </button>
-                        </Stack>
-                    </div>
-                </FocusScope>
-            </div>
-        </Show>
     }
 }

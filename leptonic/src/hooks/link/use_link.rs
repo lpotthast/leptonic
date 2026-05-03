@@ -1,28 +1,26 @@
 use leptos::{attr, attr::Attr, oco::Oco};
+use leptos_element_capture::ElementCaptureAttr;
 use reactive_graph::{
     callback::{Callable, Callback},
     prelude::Get,
     wrappers::read::Signal,
 };
 
+use crate::hooks::PropsWithStyles;
 use crate::{
     hooks::{
-        link_rel_to_string, use_focus_ring, use_focusable, use_press, FocusHandle, IntoAttrs,
-        LinkRel, LinkTarget, MergedFocusablePressFocusRingAttrs,
+        FocusHandle, IntoAttrs, LinkRel, LinkTarget, MergedFocusablePressFocusRingAttrs,
         MergedFocusablePressFocusRingProps, PressEvent, UseFocusRingInput, UseFocusRingReturn,
-        UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn,
+        UseFocusableInput, UseFocusableReturn, UsePressInput, UsePressReturn, link_rel_to_string,
+        use_focus_ring, use_focusable, use_press,
     },
     utils::{
+        MergeWith,
         aria::{AriaCurrent, AriaDisabled, AriaRole},
-        ElementCaptureAttr, MergeWith,
     },
 };
-
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/link/src/useLink.ts
 
-// =============================================================================
-// REACT-ARIA DEVIATIONS
-// =============================================================================
 //
 // ## DIFFERENT BEHAVIOR
 //
@@ -37,7 +35,6 @@ use crate::{
 //   Rationale: React-aria handles focus ring visibility at the component level.
 //   Leptonic includes it in the hook for consistency with `use_button`.
 //
-// =============================================================================
 
 /// Input parameters for the `use_link` hook.
 #[derive(Debug, Clone)]
@@ -86,7 +83,7 @@ pub enum LinkElementType {
 #[derive(Debug)]
 pub struct UseLinkReturn {
     /// Props for the link element. Call `.into_attrs()` for view spreading.
-    pub props: UseLinkProps,
+    pub props: PropsWithStyles<UseLinkProps>,
 
     /// Whether the link is disabled.
     pub is_disabled: Signal<bool>,
@@ -236,6 +233,8 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         ..UseFocusRingInput::default()
     });
 
+    let (press_props, press_styles) = press_props.into_inner();
+
     let merged = focusable_props
         .merge_with(press_props)
         .merge_with(focus_ring_props);
@@ -251,18 +250,19 @@ pub fn use_link(input: UseLinkInput) -> UseLinkReturn {
         ..merged
     };
 
-    let props = UseLinkProps {
-        href,
-        target,
-        rel,
-        role,
-        aria_current,
-        aria_disabled,
-        merged,
-    };
-
     UseLinkReturn {
-        props,
+        props: PropsWithStyles {
+            props: UseLinkProps {
+                href,
+                target,
+                rel,
+                role,
+                aria_current,
+                aria_disabled,
+                merged,
+            },
+            styles: press_styles,
+        },
         is_disabled,
         is_pressed,
         is_focus_visible,

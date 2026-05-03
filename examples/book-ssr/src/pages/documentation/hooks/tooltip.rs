@@ -1,10 +1,12 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::*, utils::{locale::WritingDirection, CapturedElement}};
-use leptos::{portal::Portal, prelude::*};
+use leptonic::components::prelude::*;
+use leptos::prelude::*;
 
-use crate::pages::documentation::{article::Article, doc_styles::*, toc::Toc};
+use super::demos::{
+    tooltip_basic::TooltipDemo, tooltip_hover_to_keep_open::HoverToKeepOpenDemo,
+    tooltip_positioning::PositioningDemo,
+};
+use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
-#[allow(clippy::too_many_lines)]
 #[component]
 pub fn PageUseTooltipHook() -> impl IntoView {
     view! {
@@ -15,7 +17,16 @@ pub fn PageUseTooltipHook() -> impl IntoView {
             </h1>
 
             <p>"Hooks for creating accessible tooltips with hover/focus triggers, warmup/cooldown delays, hover-to-keep-open behavior, and proper ARIA associations. "
-               "The tooltip system is built from three composable hooks."</p>
+               "The tooltip system is built from three composable hooks. "
+               "See the "<Link href=crate::routes::doc::Tooltip.materialize()>"Tooltip overview"</Link>" for concept guidance."</p>
+
+            <p>
+                "Based on react-aria\u{2019}s "
+                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useTooltip.html" target=LinkTarget::_Blank>
+                    "useTooltip"
+                </LinkExt>
+                "."
+            </p>
 
             <h2 id="hook-composition" class="anchor">
                 "Hook Composition"
@@ -93,74 +104,9 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 
             <p>"Hover over or focus the button to see the tooltip. Move your mouse to the tooltip content — it stays open. Press Escape to close it."</p>
 
-            <TooltipDemo />
-
-            <Code>
-                {indoc!(r#"
-                    use leptonic::hooks::{
-                        use_tooltip_trigger_state, UseTooltipTriggerStateInput,
-                        use_tooltip_trigger, UseTooltipTriggerInput,
-                        use_tooltip, UseTooltipInput,
-                        use_overlay_position, UseOverlayPositionInput,
-                        PlacementX, PlacementY,
-                    };
-                    use leptonic::utils::{locale::WritingDirection, CapturedElement};
-                    use leptos::portal::Portal;
-
-                    let target_element = CapturedElement::new();
-
-                    let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
-                        delay: 300,
-                        close_delay: 100,
-                        ..Default::default()
-                    });
-                    let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
-                    let tooltip = use_tooltip(UseTooltipInput {
-                        disabled: Signal::derive(|| false),
-                        state: Some(state),
-                        on_open: None,
-                        on_close: None,
-                    });
-
-                    // The overlay element is captured internally by use_overlay_position.
-                    let position = use_overlay_position(UseOverlayPositionInput {
-                        target: target_element,
-                        placement_x: Signal::derive(|| PlacementX::Center),
-                        placement_y: Signal::derive(|| PlacementY::Above),
-                        writing_direction: Signal::derive(|| WritingDirection::Ltr),
-                        offset: 4.0.into(),
-                        cross_offset: 0.0.into(),
-                        container_padding: 12.0.into(),
-                        should_flip: true.into(),
-                        max_height: None,
-                        is_open: trigger.is_open,
-                    });
-
-                    let target_capture = target_element.attr();
-                    let position_attrs = position.props.into_attrs();
-
-                    view! {
-                        <button
-                            {..target_capture}
-                            {..trigger.trigger_props.into_attrs()}
-                        >
-                            "Hover me"
-                        </button>
-                        <Portal>
-                            <Show when=move || trigger.is_open.get()>
-                                <div
-                                    {..position_attrs.clone()}
-                                    {..tooltip.props.into_attrs()}
-                                    id=trigger.tooltip_props.id.clone()
-                                    role=trigger.tooltip_props.role
-                                >
-                                    "Tooltip content"
-                                </div>
-                            </Show>
-                        </Portal>
-                    }
-                "#)}
-            </Code>
+            <DemoShell source=include_str!("demos/tooltip_basic.rs")>
+                <TooltipDemo />
+            </DemoShell>
 
             <h2 id="hover-to-keep-open" class="anchor">
                 "Hover-to-Keep-Open"
@@ -173,7 +119,9 @@ pub fn PageUseTooltipHook() -> impl IntoView {
 
             <p>"Compare the two buttons below:"</p>
 
-            <HoverToKeepOpenDemo />
+            <DemoShell source=include_str!("demos/tooltip_hover_to_keep_open.rs")>
+                <HoverToKeepOpenDemo />
+            </DemoShell>
 
             <h2 id="warmup-cooldown" class="anchor">
                 "Warmup / Cooldown System"
@@ -207,7 +155,9 @@ pub fn PageUseTooltipHook() -> impl IntoView {
             <p>"Combine the tooltip hooks with "<code>"use_overlay_position"</code>" for automatic positioning with collision detection. "
                "Hover over the buttons to see tooltips positioned in different directions:"</p>
 
-            <PositioningDemo />
+            <DemoShell source=include_str!("demos/tooltip_positioning.rs")>
+                <PositioningDemo />
+            </DemoShell>
 
             <h2 id="api" class="anchor">
                 "API"
@@ -509,6 +459,17 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                 <li>"Thread-local global state ("<code>"tooltip_registry"</code>") for warmup/cooldown instead of module-level JS variables"</li>
                 <li><code>"get_modality()"</code>" from "<code>"use_focus_visible"</code>" instead of react-aria's "<code>"getInteractionModality()"</code></li>
             </ul>
+
+            <h2 id="see-also" class="anchor">
+                "See Also"
+                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+            </h2>
+
+            <ul>
+                <li><Link href=crate::routes::doc::Tooltip.materialize()>"Tooltip overview"</Link></li>
+                <li><Link href=crate::routes::doc::Popover.materialize()>"Popover concept"</Link></li>
+                <li><Link href=crate::routes::doc::Overlays.materialize()>"Overlays overview"</Link></li>
+            </ul>
         </Article>
 
         <Toc toc=Toc::List {
@@ -526,328 +487,8 @@ pub fn PageUseTooltipHook() -> impl IntoView {
                 Toc::Leaf { title: "Features", link: "#features" },
                 Toc::Leaf { title: "Related Hooks", link: "#related-hooks" },
                 Toc::Leaf { title: "React Aria Deviations", link: "#deviations" },
+                Toc::Leaf { title: "See Also", link: "#see-also" },
             ]
         }/>
-    }
-}
-
-/// Simple tooltip demo using all three hooks
-#[component]
-fn TooltipDemo() -> impl IntoView {
-    let target_element = CapturedElement::new();
-
-    let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
-        delay: 300,
-        close_delay: 100,
-        ..Default::default()
-    });
-    let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
-    let tooltip = use_tooltip(UseTooltipInput {
-        disabled: Signal::derive(|| false),
-        state: Some(state),
-        on_open: None,
-        on_close: None,
-    });
-
-    let position = use_overlay_position(UseOverlayPositionInput {
-        target: target_element,
-        placement_x: Signal::derive(|| PlacementX::Center),
-        placement_y: Signal::derive(|| PlacementY::Above),
-        writing_direction: Signal::derive(|| WritingDirection::Ltr),
-        offset: 4.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        max_height: None,
-        is_open: trigger.is_open,
-    });
-
-    let is_open = trigger.is_open;
-    let tooltip_id = trigger.tooltip_props.id.clone();
-    let target_capture = target_element.attr();
-    let position_attrs = position.props.into_attrs();
-    let tooltip_attrs = tooltip.props.into_attrs();
-
-    view! {
-        <div style="margin: 3em 0; display: flex; justify-content: center;">
-            <button
-                {..target_capture}
-                style=demo_button_primary()
-                {..trigger.trigger_props.into_attrs()}
-            >
-                "Hover me"
-            </button>
-
-            <Portal>
-                {
-                    let tooltip_id = tooltip_id.clone();
-                    let position_attrs = position_attrs.clone();
-                    let tooltip_attrs = tooltip_attrs.clone();
-                    view! {
-                        <Show when=move || is_open.get()>
-                            <div
-                                {..position_attrs.clone()}
-                                {..tooltip_attrs.clone()}
-                                id=tooltip_id.clone()
-                                role="tooltip"
-                                class="tooltip-demo"
-                            >
-                                "This is a tooltip!"
-                            </div>
-                        </Show>
-                    }
-                }
-            </Portal>
-        </div>
-    }
-}
-
-/// Demo comparing tooltips with and without use_tooltip
-#[component]
-fn HoverToKeepOpenDemo() -> impl IntoView {
-    view! {
-        <div style="display: flex; gap: 3em; justify-content: center; margin: 2em 0;">
-            <div style="text-align: center;">
-                <WithoutUseTooltipDemo />
-                <p style="margin-top: 0.5em; font-size: 0.85em; color: #888;">"Without use_tooltip"</p>
-            </div>
-            <div style="text-align: center;">
-                <WithUseTooltipDemo />
-                <p style="margin-top: 0.5em; font-size: 0.85em; color: #888;">"With use_tooltip"</p>
-            </div>
-        </div>
-    }
-}
-
-/// Tooltip without use_tooltip — closes when moving cursor to tooltip content
-#[component]
-fn WithoutUseTooltipDemo() -> impl IntoView {
-    let target_element = CapturedElement::new();
-
-    let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
-        delay: 200,
-        close_delay: 50,
-        ..Default::default()
-    });
-    let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
-
-    let position = use_overlay_position(UseOverlayPositionInput {
-        target: target_element,
-        placement_x: Signal::derive(|| PlacementX::Center),
-        placement_y: Signal::derive(|| PlacementY::Above),
-        writing_direction: Signal::derive(|| WritingDirection::Ltr),
-        offset: 4.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        max_height: None,
-        is_open: trigger.is_open,
-    });
-
-    let is_open = trigger.is_open;
-    let tooltip_id = trigger.tooltip_props.id.clone();
-    let target_capture = target_element.attr();
-    let position_attrs = position.props.into_attrs();
-
-    view! {
-        <button
-            {..target_capture}
-            style=demo_button_dark()
-            {..trigger.trigger_props.into_attrs()}
-        >
-            "Hover me"
-        </button>
-
-        <Portal>
-            {
-                let tooltip_id = tooltip_id.clone();
-                let position_attrs = position_attrs.clone();
-                view! {
-                    <Show when=move || is_open.get()>
-                        <div
-                            {..position_attrs.clone()}
-                            id=tooltip_id.clone()
-                            role="tooltip"
-                            class="tooltip-demo"
-                        >
-                            "Move cursor here — closes!"
-                        </div>
-                    </Show>
-                }
-            }
-        </Portal>
-    }
-}
-
-/// Tooltip with use_tooltip — stays open when moving cursor to tooltip content
-#[component]
-fn WithUseTooltipDemo() -> impl IntoView {
-    let target_element = CapturedElement::new();
-
-    let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
-        delay: 200,
-        close_delay: 50,
-        ..Default::default()
-    });
-    let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
-    let tooltip = use_tooltip(UseTooltipInput {
-        disabled: Signal::derive(|| false),
-        state: Some(state),
-        on_open: None,
-        on_close: None,
-    });
-
-    let position = use_overlay_position(UseOverlayPositionInput {
-        target: target_element,
-        placement_x: Signal::derive(|| PlacementX::Center),
-        placement_y: Signal::derive(|| PlacementY::Above),
-        writing_direction: Signal::derive(|| WritingDirection::Ltr),
-        offset: 4.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        max_height: None,
-        is_open: trigger.is_open,
-    });
-
-    let is_open = trigger.is_open;
-    let tooltip_id = trigger.tooltip_props.id.clone();
-    let target_capture = target_element.attr();
-    let position_attrs = position.props.into_attrs();
-    let tooltip_attrs = tooltip.props.into_attrs();
-
-    view! {
-        <button
-            {..target_capture}
-            style=demo_button_primary()
-            {..trigger.trigger_props.into_attrs()}
-        >
-            "Hover me"
-        </button>
-
-        <Portal>
-            {
-                let tooltip_id = tooltip_id.clone();
-                let position_attrs = position_attrs.clone();
-                let tooltip_attrs = tooltip_attrs.clone();
-                view! {
-                    <Show when=move || is_open.get()>
-                        <div
-                            {..position_attrs.clone()}
-                            {..tooltip_attrs.clone()}
-                            id=tooltip_id.clone()
-                            role="tooltip"
-                            class="tooltip-demo"
-                        >
-                            "Move cursor here — stays open!"
-                        </div>
-                    </Show>
-                }
-            }
-        </Portal>
-    }
-}
-
-/// Demo showing different tooltip placements
-#[component]
-fn PositioningDemo() -> impl IntoView {
-    view! {
-        <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 2em; max-width: 400px; margin: 2em auto;">
-            <PositionedTooltip
-                label="Above"
-                placement_x=PlacementX::Center
-                placement_y=PlacementY::Above
-            />
-            <PositionedTooltip
-                label="Below"
-                placement_x=PlacementX::Center
-                placement_y=PlacementY::Below
-            />
-            <PositionedTooltip
-                label="Left"
-                placement_x=PlacementX::OuterLeft
-                placement_y=PlacementY::Center
-            />
-            <PositionedTooltip
-                label="Right"
-                placement_x=PlacementX::OuterRight
-                placement_y=PlacementY::Center
-            />
-        </div>
-    }
-}
-
-/// Individual positioned tooltip button
-#[component]
-fn PositionedTooltip(
-    label: &'static str,
-    placement_x: PlacementX,
-    placement_y: PlacementY,
-) -> impl IntoView {
-    let target_element = CapturedElement::new();
-
-    let state = use_tooltip_trigger_state(UseTooltipTriggerStateInput {
-        delay: 200,
-        close_delay: 50,
-        ..Default::default()
-    });
-    let trigger = use_tooltip_trigger(UseTooltipTriggerInput::default(), state);
-    let tooltip = use_tooltip(UseTooltipInput {
-        disabled: Signal::derive(|| false),
-        state: Some(state),
-        on_open: None,
-        on_close: None,
-    });
-
-    let position = use_overlay_position(UseOverlayPositionInput {
-        target: target_element,
-        placement_x: Signal::derive(move || placement_x),
-        placement_y: Signal::derive(move || placement_y),
-        writing_direction: Signal::derive(|| WritingDirection::Ltr),
-        offset: 4.0.into(),
-        cross_offset: 0.0.into(),
-        container_padding: 12.0.into(),
-        should_flip: true.into(),
-        max_height: None,
-        is_open: trigger.is_open,
-    });
-
-    let is_open = trigger.is_open;
-    let tooltip_id = trigger.tooltip_props.id.clone();
-    let target_capture = target_element.attr();
-    let position_attrs = position.props.into_attrs();
-    let tooltip_attrs = tooltip.props.into_attrs();
-
-    view! {
-        <div style="display: flex; justify-content: center;">
-            <button
-                {..target_capture}
-                style="padding: 0.5em 1em; border-radius: 6px; cursor: pointer; background: #555; color: white; border: none; font-size: 0.9em; min-width: 80px;"
-                {..trigger.trigger_props.into_attrs()}
-            >
-                {label}
-            </button>
-
-            <Portal>
-                {
-                    let tooltip_id = tooltip_id.clone();
-                    let position_attrs = position_attrs.clone();
-                    let tooltip_attrs = tooltip_attrs.clone();
-                    view! {
-                        <Show when=move || is_open.get()>
-                            <div
-                                {..position_attrs.clone()}
-                                {..tooltip_attrs.clone()}
-                                id=tooltip_id.clone()
-                                role="tooltip"
-                                class="positioned-tooltip"
-                            >
-                                {format!("Tooltip: {label}")}
-                            </div>
-                        </Show>
-                    }
-                }
-            </Portal>
-        </div>
     }
 }

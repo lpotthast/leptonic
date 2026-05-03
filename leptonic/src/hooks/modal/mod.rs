@@ -21,12 +21,13 @@
 //! This implementation is partially based on [React Aria's overlay hooks](https://github.com/adobe/react-spectrum/tree/main/packages/@react-aria/overlays)
 //! (rest in ./overlay) but has the following deviations:
 //!
-//! ### Not Implemented
+//! ### Implemented (in `use_modal_backdrop`)
 //!
-//! - **`ariaHideOutside()`**: React Aria hides all DOM content outside the modal from screen
-//!   readers using `aria-hidden` or `inert` attributes. Leptonic relies on `aria-modal="true"`
-//!   which has varying browser support for hiding outside content. A future `use_aria_hide_outside`
-//!   hook could provide this functionality.
+//! - **`ariaHideOutside()`**: When the modal is open, `use_modal_backdrop` sets the `inert`
+//!   attribute on all DOM siblings outside the modal via `utils::aria_hide_outside`. This hides
+//!   outside content from assistive technology AND prevents pointer/keyboard interaction. Works
+//!   alongside `aria-modal="true"` (set by `use_modal`) for defense in depth. Reference counting
+//!   and an observer stack support nested overlays correctly.
 //!
 //! - **`useOverlayFocusContain`**: React Aria's `useModalOverlay` signals to the parent
 //!   `Overlay` component that focus should be contained. In Leptonic, focus containment is

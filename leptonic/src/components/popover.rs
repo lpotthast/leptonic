@@ -1,191 +1,192 @@
-use std::sync::Arc;
+use leptos::prelude::*;
 
-use leptos::{html, prelude::*};
-use leptos_use::{use_element_bounding, use_element_hover};
-use uuid::Uuid;
+pub use crate::atoms::popover::PopoverContext;
+use crate::{
+    atoms::{
+        dismiss_button::DismissButton,
+        popover::{
+            Popover as PopoverAtom, PopoverContent as PopoverContentAtom,
+            PopoverTrigger as PopoverTriggerAtom,
+        },
+        press::{ClearPressResponder, PressResponder},
+    },
+    hooks::{DialogRole, PlacementX, PlacementY, PressEvent},
+    utils::{classes::Classes, locale::WritingDirection, styles::Styles},
+};
 
-use crate::{Size, UseElementBoundingReturnReadOnly};
-
-#[derive(Clone)]
-struct PopoverData {
-    key: Uuid,
-    children: ChildrenFn,
-}
-
-#[derive(Clone)]
-struct PopoverRootContext {
-    popovers: RwSignal<Vec<PopoverData>>,
-}
-
-impl PopoverRootContext {
-    fn push(&self, data: PopoverData) {
-        self.popovers.update(move |p| p.push(data));
-    }
-
-    fn remove(&self, key: Uuid) {
-        self.popovers.update(move |p| {
-            if let Some(idx) = p.iter().position(|it| it.key == key) {
-                p.remove(idx);
-            }
-        });
-    }
-}
-
-#[component]
-pub(crate) fn PopoverRoot(children: Children) -> impl IntoView {
-    let popovers = RwSignal::new(Vec::new());
-    let ctx = PopoverRootContext { popovers };
-    provide_context::<PopoverRootContext>(ctx.clone());
-
-    let children = children();
-    view! {
-        {children}
-
-        <div class="leptonic-popover-host">
-            <For
-                each=move || ctx.popovers.get()
-                key=|it| it.key
-                children=|it| view! { {(it.children)()} }
-            />
-        </div>
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum PopoverAlignX {
-    Left,
-    Center,
-    Right,
-}
-
-#[derive(Debug, Clone, Copy)]
-pub enum PopoverAlignY {
-    Top,
-    Center,
-    Bottom,
-}
-
-#[derive(Clone)]
+/// Slot for the popover trigger element.
+///
+/// The trigger is the element the popover positions itself relative to.
+/// Child [`Button`](crate::components::button::Button) elements automatically
+/// inherit toggle behavior from the component's [`PressResponder`] context.
+/// Non-interactive elements (text, icons) should be wrapped in
+/// [`Pressable`](crate::atoms::press::Pressable) to receive press events.
 #[slot]
-pub struct PopoverContent {
-    children: ChildrenFn,
+pub struct PopoverTrigger {
+    #[prop(into, optional)]
+    pub classes: Classes,
+    #[prop(into, optional)]
+    pub styles: Styles,
+    pub children: Children,
 }
 
+/// A themed popover component that bundles overlay behavior, positioning,
+/// ARIA dialog semantics, and screen-reader dismiss buttons.
+///
+/// Uses [`PressResponder`] to automatically inject toggle behavior into child
+/// [`Button`](crate::components::button::Button) elements — no manual wiring needed.
+///
+/// # Uncontrolled mode (simplest)
+///
+/// ```ignore
+/// <Popover placement_y=PlacementY::Below>
+///     <PopoverTrigger slot>
+///         <Button>"Open"</Button> // Auto-toggles via PressResponder
+///     </PopoverTrigger>
+///     "Popover content"
+/// </Popover>
+/// ```
+///
+/// # Controlled mode
+///
+/// ```ignore
+/// let (show, set_show) = signal(false);
+///
+/// <Popover show_when=show on_close=move |_| set_show.set(false)>
+///     <PopoverTrigger slot>
+///         <Button on_press=move |_| set_show.set(true)>"Open"</Button>
+///     </PopoverTrigger>
+///     "Content"
+/// </Popover>
+/// ```
 #[component]
+#[allow(clippy::needless_pass_by_value, clippy::fn_params_excessive_bools)]
 pub fn Popover(
-    #[prop(default = PopoverAlignX::Center)] align_x: PopoverAlignX,
-    #[prop(default = PopoverAlignY::Top)] align_y: PopoverAlignY,
+    /// Slot for the trigger element.
+    popover_trigger: PopoverTrigger,
 
-    /// Margin.
-    #[prop(default = Size::Em(0.25))]
-    margin: Size,
+    /// Controlled open state. Omit for uncontrolled mode.
+    #[prop(into, optional)]
+    show_when: Option<Signal<bool>>,
 
-    /// Custom X position of the popover.
+    /// Called when the popover should close (Escape, outside click, dismiss button).
+    #[prop(into, optional)]
+    on_close: Option<Callback<()>>,
+
+    /// Horizontal placement relative to trigger.
+    #[prop(into, default = Signal::stored(PlacementX::Center))]
+    placement_x: Signal<PlacementX>,
+
+    /// Vertical placement relative to trigger.
+    #[prop(into, default = Signal::stored(PlacementY::Above))]
+    placement_y: Signal<PlacementY>,
+
+    /// Writing direction for logical placement resolution.
+    #[prop(into, default = Signal::stored(WritingDirection::Ltr))]
+    writing_direction: Signal<WritingDirection>,
+
+    /// Whether the popover is non-modal (allows interaction outside). Default: `true`.
+    #[prop(default = true)]
+    is_non_modal: bool,
+
+    /// Whether clicking outside / pressing Escape dismisses the popover. Default: `true`.
+    #[prop(default = true)]
+    is_dismissable: bool,
+
+    /// Whether Escape key dismiss is disabled. Default: `false`.
+    #[prop(default = false)]
+    is_keyboard_dismiss_disabled: bool,
+
+    /// Filter for which outside interactions should close the popover.
     #[prop(optional)]
-    position_x: Option<Callback<UseElementBoundingReturnReadOnly, String>>,
+    should_close_on_interact_outside: Option<Callback<web_sys::Element, bool>>,
 
-    /// Custom Y position of the popover.
-    #[prop(optional)]
-    position_y: Option<Callback<UseElementBoundingReturnReadOnly, String>>,
+    /// Dialog role for ARIA semantics.
+    #[prop(default = DialogRole::Dialog)]
+    role: DialogRole,
 
-    #[prop(into, optional)] show: Option<Signal<bool>>,
+    /// Optional ARIA label for the dialog.
+    #[prop(into, optional)]
+    aria_label: Option<String>,
 
-    popover_content: PopoverContent,
+    /// Additional CSS classes on the popover panel.
+    #[prop(into, optional)]
+    classes: Classes,
 
-    children: Children,
+    /// Additional CSS styles on the popover panel.
+    #[prop(into, optional)]
+    styles: Styles,
+
+    children: ChildrenFn,
 ) -> impl IntoView {
-    let (clicked, set_clicked) = signal(false);
-
-    let ctx = expect_context::<PopoverRootContext>();
-
-    let el: NodeRef<html::Div> = NodeRef::new();
-    let el_bounds = use_element_bounding(el);
-
-    let pop_el: NodeRef<html::Div> = NodeRef::new();
-    let pop_bounds = use_element_bounding(pop_el);
-
-    let show = show.unwrap_or_else(|| {
-        let is_hovered = use_element_hover(el);
-        Signal::derive(move || is_hovered.get() || clicked.get())
-    });
-
-    let pop_bounds_read_only: UseElementBoundingReturnReadOnly = pop_bounds.into();
-
-    let pop_style: Signal<String> = Signal::derive(move || {
-        if show.get() {
-            {
-                let left = if let Some(pos_x) = position_x {
-                    pos_x.run(pop_bounds_read_only)
-                } else {
-                    let x = match align_x {
-                        PopoverAlignX::Center => {
-                            el_bounds.x.get() + (el_bounds.width.get() / 2.0)
-                                - (pop_bounds_read_only.width.get() / 2.0)
-                        }
-                        PopoverAlignX::Left | PopoverAlignX::Right => el_bounds.x.get(),
-                    };
-
-                    match align_x {
-                        PopoverAlignX::Left => format!("calc({x}px - {margin})"),
-                        PopoverAlignX::Center => format!("{x}px"),
-                        PopoverAlignX::Right => format!("calc({x}px + {margin})"),
-                    }
-                };
-
-                let top = if let Some(pos_y) = position_y {
-                    pos_y.run(pop_bounds_read_only)
-                } else {
-                    let y = match align_y {
-                        PopoverAlignY::Top => el_bounds.y.get() - pop_bounds_read_only.height.get(),
-                        PopoverAlignY::Center | PopoverAlignY::Bottom => el_bounds.y.get(),
-                    };
-
-                    match align_y {
-                        PopoverAlignY::Top => format!("calc({y}px - {margin})"),
-                        PopoverAlignY::Center => format!("{y}px"),
-                        PopoverAlignY::Bottom => format!("calc({y}px + {margin})"),
-                    }
-                };
-
-                format!("left: {left}; top: {top};")
-            }
-        } else {
-            String::new()
-        }
-    });
-
-    let key = Uuid::now_v7();
-
-    ctx.push(PopoverData {
-        key,
-        children: Arc::new(move || {
-            let v = view! {
-                // id=id class=class style=style
-                <div
-                    class="leptonic-popover"
-                    node_ref=pop_el
-                    id=key.to_string()
-                    style=pop_style
-                    data-active=move || if show.get() { "true" } else { "false" }
-                >
-                    {(popover_content.children)()}
-                </div>
-            };
-            v.into_any()
-        }),
-    });
-
-    on_cleanup(move || {
-        ctx.remove(key);
-    });
+    let aria_label = StoredValue::new(aria_label);
+    let classes = StoredValue::new(classes);
+    let styles = StoredValue::new(styles);
+    let children = StoredValue::new(children);
 
     view! {
-        <div
-            class="leptonic-has-popover"
-            node_ref=el
-            on:click=move |_| set_clicked.set(!clicked.get_untracked())
+        <PopoverAtom
+            is_non_modal=is_non_modal
+            is_dismissable=is_dismissable
+            should_close_on_blur=!is_non_modal
+            is_keyboard_dismiss_disabled=is_keyboard_dismiss_disabled
+            nostrip:should_close_on_interact_outside=should_close_on_interact_outside
+            nostrip:on_close=on_close
         >
-            {children()}
-        </div>
+            // Controlled state sync: external show_when → atom's internal state.
+            {
+                if let Some(show_when) = show_when {
+                    let ctx = expect_context::<PopoverContext>();
+                    Effect::new(move || {
+                        ctx.set_state.set(show_when.get());
+                    });
+                }
+            }
+
+            // PressResponder injects toggle into child Button via PressResponderContext.
+            // force_is_pressed makes the trigger button appear pressed while popover is open.
+            {
+                let ctx = expect_context::<PopoverContext>();
+                let is_open = Signal::derive(move || ctx.state.get());
+                view! {
+                    <PressResponder
+                        on_press=Callback::new(move |_: PressEvent| {
+                            ctx.set_state.set(!ctx.state.get_untracked());
+                        })
+                        force_is_pressed=is_open
+                    >
+                        <PopoverTriggerAtom
+                            classes=popover_trigger.classes
+                            styles=popover_trigger.styles
+                        >
+                            {(popover_trigger.children)()}
+                        </PopoverTriggerAtom>
+                    </PressResponder>
+                }
+            }
+
+            // Content: positioned overlay with DismissButton.
+            <PopoverContentAtom
+                placement_x=placement_x
+                placement_y=placement_y
+                writing_direction=writing_direction
+                contain_focus=!is_non_modal
+                role=role
+                nostrip:aria_label=aria_label.get_value()
+            >
+                {
+                    let ctx = expect_context::<PopoverContext>();
+                    view! {
+                        <ClearPressResponder>
+                            <DismissButton on_dismiss=ctx.on_close />
+                            <div class=classes.get_value().add("leptonic-popover") style=styles.get_value()>
+                                {(children.get_value())()}
+                            </div>
+                            <DismissButton on_dismiss=ctx.on_close />
+                        </ClearPressResponder>
+                    }
+                }
+            </PopoverContentAtom>
+        </PopoverAtom>
     }
 }

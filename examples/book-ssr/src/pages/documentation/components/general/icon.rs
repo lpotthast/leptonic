@@ -1,7 +1,8 @@
-use indoc::indoc;
-use leptonic::{components::prelude::*, hooks::LinkTarget, prelude::*};
+use leptonic::{components::prelude::*, hooks::LinkTarget};
 use leptos::prelude::*;
 
+use super::demos::icon::IconDemo;
+use crate::pages::documentation::demo_shell::DemoShell;
 use crate::pages::documentation::{article::Article, toc::Toc};
 
 #[component]
@@ -24,19 +25,9 @@ pub fn PageIcon() -> impl IntoView {
 
             <p>"You can simply include an icon using the "<Code inline=true>"<Icon>"</Code>" component."</p>
 
-            <Code>
-                {indoc!(r#"
-                    use leptonic::prelude::*;
-
-                    view! {
-                        <Icon icon=icondata::BsFolderFill style="font-size: 6em;"/>
-                        <Icon icon=icondata::BsFolder style="font-size: 6em;"/>
-                    }
-                "#)}
-            </Code>
-
-            <Icon icon=icondata::BsFolderFill attr:style="font-size: 6em;"/>
-            <Icon icon=icondata::BsFolder attr:style="font-size: 6em;"/>
+            <DemoShell source=include_str!("demos/icon.rs")>
+                <IconDemo />
+            </DemoShell>
 
             <p>"SVG data of all the icons used in your application is embedded into your binary."</p>
 
