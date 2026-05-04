@@ -7,7 +7,7 @@ use crate::{
     utils::{
         classes::Classes,
         color::ColorValue,
-        styles::{BackgroundColor, Styles},
+        styles::{Style::BackgroundColor, Styles},
     },
 };
 

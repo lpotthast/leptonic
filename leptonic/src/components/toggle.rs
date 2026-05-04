@@ -5,7 +5,7 @@ use crate::{
     prelude::*,
     utils::{
         classes::Classes,
-        styles::{Display, Styles},
+        styles::{Style::Display, Styles},
     },
 };
 

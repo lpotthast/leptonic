@@ -6,7 +6,7 @@ use crate::{
     components::{form_control::FormControlContext, icon::Icon},
     utils::{
         classes::Classes,
-        styles::{Display, Styles},
+        styles::{Style::Display, Styles},
     },
 };
 

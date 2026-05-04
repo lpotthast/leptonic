@@ -14,8 +14,11 @@ use crate::{
         color::{HSV, RGB8},
         css::pct,
         styles::{
-            AlignItems, Background, Bottom, Display, FlexDirection, Height, JustifyContent, Left,
-            MarginRight, Styles, Width,
+            Style::{
+                AlignItems, Background, Bottom, Display, FlexDirection, Height, JustifyContent,
+                Left, MarginRight, Width,
+            },
+            Styles,
         },
     },
 };

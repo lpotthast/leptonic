@@ -4,7 +4,7 @@ use leptos_use::{UseElementSizeReturn, use_element_size};
 use crate::utils::{
     classes::Classes,
     css::{pct, px},
-    styles::{Styles, Width},
+    styles::{Style::Width, Styles},
 };
 
 #[component]

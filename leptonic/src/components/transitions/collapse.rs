@@ -3,7 +3,10 @@ use leptos::{html::Div, prelude::*};
 use crate::utils::{
     classes::Classes,
     css::px,
-    styles::{Height, MinHeight, MinWidth, Styles, Width},
+    styles::{
+        Style::{Height, MinHeight, MinWidth, Width},
+        Styles,
+    },
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]

@@ -11,8 +11,11 @@ use crate::{
         color::ColorValue,
         css::pct,
         styles::{
-            Background, BackgroundBlendMode, BackgroundColor, Bottom, Height, Left, Opacity,
-            PointerEvents, Position, Styles, TouchAction, Transform, UserSelect, Width,
+            Style::{
+                Background, BackgroundBlendMode, BackgroundColor, Bottom, Height, Left, Opacity,
+                PointerEvents, Position, TouchAction, Transform, UserSelect, Width,
+            },
+            Styles,
         },
     },
 };

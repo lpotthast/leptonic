@@ -5,8 +5,11 @@ use leptonic::{
 };
 use leptos::prelude::*;
 use leptos_styles::{
-    Background, Border, BorderRadius, BoxShadow, Cursor, Height, Left, Position, Styles, Top,
-    TouchAction, Transform, Width,
+    Style::{
+        Background, Border, BorderRadius, BoxShadow, Cursor, Height, Left, Position, Top,
+        TouchAction, Transform, Width,
+    },
+    Styles,
 };
 
 #[component]
