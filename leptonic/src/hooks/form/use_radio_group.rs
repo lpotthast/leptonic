@@ -1,21 +1,43 @@
-use leptos::{attr, attr::Attr, prelude::*};
+use std::sync::Arc;
+
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
 use uuid::Uuid;
+use wasm_bindgen::JsCast;
+use web_sys::{HtmlElement, HtmlInputElement, KeyboardEvent};
 
 use super::{
     use_checkbox_group::Orientation,
     use_form_validation_state::{
-        UseFormValidationStateInput, ValidateFn, ValidationBehavior, ValidityStateSnapshot,
-        use_form_validation_state,
+        use_form_validation_state, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
+        ValidityStateSnapshot,
     },
 };
 use crate::{
     hooks::IntoAttrs,
-    utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaOrientation, AriaRequired, AriaRole},
+    utils::{
+        aria::{AriaDisabled, AriaInvalid, AriaLive, AriaOrientation, AriaRequired, AriaRole}, focusable_tree_walker::{get_focusable_tree_walker, FocusableTreeWalkerOptions}, i18n::{try_use_locale, I18nContext},
+        locale::WritingDirection,
+        EventAccessors,
+        EventHandler,
+        EventTargetExt,
+    },
 };
 
 // This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadioGroup.ts
 
 // No intentional deviations from the react-aria implementation.
+
+#[derive(Clone, Copy)]
+enum Direction {
+    Next,
+    Prev,
+}
 
 /// Input parameters for the `use_radio_group` hook.
 #[derive(Clone)]
@@ -136,6 +158,9 @@ pub struct UseRadioGroupProps {
 
     /// The aria-orientation attribute.
     pub aria_orientation: AriaOrientation,
+
+    /// Keyboard handler implementing arrow-key cycling between radios.
+    pub on_keydown: EventHandler<KeyboardEvent>,
 }
 
 impl IntoAttrs for UseRadioGroupProps {
@@ -150,6 +175,7 @@ impl IntoAttrs for UseRadioGroupProps {
             Attr(attr::AriaRequired, self.aria_required),
             Attr(attr::AriaDisabled, self.aria_disabled),
             Attr(attr::AriaOrientation, self.aria_orientation),
+            self.on_keydown.into_on(ev::keydown),
         )
     }
 }
@@ -162,6 +188,7 @@ pub type UseRadioGroupAttrs = (
     Attr<attr::AriaRequired, Option<AriaRequired>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
+    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
 );
 
 /// Props for the group label.
@@ -346,6 +373,78 @@ where
         }
     });
 
+    // Arrow-key cycling between radios. Walks the group container for radio inputs, focuses the
+    // next/previous one, and dispatches a click so the radio's own change handler invokes
+    // set_selected_value.
+    let i18n = try_use_locale();
+    let handle_keydown = move |e: KeyboardEvent| {
+        if is_disabled.get_untracked() || is_read_only.get_untracked() {
+            return;
+        }
+
+        let key = e.key();
+        let direction = i18n
+            .as_ref()
+            .map_or(WritingDirection::Ltr, I18nContext::direction);
+        let next_dir = match key.as_str() {
+            "ArrowRight" => match (direction, orientation) {
+                (WritingDirection::Rtl, Orientation::Horizontal) => Direction::Prev,
+                _ => Direction::Next,
+            },
+            "ArrowLeft" => match (direction, orientation) {
+                (WritingDirection::Rtl, Orientation::Horizontal) => Direction::Next,
+                _ => Direction::Prev,
+            },
+            "ArrowDown" => Direction::Next,
+            "ArrowUp" => Direction::Prev,
+            _ => return,
+        };
+
+        let Some(container) = e.expect_current_target().to_element() else {
+            return;
+        };
+        let from = e.expect_target().to_element();
+
+        let accept: Arc<dyn Fn(&web_sys::Element) -> bool + Send + Sync> =
+            Arc::new(|el: &web_sys::Element| {
+                el.dyn_ref::<HtmlInputElement>()
+                    .is_some_and(|input| input.type_() == "radio")
+            });
+        let Some(mut walker) = get_focusable_tree_walker(
+            &container,
+            FocusableTreeWalkerOptions {
+                tabbable: false,
+                from: from.clone(),
+                from_radio_group: None,
+                accept: Some(accept),
+            },
+        ) else {
+            return;
+        };
+
+        let next = match next_dir {
+            Direction::Next => walker.next_node().or_else(|| {
+                walker.set_current_node(container.as_ref());
+                walker.first_child()
+            }),
+            Direction::Prev => walker.previous_node().or_else(|| {
+                walker.set_current_node(container.as_ref());
+                walker.last_child()
+            }),
+        };
+
+        let Some(next_node) = next else { return };
+        let Some(next_input) = next_node.dyn_ref::<HtmlInputElement>() else {
+            return;
+        };
+
+        e.prevent_default();
+        if let Some(html) = next_input.dyn_ref::<HtmlElement>() {
+            let _ = html.focus();
+        }
+        next_input.click();
+    };
+
     UseRadioGroupReturn {
         group_props: UseRadioGroupProps {
             role: AriaRole::Radiogroup,
@@ -355,6 +454,7 @@ where
             aria_required: is_required.then_some(AriaRequired::True),
             aria_disabled: Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True)),
             aria_orientation: AriaOrientation::from(orientation),
+            on_keydown: EventHandler::new(handle_keydown),
         },
         label_props: UseRadioGroupLabelProps { id: label_id },
         error_props: UseRadioGroupErrorProps {

@@ -125,7 +125,7 @@ fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMe
         // Found "leptonic" in either package or workspace metadata, proceed
         log(
             Level::Info,
-            format!("Found 'leptonic' in metadata of package or workspace: {metadata:?}",),
+            format!("Found 'leptonic' in metadata of package or workspace: {metadata:?}"),
         );
         metadata
     } else {

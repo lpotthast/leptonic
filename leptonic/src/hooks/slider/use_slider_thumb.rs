@@ -226,6 +226,12 @@ pub struct UseSliderThumbInputProps {
     pub name: Option<&'static str>,
     /// Current thumb value for form submission.
     pub value: Signal<f64>,
+    /// Native `min` attribute for browser form validation (mirrors the slider's minimum).
+    pub min: f64,
+    /// Native `max` attribute for browser form validation (mirrors the slider's maximum).
+    pub max: f64,
+    /// Native `step` attribute. `"any"` for continuous sliders, otherwise the numeric step.
+    pub step: String,
     /// Whether the input is disabled.
     pub disabled: Signal<bool>,
     /// Element capture for the hook to obtain a reference for focusing.
@@ -255,6 +261,9 @@ impl IntoAttrs for UseSliderThumbInputProps {
             Attr(attr::AriaErrormessage, self.aria_errormessage),
             Attr(attr::Name, self.name),
             Attr(attr::Value, self.value),
+            Attr(attr::Min, self.min),
+            Attr(attr::Max, self.max),
+            Attr(attr::Step, self.step),
             Attr(attr::Disabled, self.disabled),
             self.element_capture,
         )
@@ -281,6 +290,9 @@ pub type UseSliderThumbInputAttrs = (
     Attr<attr::AriaErrormessage, Option<&'static str>>,
     Attr<attr::Name, Option<&'static str>>,
     Attr<attr::Value, Signal<f64>>,
+    Attr<attr::Min, f64>,
+    Attr<attr::Max, f64>,
+    Attr<attr::Step, String>,
     Attr<attr::Disabled, Signal<bool>>,
     ElementCaptureAttr,
 );
@@ -633,6 +645,11 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
             aria_errormessage,
             name,
             value,
+            min: state.min_value,
+            max: state.max_value,
+            step: state
+                .step
+                .map_or_else(|| "any".to_owned(), |s| s.to_string()),
             disabled: is_disabled,
             element_capture: input_element.attr(),
         },

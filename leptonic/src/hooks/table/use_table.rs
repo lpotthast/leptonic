@@ -13,6 +13,7 @@ use crate::{
     utils::{
         EventHandler,
         aria::{AriaDisabled, AriaMultiselectable, AriaRole},
+        live_announcer::announce_polite,
     },
 };
 
@@ -203,8 +204,8 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         selection_mode,
         is_disabled: disabled,
         selected_keys,
-        sorted_column: _sorted_column,
-        sort_direction: _sort_direction,
+        sorted_column,
+        sort_direction,
         on_selection_change,
         on_sort_change: _on_sort_change,
         on_row_action,
@@ -284,6 +285,37 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
 
     // Compute aria-disabled
     let aria_disabled = Signal::derive(move || disabled.get().then_some(AriaDisabled::True));
+
+    // Live-region announcements for sort changes (screen readers).
+    // Skip the initial run so the announcer doesn't fire on mount.
+    let sort_initialized = StoredValue::new(false);
+    let last_sort: StoredValue<Option<(String, SortDirection)>> = StoredValue::new(None);
+    Effect::new(move |_| {
+        let current = sorted_column.get().zip(sort_direction.get());
+
+        if !sort_initialized.get_value() {
+            sort_initialized.set_value(true);
+            last_sort.set_value(current);
+            return;
+        }
+
+        if current == last_sort.get_value() {
+            return;
+        }
+
+        match &current {
+            Some((column, direction)) => {
+                let direction_label = match direction {
+                    SortDirection::Ascending => "ascending",
+                    SortDirection::Descending => "descending",
+                };
+                announce_polite(format!("Sorted by {column}, {direction_label}."));
+            }
+            None => announce_polite("Sorting cleared.".to_string()),
+        }
+
+        last_sort.set_value(current);
+    });
 
     // Handle keyboard navigation
     let handle_keydown = move |e: KeyboardEvent| {

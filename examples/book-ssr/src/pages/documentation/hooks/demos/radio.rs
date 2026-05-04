@@ -37,14 +37,14 @@ pub fn RadioDemo() -> impl IntoView {
         ("option3", "Third Option"),
     ];
 
+    let label_id = label_props.id.clone();
+
     view! {
         <fieldset
-            role=group_props.role
-            aria-labelledby=group_props.aria_labelledby.clone()
-            aria-orientation=group_props.aria_orientation
+            {..group_props.into_attrs()}
             style="border: none; padding: 0; margin: 0;"
         >
-            <legend id=label_props.id.clone() style="font-weight: bold; margin-bottom: 0.5em;">
+            <legend id=label_id style="font-weight: bold; margin-bottom: 0.5em;">
                 "Select an option"
             </legend>
 
