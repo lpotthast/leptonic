@@ -2211,12 +2211,20 @@ dependencies = [
 
 [[package]]
 name = "leptos-classes"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "leptos",
- "reactive_graph",
  "smallvec",
- "tracing",
+ "thiserror 2.0.18",
+]
+
+[[package]]
+name = "leptos-css"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b16858ccf42e4be36e16e666d20dca792c20324596cd214112770cbd5f096139"
+dependencies = [
+ "leptos",
 ]
 
 [[package]]
@@ -2254,6 +2262,7 @@ name = "leptos-styles"
 version = "0.1.0"
 dependencies = [
  "leptos",
+ "leptos-css",
  "reactive_graph",
  "smallvec",
  "tracing",
