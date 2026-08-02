@@ -47,6 +47,8 @@ pub fn PageInstallation() -> impl IntoView {
                 ")}
             </Code>
 
+            <p>"Leptonic 0.6 requires Rust 1.89 or newer."</p>
+
             <p>
                 "Leptonic comes with default styling in form of the "<LinkExt href="https://github.com/lpotthast/leptonic-theme/tree/main" target=LinkExtTarget::Blank>"leptonic-theme"</LinkExt>" crate. "
                 "The themes, as well as other static files, are automatically copied to your project root directory when building your application. "
@@ -61,9 +63,6 @@ pub fn PageInstallation() -> impl IntoView {
                     [package.metadata.leptonic]
                     # REQUIRED: Leptonic's build-script will copy the Leptonic themes to this directory.
                     style-dir = "style"
-
-                    # REQUIRED: Leptonic's build-script will copy static JS dependencies to this directory.
-                    js-dir = "public/js"
                 "#)}
             </Code>
 
@@ -74,6 +73,22 @@ pub fn PageInstallation() -> impl IntoView {
                     @use "./leptonic/leptonic-themes";
                 "#)}
             </Code>
+
+            <h2 id="tiptap-deployment" class="anchor">
+                "Tiptap deployment"
+                <AnchorLink href="#tiptap-deployment" description="Tiptap deployment"/>
+            </h2>
+
+            <p>
+                "When the "<Code inline=true>"tiptap"</Code>" feature is enabled, leptos-tiptap embeds its bridge and "
+                "extension modules as wasm-bindgen snippets. No JavaScript files need to be copied or preloaded manually."
+            </p>
+
+            <p>
+                "Custom servers and CDNs must deploy the complete generated package directory recursively, including "
+                "the glue JavaScript, Wasm, and "<Code inline=true>"snippets/"</Code>" subtree, as one atomic release. "
+                "Serve snippet files with a JavaScript MIME type and invalidate the glue, Wasm, and snippets together."
+            </p>
 
             <p>"You can overwrite or add styles for a particular theme using a "<Code inline=true>"[data-theme=\"...\"]"</Code>" selector like so:"</p>
 
@@ -147,6 +162,7 @@ pub fn PageInstallation() -> impl IntoView {
             inner: vec![
                 Toc::Leaf { title: "Installation", link: "#installation" },
                 Toc::Leaf { title: "Custom setup", link: "#custom-setup" },
+                Toc::Leaf { title: "Tiptap deployment", link: "#tiptap-deployment" },
             ]
         }/>
     }

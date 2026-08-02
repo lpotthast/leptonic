@@ -16,4 +16,4 @@ Visit [leptonic.dev](https://leptonic.dev) for installation instructions, compon
 
 ## MSRV
 
-The minimum supported rust version is `1.70.0`
+The minimum supported Rust version is `1.89.0`.

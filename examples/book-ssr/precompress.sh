@@ -9,16 +9,6 @@ function compress {
 
 root=$1
 
-for filename in ${root}/js/*.js; do
+while IFS= read -r -d '' filename; do
     compress "${filename}"
-done
-
-for filename in ${root}/pkg/*.css; do
-    compress "${filename}"
-done
-for filename in ${root}/pkg/*.js; do
-    compress "${filename}"
-done
-for filename in ${root}/pkg/*.wasm; do
-    compress "${filename}"
-done
+done < <(find "${root}/pkg" -type f \( -name '*.css' -o -name '*.js' -o -name '*.wasm' \) -print0)

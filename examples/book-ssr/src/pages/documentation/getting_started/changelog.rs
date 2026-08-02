@@ -21,7 +21,7 @@ pub fn PageChangelog() -> impl IntoView {
             <h3>"Overview"</h3>
 
             <p>
-                ""
+                "This release migrates the Tiptap integration to leptos-tiptap 0.10 and its native handle lifecycle."
             </p>
 
             <h3>"Added:"</h3>
@@ -33,12 +33,18 @@ pub fn PageChangelog() -> impl IntoView {
             <h3>"Changed:"</h3>
             <ul>
                 <li>"Reworked the `Popover` component. It now allows for much greater flexibility. Documentation was updated."</li>
+                <li>"Renamed Leptonic's `TiptapEditor` wrapper to `TiptapToolbarEditor`. The upstream `TiptapEditor` remains available through `leptonic::prelude`."</li>
+                <li>"Tiptap editors now require a stable, globally unique ID, a `TiptapEditorHandle`, and one-time `TiptapContent` initial content. Use `on_change` and the handle to pull HTML or JSON."</li>
+                <li>"Tiptap JSON content is now represented as `serde_json::Value`."</li>
+                <li>"The minimum supported Rust version is now 1.89."</li>
             </ul>
 
             <h3>"Removed:"</h3>
             <ul>
                 <li>"Buttons no longer support `variations`. They resulted in non compliant code."</li>
                 <li>"The `OptionalSignal` prop type, which was never used in our public API. You may want to use `OptMaybeSignal` instead."</li>
+                <li>"Removed the legacy leptos-tiptap build helper, copied Tiptap JavaScript assets, and Root script preloads. wasm-bindgen now emits the required modules as snippets."</li>
+                <li>"Removed Root's `runtime_js_dir` prop and the `package.metadata.leptonic.js-dir` option."</li>
             </ul>
 
             <h2 id="v0.5.0" class="anchor">

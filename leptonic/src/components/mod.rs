@@ -35,7 +35,7 @@ pub mod tabs;
 pub mod theme;
 pub mod tile;
 #[cfg(feature = "tiptap")]
-pub mod tiptap_editor;
+pub mod tiptap_toolbar_editor;
 pub mod toast;
 pub mod toggle;
 pub mod transitions;
@@ -145,7 +145,7 @@ pub mod prelude {
     pub use super::theme::ThemeToggle;
     pub use super::tile::Tile;
     #[cfg(feature = "tiptap")]
-    pub use super::tiptap_editor::TiptapEditor;
+    pub use super::tiptap_toolbar_editor::TiptapToolbarEditor;
     pub use super::toast::Toast;
     pub use super::toast::ToastRoot;
     pub use super::toast::ToastTimeout;

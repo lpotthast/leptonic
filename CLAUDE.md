@@ -77,8 +77,10 @@ This is required for leptos-use functions.
 ```toml
 [package.metadata.leptonic]
 style-dir = "style/leptonic"   # Where to output generated SCSS
-js-dir = "public/js"           # Where to output JS dependencies (for tiptap)
 ```
+
+Tiptap's bridge and extension modules are emitted as `wasm-bindgen` snippets. Deploy the generated package directory
+recursively so its glue JavaScript, Wasm, and `snippets/` subtree stay together.
 
 ## Workspace Structure
 

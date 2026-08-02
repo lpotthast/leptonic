@@ -129,12 +129,30 @@ impl<O: 'static> From<Callback<O, ()>> for Out<O, SyncStorage> {
     }
 }
 
+#[cfg(not(feature = "nightly"))]
 impl<O: 'static, S> From<WriteSignal<O, S>> for Out<O, S> {
     fn from(write_signal: WriteSignal<O, S>) -> Self {
         Self::WriteSignal(write_signal)
     }
 }
 
+#[cfg(feature = "nightly")]
+#[rustversion::not(nightly)]
+impl<O: 'static, S> From<WriteSignal<O, S>> for Out<O, S> {
+    fn from(write_signal: WriteSignal<O, S>) -> Self {
+        Self::WriteSignal(write_signal)
+    }
+}
+
+#[cfg(not(feature = "nightly"))]
+impl<O: 'static, S> From<RwSignal<O, S>> for Out<O, S> {
+    fn from(rw_signal: RwSignal<O, S>) -> Self {
+        Self::RwSignal(rw_signal)
+    }
+}
+
+#[cfg(feature = "nightly")]
+#[rustversion::not(nightly)]
 impl<O: 'static, S> From<RwSignal<O, S>> for Out<O, S> {
     fn from(rw_signal: RwSignal<O, S>) -> Self {
         Self::RwSignal(rw_signal)
@@ -361,7 +379,7 @@ impl TrackedElementClientBoundingRect {
     pub(crate) fn track_client_rect(&self) {
         self.el.with_value(|maybe_signal| {
             if let Some(el) = maybe_signal.get_untracked() {
-                let el: web_sys::Element = el.into();
+                let el = el.take();
                 let rect = el.get_bounding_client_rect();
                 self.set_left.set(rect.left());
                 self.set_top.set(rect.top());

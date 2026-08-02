@@ -8,7 +8,7 @@ ARG DEFAULT_LEPTOS_OUTPUT_NAME="book-ssr"
 # Build
 # ------------------------------------------------------------------------------
 
-FROM --platform=linux/amd64 rust:1.75-slim-bookworm as builder
+FROM --platform=linux/amd64 rust:1.89-slim-bookworm as builder
 
 WORKDIR /build
 

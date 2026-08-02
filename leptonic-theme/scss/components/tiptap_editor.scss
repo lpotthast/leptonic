@@ -34,7 +34,7 @@ leptonic-tiptap-editor {
         }
     }
 
-    leptos-tiptap-instance {
+    .leptos-tiptap-instance {
 
         // Reset
         .ProseMirror:focus {
@@ -55,7 +55,7 @@ leptonic-tiptap-editor {
             cursor: grab;
         }
 
-        &[aria-disabled] {
+        &[aria-disabled="true"] {
             cursor: not-allowed;
             color: var(--tiptap-editor-instance-disabled-color);
         }

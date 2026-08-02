@@ -22,7 +22,6 @@ lazy_static! {
 #[derive(Debug)]
 struct LeptonicMetadata {
     relative_style_dir: String,
-    relative_js_dir: String,
 }
 
 #[allow(clippy::unwrap_used)]
@@ -58,8 +57,6 @@ pub fn main() -> Result<()> {
     println!("cargo:rerun-if-changed={}", cargo_toml_path.display());
 
     let style_dir = root_dir.join(&metadata.relative_style_dir);
-    #[allow(unused_variables)]
-    let js_dir = root_dir.join(&metadata.relative_js_dir);
 
     let theme_dir = style_dir.join("leptonic");
     leptonic_theme::generate(&theme_dir).unwrap();
@@ -68,35 +65,7 @@ pub fn main() -> Result<()> {
         format!("theme written to {}", theme_dir.display()),
     );
 
-    #[cfg(feature = "tiptap")]
-    copy_tiptap_files(&js_dir);
-
     Ok(())
-}
-
-#[cfg(feature = "tiptap")]
-fn copy_tiptap_files(js_dir: &PathBuf) {
-    use std::io::Write;
-
-    std::fs::create_dir_all(js_dir).unwrap();
-
-    std::fs::File::create(js_dir.join("tiptap-bundle.min.js"))
-        .unwrap()
-        .write_all(leptos_tiptap_build::TIPTAP_BUNDLE_MIN_JS.as_bytes())
-        .unwrap();
-    log(
-        Level::Info,
-        format!("tiptap-bundle.min.js written to {}", js_dir.display()),
-    );
-
-    std::fs::File::create(js_dir.join("tiptap.js"))
-        .unwrap()
-        .write_all(leptos_tiptap_build::TIPTAP_JS.as_bytes())
-        .unwrap();
-    log(
-        Level::Info,
-        format!("tiptap.js written to {}", js_dir.display()),
-    );
 }
 
 /// Parse the Cargo.toml file! Abort if the Cargo.toml has no config.
@@ -150,26 +119,12 @@ fn read_leptonic_metadata(cargo_toml_path: &PathBuf) -> Result<Option<LeptonicMe
         .context("Leptonic's 'style-dir' metadata was not of type 'string'.")?
         .to_owned();
 
-    let relative_js_dir = table
-        .get("js-dir")
-        .context("Leptonic's 'js-dir' metadata was not declared.")?
-        .as_str()
-        .context("Leptonic's 'js-dir' metadata was not of type 'string'.")?
-        .to_owned();
-
     log(
         Level::Debug,
         format!("relative_style_dir is: {relative_style_dir:?}"),
     );
-    log(
-        Level::Debug,
-        format!("relative_js_dir is: {relative_js_dir:?}"),
-    );
 
-    Ok(Some(LeptonicMetadata {
-        relative_style_dir,
-        relative_js_dir,
-    }))
+    Ok(Some(LeptonicMetadata { relative_style_dir }))
 }
 
 fn get_out_dir() -> Result<PathBuf> {

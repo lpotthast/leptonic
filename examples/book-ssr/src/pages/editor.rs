@@ -137,7 +137,6 @@ fn Setting(setting: SettingSpec, set_settings: WriteSignal<Settings>) -> impl In
 #[component]
 fn Output(style: Signal<String>) -> impl IntoView {
     view! {
-        // <TiptapEditor value=style disabled=true />
         <div style="height: 50%; padding: 0.75em;" >
             <div>"Output:"</div>
             <div style="background-color: white; padding: 0.5em; white-space: pre-wrap;">

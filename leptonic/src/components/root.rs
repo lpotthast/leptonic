@@ -40,12 +40,6 @@ pub struct Leptonic {
 #[component]
 #[allow(clippy::too_many_lines)]
 pub fn Root<T>(
-    /// Root directory of JS files used for dynamic script imports. Defaults to "js", as this is commonly used.
-    /// Change this if you chose a non-standard location for `[package.metadata.leptonic] > js-dir`.
-    #[allow(unused_variables)]
-    #[prop(into, default = Oco::Borrowed("js"))]
-    runtime_js_dir: Oco<'static, str>,
-
     default_theme: T,
 
     children: Children,
@@ -269,19 +263,7 @@ where
         is_desktop_device: Signal::derive(move || !is_mobile_device.get()),
     });
 
-    cfg_if::cfg_if! { if #[cfg(feature="tiptap")] {
-        use leptos_meta::Script;
-        let tiptap_js_module_includes = view! {
-            <Script type_="module" src=format!("/{}/tiptap-bundle.min.js", runtime_js_dir)/>
-            <Script type_="module" src=format!("/{}/tiptap.js", runtime_js_dir)/>
-        };
-    } else {
-        let tiptap_js_module_includes = view! {};
-    }}
-
     view! {
-        { tiptap_js_module_includes }
-
         <ThemeProvider theme=signal_ls("theme", default_theme)>
             <PopoverRoot>
                 <ToastRoot>

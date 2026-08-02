@@ -2,7 +2,7 @@
 name = "leptonic"
 version = { workspace = true }
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.89"
 authors = ["Lukas Potthast <privat@lukas-potthast.de>"]
 license = "MIT OR Apache-2.0"
 readme = "README.md"
@@ -19,18 +19,17 @@ anyhow = "1.0.100"
 cargo_toml = "0.22.1"
 lazy_static = "1.5.0"
 leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
-leptos-tiptap-build = { version = "0.2.8", optional = true }
 
 [dependencies]
-cfg-if = "1.0.4"
 indoc = "2.0.7"
 leptos = "0.8.2"
 leptos_reactive = "0.6.6"
-leptos-tiptap = { version = "0.9.0", optional = true }
-leptos-use = { version = "0.16.3", features = ["math"] }
+leptos-tiptap = { version = "0.10.0", features = ["full"], optional = true }
+leptos-use = { version = "0.19.0", features = ["math"] }
 icondata = { version = "0.6.0" }
 leptos_meta = { version = "0.8.2", features = [] }
 leptos_router = "0.8.2"
+rustversion = "1.0"
 serde = "1.0.228"
 serde_json = "1.0.145"
 strum = { version = "0.27.2", features = ["derive"] }
@@ -85,12 +84,12 @@ themes = []
 # Enables clipboard support. Requires `[build] rustflags = ["--cfg=web_sys_unstable_apis"]` in your cargo.toml.
 clipboard = ["components", "web-sys/Clipboard"]
 
-# Enables tiptap editor support. Tiptap related JS files will be copied to your proect directory when running a build.
-tiptap = ["components", "dep:leptos-tiptap", "dep:leptos-tiptap-build"]
+# Enables Tiptap editor support.
+tiptap = ["components", "dep:leptos-tiptap"]
 
 full = ["hooks", "atoms", "components", "clipboard", "tiptap"]
 
-nightly = ["leptos/nightly"]
+nightly = ["leptos/nightly", "leptos-tiptap?/nightly"]
 
 # Disable the build script when running on docs.rs
 docsrs = []
