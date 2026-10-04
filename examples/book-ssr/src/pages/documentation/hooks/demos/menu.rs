@@ -3,8 +3,7 @@ use std::collections::HashSet;
 use leptonic::{
     atoms::focus_scope::FocusScope,
     hooks::{PlacementX, PlacementY, *},
-    prelude::AriaHasPopup,
-    utils::locale::WritingDirection,
+    utils::{classes::Classes, locale::WritingDirection},
 };
 use leptos::{portal::Portal, prelude::*};
 
@@ -57,18 +56,10 @@ fn MenuItem(
     view! {
         <li
             {..item_props.into_attrs()}
-            style=move || {
-                format!(
-                    "padding: 0.75em 1em; cursor: {}; list-style: none; transition: background 0.15s; {}{}",
-                    if is_disabled.get() { "not-allowed" } else { "pointer" },
-                    if is_focused.get() { "background: #e8f4fc;" } else { "" },
-                    if is_focus_visible.get() {
-                        "outline: 2px solid #0066cc; outline-offset: -2px;"
-                    } else {
-                        ""
-                    },
-                )
-            }
+            class=Classes::from("demo-menu-item")
+                .add_reactive("disabled", is_disabled)
+                .add_reactive("focused", is_focused)
+                .add_reactive("focus-visible", is_focus_visible)
         >
             {item_label}
         </li>
@@ -93,67 +84,19 @@ pub fn MenuDemo() -> impl IntoView {
         move || items.clone()
     });
 
-    // Set up the button (ARIA haspopup/expanded are set to defaults -- the merge
-    // with menu_trigger discards them in favour of menu trigger's ARIA attributes).
-    let button = use_button(UseButtonInput {
-        disabled: false.into(),
-        aria_haspopup: Signal::stored(AriaHasPopup::default()),
-        aria_expanded: Signal::stored(None),
-        use_press_input: UsePressInput {
-            disabled: false.into(),
-            force_prevent_default: false,
-            force_propagation: false,
-            allow_text_selection_on_press: false,
-            should_cancel_on_pointer_exit: false,
-            prevent_focus_on_press: false,
-            force_is_pressed: None,
-            on_press: Callback::new(|_| {}),
-            on_press_up: None,
-            on_press_start: None,
-            on_press_end: None,
-            on_press_change: None,
-            on_double_press: None,
-            on_long_press_start: None,
-            on_long_press: None,
-            on_long_press_end: None,
-            long_press_threshold: None,
-            long_press_accessibility_description: None,
-        },
-        use_hover_input: UseHoverInput {
-            disabled: false.into(),
-            on_hover_start: None,
-            on_hover_end: None,
-            on_hover_change: None,
-        },
-        use_focus_ring_input: UseFocusRingInput::default(),
-    });
-
-    // Set up the menu trigger with menu-specific behavior
+    // The menu trigger configures the button: one `use_button` call renders the trigger.
     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
         menu_type: OverlayTriggerType::Menu,
         disabled: false.into(),
         trigger: MenuTriggerType::Press,
         state,
     });
+    let button = use_button(menu_trigger.button);
 
     // Capture the menu id so `aria-controls` on the trigger points to the `<ul>`.
     let menu_id = menu_trigger.menu_props.id;
 
-    // Extract button and menu trigger attrs/styles separately for spreading.
-    let (button_props, button_styles) = button.props.into_parts();
-    let (menu_trigger_props, menu_trigger_styles) = menu_trigger.props.into_parts();
-    let trigger_styles = button_styles
-        .merge(menu_trigger_styles)
-        .add("padding", "0.75em 1.5em")
-        .add("border-radius", "8px")
-        .add("cursor", "pointer")
-        .add("background", "var(--brand-color)")
-        .add("color", "white")
-        .add("border", "none")
-        .add("font-size", "1em")
-        .add("display", "flex")
-        .add("align-items", "center")
-        .add("gap", "0.5em");
+    let (button_props, trigger_styles) = button.props.into_parts();
 
     // Set up the popover for overlay positioning and dismiss behavior.
     let popover = use_popover(UsePopoverInput {
@@ -203,44 +146,32 @@ pub fn MenuDemo() -> impl IntoView {
     let menu_items = StoredValue::new(items.clone());
 
     view! {
-        <div style="display: inline-block; margin: 1em 0;">
+        <div class="demo-menu-anchor">
             <button
                 {..button_props}
-                {..menu_trigger_props}
                 {..popover_trigger_attrs.get_value()}
+                class="demo-btn-primary demo-menu-trigger"
                 style=trigger_styles
             >
                 "Actions"
-                <span style=move || {
-                    format!(
-                        "display: inline-block; transition: transform 0.2s; {}",
-                        if state.is_open.get() { "transform: rotate(180deg);" } else { "" },
-                    )
-                }>"\u{25bc}"</span>
+                <span class=Classes::from("demo-disclosure-arrow")
+                    .add_reactive("open", state.is_open)>"\u{25bc}"</span>
             </button>
 
             <Portal>
-                <Show when=move || state.is_open.get()>
+                <Show when=move || {
+                    state.is_open.get()
+                }>
                     {
                         let items = menu_items.get_value();
                         let menu_attrs = menu_attrs.get_value();
                         view! {
                             // Underlay captures outside clicks to dismiss
-                            <div
-                                {..underlay_attrs.get_value()}
-                                style="position: fixed; inset: 0; z-index: 999;"
-                            />
+                            <div {..underlay_attrs.get_value()} class="demo-popover-underlay" />
                             // Popover container with overlay positioning
-                            <div
-                                {..popover_attrs.get_value()}
-                                style=popover_styles.get_value()
-                            >
+                            <div {..popover_attrs.get_value()} style=popover_styles.get_value()>
                                 <FocusScope contain=true restore_focus=true>
-                                    <ul
-                                        {..menu_attrs}
-                                        id=menu_id
-                                        style="margin: 0; padding: 0.25em 0; min-width: 180px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"
-                                    >
+                                    <ul {..menu_attrs} id=menu_id class="demo-menu-list">
                                         {items
                                             .into_iter()
                                             .map(|item| {
@@ -251,7 +182,9 @@ pub fn MenuDemo() -> impl IntoView {
                                                         focused_key=focused_key
                                                         selected_keys=selected_keys
                                                         selection_mode=selection_mode
-                                                        on_focus=Callback::new(move |key| set_focused_key.run((key, None)))
+                                                        on_focus=Callback::new(move |key| {
+                                                            set_focused_key.run((key, None));
+                                                        })
                                                         on_action=Callback::new(move |key: String| {
                                                             set_selected.set(Some(key));
                                                         })

@@ -1,8 +1,9 @@
+// Upstream: react-aria/src/overlays/useModal.tsx @ 6f664fe911
 use leptos::{attr, attr::Attr};
 
 use crate::{hooks::IntoAttrs, utils::aria::AriaModal};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModal.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useModal.tsx
 
 //
 // ## DIFFERENT BEHAVIOR

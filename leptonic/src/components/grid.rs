@@ -1,6 +1,12 @@
 use leptos::prelude::*;
 
-use crate::utils::{classes::Classes, css::CssDimension, styles::Styles};
+use crate::utils::{
+    classes::Classes,
+    css::{CssDimension, css_custom_property},
+    styles::Styles,
+};
+
+css_custom_property!(GRID_GAP: CssDimension = "--leptonic-grid-gap");
 
 // TODO: Only allow rows as children.
 #[component]
@@ -11,7 +17,7 @@ pub fn Grid(
     children: Children,
 ) -> impl IntoView {
     view! {
-        <div class=classes.add("leptonic-grid-container") style=styles.add("--leptonic-grid-gap", gap)>
+        <div class=classes.add("leptonic-grid-container") style=styles.add(GRID_GAP.declare(gap))>
             {children()}
         </div>
     }
@@ -26,7 +32,7 @@ pub fn Row(
     children: Children,
 ) -> impl IntoView {
     let styles = match gap {
-        Some(g) => styles.add("--leptonic-grid-gap", g),
+        Some(g) => styles.add(GRID_GAP.declare(g)),
         None => styles,
     };
     view! {
@@ -58,11 +64,14 @@ pub fn Col(
 ) -> impl IntoView {
     view! {
         <div
-            class=classes.add("leptonic-grid-col")
+            class=classes
+                .add("leptonic-grid-col")
+                .add(match h_align {
+                    ColAlign::Start => "leptonic-grid-col-flex-start",
+                    ColAlign::Center => "leptonic-grid-col-flex-center",
+                    ColAlign::End => "leptonic-grid-col-flex-end",
+                })
             style=styles
-            class:leptonic-grid-col-flex-start=h_align == ColAlign::Start
-            class:leptonic-grid-col-flex-center=h_align == ColAlign::Center
-            class:leptonic-grid-col-flex-end=h_align == ColAlign::End
             data-xs=xs.unwrap_or(12)
             data-sm=sm
             data-md=md

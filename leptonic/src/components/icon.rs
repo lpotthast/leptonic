@@ -5,6 +5,8 @@ use crate::{
     utils::{classes::Classes, styles::Styles},
 };
 
+leptos_styles::css::css_custom_property!(MARGIN: leptos_styles::css::Margin = "--margin");
+
 /// The Icon component.
 #[component]
 pub fn Icon(
@@ -86,7 +88,7 @@ where
     };
 
     let styles = match margin {
-        Some(m) => styles.add("--margin", leptos_styles::css::CssValue::from(m)),
+        Some(m) => styles.add(MARGIN.declare(m)),
         None => styles,
     };
     view! {

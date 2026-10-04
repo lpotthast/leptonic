@@ -1,7 +1,8 @@
+// Upstream: react-aria/src/dnd/DropTargetKeyboardNavigation.ts @ 6f664fe911
 //! Keyboard navigation between drop positions within a collection.
 //!
 //! Based on react-aria's keyboard navigation logic in
-//! `@react-aria/dnd/src/useDroppableCollection.ts`.
+//! `react-aria/src/dnd/useDroppableCollection.ts`.
 
 use super::types::{DropPosition, DropTarget};
 use crate::hooks::selection::keyboard_delegate::KeyboardDelegate;

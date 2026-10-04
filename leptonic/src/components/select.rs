@@ -71,10 +71,10 @@ where
 
     // Map Selection<O> → O
     let on_selection_change = Callback::new(move |sel: Selection<O>| {
-        if let Selection::Keys(keys) = sel {
-            if let Some(key) = keys.into_iter().next() {
-                set_selected.set(key);
-            }
+        if let Selection::Keys(keys) = sel
+            && let Some(key) = keys.into_iter().next()
+        {
+            set_selected.set(key);
         }
     });
 

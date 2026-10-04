@@ -1,26 +1,46 @@
-use std::{
-    collections::VecDeque,
-    sync::{Arc, Mutex},
-};
+// Upstream: react-aria/src/live-announcer/LiveAnnouncer.tsx @ 99e6102368
+//! Announcements for screen readers, through ARIA live regions.
+//!
+//! Use this to tell assistive technology about changes that are not otherwise conveyed by focus
+//! or by the accessibility tree, like "3 results available" in a combo box, or the new value of a
+//! spin button.
+//!
+//! ```ignore
+//! use leptonic::utils::live_announcer::{announce_polite, clear_announcer, Assertiveness};
+//!
+//! announce_polite("Sorted by name, ascending.");
+//! clear_announcer(Some(Assertiveness::Polite));
+//! ```
+//!
+//! Like react-aria's `LiveAnnouncer`, a single, visually hidden element with one `assertive` and
+//! one `polite` log region is added to `<body>` on first use. Each message is a child of a log
+//! region and is removed after a timeout. The functions do nothing during server-side rendering.
 
-use leptos::prelude::*;
-use uuid::Uuid;
+use std::{cell::RefCell, time::Duration};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/live-announcer/src/LiveAnnouncer.tsx
+use leptos::prelude::set_timeout;
+use leptos_use::use_document;
+use web_sys::Element;
 
-/// The assertiveness level of a live announcement.
+/// How long an announcement stays in its live region.
+pub const DEFAULT_ANNOUNCEMENT_TIMEOUT: Duration = Duration::from_secs(7);
+
+/// Wait this long after creating the live regions before announcing into them. Otherwise
+/// Safari does not announce the first message.
+const FIRST_ANNOUNCEMENT_DELAY: Duration = Duration::from_millis(100);
+
+/// The urgency of an announcement.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum Assertiveness {
-    /// Polite announcements wait for the user to finish their current task.
+    /// Announced at the next graceful opportunity, e.g. after the current sentence.
     #[default]
     Polite,
-    /// Assertive announcements interrupt the user immediately.
+    /// Announced immediately, interrupting the current speech.
     Assertive,
 }
 
 impl Assertiveness {
-    /// Returns the ARIA live attribute value.
-    #[must_use]
+    /// The value for the `aria-live` attribute.
     pub fn as_aria_live(&self) -> &'static str {
         match self {
             Self::Polite => "polite",
@@ -29,327 +49,210 @@ impl Assertiveness {
     }
 }
 
-/// A message to be announced to screen readers.
-#[derive(Debug, Clone)]
-pub struct Announcement {
-    /// Unique ID for the announcement.
-    pub id: String,
-    /// The message to announce.
-    pub message: String,
-    /// The assertiveness level.
-    pub assertiveness: Assertiveness,
+/// What to announce.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Announcement {
+    /// A plain text message.
+    Text(String),
+    /// The accessible name of existing elements, given by their ids (like `aria-labelledby`).
+    /// Useful to announce rich content that is already in the page.
+    LabelledBy(String),
 }
 
-impl Announcement {
-    /// Creates a new announcement.
-    #[must_use]
-    pub fn new(message: impl Into<String>, assertiveness: Assertiveness) -> Self {
-        Self {
-            id: Uuid::new_v4().to_string(),
-            message: message.into(),
-            assertiveness,
-        }
+impl From<String> for Announcement {
+    fn from(text: String) -> Self {
+        Self::Text(text)
     }
 }
 
-/// The live announcer context for managing screen reader announcements.
-#[derive(Clone)]
-pub struct LiveAnnouncerContext {
-    /// Queue of polite announcements.
-    polite_queue: Arc<Mutex<VecDeque<Announcement>>>,
-    /// Queue of assertive announcements.
-    assertive_queue: Arc<Mutex<VecDeque<Announcement>>>,
-    /// Signal to trigger re-renders when announcements change.
-    trigger: RwSignal<u32>,
-}
-
-impl Default for LiveAnnouncerContext {
-    fn default() -> Self {
-        Self::new()
+impl From<&str> for Announcement {
+    fn from(text: &str) -> Self {
+        Self::Text(text.to_owned())
     }
 }
 
-impl LiveAnnouncerContext {
-    /// Creates a new live announcer context.
-    #[must_use]
-    pub fn new() -> Self {
-        Self {
-            polite_queue: Arc::new(Mutex::new(VecDeque::new())),
-            assertive_queue: Arc::new(Mutex::new(VecDeque::new())),
-            trigger: RwSignal::new(0),
-        }
-    }
-
-    /// Announces a message to screen readers.
-    ///
-    /// # Arguments
-    ///
-    /// * `message` - The message to announce.
-    /// * `assertiveness` - The assertiveness level (polite or assertive).
-    pub fn announce(&self, message: impl Into<String>, assertiveness: Assertiveness) {
-        let announcement = Announcement::new(message, assertiveness);
-
-        match assertiveness {
-            Assertiveness::Polite => {
-                if let Ok(mut queue) = self.polite_queue.lock() {
-                    queue.push_back(announcement);
-                }
-            }
-            Assertiveness::Assertive => {
-                if let Ok(mut queue) = self.assertive_queue.lock() {
-                    queue.push_back(announcement);
-                }
-            }
-        }
-
-        // Trigger re-render
-        self.trigger.update(|n| *n = n.wrapping_add(1));
-    }
-
-    /// Announces a polite message to screen readers.
-    ///
-    /// Polite messages wait for the user to finish their current task.
-    pub fn announce_polite(&self, message: impl Into<String>) {
-        self.announce(message, Assertiveness::Polite);
-    }
-
-    /// Announces an assertive message to screen readers.
-    ///
-    /// Assertive messages interrupt the user immediately.
-    pub fn announce_assertive(&self, message: impl Into<String>) {
-        self.announce(message, Assertiveness::Assertive);
-    }
-
-    /// Clears all announcements.
-    pub fn clear(&self) {
-        if let Ok(mut queue) = self.polite_queue.lock() {
-            queue.clear();
-        }
-        if let Ok(mut queue) = self.assertive_queue.lock() {
-            queue.clear();
-        }
-        self.trigger.update(|n| *n = n.wrapping_add(1));
-    }
-
-    /// Clears polite announcements.
-    pub fn clear_polite(&self) {
-        if let Ok(mut queue) = self.polite_queue.lock() {
-            queue.clear();
-        }
-        self.trigger.update(|n| *n = n.wrapping_add(1));
-    }
-
-    /// Clears assertive announcements.
-    pub fn clear_assertive(&self) {
-        if let Ok(mut queue) = self.assertive_queue.lock() {
-            queue.clear();
-        }
-        self.trigger.update(|n| *n = n.wrapping_add(1));
-    }
-
-    /// Gets the current polite message (most recent).
-    #[must_use]
-    pub fn polite_message(&self) -> Option<String> {
-        self.polite_queue
-            .lock()
-            .ok()
-            .and_then(|queue| queue.back().map(|a| a.message.clone()))
-    }
-
-    /// Gets the current assertive message (most recent).
-    #[must_use]
-    pub fn assertive_message(&self) -> Option<String> {
-        self.assertive_queue
-            .lock()
-            .ok()
-            .and_then(|queue| queue.back().map(|a| a.message.clone()))
-    }
-
-    /// Gets the trigger signal for reactive updates.
-    #[must_use]
-    pub fn trigger(&self) -> RwSignal<u32> {
-        self.trigger
-    }
+/// Announce `message` to screen readers.
+pub fn announce(message: impl Into<Announcement>, assertiveness: Assertiveness) {
+    announce_with_timeout(message, assertiveness, DEFAULT_ANNOUNCEMENT_TIMEOUT);
 }
 
-/// Provides live announcer context to descendant components.
-///
-/// This component creates the visually hidden live regions that screen readers
-/// use to announce dynamic content changes.
-///
-/// # Example
-///
-/// ```ignore
-/// view! {
-///     <LiveAnnouncerProvider>
-///         <App />
-///     </LiveAnnouncerProvider>
-/// }
-/// ```
-#[component]
-pub fn LiveAnnouncerProvider(
-    /// Children to render.
-    children: Children,
-) -> impl IntoView {
-    let context = LiveAnnouncerContext::new();
-    provide_context(context.clone());
-
-    let polite_message = {
-        let ctx = context.clone();
-        Memo::new(move |_| {
-            // Subscribe to trigger
-            ctx.trigger.get();
-            ctx.polite_message().unwrap_or_default()
-        })
-    };
-
-    let assertive_message = {
-        let ctx = context.clone();
-        Memo::new(move |_| {
-            // Subscribe to trigger
-            ctx.trigger.get();
-            ctx.assertive_message().unwrap_or_default()
-        })
-    };
-
-    view! {
-        {children()}
-
-        // Visually hidden live regions
-        <div
-            data-live-announcer="true"
-            style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;"
-        >
-            <div role="log" aria-live="polite" aria-relevant="additions">
-                {move || polite_message.get()}
-            </div>
-            <div role="log" aria-live="assertive" aria-relevant="additions">
-                {move || assertive_message.get()}
-            </div>
-        </div>
-    }
-}
-
-/// Returns the live announcer context.
-///
-/// # Panics
-///
-/// Panics if called outside of a `LiveAnnouncerProvider`.
-#[must_use]
-pub fn use_live_announcer() -> LiveAnnouncerContext {
-    use_context::<LiveAnnouncerContext>()
-        .expect("use_live_announcer must be used within a LiveAnnouncerProvider")
-}
-
-/// Returns the live announcer context, if available.
-#[must_use]
-pub fn try_use_live_announcer() -> Option<LiveAnnouncerContext> {
-    use_context::<LiveAnnouncerContext>()
-}
-
-/// Announces a message to screen readers.
-///
-/// This is a convenience function that uses the live announcer context
-/// if available, otherwise creates a standalone announcement.
-///
-/// # Arguments
-///
-/// * `message` - The message to announce.
-/// * `assertiveness` - The assertiveness level (polite or assertive).
-pub fn announce(message: impl Into<String>, assertiveness: Assertiveness) {
-    if let Some(ctx) = try_use_live_announcer() {
-        ctx.announce(message, assertiveness);
-    } else {
-        // Fallback: create a temporary live region
-        // This is less ideal but ensures announcements still work
-        #[cfg(target_arch = "wasm32")]
-        {
-            let message = message.into();
-            let assertiveness_str = assertiveness.as_aria_live();
-
-            if let Some(document) = web_sys::window().and_then(|w| w.document()) {
-                if let Ok(div) = document.create_element("div") {
-                    let _ = div.set_attribute("role", "log");
-                    let _ = div.set_attribute("aria-live", assertiveness_str);
-                    let _ = div.set_attribute("aria-relevant", "additions");
-                    let _ = div.set_attribute(
-                        "style",
-                        "position: absolute; width: 1px; height: 1px; padding: 0; \
-                         margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); \
-                         white-space: nowrap; border: 0;",
-                    );
-
-                    if let Some(body) = document.body() {
-                        let _ = body.append_child(&div);
-
-                        // Set the message after a small delay to ensure screen readers pick it up
-                        let div_clone = div.clone();
-                        set_timeout(
-                            move || {
-                                div_clone.set_text_content(Some(&message));
-
-                                // Remove after announcement
-                                let div_remove = div_clone.clone();
-                                set_timeout(
-                                    move || {
-                                        let _ = div_remove.remove();
-                                    },
-                                    std::time::Duration::from_millis(1000),
-                                );
-                            },
-                            std::time::Duration::from_millis(100),
-                        );
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Announces a polite message to screen readers.
-///
-/// Convenience function for `announce(message, Assertiveness::Polite)`.
-pub fn announce_polite(message: impl Into<String>) {
+/// Announce `message` politely: after whatever is currently being read.
+pub fn announce_polite(message: impl Into<Announcement>) {
     announce(message, Assertiveness::Polite);
 }
 
-/// Announces an assertive message to screen readers.
-///
-/// Convenience function for `announce(message, Assertiveness::Assertive)`.
-pub fn announce_assertive(message: impl Into<String>) {
+/// Announce `message` assertively: interrupting whatever is currently being read.
+pub fn announce_assertive(message: impl Into<Announcement>) {
     announce(message, Assertiveness::Assertive);
+}
+
+/// Announce `message`, removing it from its live region after `timeout`.
+pub fn announce_with_timeout(
+    message: impl Into<Announcement>,
+    assertiveness: Assertiveness,
+    timeout: Duration,
+) {
+    let message = message.into();
+    ANNOUNCER.with(|announcer| {
+        let mut announcer = announcer.borrow_mut();
+        if let Some(existing) = announcer.as_ref() {
+            existing.announce(&message, assertiveness, timeout);
+            return;
+        }
+        let Some(created) = LiveAnnouncer::create() else {
+            // No document: server-side rendering.
+            return;
+        };
+        *announcer = Some(created);
+        set_timeout(
+            move || {
+                ANNOUNCER.with(|announcer| {
+                    if let Some(announcer) = announcer.borrow().as_ref()
+                        && announcer.is_attached()
+                    {
+                        announcer.announce(&message, assertiveness, timeout);
+                    }
+                });
+            },
+            FIRST_ANNOUNCEMENT_DELAY,
+        );
+    });
+}
+
+/// Remove all pending announcements of the given assertiveness (`None`: of both kinds).
+pub fn clear_announcer(assertiveness: Option<Assertiveness>) {
+    ANNOUNCER.with(|announcer| {
+        if let Some(announcer) = announcer.borrow().as_ref() {
+            announcer.clear(assertiveness);
+        }
+    });
+}
+
+/// Remove the live regions from the document. The next announcement creates them again.
+pub fn destroy_announcer() {
+    ANNOUNCER.with(|announcer| {
+        if let Some(announcer) = announcer.borrow_mut().take() {
+            announcer.node.remove();
+        }
+    });
+}
+
+thread_local! {
+    // The browser runs leptonic on a single thread. During SSR there is no document, so no
+    // announcer is ever created.
+    static ANNOUNCER: RefCell<Option<LiveAnnouncer>> = const { RefCell::new(None) };
+}
+
+struct LiveAnnouncer {
+    node: Element,
+    assertive_log: Element,
+    polite_log: Element,
+}
+
+impl LiveAnnouncer {
+    fn create() -> Option<Self> {
+        let document = use_document();
+        let document = document.as_ref()?;
+        let body = document.body()?;
+
+        let node = document.create_element("div").ok()?;
+        node.set_attribute("data-live-announcer", "true").ok()?;
+        // Visually hidden, but read by screen readers.
+        node.set_attribute(
+            "style",
+            "border: 0; clip: rect(0 0 0 0); clip-path: inset(50%); height: 1px; margin: -1px; \
+             overflow: hidden; padding: 0; position: absolute; width: 1px; white-space: nowrap;",
+        )
+        .ok()?;
+
+        let create_log = |assertiveness: Assertiveness| -> Option<Element> {
+            let log = document.create_element("div").ok()?;
+            log.set_attribute("role", "log").ok()?;
+            log.set_attribute("aria-live", assertiveness.as_aria_live())
+                .ok()?;
+            log.set_attribute("aria-relevant", "additions").ok()?;
+            node.append_child(&log).ok()?;
+            Some(log)
+        };
+        let assertive_log = create_log(Assertiveness::Assertive)?;
+        let polite_log = create_log(Assertiveness::Polite)?;
+
+        body.prepend_with_node_1(&node).ok()?;
+        Some(Self {
+            node,
+            assertive_log,
+            polite_log,
+        })
+    }
+
+    fn is_attached(&self) -> bool {
+        self.node.is_connected()
+    }
+
+    fn log(&self, assertiveness: Assertiveness) -> &Element {
+        match assertiveness {
+            Assertiveness::Assertive => &self.assertive_log,
+            Assertiveness::Polite => &self.polite_log,
+        }
+    }
+
+    fn announce(&self, message: &Announcement, assertiveness: Assertiveness, timeout: Duration) {
+        let Some(document) = self.node.owner_document() else {
+            return;
+        };
+        let Ok(entry) = document.create_element("div") else {
+            return;
+        };
+        let is_empty = match message {
+            Announcement::Text(text) => {
+                entry.set_text_content(Some(text));
+                text.is_empty()
+            }
+            Announcement::LabelledBy(ids) => {
+                // To read an aria-labelledby, the element needs a role that supports naming.
+                let _ = entry.set_attribute("role", "img");
+                let _ = entry.set_attribute("aria-labelledby", ids);
+                false
+            }
+        };
+        if self.log(assertiveness).append_child(&entry).is_err() {
+            return;
+        }
+        if !is_empty {
+            set_timeout(move || entry.remove(), timeout);
+        }
+    }
+
+    fn clear(&self, assertiveness: Option<Assertiveness>) {
+        if assertiveness.is_none_or(|a| a == Assertiveness::Assertive) {
+            self.assertive_log.set_inner_html("");
+        }
+        if assertiveness.is_none_or(|a| a == Assertiveness::Polite) {
+            self.polite_log.set_inner_html("");
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use assertr::prelude::*;
+
     use super::*;
 
     #[test]
-    fn test_assertiveness_aria_live() {
-        assert_eq!(Assertiveness::Polite.as_aria_live(), "polite");
-        assert_eq!(Assertiveness::Assertive.as_aria_live(), "assertive");
+    fn assertiveness_maps_to_aria_live() {
+        assert_that!(Assertiveness::Polite.as_aria_live()).is_equal_to("polite");
+        assert_that!(Assertiveness::Assertive.as_aria_live()).is_equal_to("assertive");
     }
 
+    // `use_document()` only reports "no document" with the `ssr` feature; otherwise it calls into
+    // web-sys, which is unavailable natively.
+    #[cfg(feature = "ssr")]
     #[test]
-    fn test_live_announcer_context() {
-        let ctx = LiveAnnouncerContext::new();
-
-        ctx.announce_polite("Hello");
-        assert_eq!(ctx.polite_message(), Some("Hello".to_string()));
-
-        ctx.announce_assertive("Alert!");
-        assert_eq!(ctx.assertive_message(), Some("Alert!".to_string()));
-
-        ctx.clear();
-        assert_eq!(ctx.polite_message(), None);
-        assert_eq!(ctx.assertive_message(), None);
-    }
-
-    #[test]
-    fn test_announcement_new() {
-        let announcement = Announcement::new("Test message", Assertiveness::Polite);
-        assert_eq!(announcement.message, "Test message");
-        assert_eq!(announcement.assertiveness, Assertiveness::Polite);
-        assert!(!announcement.id.is_empty());
+    fn announcing_without_a_document_does_nothing() {
+        // During SSR there is no document: no announcer is created, no panic.
+        announce_polite("Hello");
+        let created = ANNOUNCER.with(|announcer| announcer.borrow().is_some());
+        assert_that!(created).is_false();
     }
 }

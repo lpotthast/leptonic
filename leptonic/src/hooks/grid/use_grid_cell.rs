@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/grid/useGridCell.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::Attr,
@@ -28,7 +29,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridCell.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/grid/useGridCell.ts
 
 // ## OMITTED FEATURES
 // - `isVirtualized`, `colSpan`, `keyWhenFocused` — no virtualization support.
@@ -205,10 +206,10 @@ where
             if let Some(active) = web_sys::window()
                 .and_then(|w| w.document())
                 .and_then(|d| d.active_element())
+                && el.contains(Some(&active))
+                && *active != *el
             {
-                if el.contains(Some(&active)) && *active != *el {
-                    return;
-                }
+                return;
             }
             focus_element(&el, true);
             scroll_into_viewport(
@@ -289,14 +290,13 @@ where
                 }
                 // Otherwise: let the event bubble to the grid's keydown handler for cell-to-cell navigation.
             }
-            "ArrowLeft" => {
+            "ArrowLeft"
                 if focus_manager_for_keydown
                     .focus_previous(FocusManagerOptions::default())
-                    .is_some()
-                {
-                    e.stop_propagation();
-                    e.prevent_default();
-                }
+                    .is_some() =>
+            {
+                e.stop_propagation();
+                e.prevent_default();
             }
             // ArrowUp, ArrowDown, Space, Enter, Home, End, etc.: let bubble to grid handler.
             _ => {}

@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/utils/animation.ts @ 6f664fe911
 //! Internal animation watching utility.
 //!
 //! Waits for all active CSS animations/transitions on an element to finish,

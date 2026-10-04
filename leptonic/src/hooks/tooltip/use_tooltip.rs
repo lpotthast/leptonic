@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/tooltip/useTooltip.ts @ 6f664fe911
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
@@ -14,7 +15,7 @@ use crate::{
     utils::EventHandler,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/tooltip/src/useTooltip.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tooltip/useTooltip.ts
 
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS

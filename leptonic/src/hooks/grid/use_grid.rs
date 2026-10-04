@@ -1,5 +1,8 @@
+// Upstream: react-aria/src/grid/useGrid.ts @ 6f664fe911
+// Upstream: react-stately/src/grid/useGridState.ts @ 6f664fe911
 use std::collections::HashSet;
 
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -7,7 +10,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
@@ -33,7 +35,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGrid.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/grid/useGrid.ts
 
 // ## OMITTED FEATURES
 // - No virtualization (`is_virtualized`, `aria-rowcount`, `aria-colcount`).
@@ -192,8 +194,9 @@ impl IntoAttrs for UseGridProps {
             Attr(attr::AriaMultiselectable, self.aria_multiselectable),
             Attr(attr::AriaDisabled, self.aria_disabled),
             self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
+            // Like React's `onFocus`/`onBlur`, these must see focus moving onto descendants.
+            self.on_focus.into_on(ev::focusin),
+            self.on_blur.into_on(ev::focusout),
             self.on_mousedown.into_on(ev::mousedown),
         )
     }
@@ -209,8 +212,8 @@ pub type UseGridAttrs = (
     Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
 );
 
@@ -267,7 +270,7 @@ where
         on_cell_action,
     } = input;
 
-    let grid_id = format!("grid-{}", Uuid::new_v4());
+    let grid_id = use_id("grid");
 
     // --- Keyboard delegate ---
     let delegate = GridKeyboardDelegate::new(collection, disabled_keys, focus_mode);
@@ -321,40 +324,40 @@ where
         match key.as_str() {
             "ArrowDown" => {
                 e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(next) = delegate.get_key_below(&focused) {
-                        if shift && selection_mode == SelectionMode::Multiple {
-                            selection.select.run(next.clone());
-                        }
-                        set_focused_key_signal.set(Some(next));
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(next) = delegate.get_key_below(&focused)
+                {
+                    if shift && selection_mode == SelectionMode::Multiple {
+                        selection.select.run(next.clone());
                     }
+                    set_focused_key_signal.set(Some(next));
                 }
             }
             "ArrowUp" => {
                 e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(prev) = delegate.get_key_above(&focused) {
-                        if shift && selection_mode == SelectionMode::Multiple {
-                            selection.select.run(prev.clone());
-                        }
-                        set_focused_key_signal.set(Some(prev));
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(prev) = delegate.get_key_above(&focused)
+                {
+                    if shift && selection_mode == SelectionMode::Multiple {
+                        selection.select.run(prev.clone());
                     }
+                    set_focused_key_signal.set(Some(prev));
                 }
             }
             "ArrowRight" => {
                 e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(next) = delegate.get_key_right_of(&focused) {
-                        set_focused_key_signal.set(Some(next));
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(next) = delegate.get_key_right_of(&focused)
+                {
+                    set_focused_key_signal.set(Some(next));
                 }
             }
             "ArrowLeft" => {
                 e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(prev) = delegate.get_key_left_of(&focused) {
-                        set_focused_key_signal.set(Some(prev));
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(prev) = delegate.get_key_left_of(&focused)
+                {
+                    set_focused_key_signal.set(Some(prev));
                 }
             }
             "Home" => {
@@ -373,26 +376,26 @@ where
             }
             "PageUp" => {
                 e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(target) = delegate.get_key_page_above(&focused) {
-                        set_focused_key_signal.set(Some(target));
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(target) = delegate.get_key_page_above(&focused)
+                {
+                    set_focused_key_signal.set(Some(target));
                 }
             }
             "PageDown" => {
                 e.prevent_default();
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(target) = delegate.get_key_page_below(&focused) {
-                        set_focused_key_signal.set(Some(target));
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(target) = delegate.get_key_page_below(&focused)
+                {
+                    set_focused_key_signal.set(Some(target));
                 }
             }
             " " => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    if selection_mode != SelectionMode::None {
-                        e.prevent_default();
-                        selection.toggle.run(focused);
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && selection_mode != SelectionMode::None
+                {
+                    e.prevent_default();
+                    selection.toggle.run(focused);
                 }
             }
             "Enter" => {
@@ -403,11 +406,11 @@ where
                             e.prevent_default();
                             on_action.run(focused);
                         }
-                    } else if coll.is_cell_key(&focused) {
-                        if let Some(on_action) = on_cell_action {
-                            e.prevent_default();
-                            on_action.run(focused);
-                        }
+                    } else if coll.is_cell_key(&focused)
+                        && let Some(on_action) = on_cell_action
+                    {
+                        e.prevent_default();
+                        on_action.run(focused);
                     }
                 }
             }
@@ -419,11 +422,9 @@ where
                     selection.clear_selection.run(());
                 }
             }
-            "a" if ctrl_or_meta => {
-                if selection_mode == SelectionMode::Multiple {
-                    e.prevent_default();
-                    selection.select_all.run(vec![]);
-                }
+            "a" if ctrl_or_meta && selection_mode == SelectionMode::Multiple => {
+                e.prevent_default();
+                selection.select_all.run(vec![]);
             }
             // Tab: don't intercept — let the browser handle single tab-stop exit.
             _ => {}
@@ -435,28 +436,24 @@ where
         set_is_focused.set(true);
 
         // If nothing is focused yet, focus the first item.
-        if focused_key.get_untracked().is_none() {
-            if let Some(first) = delegate.get_first_key(None, true) {
-                set_focused_key_signal.set(Some(first));
-            }
+        if focused_key.get_untracked().is_none()
+            && let Some(first) = delegate.get_first_key(None, true)
+        {
+            set_focused_key_signal.set(Some(first));
         }
     };
 
     // --- Blur handler ---
-    let grid_id_for_blur = grid_id.clone();
     let handle_blur = move |e: FocusEvent| {
         // Only blur if focus left the grid container entirely.
-        if let Some(related) = e.related_target() {
-            if let Ok(el) = related.dyn_into::<web_sys::Element>() {
-                if let Some(container) = web_sys::window()
-                    .and_then(|w| w.document())
-                    .and_then(|d| d.get_element_by_id(&grid_id_for_blur))
-                {
-                    if container.contains(Some(&el)) {
-                        return;
-                    }
-                }
-            }
+        if let Some(related) = e.related_target()
+            && let Ok(el) = related.dyn_into::<web_sys::Element>()
+            && let Some(container) = e
+                .current_target()
+                .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
+            && container.contains(Some(&el))
+        {
+            return;
         }
         set_is_focused.set(false);
     };

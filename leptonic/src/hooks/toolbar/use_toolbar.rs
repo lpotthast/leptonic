@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/toolbar/useToolbar.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +7,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::{
@@ -16,7 +17,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toolbar/src/useToolbar.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/toolbar/useToolbar.ts
 
 //
 // No intentional deviations from the react-aria implementation.
@@ -160,7 +161,7 @@ pub fn use_toolbar(input: UseToolbarInput) -> UseToolbarReturn {
         on_focus_last,
     } = input;
 
-    let toolbar_id = format!("toolbar-{}", Uuid::new_v4());
+    let toolbar_id = use_id("toolbar");
 
     let aria_orientation = AriaOrientation::from(orientation);
 

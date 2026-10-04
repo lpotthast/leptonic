@@ -70,19 +70,87 @@ pub fn PageArchitecture() -> impl IntoView {
 
             <Code language=Language::Rust>
                 {indoc!(r#"
-                    use leptonic::hooks::{use_button, UseButtonInput, UseButtonReturn};
+                    use leptonic::hooks::{use_button, ButtonElementType, UseButtonInput, UseButtonReturn};
 
                     let UseButtonReturn { props, .. } = use_button(UseButtonInput {
-                        // ...
+                        element_type: ButtonElementType::Other,
+                        on_press: Some(Callback::new(|_| { /* handle press */ })),
+                        ..Default::default()
                     });
+                    let (attrs, styles) = props.into_parts();
 
                     view! {
-                        <div {..props.into_attrs()}>
+                        <div {..attrs} style=styles>
                             "My custom button"
                         </div>
                     }
                 "#)}
             </Code>
+
+            <h3 id="composing-hooks" class="anchor">
+                "Composing hooks"
+                <AnchorLink href="#composing-hooks" description="Direct link to section: Composing hooks"/>
+            </h3>
+
+            <p>
+                "Most real widgets need more than one hook. There are two ways to combine them, and which one fits depends "
+                "on whether the hooks describe the same thing or different things."
+            </p>
+
+            <p>
+                <b>"One hook configures another."</b>" A menu trigger is a button that also opens a menu. A spin button has two "
+                "stepper buttons that keep stepping while held. Hooks like "<Code inline=true>"use_menu_trigger"</Code>", "
+                <Code inline=true>"use_spin_button"</Code>" and "<Code inline=true>"use_number_field"</Code>
+                " therefore don\u{2019}t hand you DOM props for those buttons. They return a "<Code inline=true>"UseButtonInput"</Code>
+                ", and you render the button with "<Code inline=true>"use_button"</Code>
+                ". Input structs implement "<Code inline=true>"Default"</Code>", so you can add your own settings with struct update syntax:"
+            </p>
+
+            <Code language=Language::Rust>
+                {indoc!(r#"
+                    let menu_trigger = use_menu_trigger(UseMenuTriggerInput { /* ... */ });
+
+                    let button = use_button(UseButtonInput {
+                        on_hover_start: Some(Callback::new(|_| { /* ... */ })),
+                        ..menu_trigger.button
+                    });
+                    let (attrs, styles) = button.props.into_parts();
+
+                    view! { <button {..attrs} style=styles>"Actions"</button> }
+                "#)}
+            </Code>
+
+            <p>
+                "This keeps exactly one press, focus and hover state machine per element. If both hooks attached their own "
+                "press handling to the same element, a single click would be processed twice, with two competing ideas of "
+                "whether the button is pressed. It is also how react-aria works: "<Code inline=true>"useMenuTrigger"</Code>
+                " returns "<Code inline=true>"AriaButtonProps"</Code>", which are then passed to "<Code inline=true>"useButton"</Code>"."
+            </p>
+
+            <p>
+                <b>"Independent hooks on one element."</b>" When hooks add unrelated behavior to the same element, say "
+                <Code inline=true>"use_press"</Code>" and "<Code inline=true>"use_hover"</Code>
+                " on a custom widget, merge their props with the "<Code inline=true>"MergeWith"</Code>
+                " trait. Event handlers are chained so both run, and for other attributes the last one wins:"
+            </p>
+
+            <Code language=Language::Rust>
+                {indoc!(r#"
+                    use leptonic::utils::MergeWith;
+
+                    let press = use_press(UsePressInput { /* ... */ ..Default::default() });
+                    let hover = use_hover(UseHoverInput { /* ... */ });
+
+                    let (attrs, styles) = press.props.merge_with(hover.props).into_parts();
+
+                    view! { <div {..attrs} style=styles>"Hover and press me"</div> }
+                "#)}
+            </Code>
+
+            <p>
+                "When in doubt, prefer input composition: if a hook hands you a "<Code inline=true>"UseButtonInput"</Code>
+                " (or another hook\u{2019}s input), pass it on rather than merging DOM props."
+            </p>
 
             <h2 id="atoms" class="anchor">
                 "Atoms"
@@ -166,6 +234,7 @@ pub fn PageArchitecture() -> impl IntoView {
                 Toc::Leaf { title: "Hooks, Atoms & Components", link: "#architecture" },
                 Toc::Leaf { title: "Layer Overview", link: "#layer-overview" },
                 Toc::Leaf { title: "Hooks", link: "#hooks" },
+                Toc::Leaf { title: "Composing hooks", link: "#composing-hooks" },
                 Toc::Leaf { title: "Atoms", link: "#atoms" },
                 Toc::Leaf { title: "Components", link: "#components" },
                 Toc::Leaf { title: "Feature Flags", link: "#feature-flags" },

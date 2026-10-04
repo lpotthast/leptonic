@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/radio/useRadio.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::{
@@ -19,7 +20,7 @@ use crate::{
     utils::{EventHandler, aria::AriaInvalid},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadio.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/radio/useRadio.ts
 
 // No intentional deviations from the react-aria implementation.
 

@@ -1,6 +1,7 @@
+use rootcause::Report;
 use std::time::Duration;
 
-use thirtyfour::{WebDriver, prelude::*};
+use browser_test::thirtyfour::{WebDriver, prelude::*};
 
 use crate::pages::BaseActions;
 
@@ -20,7 +21,7 @@ impl BaseActions for FocusScopePage<'_> {
 }
 
 impl FocusScopePage<'_> {
-    pub async fn goto(&self) -> anyhow::Result<()> {
+    pub async fn goto(&self) -> Result<(), Report> {
         tracing::info!("Navigating to focus-scope atom test page...");
         self.goto_path("/atoms/focus-scope").await?;
         // Wait for auto-focus effects to settle.
@@ -28,35 +29,35 @@ impl FocusScopePage<'_> {
         Ok(())
     }
 
-    pub async fn get_active_element_id(&self) -> anyhow::Result<Option<String>> {
+    pub async fn get_active_element_id(&self) -> Result<Option<String>, Report> {
         let active = self.driver.active_element().await?;
         Ok(active.attr("id").await?)
     }
 
     // ---- Containment section ----
 
-    pub async fn click_contain_btn_1(&self) -> anyhow::Result<()> {
+    pub async fn click_contain_btn_1(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fs-contain-btn-1").await
     }
 
     // ---- Restore focus section ----
 
-    pub async fn click_restore_toggle(&self) -> anyhow::Result<()> {
+    pub async fn click_restore_toggle(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fs-restore-toggle").await
     }
 
     // ---- Nested section ----
 
-    pub async fn click_nested_outer_btn(&self) -> anyhow::Result<()> {
+    pub async fn click_nested_outer_btn(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fs-nested-outer-btn").await
     }
 
-    pub async fn click_nested_inner_btn_1(&self) -> anyhow::Result<()> {
+    pub async fn click_nested_inner_btn_1(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fs-nested-inner-btn-1")
             .await
     }
 
-    pub async fn tab_from_active(&self) -> anyhow::Result<()> {
+    pub async fn tab_from_active(&self) -> Result<(), Report> {
         let active = self.driver.active_element().await?;
         active.send_keys(Key::Tab).await?;
         Ok(())
@@ -64,14 +65,14 @@ impl FocusScopePage<'_> {
 
     // ---- Nested restore section ----
 
-    pub async fn click_nested_restore_trigger(&self) -> anyhow::Result<()> {
+    pub async fn click_nested_restore_trigger(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fs-nested-restore-trigger")
             .await
     }
 
     // ---- Outside ----
 
-    pub async fn click_outside(&self) -> anyhow::Result<()> {
+    pub async fn click_outside(&self) -> Result<(), Report> {
         self.click_element_with_id("test-fs-outside").await
     }
 }

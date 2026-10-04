@@ -9,14 +9,15 @@ use crate::{
     utils::{
         classes::Classes,
         color::ColorValue,
-        css::pct,
-        styles::{
-            Style::{
-                Background, BackgroundBlendMode, BackgroundColor, Bottom, Height, Left, Opacity,
-                PointerEvents, Position, TouchAction, Transform, UserSelect, Width,
-            },
-            Styles,
+        css::{
+            ForcedColorAdjust, LengthPercentageAuto, Opacity, TouchAction, computed_pct,
+            computed_size,
         },
+        style::{
+            BottomProperty, ForcedColorAdjustProperty, HeightProperty, LeftProperty,
+            OpacityProperty, TouchActionProperty, WidthProperty,
+        },
+        styles::Styles,
     },
 };
 
@@ -93,30 +94,36 @@ pub fn ColorArea<C: ColorValue>(
     let thumb_x = area.thumb_x_percent;
     let thumb_y = area.thumb_y_percent;
 
+    // `background` and the thumb color are computed CSS strings (gradients, color functions),
+    // which have no checked grammar in `leptos-css` yet.
     let styles = styles
-        .add(Background, move || bg.get())
-        .add(BackgroundBlendMode, move || {
-            area.background_blend_mode.get().unwrap_or("normal")
+        .add_optional_unchecked("background", move || Some(bg.get()))
+        .add_optional_unchecked("background-blend-mode", move || {
+            Some(area.background_blend_mode.get().unwrap_or("normal"))
         })
-        .add(Position, "relative")
-        .add(TouchAction, "none")
-        .add(UserSelect, "none")
-        .add("forced-color-adjust", "none");
+        .add_unchecked("position", "relative")
+        .add(TouchActionProperty.declare(TouchAction::None))
+        .add_unchecked("user-select", "none")
+        .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None));
 
     let thumb_styles = Styles::new()
-        .add(Position, "absolute")
-        .add(Left, move || pct(thumb_x.get()))
-        .add(Bottom, move || pct(thumb_y.get()))
-        .add(Transform, "translate(-50%, 50%)")
-        .add(BackgroundColor, move || thumb_color.get());
+        .add_unchecked("position", "absolute")
+        .add_reactive(move || {
+            LeftProperty.declare(LengthPercentageAuto::from(computed_pct(thumb_x.get())))
+        })
+        .add_reactive(move || {
+            BottomProperty.declare(LengthPercentageAuto::from(computed_pct(thumb_y.get())))
+        })
+        .add_unchecked("transform", "translate(-50%, 50%)")
+        .add_optional_unchecked("background-color", move || Some(thumb_color.get()));
 
-    let hidden_input_styles = Styles::from([
-        (Opacity, "0.0001"),
-        (Width, "100%"),
-        (Height, "100%"),
-        (PointerEvents, "none"),
-        (Position, "absolute"),
-    ]);
+    let hidden_input_styles = Styles::builder()
+        .with(OpacityProperty.declare(Opacity::new(0.0001)))
+        .with(WidthProperty.declare(computed_size(computed_pct(100.0))))
+        .with(HeightProperty.declare(computed_size(computed_pct(100.0))))
+        .with_unchecked("pointer-events", "none")
+        .with_unchecked("position", "absolute")
+        .build();
 
     view! {
         <div

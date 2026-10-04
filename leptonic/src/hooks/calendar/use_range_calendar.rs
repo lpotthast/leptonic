@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/calendar/useRangeCalendar.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +7,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use super::use_range_calendar_state::{
@@ -19,7 +20,7 @@ use crate::{
     },
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useRangeCalendar.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/calendar/useRangeCalendar.ts
 
 //
 // 1. No blur-to-finalize: react-aria finalizes range selection (calls
@@ -197,7 +198,7 @@ pub fn use_range_calendar(input: UseRangeCalendarInput) -> UseRangeCalendarRetur
         first_day_of_week: input.first_day_of_week,
     });
 
-    let calendar_id = format!("range-calendar-{}", Uuid::new_v4());
+    let calendar_id = use_id("range-calendar");
 
     let aria_disabled = Signal::derive(move || is_disabled.get().then_some(AriaDisabled::True));
 

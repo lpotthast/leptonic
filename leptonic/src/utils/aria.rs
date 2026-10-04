@@ -76,8 +76,8 @@ macro_rules! impl_attribute_value_via_str {
 
             fn dry_resolve(&mut self) {}
 
-            async fn resolve(self) -> Self::AsyncOutput {
-                self
+            fn resolve(self) -> impl Future<Output = Self::AsyncOutput> + Send {
+                std::future::ready(self)
             }
         }
     };
@@ -212,8 +212,8 @@ impl AttributeValue for AriaDescribedby {
 
     fn dry_resolve(&mut self) {}
 
-    async fn resolve(self) -> Self::AsyncOutput {
-        self
+    fn resolve(self) -> impl Future<Output = Self::AsyncOutput> + Send {
+        std::future::ready(self)
     }
 }
 

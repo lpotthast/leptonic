@@ -67,20 +67,20 @@ mod tests {
     #[test]
     fn strips_script_tags() {
         let result = sanitize("<b>Hello</b><script>alert('xss')</script>", None);
-        assert_that(result).is_equal_to("<b>Hello</b>".to_string());
+        assert_that!(result).is_equal_to("<b>Hello</b>".to_string());
     }
 
     #[test]
     fn strips_event_handlers() {
         let result = sanitize(r#"<div onclick="alert('xss')">Click me</div>"#, None);
-        assert_that(result.as_str()).does_not_contain("onclick");
-        assert_that(result.as_str()).is_equal_to("Click me");
+        assert_that!(result.as_str()).does_not_contain("onclick");
+        assert_that!(result.as_str()).is_equal_to("<div>Click me</div>");
     }
 
     #[test]
     fn strips_javascript_urls() {
         let result = sanitize(r#"<a href="javascript:alert('xss')">Link</a>"#, None);
-        assert_that(result).does_not_contain("javascript");
+        assert_that!(result).does_not_contain("javascript");
     }
 
     #[test]
@@ -90,7 +90,7 @@ mod tests {
             None,
         );
         // Ammonia adds rel="noopener noreferrer" to links by default.
-        assert_that(result).is_equal_to(
+        assert_that!(result).is_equal_to(
             r#"<p>Hello <b>world</b> and <a href="https://example.com" rel="noopener noreferrer">link</a></p>"#.to_string()
         );
     }
@@ -98,14 +98,14 @@ mod tests {
     #[test]
     fn strips_iframe() {
         let result = sanitize(r#"<iframe src="https://evil.com"></iframe>"#, None);
-        assert_that(result).does_not_contain("iframe");
+        assert_that!(result).does_not_contain("iframe");
     }
 
     #[test]
     fn custom_policy_allows_extra_tags() {
         let input = "<custom-tag>content</custom-tag>";
         let result_default = sanitize(input, None);
-        assert_that(result_default).is_equal_to("content".to_string());
+        assert_that!(result_default).is_equal_to("content".to_string());
 
         let result_custom = sanitize(
             input,
@@ -114,6 +114,6 @@ mod tests {
                 builder
             }),
         );
-        assert_that(result_custom).is_equal_to(input.to_string());
+        assert_that!(result_custom).is_equal_to(input.to_string());
     }
 }

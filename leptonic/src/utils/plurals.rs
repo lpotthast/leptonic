@@ -40,32 +40,32 @@ mod tests {
     #[test]
     fn test_english_plural_one() {
         let locale = Locale::new("en-US");
-        assert_that(plural_category(&locale, 1)).is_equal_to(PluralCategory::One);
+        assert_that!(plural_category(&locale, 1)).is_equal_to(PluralCategory::One);
     }
 
     #[test]
     fn test_english_plural_other() {
         let locale = Locale::new("en-US");
-        assert_that(plural_category(&locale, 0)).is_equal_to(PluralCategory::Other);
-        assert_that(plural_category(&locale, 2)).is_equal_to(PluralCategory::Other);
-        assert_that(plural_category(&locale, 5)).is_equal_to(PluralCategory::Other);
+        assert_that!(plural_category(&locale, 0)).is_equal_to(PluralCategory::Other);
+        assert_that!(plural_category(&locale, 2)).is_equal_to(PluralCategory::Other);
+        assert_that!(plural_category(&locale, 5)).is_equal_to(PluralCategory::Other);
     }
 
     #[test]
     fn test_arabic_plural_categories() {
         let locale = Locale::new("ar");
         // Arabic has: zero, one, two, few, many, other
-        assert_that(plural_category(&locale, 0)).is_equal_to(PluralCategory::Zero);
-        assert_that(plural_category(&locale, 1)).is_equal_to(PluralCategory::One);
-        assert_that(plural_category(&locale, 2)).is_equal_to(PluralCategory::Two);
+        assert_that!(plural_category(&locale, 0)).is_equal_to(PluralCategory::Zero);
+        assert_that!(plural_category(&locale, 1)).is_equal_to(PluralCategory::One);
+        assert_that!(plural_category(&locale, 2)).is_equal_to(PluralCategory::Two);
     }
 
     #[test]
     fn test_japanese_always_other() {
         let locale = Locale::new("ja-JP");
         // Japanese has no grammatical plural distinctions
-        assert_that(plural_category(&locale, 0)).is_equal_to(PluralCategory::Other);
-        assert_that(plural_category(&locale, 1)).is_equal_to(PluralCategory::Other);
-        assert_that(plural_category(&locale, 100)).is_equal_to(PluralCategory::Other);
+        assert_that!(plural_category(&locale, 0)).is_equal_to(PluralCategory::Other);
+        assert_that!(plural_category(&locale, 1)).is_equal_to(PluralCategory::Other);
+        assert_that!(plural_category(&locale, 100)).is_equal_to(PluralCategory::Other);
     }
 }

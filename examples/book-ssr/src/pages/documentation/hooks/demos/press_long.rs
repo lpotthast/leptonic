@@ -8,41 +8,10 @@ use leptonic::{
     hooks::*,
 };
 use leptos::prelude::*;
-use leptos_styles::{
-    Style::{
-        AlignItems, Background, BackgroundColor, Border, BorderRadius, BoxShadow, Cursor, Display,
-        Flex, Gap, Height, MinWidth, Position, TextAlign, Width,
-    },
-    Styles,
-};
 use ringbuf::{
     HeapRb,
     traits::{Consumer, RingBuffer},
 };
-
-fn track_style() -> Styles {
-    Styles::from([
-        (Display, "flex"),
-        (Width, "200px"),
-        (Height, "8px"),
-        (Background, "#ddd"),
-        (BorderRadius, "4px"),
-        (Position, "relative"),
-        (Cursor, "pointer"),
-    ])
-}
-
-fn thumb_style() -> Styles {
-    Styles::builder()
-        .with(Width, "20px")
-        .with(Height, "20px")
-        .with(BackgroundColor, "var(--brand-color)")
-        .with(BorderRadius, "50%")
-        .with(Border, "2px solid white")
-        .with(BoxShadow, "0 2px 4px rgba(0,0,0,0.2)")
-        .with(Cursor, "grab")
-        .build()
-}
 
 #[component]
 pub fn PressLongDemo() -> impl IntoView {
@@ -111,29 +80,21 @@ pub fn PressLongDemo() -> impl IntoView {
     let (lp_press_props, lp_press_styles) = lp_props.into_inner();
 
     view! {
-        <p>"Press and hold the button below for " { move || threshold.get().as_millis() } "ms to trigger a long press:"</p>
+        <p>
+            "Press and hold the button below for " {move || threshold.get().as_millis()}
+            "ms to trigger a long press:"
+        </p>
 
-        <button
-            {..lp_press_props.into_attrs()}
-            style=lp_press_styles
-                .add("display", "inline-flex")
-                .add("border", "2px solid var(--brand-color)")
-                .add("padding", "1em 2em")
-                .add("cursor", "pointer")
-                .add("border-radius", "4px")
-                .add("background", "var(--brand-color)")
-                .add("color", "white")
-                .add("font-size", "1em")
-        >
+        <button {..lp_press_props.into_attrs()} class="demo-btn-primary" style=lp_press_styles>
             "Long press me"
         </button>
 
-        <FormControl attr:style="flex-direction: row; align-items: center; gap: 0.5em; margin-top: 1em;">
+        <FormControl classes=["demo-form-row", "demo-mt-1"]>
             <Checkbox checked=lp_disabled set_checked=set_lp_disabled />
             <Label>"Disabled"</Label>
         </FormControl>
 
-        <div style="display: flex; align-items: center; gap: 0.5em; margin-top: 0.5em;">
+        <div class="demo-inline-controls">
             <Label>"Threshold:"</Label>
             <SliderAtom
                 values=SliderValues::Uncontrolled(vec![500.0])
@@ -143,35 +104,24 @@ pub fn PressLongDemo() -> impl IntoView {
                 on_change=Callback::new(move |vals: Vec<f64>| {
                     set_threshold.set(Duration::from_secs_f64(vals[0] / 1000.0));
                 })
-                styles=[(Display, "flex"), (AlignItems, "center"), (Gap, "0.5em"), (Flex, "0 0 200px")]
+                classes=["demo-slider", "demo-slider-compact"]
             >
-                <SliderTrack styles=track_style()>
-                    <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
-                    <SliderThumb styles=thumb_style()/>
+                <SliderTrack classes="demo-slider-track">
+                    <SliderTrackFill classes="demo-slider-fill" />
+                    <SliderThumb classes="demo-slider-thumb" />
                 </SliderTrack>
                 <SliderOutput let:attrs let:values>
-                    <output {..attrs} style=Styles::from([(MinWidth, "60px"), (TextAlign, "right")])>
-                        { move || format!("{:.0}ms", values.get()[0]) }
+                    <output {..attrs} class="demo-slider-output">
+                        {move || format!("{:.0}ms", values.get()[0])}
                     </output>
                 </SliderOutput>
             </SliderAtom>
         </div>
 
-        <p>"Long press count: " { move || lp_count.get() }</p>
+        <p>"Long press count: " {move || lp_count.get()}</p>
 
-        <p>"Last " { move || lp_events.with(ringbuf::traits::Observer::occupied_len) } " events:"</p>
+        <p>"Last " {move || lp_events.with(ringbuf::traits::Observer::occupied_len)} " events:"</p>
 
-        <pre style="
-            width: 100%;
-            height: 10em;
-            overflow: auto;
-            padding: var(--typography-code-padding);
-            border: none;
-            border-radius: var(--typography-code-border-radius);
-            background-color: var(--typography-code-background-color);
-            color: var(--typography-code-color);
-        ">
-            { move || lp_string.get() }
-        </pre>
+        <pre class="demo-event-log">{move || lp_string.get()}</pre>
     }
 }

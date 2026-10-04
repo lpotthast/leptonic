@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/selection/useSelectableList.ts @ 6f664fe911
 use std::collections::HashSet;
 
 use leptos::prelude::*;
@@ -19,7 +20,7 @@ use crate::{
     utils::{CapturedElement, locale::WritingDirection},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableList.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/selection/useSelectableList.ts
 
 // REACT-ARIA DEVIATIONS
 //

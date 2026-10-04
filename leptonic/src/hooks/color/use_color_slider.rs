@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/color/useColorSlider.ts @ 6f664fe911
 use std::borrow::Cow;
 
 use leptos::prelude::*;
@@ -12,7 +13,7 @@ use crate::{
 
 use super::use_color_slider_state::UseColorSliderStateReturn;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/color/src/useColorSlider.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorSlider.ts
 
 // ## INTENTIONAL DEVIATIONS
 //

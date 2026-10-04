@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/color/useColorSwatch.ts @ 6f664fe911
 use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
@@ -5,7 +6,7 @@ use crate::{
     utils::{aria::AriaRole, color::ColorValue},
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/color/src/useColorSwatch.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorSwatch.ts
 
 // No intentional deviations from the react-aria implementation.
 

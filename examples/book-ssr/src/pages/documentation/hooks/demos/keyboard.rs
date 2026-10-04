@@ -46,6 +46,7 @@ pub fn KeyboardDemo() -> impl IntoView {
             });
             e.continue_propagation();
         })),
+        ..Default::default()
     });
 
     view! {

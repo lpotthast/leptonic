@@ -3,27 +3,22 @@
 //
 // ## DIFFERENT BEHAVIOR
 //
-// - Attribute merging (`mergeProps` equivalent)
-//   Rationale: React-aria provides a generic `mergeProps` function that merges
-//   two props objects at runtime by dynamically iterating over object keys.
-//   In Rust, this is not possible: *Attrs types are defined as tuples with
-//   statically known sizes. There is no way to combine two arbitrarily sized
-//   tuples at runtime and return a potentially differently sized tuple.
+// - Combining hooks (`mergeProps` equivalent)
+//   React-aria merges arbitrary props objects at runtime with `mergeProps`. Spreadable attribute
+//   sets are statically typed tuples in Leptos, so there is no generic equivalent. Leptonic
+//   combines hooks in two ways:
 //
-//   Leptonic uses explicit `merge_with_*` methods on *Return types instead of
-//   a generic merge function. These methods have full compile-time knowledge
-//   of both hook returns and can produce a correctly-typed merged result.
-//
-//   Example:
-//   ```rust
-//   let button = use_button(...);
-//   let menu_trigger = use_menu_trigger(...);
-//   let merged = menu_trigger.merge_with_button(button);
-//   view! { <button {..merged.attrs}>"Actions"</button> }
-//   ```
-//
-//   React-aria: `mergeProps(buttonProps, menuTriggerProps)` iterates over
-//   object keys at runtime, chaining handlers and merging attributes.
+//   1. Input composition (preferred). A hook that configures an element rendered by another hook
+//      returns that hook's *input*. Callers add their own settings with struct update syntax:
+//      ```rust
+//      let menu_trigger = use_menu_trigger(...);
+//      let button = use_button(UseButtonInput { on_hover_start: .., ..menu_trigger.button });
+//      view! { <button {..button.props.into_parts().0}>"Actions"</button> }
+//      ```
+//      This mirrors react-aria, where e.g. `menuTriggerProps` are `AriaButtonProps`, and keeps
+//      one press/focus state machine per element.
+//   2. `MergeWith` for independent hooks spread onto the same element (e.g. press + hover),
+//      producing an explicitly typed merged props struct.
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
 //

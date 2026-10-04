@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/focus/FocusScope.tsx @ 6f664fe911
 use std::sync::Arc;
 
 use send_wrapper::SendWrapper;
@@ -15,7 +16,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/FocusScope.tsx
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/focus/FocusScope.tsx
 //
 // ## React-aria deviation
 //
@@ -125,43 +126,43 @@ impl FocusManager {
             node_contains(Some(scope.as_ref()), Some(from_el.as_ref())).unwrap_or(false)
         });
 
-        if let Some(ref from_el) = from {
-            if from_in_scope {
-                // Normal case: advance from current position.
-                let mut walker = get_focusable_tree_walker(
+        if let Some(ref from_el) = from
+            && from_in_scope
+        {
+            // Normal case: advance from current position.
+            let mut walker = get_focusable_tree_walker(
+                &scope,
+                FocusableTreeWalkerOptions {
+                    tabbable: opts.tabbable,
+                    from: Some(from_el.clone()),
+                    from_radio_group,
+                    accept: opts.accept.clone(),
+                },
+            )?;
+
+            if let Some(el) = walker_next(&mut walker) {
+                focus_element(&el);
+                return Some(el);
+            }
+
+            // Wrap around: create a fresh walker without from_radio_group.
+            if opts.wrap {
+                let mut wrap_walker = get_focusable_tree_walker(
                     &scope,
                     FocusableTreeWalkerOptions {
                         tabbable: opts.tabbable,
-                        from: Some(from_el.clone()),
-                        from_radio_group,
-                        accept: opts.accept.clone(),
+                        accept: opts.accept,
+                        ..Default::default()
                     },
                 )?;
-
-                if let Some(el) = walker_next(&mut walker) {
-                    focus_element(&el);
-                    return Some(el);
+                let result = walker_next(&mut wrap_walker);
+                if let Some(ref el) = result {
+                    focus_element(el);
                 }
-
-                // Wrap around: create a fresh walker without from_radio_group.
-                if opts.wrap {
-                    let mut wrap_walker = get_focusable_tree_walker(
-                        &scope,
-                        FocusableTreeWalkerOptions {
-                            tabbable: opts.tabbable,
-                            accept: opts.accept,
-                            ..Default::default()
-                        },
-                    )?;
-                    let result = walker_next(&mut wrap_walker);
-                    if let Some(ref el) = result {
-                        focus_element(el);
-                    }
-                    return result;
-                }
-
-                return None;
+                return result;
             }
+
+            return None;
         }
 
         // From outside scope or no from: focus first element (react-aria behavior).
@@ -197,43 +198,43 @@ impl FocusManager {
             node_contains(Some(scope.as_ref()), Some(from_el.as_ref())).unwrap_or(false)
         });
 
-        if let Some(ref from_el) = from {
-            if from_in_scope {
-                // Normal case: walk backwards from current position.
-                let mut walker = get_focusable_tree_walker(
+        if let Some(ref from_el) = from
+            && from_in_scope
+        {
+            // Normal case: walk backwards from current position.
+            let mut walker = get_focusable_tree_walker(
+                &scope,
+                FocusableTreeWalkerOptions {
+                    tabbable: opts.tabbable,
+                    from: Some(from_el.clone()),
+                    from_radio_group,
+                    accept: opts.accept.clone(),
+                },
+            )?;
+
+            if let Some(el) = walker_previous(&mut walker) {
+                focus_element(&el);
+                return Some(el);
+            }
+
+            // Wrap around: create a fresh walker without from_radio_group.
+            if opts.wrap {
+                let mut wrap_walker = get_focusable_tree_walker(
                     &scope,
                     FocusableTreeWalkerOptions {
                         tabbable: opts.tabbable,
-                        from: Some(from_el.clone()),
-                        from_radio_group,
-                        accept: opts.accept.clone(),
+                        accept: opts.accept,
+                        ..Default::default()
                     },
                 )?;
-
-                if let Some(el) = walker_previous(&mut walker) {
-                    focus_element(&el);
-                    return Some(el);
+                let result = find_last_focusable(&mut wrap_walker, &scope);
+                if let Some(ref el) = result {
+                    focus_element(el);
                 }
-
-                // Wrap around: create a fresh walker without from_radio_group.
-                if opts.wrap {
-                    let mut wrap_walker = get_focusable_tree_walker(
-                        &scope,
-                        FocusableTreeWalkerOptions {
-                            tabbable: opts.tabbable,
-                            accept: opts.accept,
-                            ..Default::default()
-                        },
-                    )?;
-                    let result = find_last_focusable(&mut wrap_walker, &scope);
-                    if let Some(ref el) = result {
-                        focus_element(el);
-                    }
-                    return result;
-                }
-
-                return None;
+                return result;
             }
+
+            return None;
         }
 
         // From outside scope or no from: focus last element (react-aria behavior).

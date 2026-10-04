@@ -1,9 +1,10 @@
+// Upstream: react-aria/src/menu/useMenuSection.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr};
-use uuid::Uuid;
 
 use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/menu/src/useMenuSection.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/menu/useMenuSection.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -135,7 +136,7 @@ pub fn use_menu_section(input: UseMenuSectionInput) -> UseMenuSectionReturn {
         aria_label,
     } = input;
 
-    let heading_id = format!("menu-section-heading-{}", Uuid::new_v4());
+    let heading_id = use_id("menu-section-heading");
 
     let has_heading = heading.is_some();
 

@@ -67,11 +67,11 @@ icondata = { version = "0.7.0" }
 indoc = "2.0.7"
 js-sys = "0.3"
 leptos = "0.8.2"
-leptos-classes = { path = "../../leptos-classes" }
+leptos-classes = "0.1.4"
 leptos-element-capture = "0.1.0"
-leptos-styles = { path = "../../leptos-styles" }
+leptos-styles = "0.1.0"
 leptos-tiptap = { version = "0.9.0", optional = true }
-leptos-use = { version = "0.18.3", features = ["math"] }
+leptos-use = { version = "0.19.2", features = ["math"] }
 leptos_meta = { version = "0.8.2", features = [] }
 leptos_reactive = "0.6.6"
 leptos_router = "0.8.2"
@@ -150,17 +150,13 @@ leptonic-theme = { version = "0.5", path = "../leptonic-theme" }
 leptos-tiptap-build = { version = "0.2.8", optional = true }
 
 [dev-dependencies]
-anyhow = "1.0.102"
-assertr = "0.4.2"
-async-trait = "0.1"
-chrome-for-testing-manager = { version = "0.7.1", features = ["thirtyfour"] }
-thirtyfour = { version = "0.36.1", features = ["component", "reqwest", "rustls-tls"] }
-tokio = { version = "1.51.1", features = ["rt", "rt-multi-thread", "macros"] }
-tokio-process-tools = "0.8.0"
+assertr = "0.7.1"
+browser-test = "0.4.0"
+leptos-browser-test = "0.3.0"
+rootcause = "0.13.0"
+tokio = { version = "1.51.1", features = ["rt", "rt-multi-thread", "macros", "time"] }
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["fmt", "registry", "ansi"] }
-wasm-bindgen = "0.2.117"
-web-sys = "0.3.91"
 
 [lints]
 workspace = true

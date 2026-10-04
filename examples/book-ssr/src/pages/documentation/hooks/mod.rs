@@ -46,6 +46,7 @@ pub mod select;
 pub mod selection;
 pub mod separator;
 pub mod slider;
+pub mod spin_button;
 pub mod switch;
 pub mod table;
 pub mod tabs;

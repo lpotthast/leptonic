@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/slider/useSlider.ts @ 6f664fe911
 //! # Slider Hooks
 //!
 //! Accessible slider components with multi-thumb support, based on
@@ -40,6 +41,7 @@
 //! We use basic string formatting with configurable decimal places.
 //! This avoids `wasm_bindgen` complexity for internationalization.
 
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -48,7 +50,6 @@ use leptos::{
     prelude::*,
 };
 use leptos_use::use_event_listener;
-use uuid::Uuid;
 use web_sys::PointerEvent;
 
 use crate::{
@@ -61,7 +62,9 @@ use crate::{
     utils::{
         EventAccessors, EventHandler, EventTargetExt,
         aria::{AriaDisabled, AriaLive, AriaRole},
+        css::TouchAction,
         element_capture::{CapturedElement, ElementCaptureAttr},
+        style::TouchActionProperty,
         styles::Styles,
     },
 };
@@ -273,7 +276,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
         is_rtl,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("slider");
     let group_id = format!("slider-group-{base_id}");
     let label_id = format!("slider-label-{base_id}");
     let output_id = format!("slider-output-{base_id}");
@@ -417,40 +420,40 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
         is_rtl: false,
         on_move_start: Some(Callback::new(move |_: MoveStartEvent| {})),
         on_move: Some(Callback::new(move |e: MoveEvent| {
-            if let Some(idx) = dragging_thumb_index.get_value() {
-                if let Some(track) = track_element.get_untracked().as_deref().cloned() {
-                    let orientation = orientation.get_untracked();
+            if let Some(idx) = dragging_thumb_index.get_value()
+                && let Some(track) = track_element.get_untracked().as_deref().cloned()
+            {
+                let orientation = orientation.get_untracked();
 
-                    let rect = track.get_bounding_client_rect();
-                    let size = match orientation {
-                        SliderOrientation::Horizontal => rect.width(),
-                        SliderOrientation::Vertical => rect.height(),
-                    };
+                let rect = track.get_bounding_client_rect();
+                let size = match orientation {
+                    SliderOrientation::Horizontal => rect.width(),
+                    SliderOrientation::Vertical => rect.height(),
+                };
 
-                    // Get current position in pixels (initialized in on_track_pointerdown)
-                    let pos = current_position_px
-                        .get_value()
-                        .unwrap_or_else(|| state.get_thumb_percent.run(idx) * size);
+                // Get current position in pixels (initialized in on_track_pointerdown)
+                let pos = current_position_px
+                    .get_value()
+                    .unwrap_or_else(|| state.get_thumb_percent.run(idx) * size);
 
-                    // use_move provides raw deltas: delta_x for horizontal, delta_y for vertical
-                    // For vertical sliders, up should increase value (positive delta_y means cursor moved down)
-                    let delta = match orientation {
-                        SliderOrientation::Horizontal => e.delta_x,
-                        SliderOrientation::Vertical => -e.delta_y,
-                    };
-                    let delta = if is_rtl && orientation == SliderOrientation::Horizontal {
-                        -delta
-                    } else {
-                        delta
-                    };
+                // use_move provides raw deltas: delta_x for horizontal, delta_y for vertical
+                // For vertical sliders, up should increase value (positive delta_y means cursor moved down)
+                let delta = match orientation {
+                    SliderOrientation::Horizontal => e.delta_x,
+                    SliderOrientation::Vertical => -e.delta_y,
+                };
+                let delta = if is_rtl && orientation == SliderOrientation::Horizontal {
+                    -delta
+                } else {
+                    delta
+                };
 
-                    // Accumulate in pixels, then convert to percent
-                    let new_pos = pos + delta;
-                    current_position_px.set_value(Some(new_pos));
+                // Accumulate in pixels, then convert to percent
+                let new_pos = pos + delta;
+                current_position_px.set_value(Some(new_pos));
 
-                    let new_percent = (new_pos / size).clamp(0.0, 1.0);
-                    state.set_thumb_percent.run((idx, new_percent));
-                }
+                let new_percent = (new_pos / size).clamp(0.0, 1.0);
+                state.set_thumb_percent.run((idx, new_percent));
             }
         })),
         on_move_end: Some(Callback::new(move |_: MoveEndEvent| {
@@ -497,7 +500,7 @@ pub fn use_slider(input: UseSliderInput) -> UseSliderReturn {
                     .chain(track_move_return.props.on_pointerdown),
                 element_capture: track_element.attr(),
             },
-            Styles::new().add("touch-action", "none"),
+            Styles::new().add(TouchActionProperty.declare(TouchAction::None)),
         ),
         track_ref: track_element,
     }

@@ -38,8 +38,8 @@ just once              # One-time dev environment setup (enables WASM target, in
 **Development:**
 
 ```bash
-just fmt               # Format all crates with cargo fmt
-just clippy            # Run clippy (lint levels configured in Cargo.toml [lints.clippy])
+just fmt               # Format all crates (stable fmt, then nightly fmt for import grouping; needs nightly toolchain)
+just clippy            # Run `cargo clippy --tests` on every crate (lint levels configured in Cargo.toml [lints.clippy])
 just test              # Run tests for all crates
 just sort              # Sort dependencies in Cargo.toml files
 just leptosfmt         # Format Leptos view macros
@@ -53,7 +53,14 @@ cargo check -p leptonic                    # Quick compilation check
 cargo test -p leptonic                     # Run tests for leptonic crate only
 cargo test -p leptonic test_name           # Run a specific test
 cargo clippy -p leptonic                   # Clippy on leptonic only
+cargo check -p leptonic --features full    # Check atoms/components too (default feature is only `hooks`)
 ```
+
+Styling props use the published `leptos-classes` and `leptos-styles` crates. `leptos-styles` only accepts typed
+declarations (`WidthProperty.declare(..)`, typed custom properties via `css_custom_property!`). Properties `leptos-css`
+does not cover yet (`position`, `transform`, `display`, ...) go through the explicit `*_unchecked` methods. For values
+computed at runtime use the non-panicking helpers in `utils/css.rs` (`computed_pct`, `computed_px`, `computed_size`).
+Never mix `class=classes` with `class:foo=` directives on one element; use `Classes::add_reactive` instead.
 
 **Running the documentation app (primary manual testing target):**
 
@@ -68,7 +75,10 @@ The library follows a three-layer hierarchy:
 
 1. **Hooks** (`leptonic/src/hooks/`) - Low-level interaction logic (usePress, useFocus, useCalendar). Handle ARIA
    attributes and accessibility. No rendering.
-   All hooks are based on `react-aria` hooks from Adobe's react-spectrum library, checked out at `~/dev/react-spectrum`.
+   All hooks are based on `react-aria` hooks from Adobe's react-spectrum library, checked out at `~/dev/react-spectrum`
+   (sources in `packages/react-aria/src/` and `packages/react-stately/src/`). Each ported file starts with
+   `// Upstream: <path> @ <commit>` lines; `scripts/upstream-drift.sh` lists upstream commits not yet absorbed (see
+   `documentation/hooks-implementation.md`, "Tracking Upstream Changes").
    react-aria supports environments not supporting modern PointerEvent's. We DO NOT support these. Any hook we
    implement may assume that PointerEvent is available.
 
@@ -87,7 +97,6 @@ see: [documentation/documentation-strategy.md](documentation/documentation-strat
 
 **Other key directories:**
 
-- `leptonic/src/contexts/` - Global event contexts (click, keyboard, pointer, scroll, resize)
 - `leptonic/src/utils/` - Typed ARIA types (`AriaRole`, etc.), event propagation control, focus/scroll utilities,
   i18n/locale, platform detection, color types.
 - `leptonic-theme/` - Theme system with SCSS stylesheets and light/dark themes
@@ -153,15 +162,18 @@ Default feature is `hooks`. Feature hierarchy: `hooks` → `atoms` → `componen
 - `atoms` - Headless base components (requires hooks)
 - `components` - Full pre-built components (requires atoms)
 - `clipboard` - Clipboard support (requires `web_sys_unstable_apis` rustflag)
-- `tiptap` - Rich text editor integration
+- `tiptap` - Rich text editor integration (build script copies tiptap JS into the consuming app)
+- `syntax-highlight` (syntect) / `sanitize` (ammonia) - Optional component extras
 - `ssr` / `hydrate` - Server-side rendering support
-- `full` - All features combined
+- `nightly` - Enables `leptos/nightly`
+- `full` - hooks, atoms, components, clipboard, tiptap, syntax-highlight, sanitize (not ssr/hydrate/nightly)
 
 ## Key Types
 
 - `Out<O, S>` - Flexible output type for component props, accepts WriteSignal, RwSignal, Callback, or function pointers
 - `Mount` - Controls when child views are mounted (Once vs WhenShown)
-- `Size`, `Width`, `Height`, `Margin` - CSS size/dimension types
+- `Width`, `Height` (aliases of `CssDimension`), `Margin`, `Padding`, `FontWeight` - CSS types from `utils/css.rs`,
+  re-exported at the crate root
 
 ## Configuration
 
@@ -188,6 +200,11 @@ js-dir = "public/js"           # Where to output JS dependencies (for tiptap)
 - `leptonic-theme/` - Theme generation and SCSS
 - `examples/book-ssr/` - Documentation app and primary manual testing target
 - `examples/leptonic-template-*` - Starter templates (git submodules)
+- `testing/test-app/` - Leptos app that browser tests drive (`just serve-test-app` serves it at
+  `http://127.0.0.1:4200` for manual inspection)
+
+Only `leptonic` and `leptonic-theme` are workspace members; `examples/` and `testing/` are excluded and have their own
+`Cargo.lock`, so use `--manifest-path` (as the Justfile does) rather than `-p` for them.
 
 ## Testing
 
@@ -195,18 +212,43 @@ When generating tests, use the `assertr` library for assertions instead of stand
 
 ### Browser Tests
 
-Browser tests live in `leptonic/tests/` and use **thirtyfour** (Selenium WebDriver) against a test-app served at
-`http://127.0.0.1:4200`. The test-app source is in `testing/test-app/`.
+Browser tests live in `leptonic/tests/` and drive the test-app in `testing/test-app/`. They use `leptos-browser-test`
+(starts `cargo leptos serve` on a random port) and `browser-test` (Chrome for Testing + chromedriver, one fresh
+WebDriver session per test, `thirtyfour` re-exported as `browser_test::thirtyfour`).
 
-- **Running**: `just browser-test` (or `BROWSER_TEST_VISIBLE=1 just browser-test` for visual debugging).
+- **Fixtures**: every test page lives in its own module under `testing/test-app/src/pages/{atoms,hooks,components}/`
+  and is registered in `FIXTURES` (`testing/test-app/src/pages/mod.rs`). It is served at `/{group}/{name}`.
+- **Hydration**: the test-app sets `data-hydrated` on `<body>` once hydration finished. `BaseActions::goto_path`
+  waits for it, so tests never interact with a page whose event handlers aren't attached yet.
+- **Tests**: page objects in `tests/pages/` (implement `BaseActions` to get shared helpers: clicking, reading text,
+  focus/active-element queries, keyboard input, waiting), test implementations in `tests/ui_tests/test_*.rs`
+  (implement `BrowserTest<str>`; the context is the app's base URL). Register new tests in `ui_tests::all()`.
+- **Failures fail `cargo test`**: the runner uses `BrowserTestFailurePolicy::RunAll` and reports every failing test.
+  Assertions use `assertr` (panics are reported as test failures); helpers return `Result<_, rootcause::Report>`.
+- **Prefer waiting over sleeping**: use the polling helpers (`wait_for_selector`, `wait_for_text`,
+  `wait_for_active_text`) instead of fixed sleeps; focus and state often change in effects after the event.
+- **Find elements as users do**: by role and text (`by_role_and_text`, `css("[role=listbox]")`). Atoms generate
+  their own ids.
+- **Known issues**: behavior known to be broken lives in `*KnownIssues` tests that only run with
+  `BROWSER_TEST_KNOWN_ISSUES=1` (see `ui_tests::all()`). Move a check into the regular test once it's fixed.
+- **Hydration**: `test_hydration_ids.rs` compares server-rendered ids with the hydrated DOM and checks id
+  references; add fixtures that generate ids to its page list. `test_server_panics.rs` (runs last) fails the run if
+  the server panicked.
+- **Running**: `just browser-test`. `BROWSER_TEST_VISIBLE=1` shows the browser, `BROWSER_TEST_PAUSE=1` pauses before
+  each test, `BROWSER_TEST_DRIVER_OUTPUT=1` forwards chromedriver output (or `just browser-test-visible`).
+- **Toolchain**: the installed `wasm-bindgen` CLI version must match the `wasm-bindgen` version in the test-app's
+  `Cargo.lock`; otherwise `cargo leptos serve` fails. Update the lockfile (`cargo update -p wasm-bindgen -p js-sys
+  -p web-sys -p wasm-bindgen-futures`) or the CLI.
 - **Always execute browser tests** when adding or modifying them. Compilation alone is not sufficient — browser tests
   must be run and pass before considering the work complete.
 
 ## Clippy Lint Overrides
 
-These lints are allowed in workspace: `option_if_let_else`, `module_name_repetitions`, `must_use_candidate`,
-`wildcard_imports`
+The root `Cargo.toml` `[workspace.lints.clippy]` sets `all` and `pedantic` to **deny**, with a list of allowed
+overrides. `leptonic/src/lib.rs` repeats some of these as crate-level `#![allow(...)]` (CLI `-D clippy::pedantic`
+would otherwise override Cargo.toml) and additionally allows `ignored_unit_patterns` and `type_complexity`, which fire
+on `view!`/`#[component]` expansions. Treat these files as the source of truth.
 
 Book-ssr is not a workspace member and has its own `[lints.clippy]` section in `Cargo.toml` that sets `all` and
-`pedantic` to deny, with additional allows: `must_use_candidate`, `wildcard_imports`, `module_name_repetitions`, and
-`let_unit_value` (Leptos view macros generate unit-value let-bindings).
+`pedantic` to deny, with its own allows (notably `let_unit_value`, because Leptos view macros generate unit-value
+let-bindings).

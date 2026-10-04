@@ -75,10 +75,10 @@ pub fn register_scope(
 ) {
     TREE.with_borrow_mut(|tree| {
         // Add as child of parent.
-        if let Some(parent_id) = parent {
-            if let Some(parent_node) = tree.nodes.get_mut(&parent_id) {
-                parent_node.children.push(id);
-            }
+        if let Some(parent_id) = parent
+            && let Some(parent_node) = tree.nodes.get_mut(&parent_id)
+        {
+            parent_node.children.push(id);
         }
 
         tree.nodes.insert(
@@ -111,30 +111,28 @@ pub fn unregister_scope(id: ScopeId) {
             .get(&id)
             .and_then(|node| node.node_to_restore.clone());
 
-        if let Some(my_el) = my_element {
-            if let Some(my_node) = my_el.dyn_ref::<web_sys::Node>() {
-                for (other_id, other_node) in &mut tree.nodes {
-                    if *other_id == id {
-                        continue;
-                    }
-                    if let Some(ref restore_el) = other_node.node_to_restore {
-                        if let Some(restore_node) = restore_el.dyn_ref::<web_sys::Node>() {
-                            if my_node.contains(Some(restore_node)) {
-                                other_node.node_to_restore.clone_from(&my_node_to_restore);
-                            }
-                        }
-                    }
+        if let Some(my_el) = my_element
+            && let Some(my_node) = my_el.dyn_ref::<web_sys::Node>()
+        {
+            for (other_id, other_node) in &mut tree.nodes {
+                if *other_id == id {
+                    continue;
+                }
+                if let Some(ref restore_el) = other_node.node_to_restore
+                    && let Some(restore_node) = restore_el.dyn_ref::<web_sys::Node>()
+                    && my_node.contains(Some(restore_node))
+                {
+                    other_node.node_to_restore.clone_from(&my_node_to_restore);
                 }
             }
         }
 
         // Remove from parent's children list.
-        if let Some(node) = tree.nodes.get(&id) {
-            if let Some(parent_id) = node.parent {
-                if let Some(parent_node) = tree.nodes.get_mut(&parent_id) {
-                    parent_node.children.retain(|child| *child != id);
-                }
-            }
+        if let Some(node) = tree.nodes.get(&id)
+            && let Some(parent_id) = node.parent
+            && let Some(parent_node) = tree.nodes.get_mut(&parent_id)
+        {
+            parent_node.children.retain(|child| *child != id);
         }
 
         tree.nodes.remove(&id);
@@ -178,10 +176,10 @@ pub fn find_connected_node_to_restore(scope_id: ScopeId) -> Option<web_sys::Elem
         let mut current = Some(scope_id);
         while let Some(id) = current {
             if let Some(node) = tree.nodes.get(&id) {
-                if let Some(ref el) = node.node_to_restore {
-                    if el.is_connected() {
-                        return Some(el.clone());
-                    }
+                if let Some(ref el) = node.node_to_restore
+                    && el.is_connected()
+                {
+                    return Some(el.clone());
                 }
                 current = node.parent;
             } else {
@@ -306,14 +304,12 @@ fn is_in_scope_recursive(
     }
 
     // Check this scope's DOM element.
-    if let Some(scope_el) = (node.get_element)() {
-        if let Some(scope_node) = scope_el.dyn_ref::<web_sys::Node>() {
-            if let Some(el_node) = element.dyn_ref::<web_sys::Node>() {
-                if scope_node.contains(Some(el_node)) {
-                    return true;
-                }
-            }
-        }
+    if let Some(scope_el) = (node.get_element)()
+        && let Some(scope_node) = scope_el.dyn_ref::<web_sys::Node>()
+        && let Some(el_node) = element.dyn_ref::<web_sys::Node>()
+        && scope_node.contains(Some(el_node))
+    {
+        return true;
     }
 
     // Check descendant scopes.

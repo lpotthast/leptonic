@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/utils/number.ts @ 6f664fe911
 pub(crate) fn percentage_in_range(min: f64, max: f64, value: f64) -> f64 {
     let range = max - min;
     if range == 0.0 {
@@ -77,7 +78,7 @@ pub fn snap_value_to_step(value: f64, min: f64, max: f64, step: f64, precision: 
 /// For example, `handle_decimal_operation('+', 0.1, 0.2)` returns `0.3`
 /// instead of the naive `0.30000000000000004`.
 ///
-/// Based on react-aria's `handleDecimalOperation` from `@react-stately/utils/src/number.ts`.
+/// Based on react-aria's `handleDecimalOperation` from `react-stately/src/utils/number.ts`.
 ///
 /// # Panics
 /// Panics if `op` is not `'+'` or `'-'`.
@@ -121,150 +122,151 @@ mod tests {
 
     #[test]
     fn test_simple_range() {
-        assert_that(percentage_in_range(0.0, 100.0, 75.0)).is_equal_to(0.75);
-        assert_that(value_in_range(0.0, 100.0, 0.75)).is_equal_to(75.0);
+        assert_that!(percentage_in_range(0.0, 100.0, 75.0)).is_equal_to(0.75);
+        assert_that!(value_in_range(0.0, 100.0, 0.75)).is_equal_to(75.0);
     }
 
     #[test]
     fn test_min() {
-        assert_that(percentage_in_range(50.0, 100.0, 50.0)).is_equal_to(0.0);
-        assert_that(value_in_range(50.0, 100.0, 0.0)).is_equal_to(50.0);
+        assert_that!(percentage_in_range(50.0, 100.0, 50.0)).is_equal_to(0.0);
+        assert_that!(value_in_range(50.0, 100.0, 0.0)).is_equal_to(50.0);
     }
 
     #[test]
     fn test_max() {
-        assert_that(percentage_in_range(50.0, 100.0, 100.0)).is_equal_to(1.0);
-        assert_that(value_in_range(50.0, 100.0, 1.0)).is_equal_to(100.0);
+        assert_that!(percentage_in_range(50.0, 100.0, 100.0)).is_equal_to(1.0);
+        assert_that!(value_in_range(50.0, 100.0, 1.0)).is_equal_to(100.0);
     }
 
     #[test]
     fn test_zero_range() {
-        assert_that(percentage_in_range(50.0, 50.0, 50.0)).is_equal_to(0.0);
-        assert_that(value_in_range(50.0, 50.0, 0.5)).is_equal_to(50.0);
+        assert_that!(percentage_in_range(50.0, 50.0, 50.0)).is_equal_to(0.0);
+        assert_that!(value_in_range(50.0, 50.0, 0.5)).is_equal_to(50.0);
     }
 
     #[test]
     fn test_range_negative_to_positive_skewed() {
-        assert_that(percentage_in_range(-20.0, 12.0, 0.0)).is_equal_to(0.625);
-        assert_that(value_in_range(-20.0, 12.0, 0.625)).is_equal_to(0.0);
+        assert_that!(percentage_in_range(-20.0, 12.0, 0.0)).is_equal_to(0.625);
+        assert_that!(value_in_range(-20.0, 12.0, 0.625)).is_equal_to(0.0);
     }
 
     #[test]
     fn test_decimal_precision() {
         // Integer values (no decimal point in string representation)
-        assert_that(decimal_precision(1.0)).is_equal_to(0);
-        assert_that(decimal_precision(10.0)).is_equal_to(0);
+        assert_that!(decimal_precision(1.0)).is_equal_to(0);
+        assert_that!(decimal_precision(10.0)).is_equal_to(0);
 
         // Decimal values
-        assert_that(decimal_precision(0.1)).is_equal_to(1);
-        assert_that(decimal_precision(0.01)).is_equal_to(2);
-        assert_that(decimal_precision(0.001)).is_equal_to(3);
-        assert_that(decimal_precision(1.5)).is_equal_to(1);
+        assert_that!(decimal_precision(0.1)).is_equal_to(1);
+        assert_that!(decimal_precision(0.01)).is_equal_to(2);
+        assert_that!(decimal_precision(0.001)).is_equal_to(3);
+        assert_that!(decimal_precision(1.5)).is_equal_to(1);
     }
 
     #[test]
     fn test_round_to_precision() {
         // Fixes floating-point errors
-        assert_that(round_to_precision(0.300_000_000_000_000_04, 1)).is_equal_to(0.3);
-        assert_that(round_to_precision(0.123_456, 2)).is_equal_to(0.12);
-        assert_that(round_to_precision(0.125, 2)).is_equal_to(0.13);
+        assert_that!(round_to_precision(0.300_000_000_000_000_04, 1)).is_equal_to(0.3);
+        assert_that!(round_to_precision(0.123_456, 2)).is_equal_to(0.12);
+        assert_that!(round_to_precision(0.125, 2)).is_equal_to(0.13);
 
         // Precision 0 returns value unchanged (no rounding)
-        assert_that(round_to_precision(1.5, 0)).is_equal_to(1.5);
-        assert_that(round_to_precision(47.3, 0)).is_equal_to(47.3);
+        assert_that!(round_to_precision(1.5, 0)).is_equal_to(1.5);
+        assert_that!(round_to_precision(47.3, 0)).is_equal_to(47.3);
     }
 
     #[test]
     fn test_snap_value_to_step() {
         // Basic snapping
-        assert_that(snap_value_to_step(47.0, 0.0, 100.0, 10.0, 0)).is_equal_to(50.0);
-        assert_that(snap_value_to_step(44.0, 0.0, 100.0, 10.0, 0)).is_equal_to(40.0);
+        assert_that!(snap_value_to_step(47.0, 0.0, 100.0, 10.0, 0)).is_equal_to(50.0);
+        assert_that!(snap_value_to_step(44.0, 0.0, 100.0, 10.0, 0)).is_equal_to(40.0);
 
         // Snapping with min offset
-        assert_that(snap_value_to_step(52.0, 5.0, 95.0, 10.0, 0)).is_equal_to(55.0);
+        assert_that!(snap_value_to_step(52.0, 5.0, 95.0, 10.0, 0)).is_equal_to(55.0);
 
         // Clamping to range when max aligns with step
-        assert_that(snap_value_to_step(150.0, 0.0, 100.0, 10.0, 0)).is_equal_to(100.0);
-        assert_that(snap_value_to_step(-50.0, 0.0, 100.0, 10.0, 0)).is_equal_to(0.0);
+        assert_that!(snap_value_to_step(150.0, 0.0, 100.0, 10.0, 0)).is_equal_to(100.0);
+        assert_that!(snap_value_to_step(-50.0, 0.0, 100.0, 10.0, 0)).is_equal_to(0.0);
 
         // Clamping to highest valid step when max doesn't align
-        assert_that(snap_value_to_step(150.0, 0.0, 97.0, 10.0, 0)).is_equal_to(90.0);
+        assert_that!(snap_value_to_step(150.0, 0.0, 97.0, 10.0, 0)).is_equal_to(90.0);
 
         // Fine steps with precision
         let precision = decimal_precision(0.1);
-        assert_that(snap_value_to_step(0.123, 0.0, 1.0, 0.1, precision)).is_equal_to(0.1);
-        assert_that(snap_value_to_step(0.156, 0.0, 1.0, 0.1, precision)).is_equal_to(0.2);
+        assert_that!(snap_value_to_step(0.123, 0.0, 1.0, 0.1, precision)).is_equal_to(0.1);
+        assert_that!(snap_value_to_step(0.156, 0.0, 1.0, 0.1, precision)).is_equal_to(0.2);
 
         // Floating-point precision fix: 0.3 should equal exactly 0.3
-        assert_that(snap_value_to_step(0.3, 0.0, 1.0, 0.1, precision)).is_equal_to(0.3);
+        assert_that!(snap_value_to_step(0.3, 0.0, 1.0, 0.1, precision)).is_equal_to(0.3);
     }
 
     #[test]
     fn test_snap_value_to_step_reversed_range() {
         // Reversed range: min=100, max=0, step=10
         // Value 60 should snap to 60 (steps from min: (60-100)/10 = -4 → 100 + (-4)*10 = 60)
-        assert_that(snap_value_to_step(60.0, 100.0, 0.0, 10.0, 0)).is_equal_to(60.0);
+        assert_that!(snap_value_to_step(60.0, 100.0, 0.0, 10.0, 0)).is_equal_to(60.0);
 
         // Value 63 should snap to 60 (nearest step from min=100)
-        assert_that(snap_value_to_step(63.0, 100.0, 0.0, 10.0, 0)).is_equal_to(60.0);
+        assert_that!(snap_value_to_step(63.0, 100.0, 0.0, 10.0, 0)).is_equal_to(60.0);
 
         // Value 67 should snap to 70
-        assert_that(snap_value_to_step(67.0, 100.0, 0.0, 10.0, 0)).is_equal_to(70.0);
+        assert_that!(snap_value_to_step(67.0, 100.0, 0.0, 10.0, 0)).is_equal_to(70.0);
 
         // Out-of-range: value=-50 should clamp to lower bound (0)
-        assert_that(snap_value_to_step(-50.0, 100.0, 0.0, 10.0, 0)).is_equal_to(0.0);
+        assert_that!(snap_value_to_step(-50.0, 100.0, 0.0, 10.0, 0)).is_equal_to(0.0);
 
         // Out-of-range: value=150 should clamp to upper bound (100)
-        assert_that(snap_value_to_step(150.0, 100.0, 0.0, 10.0, 0)).is_equal_to(100.0);
+        assert_that!(snap_value_to_step(150.0, 100.0, 0.0, 10.0, 0)).is_equal_to(100.0);
 
         // Reversed range that doesn't align with step: min=9, max=-9, step=4
         // Steps from 9: 9, 5, 1, -3, -7 (next would be -11, past max=-9)
-        assert_that(snap_value_to_step(6.0, 9.0, -9.0, 4.0, 0)).is_equal_to(5.0);
-        assert_that(snap_value_to_step(-2.0, 9.0, -9.0, 4.0, 0)).is_equal_to(-3.0);
+        assert_that!(snap_value_to_step(6.0, 9.0, -9.0, 4.0, 0)).is_equal_to(5.0);
+        assert_that!(snap_value_to_step(-2.0, 9.0, -9.0, 4.0, 0)).is_equal_to(-3.0);
     }
 
     #[test]
     fn test_handle_decimal_operation_add() {
         // Classic floating-point issue: 0.1 + 0.2 should be 0.3
-        assert_that(handle_decimal_operation('+', 0.1, 0.2)).is_equal_to(0.3);
-        assert_that(handle_decimal_operation('+', 0.01, 0.02)).is_equal_to(0.03);
+        assert_that!(handle_decimal_operation('+', 0.1, 0.2)).is_equal_to(0.3);
+        assert_that!(handle_decimal_operation('+', 0.01, 0.02)).is_equal_to(0.03);
 
         // Integer addition
-        assert_that(handle_decimal_operation('+', 1.0, 2.0)).is_equal_to(3.0);
+        assert_that!(handle_decimal_operation('+', 1.0, 2.0)).is_equal_to(3.0);
 
         // Mixed precision
-        assert_that(handle_decimal_operation('+', 1.0, 0.1)).is_equal_to(1.1);
-        assert_that(handle_decimal_operation('+', 1_000_000.001, 0.002)).is_equal_to(1_000_000.003);
+        assert_that!(handle_decimal_operation('+', 1.0, 0.1)).is_equal_to(1.1);
+        assert_that!(handle_decimal_operation('+', 1_000_000.001, 0.002))
+            .is_equal_to(1_000_000.003);
     }
 
     #[test]
     fn test_handle_decimal_operation_subtract() {
-        assert_that(handle_decimal_operation('-', 0.3, 0.1)).is_equal_to(0.2);
-        assert_that(handle_decimal_operation('-', 1.0, 0.1)).is_equal_to(0.9);
-        assert_that(handle_decimal_operation('-', 0.03, 0.01)).is_equal_to(0.02);
+        assert_that!(handle_decimal_operation('-', 0.3, 0.1)).is_equal_to(0.2);
+        assert_that!(handle_decimal_operation('-', 1.0, 0.1)).is_equal_to(0.9);
+        assert_that!(handle_decimal_operation('-', 0.03, 0.01)).is_equal_to(0.02);
 
         // Subtraction resulting in zero
-        assert_that(handle_decimal_operation('-', 0.1, 0.1)).is_equal_to(0.0);
+        assert_that!(handle_decimal_operation('-', 0.1, 0.1)).is_equal_to(0.0);
 
         // Subtraction resulting in negative
-        assert_that(handle_decimal_operation('-', 0.1, 0.3)).is_equal_to(-0.2);
+        assert_that!(handle_decimal_operation('-', 0.1, 0.3)).is_equal_to(-0.2);
     }
 
     #[test]
     fn test_calculate_page_size() {
         // Standard 0-100 range with step 1: (100-0)/10 = 10, snapped to 1 = 10
-        assert_that(calculate_page_size(0.0, 100.0, 1.0)).is_equal_to(10.0);
+        assert_that!(calculate_page_size(0.0, 100.0, 1.0)).is_equal_to(10.0);
 
         // 0-100 range with step 5: (100-0)/10 = 10, snapped to 5 = 10
-        assert_that(calculate_page_size(0.0, 100.0, 5.0)).is_equal_to(10.0);
+        assert_that!(calculate_page_size(0.0, 100.0, 5.0)).is_equal_to(10.0);
 
         // 0-100 range with step 7: (100-0)/10 = 10, snapped to 7 = 7
-        assert_that(calculate_page_size(0.0, 100.0, 7.0)).is_equal_to(7.0);
+        assert_that!(calculate_page_size(0.0, 100.0, 7.0)).is_equal_to(7.0);
 
         // Small range: (10-0)/10 = 1, with step 0.5, snapped = 1.0
-        assert_that(calculate_page_size(0.0, 10.0, 0.5)).is_equal_to(1.0);
+        assert_that!(calculate_page_size(0.0, 10.0, 0.5)).is_equal_to(1.0);
 
         // Very large step: page size should be at least step
-        assert_that(calculate_page_size(0.0, 100.0, 50.0)).is_equal_to(50.0);
+        assert_that!(calculate_page_size(0.0, 100.0, 50.0)).is_equal_to(50.0);
     }
 }

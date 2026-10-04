@@ -1,10 +1,11 @@
+// Upstream: react-stately/src/color/useColorWheelState.ts @ 6f664fe911
 use std::fmt;
 
 use leptos::prelude::*;
 
 use crate::utils::color::ColorValue;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/color/src/useColorWheelState.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorWheelState.ts
 
 // ## INTENTIONAL DEVIATIONS
 //
@@ -246,10 +247,11 @@ pub fn use_color_wheel_state<C: ColorValue>(
     let set_dragging = Callback::new(move |dragging: bool| {
         let was_dragging = is_dragging.get_untracked();
         set_is_dragging.set(dragging);
-        if was_dragging && !dragging {
-            if let Some(cb) = on_change_end {
-                cb.run(value.get_untracked());
-            }
+        if was_dragging
+            && !dragging
+            && let Some(cb) = on_change_end
+        {
+            cb.run(value.get_untracked());
         }
     });
 

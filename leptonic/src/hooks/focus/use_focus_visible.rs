@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useFocusVisible.ts @ 6f664fe911
 #[cfg(not(feature = "ssr"))]
 use std::sync::{
     OnceLock, RwLock,
@@ -19,7 +20,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/interactions/src/useFocusVisible.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useFocusVisible.ts
 
 // ## DIFFERENT BEHAVIOR
 //
@@ -111,10 +112,10 @@ pub fn use_focus_visible(input: UseFocusVisibleInput) -> UseFocusVisibleReturn {
         let _ = is_text_input;
         let (is_focus_visible, _) = signal(auto_focus);
         let (modality, _) = signal(Modality::Unknown);
-        return UseFocusVisibleReturn {
+        UseFocusVisibleReturn {
             focus_should_be_visible: is_focus_visible.into(),
             modality: modality.into(),
-        };
+        }
     }
 
     #[cfg(not(feature = "ssr"))]
@@ -580,12 +581,11 @@ fn register_window_listeners(
         "focus",
         move |e: web_sys::FocusEvent| {
             // Guard: skip focus events on window or document targets (Firefox iframe workaround).
-            if let Some(target) = e.target() {
-                if target.dyn_ref::<web_sys::Window>().is_some()
-                    || target.dyn_ref::<web_sys::Document>().is_some()
-                {
-                    return;
-                }
+            if let Some(target) = e.target()
+                && (target.dyn_ref::<web_sys::Window>().is_some()
+                    || target.dyn_ref::<web_sys::Document>().is_some())
+            {
+                return;
             }
 
             // Guard: skip synthetic/programmatic focus events.
@@ -834,7 +834,7 @@ pub fn set_modality(modality: Modality) {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, not(feature = "ssr")))]
 mod tests {
     use std::sync::{
         Arc,

@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/searchfield/useSearchField.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -8,7 +10,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 
@@ -31,7 +32,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/searchfield/src/useSearchField.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/searchfield/useSearchField.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -441,7 +442,7 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
     });
 
     // ---- IDs ----
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("search-field");
     let input_id = format!("searchfield-{base_id}");
     let label_id = format!("searchfield-label-{base_id}");
     let description_id = format!("searchfield-description-{base_id}");
@@ -477,16 +478,14 @@ pub fn use_search_field(input: UseSearchFieldInput) -> UseSearchFieldReturn {
                     on_submit.run(value.get_untracked());
                 }
             }
-            "Escape" => {
-                if !value.get_untracked().is_empty() {
-                    e.prevent_default();
-                    // Clear the value
-                    if let Some(on_change) = on_change {
-                        on_change.run(String::new());
-                    }
-                    if let Some(on_clear) = on_clear {
-                        on_clear.run(());
-                    }
+            "Escape" if !value.get_untracked().is_empty() => {
+                e.prevent_default();
+                // Clear the value
+                if let Some(on_change) = on_change {
+                    on_change.run(String::new());
+                }
+                if let Some(on_clear) = on_clear {
+                    on_clear.run(());
                 }
             }
             _ => {}

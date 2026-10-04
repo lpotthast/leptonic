@@ -1,10 +1,11 @@
+// Upstream: react-stately/src/calendar/useRangeCalendarState.ts @ 6f664fe911
 use leptos::prelude::*;
 use time::OffsetDateTime;
 
 use super::use_calendar_state::{UseCalendarStateInput, UseCalendarStateReturn};
 use crate::utils::time::is_in_range;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/calendar/src/useRangeCalendarState.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/calendar/useRangeCalendarState.ts
 
 //
 // 1. No drag-to-select: react-aria supports `isDragging` state and drag
@@ -373,17 +374,16 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> UseRangeCa
     // When `is_date_unavailable` is set and `allows_non_contiguous_ranges` is false,
     // compute the contiguous available range around the anchor.
     let update_available_range = move |date: Option<OffsetDateTime>| {
-        if let (Some(date), Some(is_unavailable)) = (date, is_date_unavailable) {
-            if !allows_non_contiguous_ranges {
-                let start_bound =
-                    next_unavailable_date(date, min, max, |d| is_unavailable.run(d), -1);
-                let end_bound = next_unavailable_date(date, min, max, |d| is_unavailable.run(d), 1);
-                set_available_range.set(Some(AvailableRange {
-                    start: start_bound,
-                    end: end_bound,
-                }));
-                return;
-            }
+        if let (Some(date), Some(is_unavailable)) = (date, is_date_unavailable)
+            && !allows_non_contiguous_ranges
+        {
+            let start_bound = next_unavailable_date(date, min, max, |d| is_unavailable.run(d), -1);
+            let end_bound = next_unavailable_date(date, min, max, |d| is_unavailable.run(d), 1);
+            set_available_range.set(Some(AvailableRange {
+                start: start_bound,
+                end: end_bound,
+            }));
+            return;
         }
         set_available_range.set(None);
     };
@@ -467,10 +467,10 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> UseRangeCa
 
     let is_value_invalid = Signal::derive(move || {
         // External invalid signal.
-        if let Some(is_invalid) = is_invalid {
-            if is_invalid.get() {
-                return true;
-            }
+        if let Some(is_invalid) = is_invalid
+            && is_invalid.get()
+        {
+            return true;
         }
 
         // Don't validate during active selection.
@@ -485,10 +485,10 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> UseRangeCa
             if !is_in_range(&start, min.as_ref(), max.as_ref()) {
                 return true;
             }
-            if let Some(is_unavailable) = is_date_unavailable {
-                if is_unavailable.run(start) {
-                    return true;
-                }
+            if let Some(is_unavailable) = is_date_unavailable
+                && is_unavailable.run(start)
+            {
+                return true;
             }
         }
 
@@ -497,10 +497,10 @@ pub fn use_range_calendar_state(input: UseRangeCalendarStateInput) -> UseRangeCa
             if !is_in_range(&end, min.as_ref(), max.as_ref()) {
                 return true;
             }
-            if let Some(is_unavailable) = is_date_unavailable {
-                if is_unavailable.run(end) {
-                    return true;
-                }
+            if let Some(is_unavailable) = is_date_unavailable
+                && is_unavailable.run(end)
+            {
+                return true;
             }
         }
 
@@ -544,8 +544,8 @@ mod tests {
         let a = datetime!(2026-03-20 0:00 UTC);
         let b = datetime!(2026-03-10 0:00 UTC);
         let range = make_range(a, b);
-        assert_that(range.start).is_equal_to(Some(b));
-        assert_that(range.end).is_equal_to(Some(a));
+        assert_that!(range.start).is_equal_to(Some(b));
+        assert_that!(range.end).is_equal_to(Some(a));
     }
 
     #[test]
@@ -553,16 +553,16 @@ mod tests {
         let a = datetime!(2026-03-10 0:00 UTC);
         let b = datetime!(2026-03-20 0:00 UTC);
         let range = make_range(a, b);
-        assert_that(range.start).is_equal_to(Some(a));
-        assert_that(range.end).is_equal_to(Some(b));
+        assert_that!(range.start).is_equal_to(Some(a));
+        assert_that!(range.end).is_equal_to(Some(b));
     }
 
     #[test]
     fn make_range_handles_same_date() {
         let a = datetime!(2026-03-15 0:00 UTC);
         let range = make_range(a, a);
-        assert_that(range.start).is_equal_to(Some(a));
-        assert_that(range.end).is_equal_to(Some(a));
+        assert_that!(range.start).is_equal_to(Some(a));
+        assert_that!(range.end).is_equal_to(Some(a));
     }
 
     #[test]
@@ -577,7 +577,7 @@ mod tests {
             1,
         );
         // Should return March 14 (last available date before March 15).
-        assert_that(result).is_equal_to(Some(datetime!(2026-03-14 0:00 UTC)));
+        assert_that!(result).is_equal_to(Some(datetime!(2026-03-14 0:00 UTC)));
     }
 
     #[test]
@@ -592,7 +592,7 @@ mod tests {
             -1,
         );
         // Should return March 16 (last available date after March 15, walking backward).
-        assert_that(result).is_equal_to(Some(datetime!(2026-03-16 0:00 UTC)));
+        assert_that!(result).is_equal_to(Some(datetime!(2026-03-16 0:00 UTC)));
     }
 
     #[test]
@@ -605,7 +605,7 @@ mod tests {
             |_| false,
             1,
         );
-        assert_that(result).is_equal_to(None);
+        assert_that!(result).is_equal_to(None);
     }
 
     #[test]
@@ -614,7 +614,7 @@ mod tests {
         let min_bound = datetime!(2026-03-01 0:00 UTC);
         // March 15 and 14 are unavailable.
         let result = previous_available_date(date, min_bound, |d| d.day() == 15 || d.day() == 14);
-        assert_that(result).is_equal_to(Some(datetime!(2026-03-13 0:00 UTC)));
+        assert_that!(result).is_equal_to(Some(datetime!(2026-03-13 0:00 UTC)));
     }
 
     #[test]
@@ -622,7 +622,7 @@ mod tests {
         let date = datetime!(2026-03-03 0:00 UTC);
         let min_bound = datetime!(2026-03-01 0:00 UTC);
         let result = previous_available_date(date, min_bound, |_| true);
-        assert_that(result).is_equal_to(None);
+        assert_that!(result).is_equal_to(None);
     }
 
     #[test]
@@ -630,7 +630,7 @@ mod tests {
         let date = datetime!(2026-03-15 0:00 UTC);
         let min_bound = datetime!(2026-03-01 0:00 UTC);
         let result = previous_available_date(date, min_bound, |_| false);
-        assert_that(result).is_equal_to(Some(date));
+        assert_that!(result).is_equal_to(Some(date));
     }
 
     #[test]
@@ -639,7 +639,7 @@ mod tests {
         let min = Some(datetime!(2026-03-10 0:00 UTC));
         let max = Some(datetime!(2026-03-20 0:00 UTC));
         let result = constrain_to_range(date, min, max, None);
-        assert_that(result).is_equal_to(datetime!(2026-03-20 0:00 UTC));
+        assert_that!(result).is_equal_to(datetime!(2026-03-20 0:00 UTC));
     }
 
     #[test]
@@ -650,7 +650,7 @@ mod tests {
             end: Some(datetime!(2026-03-18 0:00 UTC)),
         });
         let result = constrain_to_range(date, None, None, avail);
-        assert_that(result).is_equal_to(datetime!(2026-03-18 0:00 UTC));
+        assert_that!(result).is_equal_to(datetime!(2026-03-18 0:00 UTC));
     }
 
     #[test]
@@ -664,7 +664,7 @@ mod tests {
         });
         // date < avail.start, so clamped up to March 10.
         let result = constrain_to_range(date, min, max, avail);
-        assert_that(result).is_equal_to(datetime!(2026-03-10 0:00 UTC));
+        assert_that!(result).is_equal_to(datetime!(2026-03-10 0:00 UTC));
     }
 
     #[test]
@@ -673,16 +673,16 @@ mod tests {
             datetime!(2026-03-10 0:00 UTC),
             datetime!(2026-03-20 0:00 UTC),
         );
-        assert_that(range.contains(&datetime!(2026-03-15 0:00 UTC))).is_true();
-        assert_that(range.contains(&datetime!(2026-03-10 0:00 UTC))).is_true();
-        assert_that(range.contains(&datetime!(2026-03-20 0:00 UTC))).is_true();
-        assert_that(range.contains(&datetime!(2026-03-09 0:00 UTC))).is_false();
-        assert_that(range.contains(&datetime!(2026-03-21 0:00 UTC))).is_false();
+        assert_that!(range.contains(&datetime!(2026-03-15 0:00 UTC))).is_true();
+        assert_that!(range.contains(&datetime!(2026-03-10 0:00 UTC))).is_true();
+        assert_that!(range.contains(&datetime!(2026-03-20 0:00 UTC))).is_true();
+        assert_that!(range.contains(&datetime!(2026-03-09 0:00 UTC))).is_false();
+        assert_that!(range.contains(&datetime!(2026-03-21 0:00 UTC))).is_false();
     }
 
     #[test]
     fn date_range_empty_contains_nothing() {
         let range = DateRange::empty();
-        assert_that(range.contains(&datetime!(2026-03-15 0:00 UTC))).is_false();
+        assert_that!(range.contains(&datetime!(2026-03-15 0:00 UTC))).is_false();
     }
 }

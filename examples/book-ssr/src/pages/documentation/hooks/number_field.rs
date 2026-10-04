@@ -45,6 +45,11 @@ pub fn PageUseNumberField() -> impl IntoView {
                     "commit on blur/Enter."</li>
             </ul>
 
+            <p>
+                "Under the hood, the keyboard handling, hold-to-spin buttons and screen reader announcements come from "
+                <Link href=crate::routes::doc::hooks::UseSpinButton.materialize()>"use_spin_button"</Link>"."
+            </p>
+
             <h2 id="basic" class="anchor">
                 "Basic Example"
                 <AnchorLink href="#basic" description="Direct link to basic example"/>
@@ -69,12 +74,16 @@ pub fn PageUseNumberField() -> impl IntoView {
                         ..Default::default()
                     });
 
+                    // The stepper buttons come as `UseButtonInput`s: render them with `use_button`.
+                    let (dec_attrs, dec_styles) = use_button(field.decrement_button).props.into_parts();
+                    let (inc_attrs, inc_styles) = use_button(field.increment_button).props.into_parts();
+
                     view! {
                         <div {..field.group_props.into_attrs()}>
                             <label {..field.label_props.into_attrs()}>"Quantity"</label>
-                            <button {..field.decrement_button_props.into_attrs()}>"-"</button>
-                            <input value=field.display_value {..field.input_props.into_attrs()} />
-                            <button {..field.increment_button_props.into_attrs()}>"+"</button>
+                            <button {..dec_attrs} style=dec_styles>"-"</button>
+                            <input prop:value=field.display_value {..field.input_props.into_attrs()} />
+                            <button {..inc_attrs} style=inc_styles>"+"</button>
                         </div>
                     }
                 "#)}
@@ -83,6 +92,34 @@ pub fn PageUseNumberField() -> impl IntoView {
             <DemoShell source=include_str!("demos/number_field_basic.rs")>
                 <NumberFieldBasicDemo />
             </DemoShell>
+
+            <h2 id="stepper-buttons" class="anchor">
+                "Stepper Buttons"
+                <AnchorLink href="#stepper-buttons" description="Direct link to stepper buttons"/>
+            </h2>
+
+            <p>
+                "The hook doesn\u{2019}t hand you DOM props for the increment and decrement buttons. It returns "
+                <code>"increment_button"</code>" and "<code>"decrement_button"</code>", two "<code>"UseButtonInput"</code>
+                "s that you pass to "<Link href=crate::routes::doc::button::Hook.materialize()>"use_button"</Link>
+                ". They come preconfigured the way a number field\u{2019}s steppers should behave:"
+            </p>
+
+            <ul>
+                <li>"They are left out of the tab order. Keyboard users change the value with the arrow keys in the input instead."</li>
+                <li>"They don\u{2019}t take focus when pressed. With a mouse, focus moves to the input, so you can keep typing. "
+                    "If the input already has focus, it keeps it, so tapping a button doesn\u{2019}t close the software keyboard."</li>
+                <li>"They are labelled \u{201c}Increase "<i>"label"</i>"\u{201d} and \u{201c}Decrease "<i>"label"</i>"\u{201d}, "
+                    "and point to the input with "<code>"aria-controls"</code>". Use "<code>"increment_aria_label"</code>" and "
+                    <code>"decrement_aria_label"</code>" to pick your own labels."</li>
+                <li>"They are disabled once the value reaches the minimum or maximum, but stay focusable, so focus isn\u{2019}t lost."</li>
+                <li>"Holding a button keeps stepping until you let go or the limit is reached."</li>
+            </ul>
+
+            <p>
+                "Since they are plain inputs, you can add your own settings with struct update syntax, e.g. "
+                <code>"use_button(UseButtonInput { on_hover_change: .., ..field.increment_button })"</code>"."
+            </p>
 
             <h2 id="fractional" class="anchor">
                 "Fractional Step"
@@ -115,7 +152,7 @@ pub fn PageUseNumberField() -> impl IntoView {
                 <li><strong>"Page Up/Down"</strong>" \u{2014} Increment/decrement by step"</li>
                 <li><strong>"Home"</strong>" \u{2014} Jump to minimum value"</li>
                 <li><strong>"End"</strong>" \u{2014} Jump to maximum value"</li>
-                <li><strong>"Enter"</strong>" \u{2014} Commit the current value"</li>
+                <li><strong>"Enter"</strong>" \u{2014} Commit the current value. Inside a form, Enter still submits it, with the committed value"</li>
             </ul>
 
             <p>"Modifier keys (Ctrl, Shift, Alt, Meta) are ignored. Input is also committed "
@@ -162,6 +199,7 @@ pub fn PageUseNumberField() -> impl IntoView {
                 Toc::Leaf { title: "Number Field Hook", link: "#number-field" },
                 Toc::Leaf { title: "Architecture", link: "#architecture" },
                 Toc::Leaf { title: "Basic Example", link: "#basic" },
+                Toc::Leaf { title: "Stepper Buttons", link: "#stepper-buttons" },
                 Toc::Leaf { title: "Fractional Step", link: "#fractional" },
                 Toc::Leaf { title: "Disabled State", link: "#disabled" },
                 Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard" },

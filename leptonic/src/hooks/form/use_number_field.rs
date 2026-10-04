@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/numberfield/useNumberField.ts @ 99e6102368
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -8,8 +10,9 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
-use web_sys::{Event, FocusEvent, KeyboardEvent, PointerEvent, WheelEvent};
+use leptos_use::use_document;
+use wasm_bindgen::JsCast;
+use web_sys::{Event, FocusEvent, KeyboardEvent, WheelEvent};
 
 use super::{
     use_form_reset::{UseFormResetInput, use_form_reset},
@@ -22,11 +25,12 @@ use super::{
 };
 use crate::{
     hooks::{
-        IntoAttrs,
+        IntoAttrs, UseButtonInput,
         focus::{
             use_focus_ring::{UseFocusRingInput, UseFocusRingReturn, use_focus_ring},
             use_focus_within::{UseFocusWithinInput, UseFocusWithinReturn, use_focus_within},
         },
+        interactions::use_press::{PressEvent, chain_optional_callbacks},
         interactions::use_scroll_wheel::{
             ScrollEvent, UseScrollWheelInput, UseScrollWheelReturn, use_scroll_wheel,
         },
@@ -35,11 +39,13 @@ use crate::{
     utils::{
         CapturedElement, ElementCaptureAttr, EventHandler,
         aria::{AriaInvalid, AriaLive, AriaRequired, AriaRole},
+        focus::focus_event_target,
         platform::device,
+        pointer_type::PointerType,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/numberfield/src/useNumberField.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/numberfield/useNumberField.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -164,11 +170,11 @@ pub struct UseNumberFieldReturn {
     /// Props for the input element.
     pub input_props: UseNumberFieldInputProps,
 
-    /// Props for the increment button element.
-    pub increment_button_props: UseNumberFieldButtonProps,
+    /// Configuration for the increment button. Pass it to `use_button`.
+    pub increment_button: UseButtonInput,
 
-    /// Props for the decrement button element.
-    pub decrement_button_props: UseNumberFieldButtonProps,
+    /// Configuration for the decrement button. Pass it to `use_button`.
+    pub decrement_button: UseButtonInput,
 
     /// Props for the label element.
     pub label_props: UseNumberFieldLabelProps,
@@ -325,47 +331,6 @@ pub type UseNumberFieldInputAttrs = (
     On<ev::wheel, SharedEventCallback<WheelEvent>>,
 );
 
-/// Props for increment/decrement button elements.
-#[derive(Debug)]
-pub struct UseNumberFieldButtonProps {
-    pub r#type: &'static str,
-    pub aria_label: String,
-    pub aria_controls: String,
-    pub tabindex: &'static str,
-    pub disabled: Signal<bool>,
-    pub on_pointerdown: EventHandler<PointerEvent>,
-    pub on_pointerup: EventHandler<PointerEvent>,
-    pub on_pointerleave: EventHandler<PointerEvent>,
-}
-
-impl IntoAttrs for UseNumberFieldButtonProps {
-    type Attrs = UseNumberFieldButtonAttrs;
-
-    fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Type, self.r#type),
-            Attr(attr::AriaLabel, self.aria_label),
-            custom_attribute("aria-controls", self.aria_controls),
-            Attr(attr::Tabindex, self.tabindex),
-            Attr(attr::Disabled, self.disabled),
-            self.on_pointerdown.into_on(ev::pointerdown),
-            self.on_pointerup.into_on(ev::pointerup),
-            self.on_pointerleave.into_on(ev::pointerleave),
-        )
-    }
-}
-
-pub type UseNumberFieldButtonAttrs = (
-    Attr<attr::Type, &'static str>,
-    Attr<attr::AriaLabel, String>,
-    CustomAttr<&'static str, String>,
-    Attr<attr::Tabindex, &'static str>,
-    Attr<attr::Disabled, Signal<bool>>,
-    On<ev::pointerdown, SharedEventCallback<PointerEvent>>,
-    On<ev::pointerup, SharedEventCallback<PointerEvent>>,
-    On<ev::pointerleave, SharedEventCallback<PointerEvent>>,
-);
-
 /// Props for the label element.
 #[derive(Debug)]
 pub struct UseNumberFieldLabelProps {
@@ -445,7 +410,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
         label,
         description,
         min_value,
-        max_value: _,
+        max_value,
         step,
         auto_focus,
         is_wheel_disabled,
@@ -483,7 +448,7 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     });
 
     // ---- IDs ----
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("number-field");
     let input_id = format!("numberfield-{base_id}");
     let label_id = format!("numberfield-label-{base_id}");
     let description_id = format!("numberfield-description-{base_id}");
@@ -527,19 +492,26 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     });
 
     // ---- Spin button ----
+    // Only the keyboard and focus handling end up on the input; see the input props below.
     let UseSpinButtonReturn {
-        on_keydown: spin_keydown,
-        increment_button_props: spin_inc_props,
-        decrement_button_props: spin_dec_props,
+        props: spin_props,
+        increment_button: spin_increment_button,
+        decrement_button: spin_decrement_button,
     } = use_spin_button(UseSpinButtonInput {
-        text_value: state.input_value,
-        is_disabled,
-        is_read_only,
-        on_increment: state.increment,
-        on_decrement: state.decrement,
-        on_increment_to_max: state.increment_to_max,
-        on_decrement_to_min: state.decrement_to_min,
+        value: state.number_value,
+        text_value: Signal::derive(move || Some(state.input_value.get())),
+        min_value: Signal::stored(min_value),
+        max_value: Signal::stored(max_value),
+        disabled: is_disabled,
+        read_only: is_read_only,
+        required: Signal::stored(is_required),
+        on_increment: Some(state.increment),
+        on_decrement: Some(state.decrement),
+        on_increment_to_max: Some(state.increment_to_max),
+        on_decrement_to_min: Some(state.decrement_to_min),
+        ..UseSpinButtonInput::default()
     });
+    let spin_keydown = spin_props.on_keydown;
 
     // ---- Scroll wheel ----
     let scroll_disabled = Signal::derive(move || {
@@ -584,9 +556,11 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     };
 
     // ---- Keyboard handler (merged: spin button + Enter commit) ----
+    // Enter commits the typed value. Its default action is kept, so that Enter still submits
+    // the surrounding form (with the committed value).
     let handle_keydown = move |e: KeyboardEvent| {
-        if e.key() == "Enter" && !e.is_composing() {
-            e.prevent_default();
+        let editable = !is_disabled.get_untracked() && !is_read_only.get_untracked();
+        if editable && e.key() == "Enter" && !e.is_composing() {
             state.commit.run(());
             return;
         }
@@ -668,20 +642,52 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
     let group_aria_disabled = Signal::derive(move || is_disabled.get().then_some("true"));
     let group_aria_invalid = aria_invalid;
 
-    // ---- Button labels ----
+    // ---- Stepper buttons ----
     let field_label = label.as_deref().or(aria_label).unwrap_or("value");
     let inc_label = increment_aria_label.unwrap_or_else(|| format!("Increase {field_label}"));
     let dec_label = decrement_aria_label.unwrap_or_else(|| format!("Decrease {field_label}"));
 
-    // ---- Button disabled signals ----
-    let increment_disabled = Signal::derive(move || !state.can_increment.get());
-    let decrement_disabled = Signal::derive(move || !state.can_decrement.get());
+    // If focus is already on the input, keep it there, so that tapping a stepper button doesn't
+    // hide the software keyboard. Otherwise, with a mouse, move focus to the input. On touch or
+    // with a screen reader, focus the button, so that the software keyboard does not appear and
+    // the screen reader cursor stays on the button.
+    let on_button_press_start = Callback::new(move |e: PressEvent| {
+        let input = element.get_untracked().map(|el| (*el).clone());
+        let active = use_document()
+            .as_ref()
+            .and_then(web_sys::Document::active_element);
+        if input.is_some() && active == input {
+            return;
+        }
+        if e.pointer_type == PointerType::Mouse {
+            if let Some(input) = input.and_then(|el| el.dyn_into::<web_sys::HtmlElement>().ok()) {
+                let _ = input.focus();
+            }
+        } else {
+            focus_event_target(&e.target, false);
+        }
+    });
+
+    let stepper =
+        |spin_button: UseButtonInput, label: String, can_step: Signal<bool>| UseButtonInput {
+            aria_label: Some(Oco::Owned(label)),
+            aria_controls: Signal::stored(Some(input_id.clone())),
+            exclude_from_tab_order: Signal::stored(true),
+            prevent_focus_on_press: true,
+            allow_focus_when_disabled: true,
+            disabled: Signal::derive(move || !can_step.get()),
+            on_press_start: chain_optional_callbacks(
+                spin_button.on_press_start,
+                Some(on_button_press_start),
+            ),
+            ..spin_button
+        };
+    let increment_button = stepper(spin_increment_button, inc_label, state.can_increment);
+    let decrement_button = stepper(spin_decrement_button, dec_label, state.can_decrement);
 
     // ---- Validation details ----
     let validation_details =
         Signal::derive(move || validation.display_validation.get().validation_details);
-
-    let input_id_clone = input_id.clone();
 
     UseNumberFieldReturn {
         group_props: UseNumberFieldGroupProps {
@@ -712,32 +718,15 @@ pub fn use_number_field(input: UseNumberFieldInput) -> UseNumberFieldReturn {
             element_capture: element.attr(),
             on_input: EventHandler::new(handle_input),
             on_keydown: EventHandler::new(handle_keydown),
-            on_focus: focus_ring_props.on_focus,
-            on_blur: blur_handler,
+            // The spin button tracks focus to announce value changes only while focused.
+            on_focus: focus_ring_props.on_focus.chain(spin_props.on_focus),
+            on_blur: blur_handler.chain(spin_props.on_blur),
             on_focusin: focus_ring_props.on_focusin,
             on_focusout: focus_ring_props.on_focusout,
             on_wheel: scroll_wheel_props.on_wheel,
         },
-        increment_button_props: UseNumberFieldButtonProps {
-            r#type: "button",
-            aria_label: inc_label,
-            aria_controls: input_id_clone.clone(),
-            tabindex: "-1",
-            disabled: increment_disabled,
-            on_pointerdown: spin_inc_props.on_pointerdown,
-            on_pointerup: spin_inc_props.on_pointerup,
-            on_pointerleave: spin_inc_props.on_pointerleave,
-        },
-        decrement_button_props: UseNumberFieldButtonProps {
-            r#type: "button",
-            aria_label: dec_label,
-            aria_controls: input_id_clone,
-            tabindex: "-1",
-            disabled: decrement_disabled,
-            on_pointerdown: spin_dec_props.on_pointerdown,
-            on_pointerup: spin_dec_props.on_pointerup,
-            on_pointerleave: spin_dec_props.on_pointerleave,
-        },
+        increment_button,
+        decrement_button,
         label_props: UseNumberFieldLabelProps {
             id: label_id,
             html_for: input_id,

@@ -1,4 +1,5 @@
-use thirtyfour::{WebDriver, prelude::*};
+use browser_test::thirtyfour::{WebDriver, prelude::*};
+use rootcause::Report;
 
 use crate::pages::BaseActions;
 
@@ -18,49 +19,49 @@ impl BaseActions for FocusPage<'_> {
 }
 
 impl FocusPage<'_> {
-    pub async fn goto(&self) -> anyhow::Result<()> {
+    pub async fn goto(&self) -> Result<(), Report> {
         tracing::info!("Navigating to focus hook test page...");
         self.goto_path("/hooks/focus").await?;
         Ok(())
     }
 
-    pub async fn click_target(&self) -> anyhow::Result<()> {
+    pub async fn click_target(&self) -> Result<(), Report> {
         self.click_element_with_id("test-focus-target").await
     }
 
-    pub async fn click_elsewhere(&self) -> anyhow::Result<()> {
+    pub async fn click_elsewhere(&self) -> Result<(), Report> {
         self.click_element_with_id("test-focus-elsewhere").await
     }
 
-    pub async fn click_disabled_target(&self) -> anyhow::Result<()> {
+    pub async fn click_disabled_target(&self) -> Result<(), Report> {
         self.click_element_with_id("test-focus-disabled").await
     }
 
-    pub async fn read_focus_count(&self) -> anyhow::Result<u32> {
+    pub async fn read_focus_count(&self) -> Result<u32, Report> {
         let text = self.read_text_of("test-focus-count").await?;
         Ok(text.trim().parse()?)
     }
 
-    pub async fn read_blur_count(&self) -> anyhow::Result<u32> {
+    pub async fn read_blur_count(&self) -> Result<u32, Report> {
         let text = self.read_text_of("test-blur-count").await?;
         Ok(text.trim().parse()?)
     }
 
-    pub async fn read_is_focused(&self) -> anyhow::Result<bool> {
+    pub async fn read_is_focused(&self) -> Result<bool, Report> {
         let text = self.read_text_of("test-is-focused").await?;
         Ok(text.trim() == "true")
     }
 
-    pub async fn read_disabled_focus_count(&self) -> anyhow::Result<u32> {
+    pub async fn read_disabled_focus_count(&self) -> Result<u32, Report> {
         let text = self.read_text_of("test-disabled-focus-count").await?;
         Ok(text.trim().parse()?)
     }
 
-    pub async fn click_before(&self) -> anyhow::Result<()> {
+    pub async fn click_before(&self) -> Result<(), Report> {
         self.click_element_with_id("test-focus-before").await
     }
 
-    pub async fn tab_from_before_to_target(&self) -> anyhow::Result<()> {
+    pub async fn tab_from_before_to_target(&self) -> Result<(), Report> {
         tracing::info!("Clicking 'before' button, then Tab to reach focus target...");
         self.click_before().await?;
         let active = self.driver.active_element().await?;
@@ -68,27 +69,27 @@ impl FocusPage<'_> {
         Ok(())
     }
 
-    pub async fn read_focus_change_count(&self) -> anyhow::Result<u32> {
+    pub async fn read_focus_change_count(&self) -> Result<u32, Report> {
         let text = self.read_text_of("test-focus-change-count").await?;
         Ok(text.trim().parse()?)
     }
 
     // ---- Child focus filtering section ----
 
-    pub async fn click_child(&self) -> anyhow::Result<()> {
+    pub async fn click_child(&self) -> Result<(), Report> {
         self.click_element_with_id("test-focus-child").await
     }
 
-    pub async fn click_parent(&self) -> anyhow::Result<()> {
+    pub async fn click_parent(&self) -> Result<(), Report> {
         self.click_element_with_id("test-focus-parent").await
     }
 
-    pub async fn read_parent_focus_count(&self) -> anyhow::Result<u32> {
+    pub async fn read_parent_focus_count(&self) -> Result<u32, Report> {
         let text = self.read_text_of("test-focus-parent-focus-count").await?;
         Ok(text.trim().parse()?)
     }
 
-    pub async fn read_parent_blur_count(&self) -> anyhow::Result<u32> {
+    pub async fn read_parent_blur_count(&self) -> Result<u32, Report> {
         let text = self.read_text_of("test-focus-parent-blur-count").await?;
         Ok(text.trim().parse()?)
     }

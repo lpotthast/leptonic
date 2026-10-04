@@ -12,7 +12,6 @@
 //!
 //! - [`MergedPressHoverProps`]: Combines `UsePressProps` + `UseHoverProps`
 //! - [`MergedPressHoverFocusRingProps`]: Combines the above + `UseFocusRingProps`
-//! - [`MergedButtonMenuTriggerProps`]: Combines `UseButtonProps` + `UseMenuTriggerProps`
 //! - [`MergedOverlayOverlayPositionProps`]: Combines `UseOverlayProps` + `UseOverlayPositionProps`
 //!
 //! # Usage
@@ -40,7 +39,6 @@
 //! }
 //! ```
 
-mod button_menu_trigger;
 mod focusable_press;
 mod focusable_press_focus_ring;
 mod hover_focus_ring;
@@ -49,7 +47,6 @@ mod press_focus_ring;
 mod press_hover;
 mod press_hover_focus_ring;
 
-pub use button_menu_trigger::*;
 pub use focusable_press::*;
 pub use focusable_press_focus_ring::*;
 pub use hover_focus_ring::*;

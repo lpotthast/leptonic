@@ -98,7 +98,7 @@ pub fn Button(
     #[prop(into, optional)] color: Signal<ButtonColor>,
     #[prop(into, optional)] size: Signal<ButtonSize>,
     #[prop(into, optional)] disabled: Signal<bool>,
-    #[prop(into, optional)] aria_haspopup: Signal<AriaHasPopup>,
+    #[prop(into, optional)] aria_haspopup: Signal<Option<AriaHasPopup>>,
     #[prop(into, optional)] aria_expanded: Signal<Option<AriaExpanded>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,
@@ -152,7 +152,7 @@ pub fn LinkButton<H>(
     #[prop(into, optional)] size: Signal<ButtonSize>,
     #[prop(into, optional)] disabled: Option<Signal<bool>>,
     #[prop(into, optional)] active: Option<Signal<bool>>, // TODO: Use
-    #[prop(into, optional)] aria_haspopup: Option<Signal<AriaHasPopup>>,
+    #[prop(into, optional)] aria_haspopup: Option<Signal<Option<AriaHasPopup>>>,
     #[prop(into, optional)] aria_expanded: Option<Signal<Option<AriaExpanded>>>,
     #[prop(into, optional)] classes: Classes,
     #[prop(into, optional)] styles: Styles,

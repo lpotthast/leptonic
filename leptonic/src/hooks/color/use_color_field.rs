@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/color/useColorField.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::Attr,
@@ -21,7 +22,7 @@ use crate::{
 
 use super::use_color_field_state::UseColorFieldStateReturn;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/color/src/useColorField.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorField.ts
 
 // ## INTENTIONAL DEVIATIONS
 //

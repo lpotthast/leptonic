@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useFocus.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(unused_imports))]
 
 use leptos::{
@@ -13,7 +14,7 @@ use crate::{
     utils::{EventAccessors, EventHandler, EventTargetExt, shadow_dom, synthetic_blur},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocus.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useFocus.ts
 
 // ## DIFFERENT BEHAVIOR
 //
@@ -78,12 +79,12 @@ pub fn use_focus(input: UseFocusInput) -> UseFocusReturn {
     #[cfg(feature = "ssr")]
     {
         let _ = input;
-        return UseFocusReturn {
+        UseFocusReturn {
             props: UseFocusProps {
                 on_focus: EventHandler::new(|_: FocusEvent| {}),
                 on_blur: EventHandler::new(|_: FocusEvent| {}),
             },
-        };
+        }
     }
 
     #[cfg(not(feature = "ssr"))]

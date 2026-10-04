@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/dnd/utils.ts @ 6f664fe911
 //! Drop item types for receiving data from drop operations.
 //!
 //! Unlike [`DragItem`](super::DragItem) (which represents app-internal text
@@ -5,7 +6,7 @@
 //! directories dropped from the operating system.
 //!
 //! Based on react-aria's `DropItem` types from
-//! `@react-aria/dnd/src/types.ts`.
+//! `@react-types/shared` (`DragItem`, `DropItem`) and `react-aria/src/dnd/utils.ts`.
 
 use std::collections::{HashMap, HashSet};
 

@@ -1,6 +1,7 @@
 pub mod architecture;
 pub mod changelog;
 pub mod classes_and_styles;
+pub mod demos;
 pub mod event_propagation;
 pub mod installation;
 pub mod overview;

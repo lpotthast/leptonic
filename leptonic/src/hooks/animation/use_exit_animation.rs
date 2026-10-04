@@ -1,6 +1,7 @@
+// Upstream: react-aria/src/utils/animation.ts @ 6f664fe911
 //! Hook for tracking CSS exit animations on an element.
 //!
-//! Based on: <https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/utils/src/animation.ts>
+//! Based on: <https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/animation.ts>
 
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;
@@ -135,18 +136,18 @@ pub fn use_exit_animation(input: UseExitAnimationInput) -> UseExitAnimationRetur
                 }
             });
 
-            if exit_state.get() == ExitState::Exiting {
-                if let Some(el) = element.get() {
-                    let cancel = watch_animations(&el, move || {
-                        // Only transition to Closed if still Exiting (not interrupted).
-                        set_exit_state.update(|state| {
-                            if *state == ExitState::Exiting {
-                                *state = ExitState::Closed;
-                            }
-                        });
+            if exit_state.get() == ExitState::Exiting
+                && let Some(el) = element.get()
+            {
+                let cancel = watch_animations(&el, move || {
+                    // Only transition to Closed if still Exiting (not interrupted).
+                    set_exit_state.update(|state| {
+                        if *state == ExitState::Exiting {
+                            *state = ExitState::Closed;
+                        }
                     });
-                    cleanup.set_value(Some(Box::new(cancel)));
-                }
+                });
+                cleanup.set_value(Some(Box::new(cancel)));
             }
         });
 

@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/focusSafely.ts @ 6f664fe911
 //! Focus utilities for managing element focus without side effects.
 //!
 //! This module provides utilities for focusing elements without triggering scroll,
@@ -37,7 +38,7 @@ pub fn focus_html_element(html_element: &web_sys::HtmlElement, prevent_scroll: b
 /// In all other modalities, the element is focused immediately without scrolling.
 ///
 /// Based on react-aria's `focusSafely` from
-/// `packages/@react-aria/interactions/src/focusSafely.ts`.
+/// `packages/react-aria/src/interactions/focusSafely.ts`.
 pub fn focus_safely(element: &web_sys::Element) {
     #[cfg(feature = "ssr")]
     {

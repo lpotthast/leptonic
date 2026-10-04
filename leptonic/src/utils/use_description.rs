@@ -96,24 +96,24 @@ pub fn use_description(description: Oco<'static, str>) -> AriaDescribedby {
 
 fn create_dom_node(id: Oco<'static, str>, description: Oco<'static, str>) {
     Effect::new(move || {
-        if let Some(document) = use_document().as_ref() {
-            if let Ok(div) = document.create_element("div") {
-                let _ = div.set_attribute("id", &id);
-                let _ = div.set_attribute("style", "display: none;");
-                div.set_text_content(Some(&description));
+        if let Some(document) = use_document().as_ref()
+            && let Ok(div) = document.create_element("div")
+        {
+            let _ = div.set_attribute("id", &id);
+            let _ = div.set_attribute("style", "display: none;");
+            div.set_text_content(Some(&description));
 
-                if let Some(body) = document.body() {
-                    let _ = body.append_child(&div);
-                }
+            if let Some(body) = document.body() {
+                let _ = body.append_child(&div);
             }
         }
     });
 }
 
 fn remove_dom_node(id: &Oco<'static, str>) {
-    if let Some(document) = use_document().as_ref() {
-        if let Some(el) = document.get_element_by_id(id) {
-            el.remove();
-        }
+    if let Some(document) = use_document().as_ref()
+        && let Some(el) = document.get_element_by_id(id)
+    {
+        el.remove();
     }
 }

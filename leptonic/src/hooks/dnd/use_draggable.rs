@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/dnd/useDrag.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code))]
 
 use std::collections::HashSet;
@@ -22,7 +23,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrag.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/dnd/useDrag.ts
 
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
@@ -663,22 +664,21 @@ pub(crate) fn write_to_data_transfer(dt: &web_sys::DataTransfer, items: &[DragIt
 /// Reads drag items from a `DataTransfer`, deserializing JSON if present.
 pub(crate) fn read_from_data_transfer(dt: &web_sys::DataTransfer) -> Vec<DragItem> {
     // Check for serialized items first.
-    if let Ok(json) = dt.get_data(LEPTONIC_DND_ITEMS_TYPE) {
-        if !json.is_empty() {
-            if let Some(items) = deserialize_drag_items(&json) {
-                return items;
-            }
-        }
+    if let Ok(json) = dt.get_data(LEPTONIC_DND_ITEMS_TYPE)
+        && !json.is_empty()
+        && let Some(items) = deserialize_drag_items(&json)
+    {
+        return items;
     }
 
     // Fall back: read all native types as a single DragItem.
     let types = dt.types();
     let mut item = DragItem::new();
     for i in 0..types.length() {
-        if let Some(kind) = types.get(i).as_string() {
-            if let Ok(data) = dt.get_data(&kind) {
-                item = item.with_type(kind, data);
-            }
+        if let Some(kind) = types.get(i).as_string()
+            && let Ok(data) = dt.get_data(&kind)
+        {
+            item = item.with_type(kind, data);
         }
     }
 
@@ -856,15 +856,14 @@ pub fn use_draggable(input: UseDraggableInput) -> UseDraggableReturn {
             write_to_data_transfer(&data_transfer, &items);
 
             // Custom drag preview (#6).
-            if let Some(render_preview) = render_drag_preview {
-                if let Some(preview) = render_preview.run(items.clone()) {
+            if let Some(render_preview) = render_drag_preview
+                && let Some(preview) = render_preview.run(items.clone()) {
                     data_transfer.set_drag_image(
                         &preview.element,
                         preview.x_offset,
                         preview.y_offset,
                     );
                 }
-            }
 
             if let Some(on_start) = on_drag_start {
                 on_start.run(DragStartEvent {

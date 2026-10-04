@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use leptonic::hooks::*;
+use leptonic::{hooks::*, utils::classes::Classes};
 use leptos::prelude::*;
 
 #[component]
@@ -36,59 +36,50 @@ pub fn GridListDemo() -> impl IntoView {
     let list_focused_key = grid_list.focused_key;
 
     view! {
-        <div
-            {..grid_list.props.into_attrs()}
-            style="margin: 1em 0; border: 1px solid #ccc; border-radius: 4px; overflow: hidden;"
-        >
-            {items.into_iter().enumerate().map(|(idx, (key, label))| {
-                let item = use_grid_list_item(UseGridListItemInput {
-                    state: grid_list.state,
-                    key: key.to_string(),
-                    row_index: idx,
-                    is_disabled: false.into(),
-                    text_value: Some(label.to_string()),
-                });
+        <div {..grid_list.props.into_attrs()} class="demo-grid-list demo-my-1">
+            {items
+                .into_iter()
+                .enumerate()
+                .map(|(idx, (key, label))| {
+                    let item = use_grid_list_item(UseGridListItemInput {
+                        state: grid_list.state,
+                        key: key.to_string(),
+                        row_index: idx,
+                        is_disabled: false.into(),
+                        text_value: Some(label.to_string()),
+                    });
+                    let is_selected = item.is_selected;
+                    let is_focused = item.is_focused;
+                    let (row_props, row_styles) = item.row_props.into_parts();
 
-                let is_selected = item.is_selected;
-                let is_focused = item.is_focused;
-                let (row_props, row_styles) = item.row_props.into_parts();
-
-                let row_styles = row_styles
-                    .add("display", "flex")
-                    .add("align-items", "center")
-                    .add("padding", "8px 12px")
-                    .add("cursor", "pointer")
-                    .add("user-select", "none");
-
-                view! {
-                    <div
-                        {..row_props}
-                        style=row_styles
-                        style:background=move || if is_selected.get() { "#e3f2fd" } else { "transparent" }
-                        style:outline=move || if is_focused.get() { "2px solid #1976d2" } else { "none" }
-                        style:outline-offset="-2px"
-                    >
-                        <div {..item.gridcell_props.into_attrs()} style="display: flex; align-items: center; gap: 8px; width: 100%;">
-                            <span style="width: 20px; text-align: center;">
-                                {move || if is_selected.get() { "\u{2713}" } else { "" }}
-                            </span>
-                            <span>{label}</span>
+                    view! {
+                        <div
+                            {..row_props}
+                            class=Classes::from("demo-grid-list-item")
+                                .add_reactive("selected", is_selected)
+                                .add_reactive("focused", is_focused)
+                            style=row_styles
+                        >
+                            <div {..item.gridcell_props.into_attrs()} class="demo-grid-list-cell">
+                                <span class="demo-grid-list-icon">
+                                    {move || if is_selected.get() { "\u{2713}" } else { "" }}
+                                </span>
+                                <span>{label}</span>
+                            </div>
                         </div>
-                    </div>
-                }
-            }).collect_view()}
+                    }
+                })
+                .collect_view()}
         </div>
 
-        <div style="margin-top: 1em;">
+        <div class="demo-mt-1">
             <strong>"Focused: "</strong>
-            { move || {
-                list_focused_key.get().unwrap_or_else(|| "None".to_string())
-            }}
+            {move || { list_focused_key.get().unwrap_or_else(|| "None".to_string()) }}
         </div>
 
-        <div style="margin-top: 0.5em;">
+        <div class="demo-mt-half">
             <strong>"Selected: "</strong>
-            { move || {
+            {move || {
                 match list_selected.get() {
                     Selection::Keys(keys) => {
                         if keys.is_empty() {
@@ -104,11 +95,9 @@ pub fn GridListDemo() -> impl IntoView {
             }}
         </div>
 
-        <div style="margin-top: 0.5em;">
+        <div class="demo-mt-half">
             <strong>"Last action: "</strong>
-            { move || {
-                last_action.get().unwrap_or_else(|| "None".to_string())
-            }}
+            {move || { last_action.get().unwrap_or_else(|| "None".to_string()) }}
         </div>
     }
 }

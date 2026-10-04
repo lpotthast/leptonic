@@ -111,16 +111,21 @@ pub fn PageUseColorChannelField() -> impl IntoView {
             <h3>"Hook Return"</h3>
             <p>
                 "Returns "<Code inline=true>"UseNumberFieldReturn"</Code>
-                " directly, providing group, input, increment button, decrement button, and label props."
+                " directly. These are the fields you typically need; see "
+                <Link href=crate::routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
+                " for the rest (validation, description and error props, \u{2026})."
             </p>
             <Code language=Language::Rust>
                 {indoc!(r"
                     pub struct UseNumberFieldReturn {
                         pub group_props: UseNumberFieldGroupProps,
                         pub input_props: UseNumberFieldInputProps,
-                        pub increment_button_props: UseNumberFieldButtonProps,
-                        pub decrement_button_props: UseNumberFieldButtonProps,
                         pub label_props: UseNumberFieldLabelProps,
+                        // Pass these to `use_button` to render the stepper buttons.
+                        pub increment_button: UseButtonInput,
+                        pub decrement_button: UseButtonInput,
+                        pub display_value: Signal<String>,
+                        // ...
                     }
                 ")}
             </Code>

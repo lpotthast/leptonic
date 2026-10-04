@@ -1,3 +1,6 @@
+// Upstream: react-aria/src/listbox/useOption.ts @ 6f664fe911
+use crate::hooks::selection::use_selection_state::DisabledBehavior;
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -8,7 +11,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::{FocusEvent, MouseEvent};
 
 use crate::{
@@ -32,7 +34,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useOption.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/listbox/useOption.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -254,13 +256,25 @@ where
         focused_key,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("option");
     let option_id = format!("option-{base_id}");
     let label_id = format!("option-label-{base_id}");
     let description_id = format!("option-description-{base_id}");
 
-    // Combine local and global disabled state
-    let is_disabled = Signal::derive(move || local_disabled.get() || state.is_disabled.get());
+    // An option is disabled when it says so, when the whole listbox is, or (with
+    // `DisabledBehavior::All`, the default) when its key is one of the listbox's disabled keys.
+    // With `DisabledBehavior::Selection`, disabled keys stay focusable and are only excluded from
+    // selection.
+    let disabled_key = {
+        let key = key.clone();
+        Signal::derive(move || {
+            state.disabled_behavior == DisabledBehavior::All
+                && state.disabled_keys.with(|keys| keys.contains(&key))
+        })
+    };
+    let is_disabled = Signal::derive(move || {
+        local_disabled.get() || state.is_disabled.get() || disabled_key.get()
+    });
 
     // --- Use focusable for element capture and focus handle (real focus mode) ---
     let focusable = use_focusable(UseFocusableInput {
@@ -272,6 +286,7 @@ where
         on_focus_change: None,
         on_key_down: None,
         on_key_up: None,
+        ..Default::default()
     });
 
     // Focus callback for DOM synchronization (for use_selectable_item).

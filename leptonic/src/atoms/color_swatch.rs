@@ -5,9 +5,8 @@ use leptos::prelude::*;
 use crate::{
     hooks::{IntoAttrs, UseColorSwatchInput, use_color_swatch},
     utils::{
-        classes::Classes,
-        color::ColorValue,
-        styles::{Style::BackgroundColor, Styles},
+        classes::Classes, color::ColorValue, css::ForcedColorAdjust,
+        style::ForcedColorAdjustProperty, styles::Styles,
     },
 };
 
@@ -41,8 +40,9 @@ pub fn ColorSwatch<C: ColorValue>(
     let bg = swatch.background_color;
 
     let styles = styles
-        .add(BackgroundColor, move || bg.get())
-        .add("forced-color-adjust", "none");
+        // The background is a computed CSS color string (it may use any color space).
+        .add_optional_unchecked("background-color", move || Some(bg.get()))
+        .add(ForcedColorAdjustProperty.declare(ForcedColorAdjust::None));
 
     view! {
         <div

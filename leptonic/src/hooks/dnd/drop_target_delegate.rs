@@ -1,7 +1,8 @@
+// Upstream: react-aria/src/dnd/ListDropTargetDelegate.ts @ 6f664fe911
 //! Hit-testing for resolving pointer coordinates to a [`DropTarget`] within a collection.
 //!
 //! Based on react-aria's `ListDropTargetDelegate` from
-//! `@react-aria/dnd/src/ListDropTargetDelegate.ts`.
+//! `react-aria/src/dnd/ListDropTargetDelegate.ts`.
 
 use super::types::{DropPosition, DropTarget};
 
@@ -152,10 +153,10 @@ impl ListDropTargetDelegate {
                     for j in 0..nodes.length() {
                         if let Some(node) = nodes.item(j) {
                             use wasm_bindgen::JsCast;
-                            if let Some(el) = node.dyn_ref::<web_sys::Element>() {
-                                if let Some(key) = el.get_attribute("data-key") {
-                                    result.push((key, el.clone()));
-                                }
+                            if let Some(el) = node.dyn_ref::<web_sys::Element>()
+                                && let Some(key) = el.get_attribute("data-key")
+                            {
+                                result.push((key, el.clone()));
                             }
                         }
                     }

@@ -1,12 +1,13 @@
+// Upstream: react-aria/src/listbox/useListBoxSection.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr};
-use uuid::Uuid;
 
 use crate::{
     hooks::IntoAttrs,
     utils::aria::{AriaHidden, AriaRole},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useListBoxSection.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/listbox/useListBoxSection.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -139,7 +140,7 @@ pub type UseListBoxSectionItemsAttrs = (Attr<attr::Role, AriaRole>,);
 pub fn use_listbox_section(input: UseListBoxSectionInput) -> UseListBoxSectionReturn {
     let UseListBoxSectionInput { heading } = input;
 
-    let heading_id = format!("listbox-section-heading-{}", Uuid::new_v4());
+    let heading_id = use_id("listbox-section-heading");
 
     let aria_labelledby = if heading.is_some() {
         Some(heading_id.clone())

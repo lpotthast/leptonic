@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/datepicker/useDateField.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +7,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use super::{
@@ -21,7 +22,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useTimeField.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/datepicker/useDateField.ts (`useTimeField`)
 
 //
 // DIFFERENT BEHAVIOR
@@ -350,7 +351,7 @@ pub fn use_time_field(input: UseTimeFieldInput) -> UseTimeFieldReturn {
     };
 
     // ---- IDs ----
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("time-field");
     let field_id = format!("time-field-{base_id}");
     let label_id = format!("time-field-label-{base_id}");
     let description_id = format!("time-field-desc-{base_id}");

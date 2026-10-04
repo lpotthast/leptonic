@@ -1,3 +1,6 @@
+// Upstream: react-aria/src/table/useTable.ts @ 569946588e
+// Upstream: react-stately/src/table/useTableState.ts @ 569946588e
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +8,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::{
@@ -17,7 +19,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTable.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/table/useTable.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -211,7 +213,7 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         on_row_action,
     } = input;
 
-    let table_id = format!("table-{}", Uuid::new_v4());
+    let table_id = use_id("table");
 
     // Track focused row
     let (focused_key, set_focused_key_signal) = signal::<Option<String>>(None);
@@ -326,11 +328,11 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
         let key = e.key();
         match key.as_str() {
             "Enter" => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(on_action) = on_row_action {
-                        e.prevent_default();
-                        on_action.run(focused);
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(on_action) = on_row_action
+                {
+                    e.prevent_default();
+                    on_action.run(focused);
                 }
             }
             "Escape" => {
@@ -342,20 +344,20 @@ pub fn use_table(input: UseTableInput) -> UseTableReturn {
                 }
             }
             " " => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    if selection_mode != TableSelectionMode::None {
-                        e.prevent_default();
-                        let mut current = selected_keys.get_untracked();
-                        if let Some(pos) = current.iter().position(|k| k == &focused) {
-                            current.remove(pos);
-                        } else if selection_mode == TableSelectionMode::Single {
-                            current = vec![focused];
-                        } else {
-                            current.push(focused);
-                        }
-                        if let Some(on_change) = on_selection_change {
-                            on_change.run(current);
-                        }
+                if let Some(focused) = focused_key.get_untracked()
+                    && selection_mode != TableSelectionMode::None
+                {
+                    e.prevent_default();
+                    let mut current = selected_keys.get_untracked();
+                    if let Some(pos) = current.iter().position(|k| k == &focused) {
+                        current.remove(pos);
+                    } else if selection_mode == TableSelectionMode::Single {
+                        current = vec![focused];
+                    } else {
+                        current.push(focused);
+                    }
+                    if let Some(on_change) = on_selection_change {
+                        on_change.run(current);
                     }
                 }
             }

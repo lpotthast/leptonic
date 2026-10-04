@@ -70,10 +70,10 @@ where
         provide_context(RootThemeApplied);
 
         Effect::new(move |_| {
-            if let Some(doc) = use_document().as_ref() {
-                if let Some(el) = doc.document_element() {
-                    let _ = el.set_attribute("data-theme", theme.get().name());
-                }
+            if let Some(doc) = use_document().as_ref()
+                && let Some(el) = doc.document_element()
+            {
+                let _ = el.set_attribute("data-theme", theme.get().name());
             }
         });
     }

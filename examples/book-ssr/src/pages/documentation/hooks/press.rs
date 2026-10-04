@@ -41,26 +41,23 @@ pub fn PageUsePress() -> impl IntoView {
                 {indoc!(r#"
                     let UsePressReturn { props, is_pressed } = use_press(UsePressInput {
                         disabled: disabled.into(),
-                        force_prevent_default: false,
-                        force_propagation: false,
-                        allow_text_selection_on_press: false,
-                        should_cancel_on_pointer_exit: false,
-                        prevent_focus_on_press: false,
-                        force_is_pressed: None,
                         on_press: Callback::new(move |e| { /* ... */ }),
-                        on_press_up: None,
-                        on_press_start: None,
-                        on_press_end: None,
-                        on_press_change: None,
+                        ..Default::default()
                     });
+                    let (attrs, styles) = props.into_parts();
 
                     view! {
-                        <button {..props.into_attrs()}>
+                        <button {..attrs} style=styles>
                             "Press me"
                         </button>
                     }
                 "#)}
             </Code>
+
+            <p>
+                <code>"UsePressInput"</code>" implements "<code>"Default"</code>": everything is off and "<code>"on_press"</code>
+                " does nothing, so you only name the options and callbacks you need."
+            </p>
 
             <h2 id="demo" class="anchor">
                 "Interactive Demo"
@@ -161,28 +158,18 @@ pub fn PageUsePress() -> impl IntoView {
                     let (threshold, set_threshold) = signal(Duration::from_millis(500));
 
                     let UsePressReturn { props, .. } = use_press(UsePressInput {
-                        disabled: Signal::derive(|| false),
-                        force_prevent_default: false,
-                        force_propagation: false,
-                        allow_text_selection_on_press: false,
-                        should_cancel_on_pointer_exit: false,
-                        prevent_focus_on_press: false,
-                        force_is_pressed: None,
-                        on_press: Callback::new(|_| {}),
-                        on_press_up: None,
-                        on_press_start: None,
-                        on_press_end: None,
-                        on_press_change: None,
-                        on_double_press: None,
                         on_long_press_start: Some(Callback::new(|e| { /* ... */ })),
                         on_long_press: Some(Callback::new(|e| { /* ... */ })),
                         on_long_press_end: Some(Callback::new(|e| { /* ... */ })),
                         long_press_threshold: Some(threshold.into()), // reactive Signal<Duration>
-                        long_press_accessibility_description: Some("Long press to open menu"),
+                        long_press_accessibility_description: Some("Long press to open menu".into()),
+                        // `on_press` defaults to a no-op.
+                        ..Default::default()
                     });
+                    let (attrs, styles) = props.into_parts();
 
                     view! {
-                        <button {..props.into_attrs()}>
+                        <button {..attrs} style=styles>
                             "Long press me"
                         </button>
                     }
@@ -204,7 +191,7 @@ pub fn PageUsePress() -> impl IntoView {
             </h3>
 
             <ul>
-                <li>"Customizable time threshold (default 500ms), reactive via " <code>"Signal<u64>"</code></li>
+                <li>"Customizable time threshold (default 500ms), reactive via " <code>"Signal<Duration>"</code></li>
                 <li>"Handles both mouse and touch events"</li>
                 <li>"Prevents context menu on touch devices during long press"</li>
                 <li>"Three event callbacks: start, threshold met, and end"</li>

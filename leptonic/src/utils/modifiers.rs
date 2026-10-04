@@ -1,6 +1,6 @@
 /// Keyboard modifiers held during an event.
 #[allow(clippy::struct_excessive_bools)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Hash)]
 pub struct Modifiers {
     /// Whether the shift keyboard modifier was held during the event.
     pub shift_key: bool,

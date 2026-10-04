@@ -1,12 +1,13 @@
+// Upstream: react-aria/src/label/useField.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr};
-use uuid::Uuid;
 
 use crate::{
     hooks::IntoAttrs,
     utils::aria::{AriaDisabled, AriaInvalid, AriaLive, AriaReadonly, AriaRequired, AriaRole},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useField.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/label/useField.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -238,7 +239,7 @@ pub fn use_field(input: UseFieldInput) -> UseFieldReturn {
         is_read_only,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("field");
 
     let field_id = id.unwrap_or_else(|| format!("field-{base_id}"));
     let label_id = format!("label-{base_id}");

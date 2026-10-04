@@ -15,7 +15,7 @@ pub fn Label(
         label_props,
         field_props: _,
     } = use_label(UseLabelInput {
-        id: Some(uuid::Uuid::new_v4().to_string()),
+        id: None,
         label_element_type: Some(LabelElementType::Label),
     });
 

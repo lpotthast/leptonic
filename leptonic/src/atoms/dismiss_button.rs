@@ -1,6 +1,7 @@
+// Upstream: react-aria/src/overlays/DismissButton.tsx @ 6f664fe911
 use leptos::prelude::*;
 
-// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/DismissButton.tsx
+// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/DismissButton.tsx
 
 // REACT-ARIA DEVIATIONS
 //

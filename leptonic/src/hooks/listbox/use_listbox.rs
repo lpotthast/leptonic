@@ -1,14 +1,9 @@
+// Upstream: react-aria/src/listbox/useListBox.ts @ 6f664fe911
+// Upstream: react-stately/src/list/useListState.ts @ 6f664fe911
 use std::collections::HashSet;
 
-use leptos::{
-    attr,
-    attr::Attr,
-    ev,
-    ev::{On, SharedEventCallback},
-    prelude::*,
-};
-use uuid::Uuid;
-use web_sys::KeyboardEvent;
+use crate::utils::id::use_id;
+use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
     hooks::{
@@ -16,7 +11,9 @@ use crate::{
         form::use_checkbox_group::Orientation,
         selection::{
             SelectionKey,
-            use_selectable_collection::EscapeKeyBehavior,
+            use_selectable_collection::{
+                EscapeKeyBehavior, UseSelectableCollectionAttrs, UseSelectableCollectionProps,
+            },
             use_selectable_list::{
                 UseSelectableListInput, UseSelectableListReturn, use_selectable_list,
             },
@@ -25,13 +22,13 @@ use crate::{
         },
     },
     utils::{
-        CapturedElement, EventHandler,
+        CapturedElement,
         aria::{AriaDisabled, AriaMultiselectable, AriaOrientation, AriaRole},
         locale::WritingDirection,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/listbox/src/useListBox.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/listbox/useListBox.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -103,6 +100,10 @@ where
 
     /// Behavior when Escape is pressed.
     pub escape_key_behavior: EscapeKeyBehavior,
+
+    /// The listbox element's id. Generated when `None`. Set this when another element must
+    /// reference the listbox, e.g. a select trigger's `aria-controls`.
+    pub id: Option<String>,
 }
 
 /// The orientation of a listbox.
@@ -136,7 +137,7 @@ impl<K: SelectionKey> Default for UseListBoxInput<K> {
             disabled_keys: Signal::derive(HashSet::new),
             disallow_empty_selection: false,
             items: Signal::derive(Vec::new),
-            should_focus_wrap: true,
+            should_focus_wrap: false,
             auto_focus: Signal::derive(|| None),
             select_on_focus: false,
             aria_label: None,
@@ -147,6 +148,7 @@ impl<K: SelectionKey> Default for UseListBoxInput<K> {
             collection_ref: CapturedElement::new(),
             on_close: None,
             escape_key_behavior: EscapeKeyBehavior::default(),
+            id: None,
         }
     }
 }
@@ -171,13 +173,13 @@ where
 pub struct UseListBoxProps {
     pub id: String,
     pub role: AriaRole,
-    pub tabindex: &'static str,
     pub aria_label: Option<&'static str>,
     pub aria_labelledby: Option<String>,
     pub aria_multiselectable: Option<AriaMultiselectable>,
     pub aria_orientation: AriaOrientation,
     pub aria_disabled: Signal<Option<AriaDisabled>>,
-    pub on_keydown: EventHandler<KeyboardEvent>,
+    /// Focus, keyboard and tab-index handling of the collection (`use_selectable_collection`).
+    pub collection: UseSelectableCollectionProps,
 }
 
 impl IntoAttrs for UseListBoxProps {
@@ -187,13 +189,12 @@ impl IntoAttrs for UseListBoxProps {
         (
             Attr(attr::Id, self.id),
             Attr(attr::Role, self.role),
-            Attr(attr::Tabindex, self.tabindex),
             Attr(attr::AriaLabel, self.aria_label),
             Attr(attr::AriaLabelledby, self.aria_labelledby),
             Attr(attr::AriaMultiselectable, self.aria_multiselectable),
             Attr(attr::AriaOrientation, self.aria_orientation),
             Attr(attr::AriaDisabled, self.aria_disabled),
-            self.on_keydown.into_on(ev::keydown),
+            self.collection.into_attrs(),
         )
     }
 }
@@ -202,13 +203,12 @@ impl IntoAttrs for UseListBoxProps {
 pub type UseListBoxAttrs = (
     Attr<attr::Id, String>,
     Attr<attr::Role, AriaRole>,
-    Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
     Attr<attr::AriaOrientation, AriaOrientation>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
-    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+    UseSelectableCollectionAttrs,
 );
 
 /// Provides the behavior and accessibility implementation for a listbox.
@@ -272,9 +272,10 @@ where
         collection_ref,
         on_close,
         escape_key_behavior,
+        id,
     } = input;
 
-    let listbox_id = format!("listbox-{}", Uuid::new_v4());
+    let listbox_id = id.unwrap_or_else(|| use_id("listbox"));
 
     // Convert ListBoxOrientation to Orientation for the delegate
     let list_orientation = match orientation {
@@ -309,8 +310,9 @@ where
         allows_tab_navigation: false,
     });
 
-    // Use the collection's keyboard handler (no more duplicated keyboard handling)
-    let on_keydown = state.list_props.on_keydown.clone();
+    // The collection's focus, keyboard and tab-index handling, as react-aria's `useListBox` merges
+    // the props of `useSelectableList`.
+    let collection = state.list_props.clone();
 
     // Compute aria-multiselectable
     let aria_multiselectable = match selection_mode {
@@ -329,13 +331,12 @@ where
         listbox_props: UseListBoxProps {
             id: listbox_id.clone(),
             role: AriaRole::Listbox,
-            tabindex: "0",
             aria_label,
             aria_labelledby,
             aria_multiselectable,
             aria_orientation,
             aria_disabled,
-            on_keydown,
+            collection,
         },
         state,
         id: listbox_id,

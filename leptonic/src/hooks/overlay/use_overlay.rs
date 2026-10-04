@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/overlays/useOverlay.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::{
@@ -25,7 +26,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useOverlay.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useOverlay.ts
 
 //
 // ## DIFFERENT BEHAVIOR
@@ -231,11 +232,10 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
     });
 
     let on_hide = move || {
-        if let Some(el) = overlay_element.get_untracked() {
-            if visible_overlays::is_topmost(&el) {
+        if let Some(el) = overlay_element.get_untracked()
+            && visible_overlays::is_topmost(&el) {
                 on_close.run(());
             }
-        }
     };
 
     let handle_keydown = move |e: KeyboardEvent| {
@@ -266,14 +266,12 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
                     .is_some_and(|target_el| filter.run(target_el))
             });
 
-            if should_close {
-                if let Some(el) = overlay_element.get_untracked() {
-                    if visible_overlays::is_topmost(&el) {
+            if should_close
+                && let Some(el) = overlay_element.get_untracked()
+                    && visible_overlays::is_topmost(&el) {
                         e.stop_propagation();
                         e.prevent_default();
                     }
-                }
-            }
         })),
 
         on_interact_outside: Some(Callback::new(move |e: web_sys::MouseEvent| {
@@ -285,12 +283,11 @@ pub fn use_overlay(input: UseOverlayInput) -> UseOverlayReturn {
             });
 
             if should_close {
-                if let Some(el) = overlay_element.get_untracked() {
-                    if visible_overlays::is_topmost(&el) {
+                if let Some(el) = overlay_element.get_untracked()
+                    && visible_overlays::is_topmost(&el) {
                         e.stop_propagation();
                         e.prevent_default();
                     }
-                }
 
                 // Close if this overlay was topmost at pointerdown time.
                 let was_topmost = last_topmost_at_pointerdown

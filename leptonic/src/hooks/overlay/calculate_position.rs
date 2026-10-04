@@ -461,11 +461,11 @@ mod tests {
     fn below_center() {
         let result = calculate_position(&default_input());
         // Below: top = target.bottom() = 200 + 50 = 250
-        assert_that(result.top).is_close_to(250.0, 0.01);
+        assert_that!(result.top).is_close_to(250.0, 0.01);
         // Center: left = target.left + target.width/2 - overlay.width/2 = 300 + 50 - 75 = 275
-        assert_that(result.left).is_close_to(275.0, 0.01);
-        assert_that(result.placement_y).is_equal_to(PlacementY::Below);
-        assert_that(result.placement_x).is_equal_to(PhysicalPlacementX::Center);
+        assert_that!(result.left).is_close_to(275.0, 0.01);
+        assert_that!(result.placement_y).is_equal_to(PlacementY::Below);
+        assert_that!(result.placement_x).is_equal_to(PhysicalPlacementX::Center);
     }
 
     #[test]
@@ -474,8 +474,8 @@ mod tests {
         input.placement_y = PlacementY::Above;
         let result = calculate_position(&input);
         // Above: top = target.top - overlay.height = 200 - 100 = 100
-        assert_that(result.top).is_close_to(100.0, 0.01);
-        assert_that(result.left).is_close_to(275.0, 0.01);
+        assert_that!(result.top).is_close_to(100.0, 0.01);
+        assert_that!(result.left).is_close_to(275.0, 0.01);
     }
 
     #[test]
@@ -484,9 +484,9 @@ mod tests {
         input.placement_x = PhysicalPlacementX::Left;
         let result = calculate_position(&input);
         // Below: top = 250
-        assert_that(result.top).is_close_to(250.0, 0.01);
+        assert_that!(result.top).is_close_to(250.0, 0.01);
         // Left: left = target.left = 300
-        assert_that(result.left).is_close_to(300.0, 0.01);
+        assert_that!(result.left).is_close_to(300.0, 0.01);
     }
 
     #[test]
@@ -495,7 +495,7 @@ mod tests {
         input.placement_x = PhysicalPlacementX::Right;
         let result = calculate_position(&input);
         // Right: left = target.right() - overlay.width = 400 - 150 = 250
-        assert_that(result.left).is_close_to(250.0, 0.01);
+        assert_that!(result.left).is_close_to(250.0, 0.01);
     }
 
     #[test]
@@ -505,9 +505,9 @@ mod tests {
         input.placement_y = PlacementY::Center;
         let result = calculate_position(&input);
         // OuterRight: left = target.right() = 400
-        assert_that(result.left).is_close_to(400.0, 0.01);
+        assert_that!(result.left).is_close_to(400.0, 0.01);
         // Center Y: top = target.top + target.height/2 - overlay.height/2 = 200 + 25 - 50 = 175
-        assert_that(result.top).is_close_to(175.0, 0.01);
+        assert_that!(result.top).is_close_to(175.0, 0.01);
     }
 
     #[test]
@@ -517,8 +517,8 @@ mod tests {
         input.placement_y = PlacementY::Center;
         let result = calculate_position(&input);
         // OuterLeft: left = target.left - overlay.width = 300 - 150 = 150
-        assert_that(result.left).is_close_to(150.0, 0.01);
-        assert_that(result.top).is_close_to(175.0, 0.01);
+        assert_that!(result.left).is_close_to(150.0, 0.01);
+        assert_that!(result.top).is_close_to(175.0, 0.01);
     }
 
     #[test]
@@ -527,7 +527,7 @@ mod tests {
         input.placement_y = PlacementY::Top;
         let result = calculate_position(&input);
         // Top: top = target.top = 200
-        assert_that(result.top).is_close_to(200.0, 0.01);
+        assert_that!(result.top).is_close_to(200.0, 0.01);
     }
 
     #[test]
@@ -536,7 +536,7 @@ mod tests {
         input.placement_y = PlacementY::Bottom;
         let result = calculate_position(&input);
         // Bottom: top = target.bottom() - overlay.height = 250 - 100 = 150
-        assert_that(result.top).is_close_to(150.0, 0.01);
+        assert_that!(result.top).is_close_to(150.0, 0.01);
     }
 
     // =========================================================================
@@ -549,9 +549,9 @@ mod tests {
         input.offset = 8.0;
         let result = calculate_position(&input);
         // Below with offset: top = 250 + 8 = 258
-        assert_that(result.top).is_close_to(258.0, 0.01);
+        assert_that!(result.top).is_close_to(258.0, 0.01);
         // Left unchanged
-        assert_that(result.left).is_close_to(275.0, 0.01);
+        assert_that!(result.left).is_close_to(275.0, 0.01);
     }
 
     #[test]
@@ -561,7 +561,7 @@ mod tests {
         input.offset = 8.0;
         let result = calculate_position(&input);
         // Above with offset: top = 100 - 8 = 92
-        assert_that(result.top).is_close_to(92.0, 0.01);
+        assert_that!(result.top).is_close_to(92.0, 0.01);
     }
 
     #[test]
@@ -572,7 +572,7 @@ mod tests {
         input.offset = 10.0;
         let result = calculate_position(&input);
         // OuterRight with offset: left = 400 + 10 = 410
-        assert_that(result.left).is_close_to(410.0, 0.01);
+        assert_that!(result.left).is_close_to(410.0, 0.01);
     }
 
     #[test]
@@ -583,7 +583,7 @@ mod tests {
         input.offset = 10.0;
         let result = calculate_position(&input);
         // OuterLeft with offset: left = 150 - 10 = 140
-        assert_that(result.left).is_close_to(140.0, 0.01);
+        assert_that!(result.left).is_close_to(140.0, 0.01);
     }
 
     // =========================================================================
@@ -596,9 +596,9 @@ mod tests {
         input.cross_offset = 20.0;
         let result = calculate_position(&input);
         // Y main → cross axis is X → left += 20 → 275 + 20 = 295
-        assert_that(result.left).is_close_to(295.0, 0.01);
+        assert_that!(result.left).is_close_to(295.0, 0.01);
         // top unchanged
-        assert_that(result.top).is_close_to(250.0, 0.01);
+        assert_that!(result.top).is_close_to(250.0, 0.01);
     }
 
     #[test]
@@ -609,7 +609,7 @@ mod tests {
         input.cross_offset = 15.0;
         let result = calculate_position(&input);
         // X main → cross axis is Y → top += 15 → 175 + 15 = 190
-        assert_that(result.top).is_close_to(190.0, 0.01);
+        assert_that!(result.top).is_close_to(190.0, 0.01);
     }
 
     // =========================================================================
@@ -624,9 +624,9 @@ mod tests {
         // Space above = 700 = plenty.
         input.target.top = 700.0;
         let result = calculate_position(&input);
-        assert_that(result.placement_y).is_equal_to(PlacementY::Above);
+        assert_that!(result.placement_y).is_equal_to(PlacementY::Above);
         // Above: top = 700 - 100 = 600
-        assert_that(result.top).is_close_to(600.0, 0.01);
+        assert_that!(result.top).is_close_to(600.0, 0.01);
     }
 
     #[test]
@@ -637,7 +637,7 @@ mod tests {
         // Space below = 768 - (50 + 50) = 668.
         input.target.top = 50.0;
         let result = calculate_position(&input);
-        assert_that(result.placement_y).is_equal_to(PlacementY::Below);
+        assert_that!(result.placement_y).is_equal_to(PlacementY::Below);
     }
 
     #[test]
@@ -649,7 +649,7 @@ mod tests {
         // Space left = 900.
         input.target.left = 900.0;
         let result = calculate_position(&input);
-        assert_that(result.placement_x).is_equal_to(PhysicalPlacementX::OuterLeft);
+        assert_that!(result.placement_x).is_equal_to(PhysicalPlacementX::OuterLeft);
     }
 
     #[test]
@@ -661,7 +661,7 @@ mod tests {
         // Space right = 1024 - 150 = 874.
         input.target.left = 50.0;
         let result = calculate_position(&input);
-        assert_that(result.placement_x).is_equal_to(PhysicalPlacementX::OuterRight);
+        assert_that!(result.placement_x).is_equal_to(PhysicalPlacementX::OuterRight);
     }
 
     #[test]
@@ -671,7 +671,7 @@ mod tests {
         // Target near bottom, would normally flip.
         input.target.top = 700.0;
         let result = calculate_position(&input);
-        assert_that(result.placement_y).is_equal_to(PlacementY::Below);
+        assert_that!(result.placement_y).is_equal_to(PlacementY::Below);
     }
 
     #[test]
@@ -682,7 +682,7 @@ mod tests {
         input.overlay.height = 500.0;
         // Space below = 768 - 250 = 518, space above = 200. Below is better, don't flip.
         let result = calculate_position(&input);
-        assert_that(result.placement_y).is_equal_to(PlacementY::Below);
+        assert_that!(result.placement_y).is_equal_to(PlacementY::Below);
     }
 
     // =========================================================================
@@ -699,7 +699,7 @@ mod tests {
         input.target.left = 20.0;
         let result = calculate_position(&input);
         // Should be nudged to at least container_padding (12)
-        assert_that(result.left).is_greater_or_equal_to(12.0);
+        assert_that!(result.left).is_greater_or_equal_to(12.0);
     }
 
     #[test]
@@ -712,7 +712,7 @@ mod tests {
         let result = calculate_position(&input);
         // Right edge of overlay should be <= boundary.right - padding
         let right_edge = result.left + 150.0;
-        assert_that(right_edge).is_less_or_equal_to(1012.0);
+        assert_that!(right_edge).is_less_or_equal_to(1012.0);
     }
 
     #[test]
@@ -725,7 +725,7 @@ mod tests {
         input.target.top = 25.0;
         input.target.height = 50.0;
         let result = calculate_position(&input);
-        assert_that(result.top).is_greater_or_equal_to(12.0);
+        assert_that!(result.top).is_greater_or_equal_to(12.0);
     }
 
     // =========================================================================
@@ -738,7 +738,7 @@ mod tests {
         input.container_padding = 12.0;
         let result = calculate_position(&input);
         // Below: max_height = boundary.bottom - top - padding = 768 - 250 - 12 = 506
-        assert_that(result.max_height).is_close_to(506.0, 0.01);
+        assert_that!(result.max_height).is_close_to(506.0, 0.01);
     }
 
     #[test]
@@ -749,7 +749,7 @@ mod tests {
         let result = calculate_position(&input);
         // Above: max_height = (top + overlay.height) - boundary.top - padding
         //       = (100 + 100) - 0 - 12 = 188
-        assert_that(result.max_height).is_close_to(188.0, 0.01);
+        assert_that!(result.max_height).is_close_to(188.0, 0.01);
     }
 
     #[test]
@@ -758,7 +758,7 @@ mod tests {
         input.max_height = Some(200.0);
         let result = calculate_position(&input);
         // Computed max_height = 768 - 250 - 0 = 518. min(518, 200) = 200
-        assert_that(result.max_height).is_close_to(200.0, 0.01);
+        assert_that!(result.max_height).is_close_to(200.0, 0.01);
     }
 
     #[test]
@@ -768,7 +768,7 @@ mod tests {
         input.max_height = Some(9999.0);
         let result = calculate_position(&input);
         // Computed = 506, user = 9999, result = 506
-        assert_that(result.max_height).is_close_to(506.0, 0.01);
+        assert_that!(result.max_height).is_close_to(506.0, 0.01);
     }
 
     // =========================================================================
@@ -788,8 +788,8 @@ mod tests {
         // Recompute: top = 80 - 68 = 12.
         input.target.top = 80.0;
         let result = calculate_position(&input);
-        assert_that(result.max_height).is_close_to(68.0, 0.01);
-        assert_that(result.top).is_close_to(12.0, 0.01);
+        assert_that!(result.max_height).is_close_to(68.0, 0.01);
+        assert_that!(result.top).is_close_to(12.0, 0.01);
     }
 
     // =========================================================================
@@ -804,8 +804,8 @@ mod tests {
         input.container_padding = 12.0;
         let result = calculate_position(&input);
         // Should still produce valid (non-NaN) results, nudged to container_padding
-        assert_that(result.left).is_close_to(12.0, 0.01);
-        assert_that(result.max_height).is_greater_or_equal_to(0.0);
+        assert_that!(result.left).is_close_to(12.0, 0.01);
+        assert_that!(result.max_height).is_greater_or_equal_to(0.0);
     }
 
     // =========================================================================

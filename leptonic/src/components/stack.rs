@@ -1,4 +1,6 @@
-use crate::utils::css::CssDimension;
+use crate::utils::css::{CssDimension, css_custom_property};
+
+css_custom_property!(STACK_GAP: CssDimension = "--gap");
 use leptos::prelude::*;
 use leptos_classes::Classes;
 use leptos_styles::Styles;
@@ -31,7 +33,7 @@ pub fn Stack(
         <div
             class=classes.add("leptonic-stack")
             data-orientation=orientation.as_str()
-            style=styles.add("--gap", spacing)
+            style=styles.add(STACK_GAP.declare(spacing))
         >
             {children()}
         </div>

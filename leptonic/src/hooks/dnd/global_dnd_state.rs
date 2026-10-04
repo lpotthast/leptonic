@@ -1,14 +1,16 @@
+// Upstream: react-aria/src/dnd/utils.ts @ 6f664fe911
 //! Global thread-local state for cross-collection drag-and-drop coordination.
 //!
 //! Tracks which keys are being dragged and which collection element is the
 //! source, enabling detection of internal vs external drop operations.
 //!
 //! Based on react-aria's global drag-and-drop state tracking in
-//! `@react-aria/dnd/src/utils.ts`.
+//! `react-aria/src/dnd/utils.ts`.
 
 use std::collections::HashSet;
 
 #[cfg(feature = "ssr")]
+#[allow(clippy::implicit_hasher)] // Must match the signature of the client-side variant.
 pub fn set_dragging_keys(_keys: &HashSet<String>) {}
 
 #[cfg(feature = "ssr")]

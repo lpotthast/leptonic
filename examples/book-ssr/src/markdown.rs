@@ -150,10 +150,10 @@ impl MarkdownCache {
 
                 // Occurrence frequency (capped at 20)
                 let occurrence_count = md_lower.matches(&query_lower).count();
-                score += (occurrence_count.min(20) * 10) as i64;
+                score += i64::try_from(occurrence_count.min(20) * 10).unwrap_or_default();
 
                 // Early position bonus
-                score += ((1000 - first_idx.min(1000)) / 10) as i64;
+                score += i64::try_from((1000 - first_idx.min(1000)) / 10).unwrap_or_default();
 
                 // Build snippet with context
                 let snippet = if title_lower.contains(&query_lower) {
@@ -167,7 +167,7 @@ impl MarkdownCache {
                 } else {
                     let start = snap_to_word_start(&doc.markdown, first_idx.saturating_sub(60));
                     let end = snap_to_word_end(&doc.markdown, first_idx + query.len() + 60);
-                    format!("...{}...", &doc.markdown[start..end].replace('\n', " "))
+                    format!("...{}...", doc.markdown[start..end].replace('\n', " "))
                 };
 
                 Some((
@@ -305,22 +305,7 @@ fn compute_etag(content: &str) -> String {
 }
 
 fn infer_layer(path: &str) -> DocLayer {
-    if path.ends_with("/hook") {
-        return DocLayer::Hook;
-    }
-    if path.ends_with("/atom") {
-        return DocLayer::Atom;
-    }
-    if path.ends_with("/component") {
-        return DocLayer::Component;
-    }
-    if path.starts_with("/doc/hooks/") {
-        return DocLayer::Hook;
-    }
-    if path.starts_with("/doc/components/") {
-        return DocLayer::Component;
-    }
-    let domains = [
+    const DOMAINS: &[&str] = &[
         "/doc/interactions",
         "/doc/focus",
         "/doc/overlays",
@@ -332,9 +317,6 @@ fn infer_layer(path: &str) -> DocLayer {
         "/doc/navigation",
         "/doc/general",
     ];
-    if domains.contains(&path) {
-        return DocLayer::Domain;
-    }
     const CONCEPTS: &[&str] = &[
         "/doc/button",
         "/doc/checkbox",
@@ -358,6 +340,25 @@ fn infer_layer(path: &str) -> DocLayer {
         "/doc/tooltip",
         "/doc/link",
     ];
+
+    if path.ends_with("/hook") {
+        return DocLayer::Hook;
+    }
+    if path.ends_with("/atom") {
+        return DocLayer::Atom;
+    }
+    if path.ends_with("/component") {
+        return DocLayer::Component;
+    }
+    if path.starts_with("/doc/hooks/") {
+        return DocLayer::Hook;
+    }
+    if path.starts_with("/doc/components/") {
+        return DocLayer::Component;
+    }
+    if DOMAINS.contains(&path) {
+        return DocLayer::Domain;
+    }
     if CONCEPTS.contains(&path) {
         return DocLayer::Concept;
     }
@@ -470,11 +471,11 @@ fn extract_related(markdown: &str) -> Vec<(String, String)> {
     let mut in_see_also = false;
 
     for line in markdown.lines() {
-        if line.starts_with("## ") {
+        if let Some(heading) = line.strip_prefix("## ") {
             if in_see_also {
                 break; // Next section, stop.
             }
-            if line[3..].trim().eq_ignore_ascii_case("see also") {
+            if heading.trim().eq_ignore_ascii_case("see also") {
                 in_see_also = true;
             }
             continue;
@@ -539,7 +540,11 @@ fn rewrite_internal_links(markdown: &str) -> String {
             let link_rest = &rest[link_start..];
             if let Some(paren_end) = link_rest.iter().position(|&b| b == b')') {
                 let link = std::str::from_utf8(&link_rest[..paren_end]).unwrap_or("");
-                if link.ends_with(".md") || link.contains(".md#") {
+                if std::path::Path::new(link)
+                    .extension()
+                    .is_some_and(|ext| ext.eq_ignore_ascii_case("md"))
+                    || link.contains(".md#")
+                {
                     // Already has .md, keep as-is.
                     line_result.push_str(link);
                 } else if let Some(hash_pos) = link.find('#') {

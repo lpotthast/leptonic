@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/grid/GridKeyboardDelegate.ts @ 6f664fe911
 use std::collections::HashSet;
 
 use leptos::prelude::*;
@@ -5,7 +6,7 @@ use leptos::prelude::*;
 use super::grid_collection::GridCollection;
 use crate::hooks::selection::{SelectionKey, keyboard_delegate::KeyboardDelegate};
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/GridKeyboardDelegate.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/grid/GridKeyboardDelegate.ts
 
 // ## DIFFERENT BEHAVIOR
 // - Reads signals lazily via `get_untracked()` instead of react-aria's `useMemo`
@@ -200,14 +201,13 @@ where
     fn get_first_key(&self, from_key: Option<&K>, global: bool) -> Option<K> {
         let collection = self.collection.get_untracked();
 
-        if !global {
-            if let Some(fk) = from_key {
-                if collection.is_cell_key(fk) {
-                    // First cell in the same row.
-                    let (row, _) = collection.get_row_for_cell(fk)?;
-                    return row.cells.first().cloned();
-                }
-            }
+        if !global
+            && let Some(fk) = from_key
+            && collection.is_cell_key(fk)
+        {
+            // First cell in the same row.
+            let (row, _) = collection.get_row_for_cell(fk)?;
+            return row.cells.first().cloned();
         }
 
         // Global first: first row (or first cell if Cell mode).
@@ -222,14 +222,13 @@ where
     fn get_last_key(&self, from_key: Option<&K>, global: bool) -> Option<K> {
         let collection = self.collection.get_untracked();
 
-        if !global {
-            if let Some(fk) = from_key {
-                if collection.is_cell_key(fk) {
-                    // Last cell in the same row.
-                    let (row, _) = collection.get_row_for_cell(fk)?;
-                    return row.cells.last().cloned();
-                }
-            }
+        if !global
+            && let Some(fk) = from_key
+            && collection.is_cell_key(fk)
+        {
+            // Last cell in the same row.
+            let (row, _) = collection.get_row_for_cell(fk)?;
+            return row.cells.last().cloned();
         }
 
         // Global last: last row (or last cell if Cell mode).
@@ -280,17 +279,17 @@ mod tests {
         let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Cell);
 
-        assert_that(d.get_key_below(&"0-1".into()))
-            .is_some()
+        assert_that!(d.get_key_below(&"0-1".into()))
+            .get_some()
             .is_equal_to("1-1");
 
         // At bottom-right, should clamp column
-        assert_that(d.get_key_below(&"1-2".into()))
-            .is_some()
+        assert_that!(d.get_key_below(&"1-2".into()))
+            .get_some()
             .is_equal_to("2-1");
 
         // Last row cell, no row below
-        assert_that(d.get_key_below(&"2-0".into())).is_none();
+        assert_that!(d.get_key_below(&"2-0".into())).is_none();
     }
 
     #[test]
@@ -298,12 +297,12 @@ mod tests {
         let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Cell);
 
-        assert_that(d.get_key_above(&"1-1".into()))
-            .is_some()
+        assert_that!(d.get_key_above(&"1-1".into()))
+            .get_some()
             .is_equal_to("0-1");
 
         // First row, no row above
-        assert_that(d.get_key_above(&"0-0".into())).is_none();
+        assert_that!(d.get_key_above(&"0-0".into())).is_none();
     }
 
     #[test]
@@ -311,19 +310,19 @@ mod tests {
         let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Cell);
 
-        assert_that(d.get_key_right_of(&"0-0".into()))
-            .is_some()
+        assert_that!(d.get_key_right_of(&"0-0".into()))
+            .get_some()
             .is_equal_to("0-1");
 
         // End of row in Cell mode: None
-        assert_that(d.get_key_right_of(&"0-2".into())).is_none();
+        assert_that!(d.get_key_right_of(&"0-2".into())).is_none();
 
-        assert_that(d.get_key_left_of(&"0-1".into()))
-            .is_some()
+        assert_that!(d.get_key_left_of(&"0-1".into()))
+            .get_some()
             .is_equal_to("0-0");
 
         // Start of row in Cell mode: None
-        assert_that(d.get_key_left_of(&"0-0".into())).is_none();
+        assert_that!(d.get_key_left_of(&"0-0".into())).is_none();
     }
 
     #[test]
@@ -332,13 +331,13 @@ mod tests {
         let d = make_delegate(GridFocusMode::Row);
 
         // Right from row key → first cell
-        assert_that(d.get_key_right_of(&"row-0".into()))
-            .is_some()
+        assert_that!(d.get_key_right_of(&"row-0".into()))
+            .get_some()
             .is_equal_to("0-0");
 
         // At end of row in Row mode → back to row key
-        assert_that(d.get_key_right_of(&"0-2".into()))
-            .is_some()
+        assert_that!(d.get_key_right_of(&"0-2".into()))
+            .get_some()
             .is_equal_to("row-0");
     }
 
@@ -348,13 +347,13 @@ mod tests {
         let d = make_delegate(GridFocusMode::Row);
 
         // Left from row key → last cell
-        assert_that(d.get_key_left_of(&"row-0".into()))
-            .is_some()
+        assert_that!(d.get_key_left_of(&"row-0".into()))
+            .get_some()
             .is_equal_to("0-2");
 
         // At start of row in Row mode → back to row key
-        assert_that(d.get_key_left_of(&"0-0".into()))
-            .is_some()
+        assert_that!(d.get_key_left_of(&"0-0".into()))
+            .get_some()
             .is_equal_to("row-0");
     }
 
@@ -364,29 +363,29 @@ mod tests {
 
         let d_cell = make_delegate(GridFocusMode::Cell);
         // Global first in Cell mode → first cell
-        assert_that(d_cell.get_first_key(None, true))
-            .is_some()
+        assert_that!(d_cell.get_first_key(None, true))
+            .get_some()
             .is_equal_to("0-0");
 
         // From a cell, non-global → first cell in same row
-        assert_that(d_cell.get_first_key(Some(&"1-2".into()), false))
-            .is_some()
+        assert_that!(d_cell.get_first_key(Some(&"1-2".into()), false))
+            .get_some()
             .is_equal_to("1-0");
 
         // Global last in Cell mode → last cell of last row
-        assert_that(d_cell.get_last_key(None, true))
-            .is_some()
+        assert_that!(d_cell.get_last_key(None, true))
+            .get_some()
             .is_equal_to("2-1");
 
         let d_row = make_delegate(GridFocusMode::Row);
         // Global first in Row mode → first row key
-        assert_that(d_row.get_first_key(None, true))
-            .is_some()
+        assert_that!(d_row.get_first_key(None, true))
+            .get_some()
             .is_equal_to("row-0");
 
         // Global last in Row mode → last row key
-        assert_that(d_row.get_last_key(None, true))
-            .is_some()
+        assert_that!(d_row.get_last_key(None, true))
+            .get_some()
             .is_equal_to("row-2");
     }
 
@@ -395,15 +394,15 @@ mod tests {
         let _owner = Owner::new();
         let d = make_delegate(GridFocusMode::Row);
 
-        assert_that(d.get_key_below(&"row-0".into()))
-            .is_some()
+        assert_that!(d.get_key_below(&"row-0".into()))
+            .get_some()
             .is_equal_to("row-1");
 
-        assert_that(d.get_key_above(&"row-2".into()))
-            .is_some()
+        assert_that!(d.get_key_above(&"row-2".into()))
+            .get_some()
             .is_equal_to("row-1");
 
-        assert_that(d.get_key_below(&"row-2".into())).is_none();
-        assert_that(d.get_key_above(&"row-0".into())).is_none();
+        assert_that!(d.get_key_below(&"row-2".into())).is_none();
+        assert_that!(d.get_key_above(&"row-0".into())).is_none();
     }
 }

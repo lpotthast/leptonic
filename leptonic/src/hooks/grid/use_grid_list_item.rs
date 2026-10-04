@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/gridlist/useGridListItem.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::Attr,
@@ -282,14 +283,13 @@ where
                 // Otherwise: no-op. The event may bubble to the container which also ignores
                 // ArrowLeft/ArrowRight.
             }
-            "ArrowLeft" => {
+            "ArrowLeft"
                 if focus_manager_for_keydown
                     .focus_previous(FocusManagerOptions::default())
-                    .is_some()
-                {
-                    e.stop_propagation();
-                    e.prevent_default();
-                }
+                    .is_some() =>
+            {
+                e.stop_propagation();
+                e.prevent_default();
             }
             // ArrowUp, ArrowDown, Space, Enter, Home, End, Escape, Ctrl+A:
             // let bubble to grid list container handler.

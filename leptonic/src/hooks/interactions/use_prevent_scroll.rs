@@ -1,4 +1,5 @@
-// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/overlays/src/usePreventScroll.ts
+// Upstream: react-aria/src/overlays/usePreventScroll.ts @ 6f664fe911
+// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/usePreventScroll.ts
 //
 // Intentional deviations from react-aria:
 // - DEV-I1: `disabled` is `Signal<bool>` (reactive) instead of a plain `bool`.
@@ -109,10 +110,10 @@ fn decrement_and_maybe_restore() {
     PREVENT_SCROLL_STATE.with(|state| {
         let mut state = state.borrow_mut();
         state.count = state.count.saturating_sub(1);
-        if state.count == 0 {
-            if let Some(restore) = state.restore.take() {
-                restore();
-            }
+        if state.count == 0
+            && let Some(restore) = state.restore.take()
+        {
+            restore();
         }
     });
 }
@@ -247,27 +248,25 @@ fn prevent_scroll_mobile_safari() -> Option<Box<dyn FnOnce()>> {
             allow_touch_move_ts.set(false);
 
             // If the target is selected, don't preventDefault in touchmove to allow user to adjust selection.
-            if let Some(window) = target_el.owner_document().and_then(|d| d.default_view()) {
-                if let Ok(Some(selection)) = window.get_selection() {
-                    if !selection.is_collapsed()
-                        && selection
-                            .contains_node_with_allow_partial_containment(&target_el, true)
-                            .unwrap_or(false)
-                    {
-                        allow_touch_move_ts.set(true);
-                    }
-                }
+            if let Some(window) = target_el.owner_document().and_then(|d| d.default_view())
+                && let Ok(Some(selection)) = window.get_selection()
+                && !selection.is_collapsed()
+                && selection
+                    .contains_node_with_allow_partial_containment(&target_el, true)
+                    .unwrap_or(false)
+            {
+                allow_touch_move_ts.set(true);
             }
 
             // If this is a range input, allow touch move to allow user to adjust the slider value.
             let composed_path = e.composed_path();
             for i in 0..composed_path.length() {
                 let item = composed_path.get(i);
-                if let Some(input) = item.dyn_ref::<web_sys::HtmlInputElement>() {
-                    if input.type_() == "range" {
-                        allow_touch_move_ts.set(true);
-                        break;
-                    }
+                if let Some(input) = item.dyn_ref::<web_sys::HtmlInputElement>()
+                    && input.type_() == "range"
+                {
+                    allow_touch_move_ts.set(true);
+                    break;
                 }
             }
 
@@ -275,27 +274,20 @@ fn prevent_scroll_mobile_safari() -> Option<Box<dyn FnOnce()>> {
             if let Some(input) = target_el.dyn_ref::<web_sys::HtmlInputElement>() {
                 if let (Ok(Some(start)), Ok(Some(end))) =
                     (input.selection_start(), input.selection_end())
+                    && start < end
+                    && let Some(doc) = target_el.owner_document()
+                    && doc.active_element().as_ref() == Some(&target_el)
                 {
-                    if start < end {
-                        if let Some(doc) = target_el.owner_document() {
-                            if doc.active_element().as_ref() == Some(&target_el) {
-                                allow_touch_move_ts.set(true);
-                            }
-                        }
-                    }
+                    allow_touch_move_ts.set(true);
                 }
-            } else if let Some(textarea) = target_el.dyn_ref::<web_sys::HtmlTextAreaElement>() {
-                if let (Ok(Some(start)), Ok(Some(end))) =
+            } else if let Some(textarea) = target_el.dyn_ref::<web_sys::HtmlTextAreaElement>()
+                && let (Ok(Some(start)), Ok(Some(end))) =
                     (textarea.selection_start(), textarea.selection_end())
-                {
-                    if start < end {
-                        if let Some(doc) = target_el.owner_document() {
-                            if doc.active_element().as_ref() == Some(&target_el) {
-                                allow_touch_move_ts.set(true);
-                            }
-                        }
-                    }
-                }
+                && start < end
+                && let Some(doc) = target_el.owner_document()
+                && doc.active_element().as_ref() == Some(&target_el)
+            {
+                allow_touch_move_ts.set(true);
             }
         }));
 
@@ -335,10 +327,11 @@ fn prevent_scroll_mobile_safari() -> Option<Box<dyn FnOnce()>> {
             // block horizontal scrolling too. In that case, adding `touch-action: pan-x` to
             // the element will prevent vertical page scrolling. We can't add that automatically
             // because it must be set before the touchstart event.
-            if let Some(s) = scrollable {
-                if s.scroll_height() == s.client_height() && s.scroll_width() == s.client_width() {
-                    e.prevent_default();
-                }
+            if let Some(s) = scrollable
+                && s.scroll_height() == s.client_height()
+                && s.scroll_width() == s.client_width()
+            {
+                e.prevent_default();
             }
         }));
 
@@ -369,15 +362,14 @@ fn prevent_scroll_mobile_safari() -> Option<Box<dyn FnOnce()>> {
                 // the same input again, it is already focused, so no blur event will fire,
                 // resulting in the flow above never running and Safari's native scrolling occurring.
                 // Instead, move focus to the parent focusable element (e.g. the dialog).
-                if let Some(target_el) = target_el {
-                    if let Some(parent) = target_el.parent_element() {
-                        if let Ok(Some(focusable)) = parent.closest("[tabindex]") {
-                            let focusable: HtmlElement = focusable.unchecked_into();
-                            let opts = web_sys::FocusOptions::new();
-                            opts.set_prevent_scroll(true);
-                            focusable.focus_with_options(&opts).ok();
-                        }
-                    }
+                if let Some(target_el) = target_el
+                    && let Some(parent) = target_el.parent_element()
+                    && let Ok(Some(focusable)) = parent.closest("[tabindex]")
+                {
+                    let focusable: HtmlElement = focusable.unchecked_into();
+                    let opts = web_sys::FocusOptions::new();
+                    opts.set_prevent_scroll(true);
+                    focusable.focus_with_options(&opts).ok();
                 }
             }
         }));
@@ -644,7 +636,7 @@ fn scroll_into_view_centered(target: &HtmlElement) {
             let adjustment = (target_rect.top() - scrollable_rect.top())
                 - ((bottom - scrollable_rect.top()) / 2.0 - target_rect.height() / 2.0);
 
-            let scroll_top = scrollable.scroll_top() as f64 + adjustment;
+            let scroll_top = scrollable.scroll_top() + adjustment;
             let max_scroll = f64::from(scrollable.scroll_height() - scrollable.client_height());
 
             let opts = web_sys::ScrollToOptions::new();

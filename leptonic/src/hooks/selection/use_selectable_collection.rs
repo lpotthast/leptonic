@@ -1,6 +1,13 @@
+// Upstream: react-aria/src/selection/useSelectableCollection.ts @ 6f664fe911
 use std::collections::HashSet;
 
+use crate::utils::id::use_id;
 use leptos::{
+    attr,
+    attr::{
+        Attr,
+        custom::{CustomAttr, custom_attribute},
+    },
     ev,
     ev::{On, SharedEventCallback},
     prelude::*,
@@ -33,7 +40,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableCollection.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/selection/useSelectableCollection.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -153,9 +160,12 @@ impl IntoAttrs for UseSelectableCollectionProps {
 
     fn into_attrs(self) -> Self::Attrs {
         (
+            Attr(attr::Tabindex, self.tabindex),
+            custom_attribute("data-collection", self.collection_id),
             self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
+            // Like React's `onFocus`/`onBlur`, these must see focus moving onto items.
+            self.on_focus.into_on(ev::focusin),
+            self.on_blur.into_on(ev::focusout),
             self.on_mousedown.into_on(ev::mousedown),
         )
     }
@@ -163,9 +173,11 @@ impl IntoAttrs for UseSelectableCollectionProps {
 
 /// Attributes for the collection container element.
 pub type UseSelectableCollectionAttrs = (
+    Attr<attr::Tabindex, Signal<i32>>,
+    CustomAttr<&'static str, String>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
 );
 
@@ -249,7 +261,7 @@ where
 
     // --- Collection ID ---
     // Unique identifier for scoped data-key queries (prevents false matches in nested collections).
-    let collection_id = uuid::Uuid::new_v4().to_string();
+    let collection_id = use_id("collection");
     let collection_id_for_scroll = collection_id.clone();
 
     // --- Scroll position save/restore ---
@@ -309,14 +321,13 @@ where
             };
 
             // 2. Remove the OLD range (anchor → old current_key)
-            if let Selection::Keys(ref set) = current_selection {
-                if let Some(ref old_current) = set.current_key {
-                    if let Some(oc) = keys.iter().position(|k| k == old_current) {
-                        let (os, oe) = if a <= oc { (a, oc) } else { (oc, a) };
-                        for key in &keys[os..=oe] {
-                            new_keys.remove(key);
-                        }
-                    }
+            if let Selection::Keys(ref set) = current_selection
+                && let Some(ref old_current) = set.current_key
+                && let Some(oc) = keys.iter().position(|k| k == old_current)
+            {
+                let (os, oe) = if a <= oc { (a, oc) } else { (oc, a) };
+                for key in &keys[os..=oe] {
+                    new_keys.remove(key);
                 }
             }
 
@@ -392,33 +403,35 @@ where
 
         match e.key().as_str() {
             "ArrowDown" => {
-                if let Some(next_key) = focused
-                    .as_ref()
-                    .and_then(|fk| delegate.get_key_below(fk))
-                    .or_else(|| delegate.get_first_key(None, false))
-                {
+                // Without a focused item, start at the edge. Only wrap when asked to.
+                let next_key = match focused.as_ref() {
+                    Some(fk) => delegate.get_key_below(fk),
+                    None => delegate.get_first_key(None, false),
+                };
+                if let Some(next_key) = next_key {
                     e.prevent_default();
                     navigate_to_key(next_key, &e, None);
-                } else if should_focus_wrap {
-                    if let Some(first) = delegate.get_first_key(focused.as_ref(), false) {
-                        e.prevent_default();
-                        navigate_to_key(first, &e, None);
-                    }
+                } else if should_focus_wrap
+                    && let Some(first) = delegate.get_first_key(focused.as_ref(), false)
+                {
+                    e.prevent_default();
+                    navigate_to_key(first, &e, None);
                 }
             }
             "ArrowUp" => {
-                if let Some(next_key) = focused
-                    .as_ref()
-                    .and_then(|fk| delegate.get_key_above(fk))
-                    .or_else(|| delegate.get_last_key(None, false))
-                {
+                // Without a focused item, start at the edge. Only wrap when asked to.
+                let next_key = match focused.as_ref() {
+                    Some(fk) => delegate.get_key_above(fk),
+                    None => delegate.get_last_key(None, false),
+                };
+                if let Some(next_key) = next_key {
                     e.prevent_default();
                     navigate_to_key(next_key, &e, None);
-                } else if should_focus_wrap {
-                    if let Some(last) = delegate.get_last_key(focused.as_ref(), false) {
-                        e.prevent_default();
-                        navigate_to_key(last, &e, None);
-                    }
+                } else if should_focus_wrap
+                    && let Some(last) = delegate.get_last_key(focused.as_ref(), false)
+                {
+                    e.prevent_default();
+                    navigate_to_key(last, &e, None);
                 }
             }
             "ArrowLeft" => {
@@ -453,11 +466,11 @@ where
                 {
                     e.prevent_default();
                     navigate_to_key(next_key, &e, child_focus);
-                } else if should_focus_wrap {
-                    if let Some(key) = delegate.get_first_key(focused.as_ref(), false) {
-                        e.prevent_default();
-                        navigate_to_key(key, &e, child_focus);
-                    }
+                } else if should_focus_wrap
+                    && let Some(key) = delegate.get_first_key(focused.as_ref(), false)
+                {
+                    e.prevent_default();
+                    navigate_to_key(key, &e, child_focus);
                 }
             }
             "Home" => {
@@ -499,19 +512,19 @@ where
                 }
             }
             "PageDown" => {
-                if let Some(fk) = &focused {
-                    if let Some(next_key) = delegate.get_key_page_below(fk) {
-                        e.prevent_default();
-                        navigate_to_key(next_key, &e, None);
-                    }
+                if let Some(fk) = &focused
+                    && let Some(next_key) = delegate.get_key_page_below(fk)
+                {
+                    e.prevent_default();
+                    navigate_to_key(next_key, &e, None);
                 }
             }
             "PageUp" => {
-                if let Some(fk) = &focused {
-                    if let Some(next_key) = delegate.get_key_page_above(fk) {
-                        e.prevent_default();
-                        navigate_to_key(next_key, &e, None);
-                    }
+                if let Some(fk) = &focused
+                    && let Some(next_key) = delegate.get_key_page_above(fk)
+                {
+                    e.prevent_default();
+                    navigate_to_key(next_key, &e, None);
                 }
             }
             " " | "Enter" => {
@@ -519,14 +532,14 @@ where
                 if e.default_prevented() {
                     return;
                 }
-                if let Some(ref key) = focused {
-                    if state.can_select_item.run(key.clone()) {
-                        e.prevent_default();
-                        if selection_mode == SelectionMode::Single {
-                            state.replace_selection_single.run(key.clone());
-                        } else if selection_mode == SelectionMode::Multiple {
-                            state.toggle.run(key.clone());
-                        }
+                if let Some(ref key) = focused
+                    && state.can_select_item.run(key.clone())
+                {
+                    e.prevent_default();
+                    if selection_mode == SelectionMode::Single {
+                        state.replace_selection_single.run(key.clone());
+                    } else if selection_mode == SelectionMode::Multiple {
+                        state.toggle.run(key.clone());
                     }
                 }
             }
@@ -543,34 +556,34 @@ where
                         // Shift+Tab: clear focused key so the container gets tabindex=0,
                         // then focus the container. The browser's default Shift+Tab then
                         // moves focus to the element before the collection.
-                        if let Some(container) = collection_ref.get_untracked() {
-                            if let Some(el) = container.dyn_ref::<web_sys::HtmlElement>() {
-                                state.set_focused_key.run((None, None));
-                                focus_safely(el);
-                            }
+                        if let Some(container) = collection_ref.get_untracked()
+                            && let Some(el) = container.dyn_ref::<web_sys::HtmlElement>()
+                        {
+                            state.set_focused_key.run((None, None));
+                            focus_safely(el);
                         }
                     } else {
                         // Tab: focus the last tabbable element inside the collection.
                         // The browser's default Tab then moves focus to the next element
                         // after the collection, completing the single-tab-stop behavior.
-                        if let Some(container) = collection_ref.get_untracked() {
-                            if let Some(walker) = get_focusable_tree_walker(
+                        if let Some(container) = collection_ref.get_untracked()
+                            && let Some(walker) = get_focusable_tree_walker(
                                 container.as_ref(),
                                 FocusableTreeWalkerOptions {
                                     tabbable: true,
                                     ..FocusableTreeWalkerOptions::default()
                                 },
-                            ) {
-                                let mut last = None;
-                                let mut w = walker;
-                                while let Some(node) = w.last_child() {
-                                    last = Some(node);
-                                }
-                                if let Some(last_node) = last {
-                                    if let Some(el) = last_node.dyn_ref::<web_sys::HtmlElement>() {
-                                        let _ = el.focus();
-                                    }
-                                }
+                            )
+                        {
+                            let mut last = None;
+                            let mut w = walker;
+                            while let Some(node) = w.last_child() {
+                                last = Some(node);
+                            }
+                            if let Some(last_node) = last
+                                && let Some(el) = last_node.dyn_ref::<web_sys::HtmlElement>()
+                            {
+                                let _ = el.focus();
                             }
                         }
                     }
@@ -615,26 +628,26 @@ where
         state.set_focused.run(true);
 
         // Restore scroll position to prevent jump on focus.
-        if let Some(container) = collection_ref.get_untracked() {
-            if let Some(html_el) = container.dyn_ref::<web_sys::HtmlElement>() {
-                let (top, left) = scroll_pos.get_value();
-                html_el.set_scroll_top(top);
-                html_el.set_scroll_left(left);
-            }
+        if let Some(container) = collection_ref.get_untracked()
+            && let Some(html_el) = container.dyn_ref::<web_sys::HtmlElement>()
+        {
+            let (top, left) = scroll_pos.get_value();
+            html_el.set_scroll_top(top);
+            html_el.set_scroll_left(left);
         }
 
         if state.focused_key.get_untracked().is_none() {
             // Determine if user is tabbing forward or backward into the collection
             let should_focus_last = e.related_target().is_some_and(|related| {
-                if let Some(current_target) = e.current_target() {
-                    if let (Some(current_node), Some(related_node)) = (
+                if let Some(current_target) = e.current_target()
+                    && let (Some(current_node), Some(related_node)) = (
                         current_target.dyn_ref::<web_sys::Node>(),
                         related.dyn_ref::<web_sys::Node>(),
-                    ) {
-                        let position = current_node.compare_document_position(related_node);
-                        // DOCUMENT_POSITION_FOLLOWING = 4
-                        return position & 4 != 0;
-                    }
+                    )
+                {
+                    let position = current_node.compare_document_position(related_node);
+                    // DOCUMENT_POSITION_FOLLOWING = 4
+                    return position & 4 != 0;
                 }
                 false
             });
@@ -682,13 +695,13 @@ where
     let on_blur = move |e: FocusEvent| {
         // Don't set blurred if moving focus within the collection
         let stays_within = e.related_target().is_some_and(|related| {
-            if let Some(current_target) = e.current_target() {
-                if let (Some(container_node), Some(related_node)) = (
+            if let Some(current_target) = e.current_target()
+                && let (Some(container_node), Some(related_node)) = (
                     current_target.dyn_ref::<web_sys::Node>(),
                     related.dyn_ref::<web_sys::Node>(),
-                ) {
-                    return container_node.contains(Some(related_node));
-                }
+                )
+            {
+                return container_node.contains(Some(related_node));
             }
             false
         });
@@ -696,10 +709,10 @@ where
         if !stays_within {
             // Save scroll position before losing focus, so we can restore it
             // when focus returns (prevents scroll jump).
-            if let Some(container) = collection_ref.get_untracked() {
-                if let Some(html_el) = container.dyn_ref::<web_sys::HtmlElement>() {
-                    scroll_pos.set_value((html_el.scroll_top(), html_el.scroll_left()));
-                }
+            if let Some(container) = collection_ref.get_untracked()
+                && let Some(html_el) = container.dyn_ref::<web_sys::HtmlElement>()
+            {
+                scroll_pos.set_value((html_el.scroll_top(), html_el.scroll_left()));
             }
             state.set_focused.run(false);
         }
@@ -707,13 +720,13 @@ where
 
     // --- Mousedown handler (prevent scrollbar click from stealing focus) ---
     let on_mousedown = move |e: MouseEvent| {
-        if let Some(container) = collection_ref.get_untracked() {
-            if let Some(target) = get_event_target(&e) {
-                // If the click target is the scroll container itself (not a child),
-                // that means the user clicked the scrollbar area.
-                if target.dyn_ref::<web_sys::Element>() == Some(container.as_ref()) {
-                    e.prevent_default();
-                }
+        if let Some(container) = collection_ref.get_untracked()
+            && let Some(target) = get_event_target(&e)
+        {
+            // If the click target is the scroll container itself (not a child),
+            // that means the user clicked the scrollbar area.
+            if target.dyn_ref::<web_sys::Element>() == Some(container.as_ref()) {
+                e.prevent_default();
             }
         }
     };
@@ -735,38 +748,33 @@ where
             let current_focused = state.focused_key.get();
             let is_focused = state.is_focused.get_untracked();
 
-            if is_focused {
-                if let Some(ref key) = current_focused {
-                    let prev = prev_focused_key.get_value();
-                    if prev.as_ref() != Some(key) {
-                        // Only scroll on keyboard modality
-                        if matches!(
-                            get_modality(),
-                            crate::hooks::focus::use_focus_visible::Modality::Keyboard
+            if is_focused && let Some(ref key) = current_focused {
+                let prev = prev_focused_key.get_value();
+                if prev.as_ref() != Some(key) {
+                    // Only scroll on keyboard modality
+                    if matches!(
+                        get_modality(),
+                        crate::hooks::focus::use_focus_visible::Modality::Keyboard
+                    ) && let Some(container) = collection_ref.get_untracked()
+                    {
+                        // Find the item element by data-key
+                        if let Some(element) = get_item_element(
+                            &container,
+                            &format!("{key}"),
+                            Some(&collection_id_for_scroll),
+                        ) && let (Some(container_html), Some(element_html)) = (
+                            container.dyn_ref::<web_sys::HtmlElement>(),
+                            element.dyn_ref::<web_sys::HtmlElement>(),
                         ) {
-                            if let Some(container) = collection_ref.get_untracked() {
-                                // Find the item element by data-key
-                                if let Some(element) = get_item_element(
-                                    &container,
-                                    &format!("{key}"),
-                                    Some(&collection_id_for_scroll),
-                                ) {
-                                    if let (Some(container_html), Some(element_html)) = (
-                                        container.dyn_ref::<web_sys::HtmlElement>(),
-                                        element.dyn_ref::<web_sys::HtmlElement>(),
-                                    ) {
-                                        scroll_into_view(
-                                            container_html,
-                                            element_html,
-                                            ScrollIntoViewOpts::default(),
-                                        );
-                                        scroll_into_viewport(
-                                            Some(&element),
-                                            &ScrollIntoViewportOpts::default(),
-                                        );
-                                    }
-                                }
-                            }
+                            scroll_into_view(
+                                container_html,
+                                element_html,
+                                ScrollIntoViewOpts::default(),
+                            );
+                            scroll_into_viewport(
+                                Some(&element),
+                                &ScrollIntoViewportOpts::default(),
+                            );
                         }
                     }
                 }
@@ -818,12 +826,13 @@ where
             let current = state.focused_key.get();
             let was_some = prev_focused_key2.get_value().is_some();
 
-            if state.is_focused.get_untracked() && current.is_none() && was_some {
-                if let Some(container) = collection_ref.get_untracked() {
-                    if let Some(el) = container.dyn_ref::<web_sys::HtmlElement>() {
-                        focus_safely(el);
-                    }
-                }
+            if state.is_focused.get_untracked()
+                && current.is_none()
+                && was_some
+                && let Some(container) = collection_ref.get_untracked()
+                && let Some(el) = container.dyn_ref::<web_sys::HtmlElement>()
+            {
+                focus_safely(el);
             }
 
             prev_focused_key2.set_value(current);

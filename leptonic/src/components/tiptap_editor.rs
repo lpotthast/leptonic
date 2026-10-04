@@ -26,8 +26,10 @@ pub fn TiptapEditor(
 
     view! {
         <div class=classes.add("leptonic-tiptap-editor") style=styles>
-            {move || match disabled.get() {
-                false => {
+            {move || {
+                if disabled.get() {
+                    ().into_any()
+                } else {
                     view! {
                         <div class="leptonic-tiptap-menu">
                             {move || {
@@ -37,7 +39,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.h1))
+                                                    .with_reactive("active", state.h1)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::H1)
@@ -48,7 +50,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.h2))
+                                                    .with_reactive("active", state.h2)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::H2)
@@ -59,7 +61,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.h3))
+                                                    .with_reactive("active", state.h3)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::H3)
@@ -70,7 +72,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.h4))
+                                                    .with_reactive("active", state.h4)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::H4)
@@ -81,7 +83,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.h5))
+                                                    .with_reactive("active", state.h5)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::H5)
@@ -92,7 +94,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.h6))
+                                                    .with_reactive("active", state.h6)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::H6)
@@ -103,7 +105,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.paragraph))
+                                                    .with_reactive("active", state.paragraph)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::Paragraph)
@@ -115,7 +117,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.bold))
+                                                    .with_reactive("active", state.bold)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::Bold)
@@ -127,7 +129,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.italic))
+                                                    .with_reactive("active", state.italic)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::Italic)
@@ -139,7 +141,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.strike))
+                                                    .with_reactive("active", state.strike)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::Strike)
@@ -151,7 +153,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.blockquote))
+                                                    .with_reactive("active", state.blockquote)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::Blockquote)
@@ -163,7 +165,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.highlight))
+                                                    .with_reactive("active", state.highlight)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::Highlight)
@@ -175,7 +177,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.align_left))
+                                                    .with_reactive("active", state.align_left)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::AlignLeft)
@@ -187,11 +189,11 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.align_center))
+                                                    .with_reactive("active", state.align_center)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| {
-                                                    set_msg.set(TiptapInstanceMsg::AlignCenter)
+                                                    set_msg.set(TiptapInstanceMsg::AlignCenter);
                                                 }
                                             >
                                                 <Icon icon=icondata::BsTextCenter />
@@ -201,7 +203,7 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.align_right))
+                                                    .with_reactive("active", state.align_right)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| set_msg.set(TiptapInstanceMsg::AlignRight)
@@ -213,11 +215,11 @@ pub fn TiptapEditor(
                                             <Button
                                                 classes=Classes::builder()
                                                     .with("leptonic-tiptap-btn")
-                                                    .with(("active", state.align_justify))
+                                                    .with_reactive("active", state.align_justify)
                                                     .build()
                                                 size=ButtonSize::Small
                                                 on_press=move |_| {
-                                                    set_msg.set(TiptapInstanceMsg::AlignJustify)
+                                                    set_msg.set(TiptapInstanceMsg::AlignJustify);
                                                 }
                                             >
                                                 <Icon icon=icondata::BsJustify />
@@ -230,7 +232,6 @@ pub fn TiptapEditor(
                     }
                         .into_any()
                 }
-                true => ().into_any(),
             }}
             <TiptapInstance
                 id=instance_id.to_string()

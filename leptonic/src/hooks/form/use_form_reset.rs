@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/utils/useFormReset.ts @ 6f664fe911
 //! Form reset detection hook.
 //!
 //! Detects `<form>` reset events and restores a field to its initial value.
@@ -9,7 +10,7 @@ use wasm_bindgen::{JsCast, closure::Closure};
 
 use super::use_form_validation::get_parent_form;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/utils/src/useFormReset.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/useFormReset.ts
 
 // No intentional deviations from the react-aria implementation.
 

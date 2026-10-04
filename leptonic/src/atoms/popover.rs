@@ -221,10 +221,10 @@ pub fn PopoverContent(
             if is_non_modal {
                 // Non-modal: ensure this popover stays visible to AT even if
                 // another modal's aria_hide_outside is active.
-                if let Some(el) = overlay_element.get() {
-                    if let Some(undo) = keep_visible(&el) {
-                        hide_cleanup.set_value(Some(undo));
-                    }
+                if let Some(el) = overlay_element.get()
+                    && let Some(undo) = keep_visible(&el)
+                {
+                    hide_cleanup.set_value(Some(undo));
                 }
             } else {
                 // Modal: hide everything outside the popover and trigger from AT.

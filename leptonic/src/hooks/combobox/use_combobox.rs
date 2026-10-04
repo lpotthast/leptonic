@@ -1,5 +1,8 @@
+// Upstream: react-aria/src/combobox/useComboBox.ts @ 6f664fe911
+// Upstream: react-stately/src/combobox/useComboBoxState.ts @ 6f664fe911
 use std::collections::HashSet;
 
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -7,7 +10,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{Event, FocusEvent, KeyboardEvent, MouseEvent};
 
@@ -22,7 +24,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/combobox/src/useComboBox.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/combobox/useComboBox.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -516,7 +518,7 @@ where
 
     // ─── IDs ────────────────────────────────────────────────────────────
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("combobox");
     let input_id = format!("combobox-input-{base_id}");
     let button_id = format!("combobox-button-{base_id}");
     let listbox_id = format!("combobox-listbox-{base_id}");
@@ -585,10 +587,10 @@ where
     // Clear focused key when displayed items change and focused key is no longer present.
     Effect::new(move |_| {
         let current_items = filtered_items.get();
-        if let Some(key) = focused_key.get_untracked() {
-            if !current_items.contains(&key) {
-                set_focused_key.set(None);
-            }
+        if let Some(key) = focused_key.get_untracked()
+            && !current_items.contains(&key)
+        {
+            set_focused_key.set(None);
         }
     });
 
@@ -872,12 +874,10 @@ where
                     set_focused_key.set(first);
                 }
             }
-            "End" => {
-                if is_open.get_untracked() && !filtered.is_empty() {
-                    e.prevent_default();
-                    let last = find_adjacent_enabled(&filtered, None, &disabled, false, false);
-                    set_focused_key.set(last);
-                }
+            "End" if is_open.get_untracked() && !filtered.is_empty() => {
+                e.prevent_default();
+                let last = find_adjacent_enabled(&filtered, None, &disabled, false, false);
+                set_focused_key.set(last);
             }
             _ => {}
         }
@@ -907,22 +907,21 @@ where
         };
 
         // Ignore blur if focus moved to the button.
-        if let Some(el) = related_target.dyn_ref::<web_sys::Element>() {
-            if el.id() == button_id_for_blur {
-                return;
-            }
+        if let Some(el) = related_target.dyn_ref::<web_sys::Element>()
+            && el.id() == button_id_for_blur
+        {
+            return;
         }
 
         // Ignore blur if focus moved into the popover.
-        if let Some(popover_el) = popover_element.get_untracked() {
-            if node_contains(
+        if let Some(popover_el) = popover_element.get_untracked()
+            && node_contains(
                 Some(popover_el.unchecked_ref::<web_sys::Node>()),
                 related_target.dyn_ref::<web_sys::Node>(),
             )
             .unwrap_or(false)
-            {
-                return;
-            }
+        {
+            return;
         }
 
         // Focus left the combobox — commit value.
@@ -1043,21 +1042,19 @@ where
             let current = focused_key_signal.get();
             let prev = last_focused.get_value();
 
-            if current != prev {
-                if let Some(ref key) = current {
-                    if is_open.get_untracked() {
-                        if let Some(get_text) = get_text_value {
-                            let text = get_text.run(key.clone());
-                            let is_selected = selected_key.get_untracked().as_ref() == Some(key);
-                            let msg = if is_selected {
-                                format!("{text}, selected")
-                            } else {
-                                text
-                            };
-                            announce_polite(msg);
-                        }
-                    }
-                }
+            if current != prev
+                && let Some(ref key) = current
+                && is_open.get_untracked()
+                && let Some(get_text) = get_text_value
+            {
+                let text = get_text.run(key.clone());
+                let is_selected = selected_key.get_untracked().as_ref() == Some(key);
+                let msg = if is_selected {
+                    format!("{text}, selected")
+                } else {
+                    text
+                };
+                announce_polite(msg);
             }
 
             last_focused.set_value(current);
@@ -1069,13 +1066,12 @@ where
             let current = selected_key.get();
             let prev = last_selected.get_value();
 
-            if current != prev {
-                if let Some(ref key) = current {
-                    if let Some(get_text) = get_text_value {
-                        let text = get_text.run(key.clone());
-                        announce_polite(format!("{text}, selected"));
-                    }
-                }
+            if current != prev
+                && let Some(ref key) = current
+                && let Some(get_text) = get_text_value
+            {
+                let text = get_text.run(key.clone());
+                announce_polite(format!("{text}, selected"));
             }
 
             last_selected.set_value(current);

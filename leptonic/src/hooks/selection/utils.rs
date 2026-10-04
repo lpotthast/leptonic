@@ -1,8 +1,9 @@
+// Upstream: react-aria/src/selection/utils.ts @ 6f664fe911
 use web_sys::{Element, KeyboardEvent, MouseEvent, PointerEvent};
 
 use crate::utils::{modifiers::Modifiers, platform::device::is_apple_device};
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/utils.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/selection/utils.ts
 
 /// Returns `true` if the Ctrl key (or Meta key on Apple) is pressed.
 ///

@@ -1,10 +1,11 @@
+// Upstream: react-aria/src/dnd/useAutoScroll.ts @ 6f664fe911
 //! Auto-scroll hook for drag-and-drop operations.
 //!
 //! Scrolls a container element when the pointer is near its edges during
 //! a drag operation.
 //!
 //! Based on react-aria's auto-scroll logic from
-//! `@react-aria/dnd/src/useDroppableCollection.ts`.
+//! `react-aria/src/dnd/useDroppableCollection.ts`.
 
 use leptos::prelude::*;
 
@@ -84,10 +85,10 @@ pub fn use_auto_scroll(input: UseAutoScrollInput) -> UseAutoScrollReturn {
         velocity_y.set_value(0.0);
         #[cfg(not(feature = "ssr"))]
         interval_state.update_value(|state| {
-            if let Some((id, _closure)) = state.take() {
-                if let Some(window) = web_sys::window() {
-                    window.clear_interval_with_handle(id);
-                }
+            if let Some((id, _closure)) = state.take()
+                && let Some(window) = web_sys::window()
+            {
+                window.clear_interval_with_handle(id);
             }
         });
     };

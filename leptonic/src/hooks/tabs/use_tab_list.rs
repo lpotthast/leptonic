@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/tabs/useTabList.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::Attr,
@@ -16,7 +17,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tabs/useTabList.ts
 
 //
 // No intentional deviations from the react-aria implementation.

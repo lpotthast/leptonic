@@ -18,5 +18,8 @@ anyhow = "1.0.100"
 include_dir = "0.7.4"
 indoc = "2.0.7"
 
+[dev-dependencies]
+assertr = "0.7.1"
+
 [lints]
 workspace = true

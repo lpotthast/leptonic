@@ -42,6 +42,7 @@ pub fn FocusableDemo() -> impl IntoView {
             e.continue_propagation();
         })),
         on_key_up: None,
+        ..Default::default()
     });
     let attrs = props.into_attrs();
 

@@ -270,7 +270,7 @@ mod tests {
                 marks: SliderMarks::None,
                 value_display: None,
             });
-            assert_that(result.marks.get().len()).is_equal_to(0);
+            assert_that!(result.marks.get().len()).is_equal_to(0);
         });
     }
 
@@ -288,11 +288,11 @@ mod tests {
             });
             let marks = result.marks.get();
             // 0, 10, 20, ..., 100 = 11 marks
-            assert_that(marks.len()).is_equal_to(11);
+            assert_that!(marks.len()).is_equal_to(11);
             // First mark at 0%
-            assert_that(marks[0].percentage).is_close_to(0.0, 0.001);
+            assert_that!(marks[0].percentage).is_close_to(0.0, 0.001);
             // Last mark at 100%
-            assert_that(marks[10].percentage).is_close_to(1.0, 0.001);
+            assert_that!(marks[10].percentage).is_close_to(1.0, 0.001);
         });
     }
 
@@ -308,10 +308,10 @@ mod tests {
             });
             let marks = result.marks.get();
             // 0, 5, 10 = 3 marks
-            assert_that(marks.len()).is_equal_to(3);
-            assert_that(marks[0].name.as_deref()).is_equal_to(Some("0"));
-            assert_that(marks[1].name.as_deref()).is_equal_to(Some("5"));
-            assert_that(marks[2].name.as_deref()).is_equal_to(Some("10"));
+            assert_that!(marks.len()).is_equal_to(3);
+            assert_that!(marks[0].name.as_deref()).is_equal_to(Some("0"));
+            assert_that!(marks[1].name.as_deref()).is_equal_to(Some("5"));
+            assert_that!(marks[2].name.as_deref()).is_equal_to(Some("10"));
         });
     }
 
@@ -328,9 +328,9 @@ mod tests {
                 value_display: None,
             });
             let marks = result.marks.get();
-            assert_that(marks.len()).is_equal_to(3);
+            assert_that!(marks.len()).is_equal_to(3);
             for mark in &marks {
-                assert_that(mark.name.is_none()).is_true();
+                assert_that!(mark.name.is_none()).is_true();
             }
         });
     }
@@ -349,7 +349,7 @@ mod tests {
                 value_display: None,
             });
             let marks = result.marks.get();
-            assert_that(marks.len()).is_less_or_equal_to(21);
+            assert_that!(marks.len()).is_less_or_equal_to(21);
         });
     }
 
@@ -364,7 +364,7 @@ mod tests {
                 value_display: None,
             });
             let marks = result.marks.get();
-            assert_that(marks.len()).is_equal_to(0);
+            assert_that!(marks.len()).is_equal_to(0);
         });
     }
 
@@ -381,11 +381,11 @@ mod tests {
             });
             let marks = result.marks.get();
             // 10, 8, 6, 4, 2, 0 = 6 marks
-            assert_that(marks.len()).is_equal_to(6);
+            assert_that!(marks.len()).is_equal_to(6);
             // First mark at percentage 0 (which is value=min=10)
-            assert_that(marks[0].percentage).is_close_to(0.0, 0.001);
+            assert_that!(marks[0].percentage).is_close_to(0.0, 0.001);
             // Last mark at percentage 1 (which is value=max=0)
-            assert_that(marks[5].percentage).is_close_to(1.0, 0.001);
+            assert_that!(marks[5].percentage).is_close_to(1.0, 0.001);
         });
     }
 
@@ -400,9 +400,9 @@ mod tests {
                 value_display: Some(Callback::new(|v: f64| format!("{v:.1}!"))),
             });
             let marks = result.marks.get();
-            assert_that(marks[0].name.as_deref()).is_equal_to(Some("0.0!"));
-            assert_that(marks[1].name.as_deref()).is_equal_to(Some("5.0!"));
-            assert_that(marks[2].name.as_deref()).is_equal_to(Some("10.0!"));
+            assert_that!(marks[0].name.as_deref()).is_equal_to(Some("0.0!"));
+            assert_that!(marks[1].name.as_deref()).is_equal_to(Some("5.0!"));
+            assert_that!(marks[2].name.as_deref()).is_equal_to(Some("10.0!"));
         });
     }
 
@@ -428,11 +428,11 @@ mod tests {
                 value_display: None,
             });
             let marks = result.marks.get();
-            assert_that(marks.len()).is_equal_to(2);
-            assert_that(marks[0].percentage).is_close_to(0.25, 0.001);
-            assert_that(marks[0].name.as_deref()).is_equal_to(Some("25"));
-            assert_that(marks[1].percentage).is_close_to(0.75, 0.001);
-            assert_that(marks[1].name.as_deref()).is_equal_to(Some("75"));
+            assert_that!(marks.len()).is_equal_to(2);
+            assert_that!(marks[0].percentage).is_close_to(0.25, 0.001);
+            assert_that!(marks[0].name.as_deref()).is_equal_to(Some("25"));
+            assert_that!(marks[1].percentage).is_close_to(0.75, 0.001);
+            assert_that!(marks[1].name.as_deref()).is_equal_to(Some("75"));
         });
     }
 
@@ -452,8 +452,8 @@ mod tests {
                 value_display: None,
             });
             let marks = result.marks.get();
-            assert_that(marks.len()).is_equal_to(1);
-            assert_that(marks[0].percentage).is_close_to(0.3, 0.001);
+            assert_that!(marks.len()).is_equal_to(1);
+            assert_that!(marks[0].percentage).is_close_to(0.3, 0.001);
         });
     }
 
@@ -483,8 +483,8 @@ mod tests {
                 value_display: None,
             });
             let marks = result.marks.get();
-            assert_that(marks.len()).is_equal_to(1);
-            assert_that(marks[0].name.as_deref()).is_equal_to(Some("valid"));
+            assert_that!(marks.len()).is_equal_to(1);
+            assert_that!(marks[0].name.as_deref()).is_equal_to(Some("valid"));
         });
     }
 
@@ -514,8 +514,8 @@ mod tests {
                 value_display: None,
             });
             let marks = result.marks.get();
-            assert_that(marks.len()).is_equal_to(1);
-            assert_that(marks[0].name.as_deref()).is_equal_to(Some("valid"));
+            assert_that!(marks.len()).is_equal_to(1);
+            assert_that!(marks[0].name.as_deref()).is_equal_to(Some("valid"));
         });
     }
 
@@ -542,8 +542,8 @@ mod tests {
             });
             let marks = result.marks.get();
             // Thumb at 50: mark at 30 is in range, mark at 70 is not
-            assert_that(marks[0].in_range.get()).is_true();
-            assert_that(marks[1].in_range.get()).is_false();
+            assert_that!(marks[0].in_range.get()).is_true();
+            assert_that!(marks[1].in_range.get()).is_false();
         });
     }
 
@@ -574,9 +574,9 @@ mod tests {
             });
             let marks = result.marks.get();
             // Thumbs at 20 and 80: mark at 10 is NOT in range, 50 IS, 90 is NOT
-            assert_that(marks[0].in_range.get()).is_false();
-            assert_that(marks[1].in_range.get()).is_true();
-            assert_that(marks[2].in_range.get()).is_false();
+            assert_that!(marks[0].in_range.get()).is_false();
+            assert_that!(marks[1].in_range.get()).is_true();
+            assert_that!(marks[2].in_range.get()).is_false();
         });
     }
 
@@ -594,15 +594,15 @@ mod tests {
             });
             let marks = result.marks.get();
             // 10, 8, 6, 4, 2, 0 = 6 marks
-            assert_that(marks.len()).is_equal_to(6);
+            assert_that!(marks.len()).is_equal_to(6);
             // First mark at percentage 0 (which is value=min=10)
-            assert_that(marks[0].percentage).is_close_to(0.0, 0.001);
-            assert_that(marks[0].name.as_deref()).is_equal_to(Some("10"));
+            assert_that!(marks[0].percentage).is_close_to(0.0, 0.001);
+            assert_that!(marks[0].name.as_deref()).is_equal_to(Some("10"));
             // Last mark at percentage 1 (which is value=max=0)
-            assert_that(marks[5].percentage).is_close_to(1.0, 0.001);
-            assert_that(marks[5].name.as_deref()).is_equal_to(Some("0"));
+            assert_that!(marks[5].percentage).is_close_to(1.0, 0.001);
+            assert_that!(marks[5].name.as_deref()).is_equal_to(Some("0"));
             // Middle mark at value=6, percentage = (6-10)/(0-10) = -4/-10 = 0.4
-            assert_that(marks[2].percentage).is_close_to(0.4, 0.001);
+            assert_that!(marks[2].percentage).is_close_to(0.4, 0.001);
         });
     }
 
@@ -634,9 +634,9 @@ mod tests {
             });
             let marks = result.marks.get();
             // 70 and 30 are within [0, 100], 150 is not
-            assert_that(marks.len()).is_equal_to(2);
-            assert_that(marks[0].name.as_deref()).is_equal_to(Some("70"));
-            assert_that(marks[1].name.as_deref()).is_equal_to(Some("30"));
+            assert_that!(marks.len()).is_equal_to(2);
+            assert_that!(marks[0].name.as_deref()).is_equal_to(Some("70"));
+            assert_that!(marks[1].name.as_deref()).is_equal_to(Some("30"));
         });
     }
 
@@ -664,12 +664,12 @@ mod tests {
                 value_display: None,
             });
             let marks = result.marks.get();
-            assert_that(marks.len()).is_equal_to(2);
+            assert_that!(marks.len()).is_equal_to(2);
             // Thumb at 60. Reversed: in_range = v >= thumb.
             // 80 >= 60: in range
-            assert_that(marks[0].in_range.get()).is_true();
+            assert_that!(marks[0].in_range.get()).is_true();
             // 40 >= 60: NOT in range
-            assert_that(marks[1].in_range.get()).is_false();
+            assert_that!(marks[1].in_range.get()).is_false();
         });
     }
 
@@ -690,7 +690,7 @@ mod tests {
             });
             let marks = result.marks.get();
             // 3+ thumbs: in_range is always false
-            assert_that(marks[0].in_range.get()).is_false();
+            assert_that!(marks[0].in_range.get()).is_false();
         });
     }
 }

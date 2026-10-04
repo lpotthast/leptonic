@@ -16,6 +16,13 @@ pub fn NumberFieldDisabledDemo() -> impl IntoView {
         ..Default::default()
     });
 
+    let (decrement_attrs, decrement_styles) = use_button(disabled_field.decrement_button)
+        .props
+        .into_parts();
+    let (increment_attrs, increment_styles) = use_button(disabled_field.increment_button)
+        .props
+        .into_parts();
+
     view! {
         <div {..disabled_field.group_props.into_attrs()}>
             <label
@@ -26,8 +33,9 @@ pub fn NumberFieldDisabledDemo() -> impl IntoView {
             </label>
             <div style="display: flex; gap: 0.25em; align-items: center;">
                 <button
-                    {..disabled_field.decrement_button_props.into_attrs()}
-                    style="padding: 0.5em 1em; border: 1px solid #ccc; border-radius: 4px; opacity: 0.5;"
+                    {..decrement_attrs}
+                    style=decrement_styles
+                    class="demo-stepper-btn"
                 >
                     "\u{2212}"
                 </button>
@@ -37,8 +45,9 @@ pub fn NumberFieldDisabledDemo() -> impl IntoView {
                     style="padding: 0.5em; border: 1px solid #ccc; border-radius: 4px; width: 80px; text-align: center; opacity: 0.5;"
                 />
                 <button
-                    {..disabled_field.increment_button_props.into_attrs()}
-                    style="padding: 0.5em 1em; border: 1px solid #ccc; border-radius: 4px; opacity: 0.5;"
+                    {..increment_attrs}
+                    style=increment_styles
+                    class="demo-stepper-btn"
                 >
                     "+"
                 </button>

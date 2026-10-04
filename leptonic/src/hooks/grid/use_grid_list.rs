@@ -1,5 +1,7 @@
+// Upstream: react-aria/src/gridlist/useGridList.ts @ 6f664fe911
 use std::collections::HashSet;
 
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -7,7 +9,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
@@ -29,8 +30,8 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridList.ts
-// and: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/gridlist/src/useGridListItem.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/gridlist/useGridList.ts
+// and: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/gridlist/useGridListItem.ts
 
 // ## OMITTED FEATURES
 // - Virtualization (`isVirtualized`, `aria-rowcount`, `aria-colcount`).
@@ -198,8 +199,9 @@ impl IntoAttrs for UseGridListProps {
             Attr(attr::AriaMultiselectable, self.aria_multiselectable),
             Attr(attr::AriaDisabled, self.aria_disabled),
             self.on_keydown.into_on(ev::keydown),
-            self.on_focus.into_on(ev::focus),
-            self.on_blur.into_on(ev::blur),
+            // Like React's `onFocus`/`onBlur`, these must see focus moving onto descendants.
+            self.on_focus.into_on(ev::focusin),
+            self.on_blur.into_on(ev::focusout),
             self.on_mousedown.into_on(ev::mousedown),
         )
     }
@@ -215,8 +217,8 @@ pub type UseGridListAttrs = (
     Attr<attr::AriaMultiselectable, Option<AriaMultiselectable>>,
     Attr<attr::AriaDisabled, Signal<Option<AriaDisabled>>>,
     On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
-    On<ev::focus, SharedEventCallback<FocusEvent>>,
-    On<ev::blur, SharedEventCallback<FocusEvent>>,
+    On<ev::focusin, SharedEventCallback<FocusEvent>>,
+    On<ev::focusout, SharedEventCallback<FocusEvent>>,
     On<ev::mousedown, SharedEventCallback<MouseEvent>>,
 );
 
@@ -348,7 +350,7 @@ where
         on_action,
     } = input;
 
-    let list_id = format!("gridlist-{}", Uuid::new_v4());
+    let list_id = use_id("gridlist");
 
     // --- Selection state (delegated) ---
     let selection = use_selection_state(UseSelectionStateInput {
@@ -437,19 +439,19 @@ where
                 }
             }
             " " => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    if selection_mode != SelectionMode::None {
-                        e.prevent_default();
-                        selection.toggle.run(focused);
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && selection_mode != SelectionMode::None
+                {
+                    e.prevent_default();
+                    selection.toggle.run(focused);
                 }
             }
             "Enter" => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(on_action) = on_action {
-                        e.prevent_default();
-                        on_action.run(focused);
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(on_action) = on_action
+                {
+                    e.prevent_default();
+                    on_action.run(focused);
                 }
             }
             "Escape" => {
@@ -460,11 +462,9 @@ where
                     selection.clear_selection.run(());
                 }
             }
-            "a" if ctrl_or_meta => {
-                if selection_mode == SelectionMode::Multiple {
-                    e.prevent_default();
-                    selection.select_all.run(vec![]);
-                }
+            "a" if ctrl_or_meta && selection_mode == SelectionMode::Multiple => {
+                e.prevent_default();
+                selection.select_all.run(vec![]);
             }
             // Tab: don't intercept — let the browser handle single tab-stop exit.
             _ => {}
@@ -486,20 +486,16 @@ where
     };
 
     // --- Blur handler ---
-    let list_id_for_blur = list_id.clone();
     let handle_blur = move |e: FocusEvent| {
         // Only blur if focus left the grid list container entirely.
-        if let Some(related) = e.related_target() {
-            if let Ok(el) = related.dyn_into::<web_sys::Element>() {
-                if let Some(container) = web_sys::window()
-                    .and_then(|w| w.document())
-                    .and_then(|d| d.get_element_by_id(&list_id_for_blur))
-                {
-                    if container.contains(Some(&el)) {
-                        return;
-                    }
-                }
-            }
+        if let Some(related) = e.related_target()
+            && let Ok(el) = related.dyn_into::<web_sys::Element>()
+            && let Some(container) = e
+                .current_target()
+                .and_then(|t| t.dyn_into::<web_sys::Node>().ok())
+            && container.contains(Some(&el))
+        {
+            return;
         }
         set_is_focused.set(false);
     };
@@ -556,7 +552,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled = HashSet::new();
         let result = get_next_key(&keys, &disabled, &"a", true, false);
-        assert_that(result).is_equal_to(Some("b"));
+        assert_that!(result).is_equal_to(Some("b"));
     }
 
     #[test]
@@ -564,7 +560,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled = HashSet::new();
         let result = get_next_key(&keys, &disabled, &"c", false, false);
-        assert_that(result).is_equal_to(Some("b"));
+        assert_that!(result).is_equal_to(Some("b"));
     }
 
     #[test]
@@ -572,7 +568,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled = HashSet::new();
         let result = get_next_key(&keys, &disabled, &"c", true, true);
-        assert_that(result).is_equal_to(Some("a"));
+        assert_that!(result).is_equal_to(Some("a"));
     }
 
     #[test]
@@ -580,7 +576,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled = HashSet::new();
         let result = get_next_key(&keys, &disabled, &"a", false, true);
-        assert_that(result).is_equal_to(Some("c"));
+        assert_that!(result).is_equal_to(Some("c"));
     }
 
     #[test]
@@ -588,7 +584,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled = HashSet::new();
         let result = get_next_key(&keys, &disabled, &"c", true, false);
-        assert_that(result).is_equal_to(None);
+        assert_that!(result).is_equal_to(None);
     }
 
     #[test]
@@ -596,7 +592,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled = HashSet::new();
         let result = get_next_key(&keys, &disabled, &"a", false, false);
-        assert_that(result).is_equal_to(None);
+        assert_that!(result).is_equal_to(None);
     }
 
     #[test]
@@ -604,7 +600,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled: HashSet<&str> = ["b"].into_iter().collect();
         let result = get_next_key(&keys, &disabled, &"a", true, false);
-        assert_that(result).is_equal_to(Some("c"));
+        assert_that!(result).is_equal_to(Some("c"));
     }
 
     #[test]
@@ -612,7 +608,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled: HashSet<&str> = ["a", "b", "c"].into_iter().collect();
         let result = get_next_key(&keys, &disabled, &"a", true, true);
-        assert_that(result).is_equal_to(None);
+        assert_that!(result).is_equal_to(None);
     }
 
     #[test]
@@ -620,7 +616,7 @@ mod tests {
         let keys: Vec<&str> = vec![];
         let disabled = HashSet::new();
         let result = get_next_key(&keys, &disabled, &"a", true, false);
-        assert_that(result).is_equal_to(None);
+        assert_that!(result).is_equal_to(None);
     }
 
     #[test]
@@ -628,7 +624,7 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled: HashSet<&str> = ["a"].into_iter().collect();
         let result = get_first_key(&keys, &disabled);
-        assert_that(result).is_equal_to(Some("b"));
+        assert_that!(result).is_equal_to(Some("b"));
     }
 
     #[test]
@@ -636,6 +632,6 @@ mod tests {
         let keys = vec!["a", "b", "c"];
         let disabled: HashSet<&str> = ["c"].into_iter().collect();
         let result = get_last_key(&keys, &disabled);
-        assert_that(result).is_equal_to(Some("b"));
+        assert_that!(result).is_equal_to(Some("b"));
     }
 }

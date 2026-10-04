@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/separator/useSeparator.ts @ 6f664fe911
 use leptos::{attr, attr::Attr};
 
 use crate::{
@@ -5,7 +6,7 @@ use crate::{
     utils::aria::{AriaOrientation, AriaRole},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/separator/src/useSeparator.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/separator/useSeparator.ts
 
 //
 // No intentional deviations from the react-aria implementation.

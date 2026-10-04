@@ -1,8 +1,9 @@
+// Upstream: react-aria/src/grid/useGridRowGroup.ts @ 6f664fe911
 use leptos::{attr, attr::Attr};
 
 use crate::{hooks::IntoAttrs, utils::aria::AriaRole};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/grid/src/useGridRowGroup.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/grid/useGridRowGroup.ts
 
 // ## OMITTED FEATURES
 // - `isVirtualized` — no virtualization support.

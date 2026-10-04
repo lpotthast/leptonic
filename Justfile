@@ -82,6 +82,27 @@ serve-template-ssr-nightly:
 serve-template-tauri:
   cd ./examples/leptonic-template-tauri && cargo tauri dev
 
+# Fast feedback: unit tests of leptonic (all features) and leptonic-theme. No browser involved.
+unit-test:
+  cargo test -p leptonic --features full --lib
+  cargo test -p leptonic --features full,ssr --lib
+  cargo test -p leptonic-theme
+
+# Everything that must pass before work is considered done. Fails on the first problem.
+verify:
+  cargo fmt --all --check
+  cargo clippy -p leptonic --tests
+  cargo clippy -p leptonic --features full --tests
+  cargo clippy -p leptonic --features full,ssr --tests
+  cargo clippy -p leptonic --features full,hydrate --tests
+  cargo clippy -p leptonic-theme --tests
+  LEPTOS_OUTPUT_NAME=leptonic-test-app cargo clippy --manifest-path ./testing/test-app/Cargo.toml --features ssr
+  LEPTOS_OUTPUT_NAME=leptonic-test-app cargo clippy --manifest-path ./testing/test-app/Cargo.toml --lib --no-default-features --features hydrate --target wasm32-unknown-unknown
+  LEPTOS_OUTPUT_NAME=book-ssr cargo clippy --manifest-path ./examples/book-ssr/Cargo.toml --features ssr
+  LEPTOS_OUTPUT_NAME=book-ssr cargo clippy --manifest-path ./examples/book-ssr/Cargo.toml --lib --no-default-features --features hydrate --target wasm32-unknown-unknown
+  just unit-test
+  just browser-test
+
 # Run browser tests (headless by default)
 browser-test:
   cargo test --manifest-path ./leptonic/Cargo.toml --test browser_test -- --nocapture

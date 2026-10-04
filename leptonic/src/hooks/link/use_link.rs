@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/link/useLink.ts @ 6f664fe911
 use leptos::{attr, attr::Attr, oco::Oco};
 use leptos_element_capture::ElementCaptureAttr;
 use reactive_graph::{
@@ -19,7 +20,7 @@ use crate::{
         aria::{AriaCurrent, AriaDisabled, AriaRole},
     },
 };
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/link/src/useLink.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/link/useLink.ts
 
 //
 // ## DIFFERENT BEHAVIOR

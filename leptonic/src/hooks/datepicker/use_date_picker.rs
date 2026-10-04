@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/datepicker/useDatePicker.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -6,7 +8,6 @@ use leptos::{
     prelude::*,
 };
 use leptos_use::use_document;
-use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{KeyboardEvent, MouseEvent};
 
@@ -25,7 +26,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/datepicker/src/useDatePicker.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/datepicker/useDatePicker.ts
 
 //
 // ## OMITTED FEATURES
@@ -508,7 +509,7 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
     });
 
     // ---- IDs ----
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("date-picker");
     let picker_id = format!("date-picker-{base_id}");
     let label_id = format!("date-picker-label-{base_id}");
     let field_id = format!("date-picker-field-{base_id}");
@@ -560,14 +561,14 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
 
             if let Some(el) = document.get_element_by_id(&desc_id_for_effect) {
                 el.set_text_content(if text.is_empty() { None } else { Some(&text) });
-            } else if !text.is_empty() {
-                if let Ok(el) = document.create_element("span") {
-                    el.set_id(&desc_id_for_effect);
-                    let _ = el.set_attribute("hidden", "");
-                    el.set_text_content(Some(&text));
-                    if let Some(body) = document.body() {
-                        let _ = body.append_child(&el);
-                    }
+            } else if !text.is_empty()
+                && let Ok(el) = document.create_element("span")
+            {
+                el.set_id(&desc_id_for_effect);
+                let _ = el.set_attribute("hidden", "");
+                el.set_text_content(Some(&text));
+                if let Some(body) = document.body() {
+                    let _ = body.append_child(&el);
                 }
             }
         });
@@ -575,10 +576,10 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
         let desc_id_for_cleanup = value_desc_id.clone();
         on_cleanup(move || {
             let doc = use_document();
-            if let Some(document) = doc.as_ref() {
-                if let Some(el) = document.get_element_by_id(&desc_id_for_cleanup) {
-                    el.remove();
-                }
+            if let Some(document) = doc.as_ref()
+                && let Some(el) = document.get_element_by_id(&desc_id_for_cleanup)
+            {
+                el.remove();
             }
         });
     }
@@ -665,10 +666,9 @@ pub fn use_date_picker(input: UseDatePickerInput) -> UseDatePickerReturn {
             // Find the first tabbable segment within the group.
             if let Ok(Some(first)) =
                 el.query_selector("[tabindex]:not([tabindex='-1']), [data-segment]")
+                && let Some(focusable) = first.dyn_ref::<web_sys::HtmlElement>()
             {
-                if let Some(focusable) = first.dyn_ref::<web_sys::HtmlElement>() {
-                    let _ = focusable.focus();
-                }
+                let _ = focusable.focus();
             }
         }
     };

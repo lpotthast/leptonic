@@ -1,10 +1,12 @@
+// Upstream: react-aria/src/utils/shadowdom/DOMFunctions.ts @ 6f664fe911
+// Upstream: react-aria/src/utils/domHelpers.ts @ eef7319215
 //! Shadow DOM utilities for cross-shadow-boundary DOM operations.
 //!
 //! Provides functions for working with shadow DOM boundaries, including
 //! piercing active element resolution and cross-shadow event target access.
 //!
-//! Based on react-aria's `@react-aria/utils/src/shadowdom/DOMFunctions.ts`
-//! and `@react-aria/utils/src/domHelpers.ts`.
+//! Based on react-aria's `react-aria/src/utils/shadowdom/DOMFunctions.ts`
+//! and `react-aria/src/utils/domHelpers.ts`.
 
 use wasm_bindgen::JsCast;
 

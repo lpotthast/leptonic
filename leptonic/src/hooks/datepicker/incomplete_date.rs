@@ -326,12 +326,12 @@ impl IncompleteDate {
 
     /// Clamp day if it exceeds the max for current month.
     fn clamp_day_to_month(&mut self) {
-        if let (Some(year), Some(month_num), Some(day)) = (self.year, self.month, self.day) {
-            if let Some(month) = month_from_u8(month_num) {
-                let max = whole_days_in(year, month);
-                if day > max {
-                    self.day = Some(max);
-                }
+        if let (Some(year), Some(month_num), Some(day)) = (self.year, self.month, self.day)
+            && let Some(month) = month_from_u8(month_num)
+        {
+            let max = whole_days_in(year, month);
+            if day > max {
+                self.day = Some(max);
             }
         }
     }
@@ -383,32 +383,32 @@ mod tests {
 
     #[test]
     fn wrap_cycles_forward() {
-        assert_that(wrap(13, 1, 12)).is_equal_to(1);
-        assert_that(wrap(32, 1, 31)).is_equal_to(1);
-        assert_that(wrap(60, 0, 59)).is_equal_to(0);
+        assert_that!(wrap(13, 1, 12)).is_equal_to(1);
+        assert_that!(wrap(32, 1, 31)).is_equal_to(1);
+        assert_that!(wrap(60, 0, 59)).is_equal_to(0);
     }
 
     #[test]
     fn wrap_cycles_backward() {
-        assert_that(wrap(0, 1, 12)).is_equal_to(12);
-        assert_that(wrap(0, 1, 31)).is_equal_to(31);
-        assert_that(wrap(-1, 0, 59)).is_equal_to(59);
+        assert_that!(wrap(0, 1, 12)).is_equal_to(12);
+        assert_that!(wrap(0, 1, 31)).is_equal_to(31);
+        assert_that!(wrap(-1, 0, 59)).is_equal_to(59);
     }
 
     #[test]
     fn from_24_hour_h24() {
-        assert_that(IncompleteDate::from_24_hour(0, true)).is_equal_to((0, None));
-        assert_that(IncompleteDate::from_24_hour(13, true)).is_equal_to((13, None));
-        assert_that(IncompleteDate::from_24_hour(23, true)).is_equal_to((23, None));
+        assert_that!(IncompleteDate::from_24_hour(0, true)).is_equal_to((0, None));
+        assert_that!(IncompleteDate::from_24_hour(13, true)).is_equal_to((13, None));
+        assert_that!(IncompleteDate::from_24_hour(23, true)).is_equal_to((23, None));
     }
 
     #[test]
     fn from_24_hour_h12() {
-        assert_that(IncompleteDate::from_24_hour(0, false)).is_equal_to((12, Some(false)));
-        assert_that(IncompleteDate::from_24_hour(1, false)).is_equal_to((1, Some(false)));
-        assert_that(IncompleteDate::from_24_hour(12, false)).is_equal_to((12, Some(true)));
-        assert_that(IncompleteDate::from_24_hour(13, false)).is_equal_to((1, Some(true)));
-        assert_that(IncompleteDate::from_24_hour(23, false)).is_equal_to((11, Some(true)));
+        assert_that!(IncompleteDate::from_24_hour(0, false)).is_equal_to((12, Some(false)));
+        assert_that!(IncompleteDate::from_24_hour(1, false)).is_equal_to((1, Some(false)));
+        assert_that!(IncompleteDate::from_24_hour(12, false)).is_equal_to((12, Some(true)));
+        assert_that!(IncompleteDate::from_24_hour(13, false)).is_equal_to((1, Some(true)));
+        assert_that!(IncompleteDate::from_24_hour(23, false)).is_equal_to((11, Some(true)));
     }
 
     #[test]
@@ -416,15 +416,15 @@ mod tests {
         let placeholder = time::macros::datetime!(2024-06-15 12:00 UTC);
         let mut date = IncompleteDate::from_date(&placeholder, true);
         date.cycle(DateSegmentType::Month, 1, &placeholder);
-        assert_that(date.month).is_equal_to(Some(7));
+        assert_that!(date.month).is_equal_to(Some(7));
 
         date.month = Some(12);
         date.cycle(DateSegmentType::Month, 1, &placeholder);
-        assert_that(date.month).is_equal_to(Some(1));
+        assert_that!(date.month).is_equal_to(Some(1));
 
         date.month = Some(1);
         date.cycle(DateSegmentType::Month, -1, &placeholder);
-        assert_that(date.month).is_equal_to(Some(12));
+        assert_that!(date.month).is_equal_to(Some(12));
     }
 
     #[test]
@@ -433,22 +433,22 @@ mod tests {
         let mut date = IncompleteDate::from_date(&placeholder, true);
         date.day = Some(29); // leap year
         date.cycle(DateSegmentType::Day, 1, &placeholder);
-        assert_that(date.day).is_equal_to(Some(1));
+        assert_that!(date.day).is_equal_to(Some(1));
 
         date.day = Some(1);
         date.cycle(DateSegmentType::Day, -1, &placeholder);
-        assert_that(date.day).is_equal_to(Some(29));
+        assert_that!(date.day).is_equal_to(Some(29));
     }
 
     #[test]
     fn is_complete_date_only() {
         let mut date = IncompleteDate::empty(true);
-        assert_that(date.is_complete(false)).is_false();
+        assert_that!(date.is_complete(false)).is_false();
         date.year = Some(2024);
         date.month = Some(6);
-        assert_that(date.is_complete(false)).is_false();
+        assert_that!(date.is_complete(false)).is_false();
         date.day = Some(15);
-        assert_that(date.is_complete(false)).is_true();
+        assert_that!(date.is_complete(false)).is_true();
     }
 
     #[test]
@@ -457,10 +457,10 @@ mod tests {
         date.year = Some(2024);
         date.month = Some(6);
         date.day = Some(15);
-        assert_that(date.is_complete(true)).is_false();
+        assert_that!(date.is_complete(true)).is_false();
         date.hour = Some(12);
         date.minute = Some(30);
-        assert_that(date.is_complete(true)).is_true();
+        assert_that!(date.is_complete(true)).is_true();
     }
 
     #[test]
@@ -471,9 +471,9 @@ mod tests {
         date.day = Some(15);
         date.hour = Some(12);
         date.minute = Some(30);
-        assert_that(date.is_complete(true)).is_false();
+        assert_that!(date.is_complete(true)).is_false();
         date.day_period = Some(false);
-        assert_that(date.is_complete(true)).is_true();
+        assert_that!(date.is_complete(true)).is_true();
     }
 
     #[test]
@@ -487,13 +487,13 @@ mod tests {
         date.minute = Some(30);
         date.second = Some(0);
         let result = date.to_date(&placeholder);
-        assert_that(result).is_some();
+        assert_that!(result).is_some();
         let dt = result.unwrap();
-        assert_that(dt.year()).is_equal_to(2024);
-        assert_that(dt.month() as u8).is_equal_to(6);
-        assert_that(dt.day()).is_equal_to(15);
-        assert_that(dt.hour()).is_equal_to(14);
-        assert_that(dt.minute()).is_equal_to(30);
+        assert_that!(dt.year()).is_equal_to(2024);
+        assert_that!(dt.month() as u8).is_equal_to(6);
+        assert_that!(dt.day()).is_equal_to(15);
+        assert_that!(dt.hour()).is_equal_to(14);
+        assert_that!(dt.minute()).is_equal_to(30);
     }
 
     #[test]
@@ -508,16 +508,16 @@ mod tests {
         date.second = Some(0);
         date.day_period = Some(true); // PM
         let dt = date.to_date(&placeholder).unwrap();
-        assert_that(dt.hour()).is_equal_to(15);
+        assert_that!(dt.hour()).is_equal_to(15);
     }
 
     #[test]
     fn month_change_clamps_day() {
         let placeholder = time::macros::datetime!(2024-01-31 0:00 UTC);
         let mut date = IncompleteDate::from_date(&placeholder, true);
-        assert_that(date.day).is_equal_to(Some(31));
+        assert_that!(date.day).is_equal_to(Some(31));
         // Change to February (max 29 in 2024 leap year)
         date.set(DateSegmentType::Month, 2);
-        assert_that(date.day).is_equal_to(Some(29));
+        assert_that!(date.day).is_equal_to(Some(29));
     }
 }

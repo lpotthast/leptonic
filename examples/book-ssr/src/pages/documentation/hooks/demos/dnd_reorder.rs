@@ -215,7 +215,7 @@ pub fn ReorderDemo() -> impl IntoView {
             set_events.update(|events| {
                 events.push_overwrite(Oco::Owned(format!(
                     "Reorder: {:?} -> {} ({:?})",
-                    e.keys, &e.target.key, e.target.position
+                    e.keys, e.target.key, e.target.position
                 )));
             });
             set_items.update(|items| {

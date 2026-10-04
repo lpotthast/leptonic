@@ -2,11 +2,9 @@ use leptos::{html::Div, prelude::*};
 
 use crate::utils::{
     classes::Classes,
-    css::px,
-    styles::{
-        Style::{Height, MinHeight, MinWidth, Width},
-        Styles,
-    },
+    css::{CssDimension, Size, computed_size, px},
+    style::{HeightProperty, MinHeightProperty, MinWidthProperty, WidthProperty},
+    styles::Styles,
 };
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy, Default)]
@@ -35,23 +33,23 @@ pub fn Collapse(
         px(f64::from(if show { el_axis_dimension } else { 0 }))
     });
 
-    let styles = styles
-        .add_optional(MinWidth, move || (axis == CollapseAxis::X).then_some("0px"))
-        .add_optional(Width, move || {
-            (axis == CollapseAxis::X).then(|| axis_dimension.get())
-        })
-        .add_optional(MinHeight, move || {
-            (axis == CollapseAxis::Y).then_some("0px")
-        })
-        .add_optional(Height, move || {
-            (axis == CollapseAxis::Y).then(|| axis_dimension.get())
-        });
+    let zero: Size = computed_size(CssDimension::Zero);
+    let styles = match axis {
+        CollapseAxis::X => styles
+            .add(MinWidthProperty.declare(zero))
+            .add_reactive(move || WidthProperty.declare(computed_size(axis_dimension.get()))),
+        CollapseAxis::Y => styles
+            .add(MinHeightProperty.declare(zero))
+            .add_reactive(move || HeightProperty.declare(computed_size(axis_dimension.get()))),
+    };
+    let classes = classes.add("leptonic-collapse").add(match axis {
+        CollapseAxis::X => "width",
+        CollapseAxis::Y => "height",
+    });
 
     view! {
         <div
-            class=classes.add("leptonic-collapse")
-            class:width=move || { axis == CollapseAxis::X }
-            class:height=move || { axis == CollapseAxis::Y }
+            class=classes
             style=styles
         >
             <div class="content" class:show=move || show.get() node_ref=content>

@@ -66,10 +66,10 @@ pub fn is_inert(element: &web_sys::Element) -> bool {
     let mut current: Option<web_sys::Element> = Some(element.clone());
 
     while let Some(el) = current {
-        if let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>() {
-            if html_el.inert() {
-                return true;
-            }
+        if let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>()
+            && html_el.inert()
+        {
+            return true;
         }
         current = el.parent_element();
     }
@@ -116,19 +116,16 @@ pub fn is_element_visible(element: &web_sys::Element) -> bool {
 
     // Try `checkVisibility()` (available in modern browsers).
     // Cache whether the method exists to avoid repeated Reflect::get lookups.
-    if has_check_visibility() {
-        if let Ok(check_visibility) = js_sys::Reflect::get(element, &"checkVisibility".into()) {
-            if check_visibility.is_function() {
-                let fun = Function::from(check_visibility);
+    if has_check_visibility()
+        && let Ok(check_visibility) = js_sys::Reflect::get(element, &"checkVisibility".into())
+        && check_visibility.is_function()
+    {
+        let fun = Function::from(check_visibility);
 
-                let options = js_sys::Object::new();
-                let _ = js_sys::Reflect::set(&options, &"visibilityProperty".into(), &true.into());
-                if let Ok(result) =
-                    js_sys::Reflect::apply(&fun, element, &js_sys::Array::of1(&options))
-                {
-                    return result.as_bool().unwrap_or(true);
-                }
-            }
+        let options = js_sys::Object::new();
+        let _ = js_sys::Reflect::set(&options, &"visibilityProperty".into(), &true.into());
+        if let Ok(result) = js_sys::Reflect::apply(&fun, element, &js_sys::Array::of1(&options)) {
+            return result.as_bool().unwrap_or(true);
         }
     }
 
@@ -179,15 +176,15 @@ fn is_element_visible_fallback(
 
     // Check computed style. `getComputedStyle` works on any Element (HTML or SVG).
     if let Ok(Some(style)) = window.get_computed_style(element) {
-        if let Ok(display) = style.get_property_value("display") {
-            if display == "none" {
-                return false;
-            }
+        if let Ok(display) = style.get_property_value("display")
+            && display == "none"
+        {
+            return false;
         }
-        if let Ok(visibility) = style.get_property_value("visibility") {
-            if visibility == "hidden" || visibility == "collapse" {
-                return false;
-            }
+        if let Ok(visibility) = style.get_property_value("visibility")
+            && (visibility == "hidden" || visibility == "collapse")
+        {
+            return false;
         }
     }
 
@@ -269,10 +266,10 @@ pub fn is_tabbable(element: &web_sys::Element) -> bool {
     }
 
     // Double-check tabindex (the selector already filters -1, but be defensive).
-    if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
-        if html_el.tab_index() < 0 {
-            return false;
-        }
+    if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>()
+        && html_el.tab_index() < 0
+    {
+        return false;
     }
 
     true
@@ -334,12 +331,11 @@ fn collect_form_radios(
     if let Some(radio_list) = item.dyn_ref::<web_sys::RadioNodeList>() {
         let mut radios = Vec::new();
         for i in 0..radio_list.length() {
-            if let Some(node) = radio_list.get(i) {
-                if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
-                    if input.type_() == "radio" {
-                        radios.push(input.clone());
-                    }
-                }
+            if let Some(node) = radio_list.get(i)
+                && let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>()
+                && input.type_() == "radio"
+            {
+                radios.push(input.clone());
             }
         }
         radios
@@ -375,12 +371,11 @@ fn collect_radio_nodes(
 
     let mut radios = Vec::new();
     for i in 0..nodes.length() {
-        if let Some(node) = nodes.get(i) {
-            if let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>() {
-                if filter(input) {
-                    radios.push(input.clone());
-                }
-            }
+        if let Some(node) = nodes.get(i)
+            && let Some(input) = node.dyn_ref::<web_sys::HtmlInputElement>()
+            && filter(input)
+        {
+            radios.push(input.clone());
         }
     }
     radios
@@ -391,14 +386,12 @@ fn css_escape(value: &str) -> String {
     let global_css = js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str("CSS"));
     if let Ok(css_obj) = global_css {
         let escape_fn = js_sys::Reflect::get(&css_obj, &JsValue::from_str("escape"));
-        if let Ok(func) = escape_fn {
-            if let Some(func) = func.dyn_ref::<js_sys::Function>() {
-                if let Ok(result) = func.call1(&JsValue::NULL, &JsValue::from_str(value)) {
-                    if let Some(s) = result.as_string() {
-                        return s;
-                    }
-                }
-            }
+        if let Ok(func) = escape_fn
+            && let Some(func) = func.dyn_ref::<js_sys::Function>()
+            && let Ok(result) = func.call1(&JsValue::NULL, &JsValue::from_str(value))
+            && let Some(s) = result.as_string()
+        {
+            return s;
         }
     }
     // Fallback: simple escaping of quotes and backslashes.
@@ -431,10 +424,10 @@ pub(crate) fn is_text_input(element: &web_sys::Element) -> bool {
     if element.dyn_ref::<web_sys::HtmlTextAreaElement>().is_some() {
         return true;
     }
-    if let Some(el) = element.dyn_ref::<web_sys::HtmlElement>() {
-        if el.is_content_editable() {
-            return true;
-        }
+    if let Some(el) = element.dyn_ref::<web_sys::HtmlElement>()
+        && el.is_content_editable()
+    {
+        return true;
     }
     false
 }

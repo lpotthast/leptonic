@@ -1,5 +1,7 @@
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/i18n/src/useFilter.ts
-// and https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/i18n/src/useCollator.ts
+// Upstream: react-aria/src/i18n/useFilter.ts @ 6f664fe911
+// Upstream: react-aria/src/i18n/useCollator.ts @ 6f664fe911
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useFilter.ts
+// and https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useCollator.ts
 
 use std::cmp::Ordering;
 
@@ -241,9 +243,9 @@ mod tests {
     fn test_collator_basic_ordering() {
         let locale = Locale::new("en-US");
         let collator = Collator::new(&locale, &CollatorOptions::default());
-        assert_that(collator.compare("apple", "banana")).is_equal_to(Ordering::Less);
-        assert_that(collator.compare("banana", "apple")).is_equal_to(Ordering::Greater);
-        assert_that(collator.compare("apple", "apple")).is_equal_to(Ordering::Equal);
+        assert_that!(collator.compare("apple", "banana")).is_equal_to(Ordering::Less);
+        assert_that!(collator.compare("banana", "apple")).is_equal_to(Ordering::Greater);
+        assert_that!(collator.compare("apple", "apple")).is_equal_to(Ordering::Equal);
     }
 
     #[test]
@@ -256,7 +258,7 @@ mod tests {
                 ..CollatorOptions::default()
             },
         );
-        assert_that(collator.compare("Apple", "apple")).is_equal_to(Ordering::Equal);
+        assert_that!(collator.compare("Apple", "apple")).is_equal_to(Ordering::Equal);
     }
 
     #[test]
@@ -269,52 +271,52 @@ mod tests {
                 ..CollatorOptions::default()
             },
         );
-        assert_that(collator.compare("café", "cafe")).is_equal_to(Ordering::Equal);
+        assert_that!(collator.compare("café", "cafe")).is_equal_to(Ordering::Equal);
     }
 
     #[test]
     fn test_filter_contains_empty_substring() {
         let filter = default_filter("en-US");
-        assert_that(filter.contains("hello", "")).is_true();
+        assert_that!(filter.contains("hello", "")).is_true();
     }
 
     #[test]
     fn test_filter_contains_basic() {
         let filter = default_filter("en-US");
-        assert_that(filter.contains("hello world", "world")).is_true();
-        assert_that(filter.contains("hello world", "xyz")).is_false();
+        assert_that!(filter.contains("hello world", "world")).is_true();
+        assert_that!(filter.contains("hello world", "xyz")).is_false();
     }
 
     #[test]
     fn test_filter_starts_with_basic() {
         let filter = default_filter("en-US");
-        assert_that(filter.starts_with("hello world", "hello")).is_true();
-        assert_that(filter.starts_with("hello world", "world")).is_false();
+        assert_that!(filter.starts_with("hello world", "hello")).is_true();
+        assert_that!(filter.starts_with("hello world", "world")).is_false();
     }
 
     #[test]
     fn test_filter_ends_with_basic() {
         let filter = default_filter("en-US");
-        assert_that(filter.ends_with("hello world", "world")).is_true();
-        assert_that(filter.ends_with("hello world", "hello")).is_false();
+        assert_that!(filter.ends_with("hello world", "world")).is_true();
+        assert_that!(filter.ends_with("hello world", "hello")).is_false();
     }
 
     #[test]
     fn test_filter_case_insensitive() {
         let filter = default_filter("en-US");
-        assert_that(filter.contains("Hello World", "hello")).is_true();
-        assert_that(filter.starts_with("Hello World", "hello")).is_true();
+        assert_that!(filter.contains("Hello World", "hello")).is_true();
+        assert_that!(filter.starts_with("Hello World", "hello")).is_true();
     }
 
     #[test]
     fn test_filter_with_german_locale() {
         let filter = default_filter("de-DE");
-        assert_that(filter.contains("Straße", "strass")).is_true();
+        assert_that!(filter.contains("Straße", "strass")).is_true();
     }
 
     #[test]
     fn test_filter_with_japanese_locale() {
         let filter = default_filter("ja-JP");
-        assert_that(filter.contains("東京都", "東京")).is_true();
+        assert_that!(filter.contains("東京都", "東京")).is_true();
     }
 }

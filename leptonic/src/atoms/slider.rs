@@ -10,11 +10,9 @@ use crate::{
     utils::{
         CapturedElement,
         classes::Classes,
-        css::{CssDimension, CssValue, pct},
-        styles::{
-            Style::{Bottom, Height, Left, Position, Top, Transform, Width},
-            Styles,
-        },
+        css::{CssDimension, LengthPercentageAuto, computed_pct, computed_size},
+        style::{BottomProperty, HeightProperty, LeftProperty, TopProperty, WidthProperty},
+        styles::Styles,
     },
 };
 
@@ -160,23 +158,31 @@ pub fn SliderTrackFill(
                 state.get_value_percent.run(val) * 100.0
             });
             let styles = styles
-                .add(Position, "absolute")
-                .add(Left, "0")
-                .add_optional(Top, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some(CssDimension::Zero),
+                .add_unchecked("position", "absolute")
+                .add(LeftProperty.declare(LengthPercentageAuto::from(CssDimension::Zero)))
+                .add_optional(move || match state.orientation.get() {
+                    SliderOrientation::Horizontal => {
+                        Some(TopProperty.declare(LengthPercentageAuto::from(CssDimension::Zero)))
+                    }
                     SliderOrientation::Vertical => None,
                 })
-                .add_optional(Bottom, move || match state.orientation.get() {
+                .add_optional(move || match state.orientation.get() {
                     SliderOrientation::Horizontal => None,
-                    SliderOrientation::Vertical => Some(CssDimension::Zero),
+                    SliderOrientation::Vertical => {
+                        Some(BottomProperty.declare(LengthPercentageAuto::from(CssDimension::Zero)))
+                    }
                 })
-                .add(Height, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => pct(100.0),
-                    SliderOrientation::Vertical => pct(percentage.get()),
+                .add_reactive(move || {
+                    HeightProperty.declare(computed_size(match state.orientation.get() {
+                        SliderOrientation::Horizontal => computed_pct(100.0),
+                        SliderOrientation::Vertical => computed_pct(percentage.get()),
+                    }))
                 })
-                .add(Width, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => pct(percentage.get()),
-                    SliderOrientation::Vertical => pct(100.0),
+                .add_reactive(move || {
+                    WidthProperty.declare(computed_size(match state.orientation.get() {
+                        SliderOrientation::Horizontal => computed_pct(percentage.get()),
+                        SliderOrientation::Vertical => computed_pct(100.0),
+                    }))
                 });
             view! { <div class=classes style=styles /> }.into_any()
         }
@@ -193,26 +199,38 @@ pub fn SliderTrackFill(
                     .max(0.0)
             });
             let styles = styles
-                .add(Position, "absolute")
-                .add_optional(Top, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => Some(CssDimension::Zero),
+                .add_unchecked("position", "absolute")
+                .add_optional(move || match state.orientation.get() {
+                    SliderOrientation::Horizontal => {
+                        Some(TopProperty.declare(LengthPercentageAuto::from(CssDimension::Zero)))
+                    }
                     SliderOrientation::Vertical => None,
                 })
-                .add_optional(Bottom, move || match state.orientation.get() {
+                .add_optional(move || match state.orientation.get() {
                     SliderOrientation::Horizontal => None,
-                    SliderOrientation::Vertical => Some(pct(first_percentage.get())),
+                    SliderOrientation::Vertical => Some(BottomProperty.declare(
+                        LengthPercentageAuto::from(computed_pct(first_percentage.get())),
+                    )),
                 })
-                .add(Left, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => pct(first_percentage.get()),
-                    SliderOrientation::Vertical => CssDimension::Zero,
+                .add_reactive(move || {
+                    LeftProperty.declare(LengthPercentageAuto::from(
+                        match state.orientation.get() {
+                            SliderOrientation::Horizontal => computed_pct(first_percentage.get()),
+                            SliderOrientation::Vertical => CssDimension::Zero,
+                        },
+                    ))
                 })
-                .add(Height, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => pct(100.0),
-                    SliderOrientation::Vertical => pct(difference.get()),
+                .add_reactive(move || {
+                    HeightProperty.declare(computed_size(match state.orientation.get() {
+                        SliderOrientation::Horizontal => computed_pct(100.0),
+                        SliderOrientation::Vertical => computed_pct(difference.get()),
+                    }))
                 })
-                .add(Width, move || match state.orientation.get() {
-                    SliderOrientation::Horizontal => pct(difference.get()),
-                    SliderOrientation::Vertical => pct(100.0),
+                .add_reactive(move || {
+                    WidthProperty.declare(computed_size(match state.orientation.get() {
+                        SliderOrientation::Horizontal => computed_pct(difference.get()),
+                        SliderOrientation::Vertical => computed_pct(100.0),
+                    }))
                 });
             view! { <div class=classes style=styles /> }.into_any()
         }
@@ -297,22 +315,32 @@ pub fn SliderThumb(
     });
 
     let styles = styles
-        .add(Position, "absolute")
-        .add_optional(Top, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => Some(pct(50.0)),
+        .add_unchecked("position", "absolute")
+        .add_optional(move || match ctx.state.orientation.get() {
+            SliderOrientation::Horizontal => {
+                Some(TopProperty.declare(LengthPercentageAuto::from(computed_pct(50.0))))
+            }
             SliderOrientation::Vertical => None,
         })
-        .add(Left, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => pct(percentage.get()),
-            SliderOrientation::Vertical => pct(50.0),
+        .add_reactive(move || {
+            LeftProperty.declare(LengthPercentageAuto::from(
+                match ctx.state.orientation.get() {
+                    SliderOrientation::Horizontal => computed_pct(percentage.get()),
+                    SliderOrientation::Vertical => computed_pct(50.0),
+                },
+            ))
         })
-        .add_optional(Bottom, move || match ctx.state.orientation.get() {
+        .add_optional(move || match ctx.state.orientation.get() {
             SliderOrientation::Horizontal => None,
-            SliderOrientation::Vertical => Some(pct(percentage.get())),
+            SliderOrientation::Vertical => Some(
+                BottomProperty.declare(LengthPercentageAuto::from(computed_pct(percentage.get()))),
+            ),
         })
-        .add(Transform, move || match ctx.state.orientation.get() {
-            SliderOrientation::Horizontal => CssValue::Str("translate(-50%, -50%)".into()),
-            SliderOrientation::Vertical => CssValue::Str("translate(-50%, 50%)".into()),
+        .add_optional_unchecked("transform", move || {
+            Some(match ctx.state.orientation.get() {
+                SliderOrientation::Horizontal => "translate(-50%, -50%)",
+                SliderOrientation::Vertical => "translate(-50%, 50%)",
+            })
         });
 
     let thumb_ctx = SliderThumbCtx {
@@ -418,11 +446,15 @@ pub fn SliderMark(
     children: Children,
 ) -> impl IntoView {
     // TODO: We could use a data attribute instead.
-    let classes = classes.add(("in-range", mark.in_range));
+    let classes = classes.add_reactive("in-range", mark.in_range);
 
     let styles = styles
-        .add(Position, "absolute")
-        .add(Left, pct(mark.percentage * 100.0));
+        .add_unchecked("position", "absolute")
+        .add(
+            LeftProperty.declare(LengthPercentageAuto::from(computed_pct(
+                mark.percentage * 100.0,
+            ))),
+        );
 
     view! {
         <div class=classes style=styles>

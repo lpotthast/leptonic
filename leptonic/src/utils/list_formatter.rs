@@ -1,4 +1,5 @@
-// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/i18n/src/useListFormatter.tsx
+// Upstream: react-aria/src/i18n/useListFormatter.tsx @ 6f664fe911
+// Based on: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useListFormatter.tsx
 
 use icu_list::{ListFormatter as IcuListFormatter, options::ListLength};
 
@@ -127,7 +128,7 @@ mod tests {
                 style: ListFormatStyle::Long,
             },
         );
-        assert_that(formatter.format(&["Alice", "Bob", "Charlie"]))
+        assert_that!(formatter.format(&["Alice", "Bob", "Charlie"]))
             .is_equal_to("Alice, Bob, and Charlie".to_string());
     }
 
@@ -140,7 +141,7 @@ mod tests {
                 style: ListFormatStyle::Long,
             },
         );
-        assert_that(formatter.format(&["Alice", "Bob", "Charlie"]))
+        assert_that!(formatter.format(&["Alice", "Bob", "Charlie"]))
             .is_equal_to("Alice, Bob, or Charlie".to_string());
     }
 
@@ -155,7 +156,7 @@ mod tests {
         );
         let result = formatter.format(&["Alice", "Bob", "Charlie"]);
         // German uses "und" instead of "and"
-        assert_that(result.contains("und")).is_true();
+        assert_that!(result.contains("und")).is_true();
     }
 
     #[test]
@@ -169,18 +170,18 @@ mod tests {
         );
         let result = formatter.format(&["Alice", "Bob", "Charlie"]);
         // French uses "et" instead of "and"
-        assert_that(result.contains("et")).is_true();
+        assert_that!(result.contains("et")).is_true();
     }
 
     #[test]
     fn test_single_item() {
         let formatter = ListFormatter::new(&Locale::new("en-US"), &ListFormatOptions::default());
-        assert_that(formatter.format(&["Alice"])).is_equal_to("Alice".to_string());
+        assert_that!(formatter.format(&["Alice"])).is_equal_to("Alice".to_string());
     }
 
     #[test]
     fn test_two_items() {
         let formatter = ListFormatter::new(&Locale::new("en-US"), &ListFormatOptions::default());
-        assert_that(formatter.format(&["Alice", "Bob"])).is_equal_to("Alice and Bob".to_string());
+        assert_that!(formatter.format(&["Alice", "Bob"])).is_equal_to("Alice and Bob".to_string());
     }
 }

@@ -1,12 +1,13 @@
+// Upstream: react-aria/src/progress/useProgressBar.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr, prelude::*};
-use uuid::Uuid;
 
 use crate::{
     hooks::IntoAttrs,
     utils::{aria::AriaRole, math::percentage_in_range},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/progress/src/useProgressBar.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/progress/useProgressBar.ts
 
 //
 // No intentional deviations from the react-aria implementation.
@@ -149,7 +150,7 @@ pub fn use_progress_bar(input: UseProgressBarInput) -> UseProgressBarReturn {
         is_indeterminate,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("progress-bar");
     let progress_id = format!("progress-{base_id}");
     let label_id = format!("progress-label-{base_id}");
 

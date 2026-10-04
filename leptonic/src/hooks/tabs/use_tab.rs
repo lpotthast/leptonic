@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/tabs/useTab.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::{
@@ -27,7 +28,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTab.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tabs/useTab.ts
 
 //
 // No intentional deviations from the react-aria implementation.
@@ -193,6 +194,7 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
         on_focus_change: None,
         on_key_down: None, // We handle keydown separately for tab-specific behavior
         on_key_up: None,
+        ..Default::default()
     });
 
     // Effect to focus the element when is_focused becomes true
@@ -279,10 +281,10 @@ pub fn use_tab(input: UseTabInput) -> UseTabReturn {
             }
 
             // For automatic activation, select on focus
-            if activation_mode == TabsActivationMode::Automatic {
-                if let Some(on_select) = on_select {
-                    on_select.run(());
-                }
+            if activation_mode == TabsActivationMode::Automatic
+                && let Some(on_select) = on_select
+            {
+                on_select.run(());
             }
         })),
         on_blur: None,

@@ -1,4 +1,5 @@
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/i18n/src/useNumberFormatter.ts
+// Upstream: react-aria/src/i18n/useNumberFormatter.ts @ 6f664fe911
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useNumberFormatter.ts
 
 use icu_decimal::{DecimalFormatter, options::DecimalFormatterOptions};
 use icu_locale::Locale as IcuLocale;

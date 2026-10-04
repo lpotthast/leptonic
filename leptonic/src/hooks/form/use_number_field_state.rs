@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/numberfield/useNumberFieldState.ts @ 6f664fe911
 use leptos::prelude::*;
 
 use crate::utils::{
@@ -7,7 +8,7 @@ use crate::utils::{
     number_parser::NumberParser,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/numberfield/src/useNumberFieldState.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/numberfield/useNumberFieldState.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -413,7 +414,6 @@ pub fn use_number_field_state(input: UseNumberFieldStateInput) -> UseNumberField
 #[cfg(test)]
 mod tests {
     use assertr::prelude::*;
-    use leptos::prelude::*;
 
     use super::*;
 
@@ -426,8 +426,8 @@ mod tests {
     fn test_default_empty() {
         with_owner(|| {
             let state = use_number_field_state(UseNumberFieldStateInput::default());
-            assert_that(state.number_value.get_untracked()).is_equal_to(None);
-            assert_that(state.input_value.get_untracked()).is_equal_to(String::new());
+            assert_that!(state.number_value.get_untracked()).is_equal_to(None);
+            assert_that!(state.input_value.get_untracked()).is_equal_to(String::new());
         });
     }
 
@@ -438,8 +438,8 @@ mod tests {
                 default_value: Some(42.0),
                 ..Default::default()
             });
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(42.0));
-            assert_that(state.input_value.get_untracked()).is_equal_to("42".to_string());
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(42.0));
+            assert_that!(state.input_value.get_untracked()).is_equal_to("42".to_string());
         });
     }
 
@@ -453,7 +453,7 @@ mod tests {
                 ..Default::default()
             });
             state.increment.run(());
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(0.0));
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(0.0));
         });
     }
 
@@ -468,7 +468,7 @@ mod tests {
                 ..Default::default()
             });
             state.increment.run(());
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(6.0));
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(6.0));
         });
     }
 
@@ -482,7 +482,7 @@ mod tests {
                 ..Default::default()
             });
             state.decrement.run(());
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(10.0));
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(10.0));
         });
     }
 
@@ -497,10 +497,10 @@ mod tests {
                 ..Default::default()
             });
             // At max, can_increment should be false.
-            assert_that(state.can_increment.get_untracked()).is_false();
+            assert_that!(state.can_increment.get_untracked()).is_false();
             state.increment.run(());
             // Value shouldn't change.
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(10.0));
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(10.0));
         });
     }
 
@@ -514,9 +514,9 @@ mod tests {
                 step: 1.0,
                 ..Default::default()
             });
-            assert_that(state.can_decrement.get_untracked()).is_false();
+            assert_that!(state.can_decrement.get_untracked()).is_false();
             state.decrement.run(());
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(0.0));
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(0.0));
         });
     }
 
@@ -532,7 +532,7 @@ mod tests {
             state.increment.run(());
             state.increment.run(());
             // Should be exactly 0.3, not 0.30000000000000004.
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(0.3));
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(0.3));
         });
     }
 
@@ -550,7 +550,7 @@ mod tests {
             state.commit.run(());
             // Should snap to nearest step boundary: 35 or 40.
             let val = state.number_value.get_untracked().unwrap();
-            assert_that(val == 35.0 || val == 40.0).is_true();
+            assert_that!(val == 35.0 || val == 40.0).is_true();
         });
     }
 
@@ -563,7 +563,7 @@ mod tests {
             });
             state.set_input_value.run(String::new());
             state.commit.run(());
-            assert_that(state.number_value.get_untracked()).is_equal_to(None);
+            assert_that!(state.number_value.get_untracked()).is_equal_to(None);
         });
     }
 
@@ -577,8 +577,8 @@ mod tests {
             state.set_input_value.run("abc".to_string());
             state.commit.run(());
             // Should revert to previous formatted value.
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(42.0));
-            assert_that(state.input_value.get_untracked()).is_equal_to("42".to_string());
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(42.0));
+            assert_that!(state.input_value.get_untracked()).is_equal_to("42".to_string());
         });
     }
 
@@ -586,11 +586,11 @@ mod tests {
     fn test_validate_partial() {
         with_owner(|| {
             let state = use_number_field_state(UseNumberFieldStateInput::default());
-            assert_that(state.validate.run(String::new())).is_true();
-            assert_that(state.validate.run("1".to_string())).is_true();
-            assert_that(state.validate.run("1.".to_string())).is_true();
-            assert_that(state.validate.run("-".to_string())).is_true();
-            assert_that(state.validate.run("abc".to_string())).is_false();
+            assert_that!(state.validate.run(String::new())).is_true();
+            assert_that!(state.validate.run("1".to_string())).is_true();
+            assert_that!(state.validate.run("1.".to_string())).is_true();
+            assert_that!(state.validate.run("-".to_string())).is_true();
+            assert_that!(state.validate.run("abc".to_string())).is_false();
         });
     }
 
@@ -604,7 +604,7 @@ mod tests {
                 ..Default::default()
             });
             state.increment_to_max.run(());
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(100.0));
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(100.0));
         });
     }
 
@@ -618,7 +618,7 @@ mod tests {
                 ..Default::default()
             });
             state.decrement_to_min.run(());
-            assert_that(state.number_value.get_untracked()).is_equal_to(Some(0.0));
+            assert_that!(state.number_value.get_untracked()).is_equal_to(Some(0.0));
         });
     }
 
@@ -634,7 +634,7 @@ mod tests {
             state.commit_value.run("42.5".to_string());
             // Should parse, clamp, snap.
             let val = state.number_value.get_untracked().unwrap();
-            assert_that(val == 42.0 || val == 43.0).is_true();
+            assert_that!(val == 42.0 || val == 43.0).is_true();
         });
     }
 }

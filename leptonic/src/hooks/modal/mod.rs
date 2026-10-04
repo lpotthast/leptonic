@@ -18,7 +18,7 @@
 //!
 //! ## React-aria Deviations
 //!
-//! This implementation is partially based on [React Aria's overlay hooks](https://github.com/adobe/react-spectrum/tree/main/packages/@react-aria/overlays)
+//! This implementation is partially based on [React Aria's overlay hooks](https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays)
 //! (rest in ./overlay) but has the following deviations:
 //!
 //! ### Implemented (in `use_modal_backdrop`)

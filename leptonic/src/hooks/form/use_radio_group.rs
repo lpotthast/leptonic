@@ -1,5 +1,7 @@
+// Upstream: react-aria/src/radio/useRadioGroup.ts @ 569946588e
 use std::sync::Arc;
 
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -7,29 +9,28 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{HtmlElement, HtmlInputElement, KeyboardEvent};
 
 use super::{
     use_checkbox_group::Orientation,
     use_form_validation_state::{
-        use_form_validation_state, UseFormValidationStateInput, ValidateFn, ValidationBehavior,
-        ValidityStateSnapshot,
+        UseFormValidationStateInput, ValidateFn, ValidationBehavior, ValidityStateSnapshot,
+        use_form_validation_state,
     },
 };
 use crate::{
     hooks::IntoAttrs,
     utils::{
-        aria::{AriaDisabled, AriaInvalid, AriaLive, AriaOrientation, AriaRequired, AriaRole}, focusable_tree_walker::{get_focusable_tree_walker, FocusableTreeWalkerOptions}, i18n::{try_use_locale, I18nContext},
+        EventAccessors, EventHandler, EventTargetExt,
+        aria::{AriaDisabled, AriaInvalid, AriaLive, AriaOrientation, AriaRequired, AriaRole},
+        focusable_tree_walker::{FocusableTreeWalkerOptions, get_focusable_tree_walker},
+        i18n::{I18nContext, try_use_locale},
         locale::WritingDirection,
-        EventAccessors,
-        EventHandler,
-        EventTargetExt,
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/radio/src/useRadioGroup.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/radio/useRadioGroup.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -320,7 +321,7 @@ where
     });
 
     // ---- IDs ----
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("radio-group");
     let label_id = format!("radio-group-label-{base_id}");
     let description_id = format!("radio-group-description-{base_id}");
     let error_id = format!("radio-group-error-{base_id}");

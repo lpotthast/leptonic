@@ -1,14 +1,32 @@
 use std::collections::HashSet;
 
-use leptonic::hooks::*;
+use leptonic::{
+    hooks::*,
+    utils::{classes::Classes, css::rgb, style::BackgroundColorProperty},
+};
 use leptos::prelude::*;
 
 #[component]
 pub fn Grid2dDemo() -> impl IntoView {
     let colors = [
-        ["#f44336", "#e91e63", "#9c27b0", "#673ab7"],
-        ["#3f51b5", "#2196f3", "#03a9f4", "#00bcd4"],
-        ["#009688", "#4caf50", "#8bc34a", "#cddc39"],
+        [
+            rgb(0xf4, 0x43, 0x36),
+            rgb(0xe9, 0x1e, 0x63),
+            rgb(0x9c, 0x27, 0xb0),
+            rgb(0x67, 0x3a, 0xb7),
+        ],
+        [
+            rgb(0x3f, 0x51, 0xb5),
+            rgb(0x21, 0x96, 0xf3),
+            rgb(0x03, 0xa9, 0xf4),
+            rgb(0x00, 0xbc, 0xd4),
+        ],
+        [
+            rgb(0x00, 0x96, 0x88),
+            rgb(0x4c, 0xaf, 0x50),
+            rgb(0x8b, 0xc3, 0x4a),
+            rgb(0xcd, 0xdc, 0x39),
+        ],
     ];
 
     let collection = Signal::stored(GridCollection::new(
@@ -51,84 +69,69 @@ pub fn Grid2dDemo() -> impl IntoView {
     let row_group = use_grid_row_group();
 
     view! {
-        <div
-            {..grid.props.into_attrs()}
-            style="margin: 1em 0;"
-        >
-            <div
-                {..row_group.props.into_attrs()}
-                style="display: grid; grid-template-columns: repeat(4, 50px); gap: 8px;"
-            >
-                {colors.iter().enumerate().map(|(row_idx, row)| {
-                    let row_hook = use_grid_row(UseGridRowInput {
-                        state: grid.state,
-                        key: format!("row-{row_idx}"),
-                        row_index: row_idx,
-                    });
-                    let (row_props, row_styles) = row_hook.props.into_parts();
+        <div {..grid.props.into_attrs()} class="demo-my-1">
+            <div {..row_group.props.into_attrs()} class="demo-palette-grid-2d">
+                {colors
+                    .iter()
+                    .enumerate()
+                    .map(|(row_idx, row)| {
+                        let row_hook = use_grid_row(UseGridRowInput {
+                            state: grid.state,
+                            key: format!("row-{row_idx}"),
+                            row_index: row_idx,
+                        });
+                        let (row_props, row_styles) = row_hook.props.into_parts();
 
-                    view! {
-                        <div
-                            {..row_props}
-                            style=row_styles.add("display", "contents")
-                        >
-                            {row.iter().enumerate().map(|(col_idx, color)| {
-                                let color = *color;
+                        view! {
+                            <div {..row_props} class="demo-contents" style=row_styles>
+                                {row
+                                    .iter()
+                                    .enumerate()
+                                    .map(|(col_idx, color)| {
+                                        let color = *color;
+                                        let cell = use_grid_cell(UseGridCellInput {
+                                            state: grid.state,
+                                            key: format!("{row_idx}-{col_idx}"),
+                                            row_index: row_idx,
+                                            column_index: col_idx,
+                                            focus_mode: CellFocusMode::Cell,
+                                        });
+                                        let is_selected = cell.is_selected;
+                                        let is_focused = cell.is_focused;
+                                        let (cell_props, cell_styles) = cell.props.into_parts();
+                                        let cell_styles = cell_styles
+                                            .add(BackgroundColorProperty.declare(color));
 
-                                let cell = use_grid_cell(UseGridCellInput {
-                                    state: grid.state,
-                                    key: format!("{row_idx}-{col_idx}"),
-                                    row_index: row_idx,
-                                    column_index: col_idx,
-                                    focus_mode: CellFocusMode::Cell,
-                                });
+                                        // The color is per-cell data; everything else lives in `.demo-palette-cell`.
 
-                                let is_selected = cell.is_selected;
-                                let is_focused = cell.is_focused;
-                                let (cell_props, cell_styles) = cell.props.into_parts();
-                                let cell_styles = cell_styles
-                                    .add("position", "relative")
-                                    .add("width", "50px")
-                                    .add("height", "50px")
-                                    .add("background", color.to_string())
-                                    .add("border-radius", "4px")
-                                    .add("cursor", "pointer");
-
-                                view! {
-                                    <div
-                                        {..cell_props}
-                                        style=cell_styles
-                                        style:outline=move || if is_focused.get() { "3px solid #000" } else { "none" }
-                                        style:outline-offset="2px"
-                                        style:transform=move || if is_selected.get() { "scale(0.9)" } else { "scale(1)" }
-                                    >
-                                        <div
-                                            style="position: absolute; top: 3px; left: 3px; width: 14px; height: 14px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 10px; line-height: 1; pointer-events: none;"
-                                            style:background=move || if is_selected.get() { "rgba(255, 255, 255, 0.95)" } else { "rgba(0, 0, 0, 0.25)" }
-                                            style:border=move || if is_selected.get() { "none" } else { "1.5px solid rgba(255, 255, 255, 0.6)" }
-                                            style:color=move || if is_selected.get() { "#333" } else { "transparent" }
-                                        >
-                                            "\u{2713}"
-                                        </div>
-                                    </div>
-                                }
-                            }).collect_view()}
-                        </div>
-                    }
-                }).collect_view()}
+                                        view! {
+                                            <div
+                                                {..cell_props}
+                                                class=Classes::from("demo-palette-cell")
+                                                    .add_reactive("focused", is_focused)
+                                                    .add_reactive("selected", is_selected)
+                                                style=cell_styles
+                                            >
+                                                <div class="demo-palette-check">"\u{2713}"</div>
+                                            </div>
+                                        }
+                                    })
+                                    .collect_view()}
+                            </div>
+                        }
+                    })
+                    .collect_view()}
             </div>
         </div>
 
-        <div style="margin-top: 1em;">
+        <div class="demo-mt-1">
             <strong>"Focused: "</strong>
-            { move || {
-                focused_key.get().unwrap_or_else(|| "None".to_string())
-            }}
+            {move || { focused_key.get().unwrap_or_else(|| "None".to_string()) }}
         </div>
 
-        <div style="margin-top: 0.5em;">
+        <div class="demo-mt-half">
             <strong>"Selected: "</strong>
-            { move || {
+            {move || {
                 match selected.get() {
                     Selection::Keys(keys) => {
                         if keys.is_empty() {
@@ -144,11 +147,9 @@ pub fn Grid2dDemo() -> impl IntoView {
             }}
         </div>
 
-        <div style="margin-top: 0.5em;">
+        <div class="demo-mt-half">
             <strong>"Last row action: "</strong>
-            { move || {
-                last_row_action.get().unwrap_or_else(|| "None".to_string())
-            }}
+            {move || { last_row_action.get().unwrap_or_else(|| "None".to_string()) }}
         </div>
     }
 }

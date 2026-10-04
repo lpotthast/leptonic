@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/color/useColorArea.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::Attr,
@@ -22,7 +23,7 @@ use crate::{
 
 use super::use_color_area_state::UseColorAreaStateReturn;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/color/src/useColorArea.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorArea.ts
 
 // ## INTENTIONAL DEVIATIONS
 //

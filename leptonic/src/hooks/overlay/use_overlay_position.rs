@@ -1,16 +1,24 @@
+// Upstream: react-aria/src/overlays/useOverlayPosition.ts @ 6f664fe911
+// Upstream: react-aria/src/overlays/calculatePosition.ts @ 6f664fe911
 use leptos::prelude::*;
 use leptos_use::{use_document, use_element_bounding, use_window};
 
 use super::calculate_position::{CalculatePositionInput, Rect, calculate_position};
 use crate::{
     hooks::{IntoAttrs, PropsWithStyles},
-    utils::{CapturedElement, ElementCaptureAttr, locale::WritingDirection, styles::Styles},
+    utils::{
+        CapturedElement, ElementCaptureAttr,
+        css::{LengthPercentageAuto, MaxSize, NonNegativeLengthPercentage, ZIndex, try_px},
+        locale::WritingDirection,
+        style::{LeftProperty, MaxHeightProperty, TopProperty, ZIndexProperty},
+        styles::Styles,
+    },
 };
 
 //
 // This hook is based on React Aria's `useOverlayPosition` and `calculatePosition`:
-// https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useOverlayPosition.ts
-// https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/calculatePosition.ts
+// https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useOverlayPosition.ts
+// https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/calculatePosition.ts
 //
 // ## OMITTED FEATURES
 //
@@ -278,10 +286,10 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
     let viewport_width = move || {
         viewport_resize.track();
         #[cfg(web_sys_unstable_apis)]
-        if let Some(window) = use_window().as_ref() {
-            if let Some(vv) = window.visual_viewport() {
-                return vv.width();
-            }
+        if let Some(window) = use_window().as_ref()
+            && let Some(vv) = window.visual_viewport()
+        {
+            return vv.width();
         }
         match use_document().as_ref() {
             Some(document) => match document.document_element() {
@@ -295,10 +303,10 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
     let viewport_height = move || {
         viewport_resize.track();
         #[cfg(web_sys_unstable_apis)]
-        if let Some(window) = use_window().as_ref() {
-            if let Some(vv) = window.visual_viewport() {
-                return vv.height();
-            }
+        if let Some(window) = use_window().as_ref()
+            && let Some(vv) = window.visual_viewport()
+        {
+            return vv.height();
         }
         match use_document().as_ref() {
             Some(document) => match document.document_element() {
@@ -354,17 +362,26 @@ pub fn use_overlay_position(input: UseOverlayPositionInput) -> UseOverlayPositio
                 element_capture: overlay_element.attr(),
             },
             Styles::builder()
-                .with("position", "fixed")
-                .with("z-index", "100000")
-                .with("top", move || format!("{}px", result.get().top))
-                .with("left", move || format!("{}px", result.get().left))
-                .with_optional("max-height", move || {
+                .with_unchecked("position", "fixed")
+                .with(ZIndexProperty.declare(ZIndex::Integer(100_000)))
+                .with_optional(move || {
+                    try_px(result.get().top)
+                        .ok()
+                        .map(|top| TopProperty.declare(LengthPercentageAuto::from(top)))
+                })
+                .with_optional(move || {
+                    try_px(result.get().left)
+                        .ok()
+                        .map(|left| LeftProperty.declare(LengthPercentageAuto::from(left)))
+                })
+                .with_optional(move || {
                     let mh = result.get().max_height;
                     if mh >= f64::MAX / 2.0 {
-                        None
-                    } else {
-                        Some(format!("{mh}px"))
+                        return None;
                     }
+                    let mh =
+                        NonNegativeLengthPercentage::try_from(try_px(mh.max(0.0)).ok()?).ok()?;
+                    Some(MaxHeightProperty.declare(MaxSize::from(mh)))
                 })
                 .build(),
         ),

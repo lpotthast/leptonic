@@ -1,10 +1,11 @@
+// Upstream: react-aria/src/dnd/useClipboard.ts @ 6f664fe911
 //! Clipboard hook for cut/copy/paste operations on collections.
 //!
 //! Provides element-level event handlers for clipboard events, reusing the
 //! same serialization format as drag-and-drop for consistency.
 //!
 //! Based on react-aria's `useClipboard` from
-//! `@react-aria/dnd/src/useClipboard.ts`.
+//! `react-aria/src/dnd/useClipboard.ts`.
 
 use leptos::{
     attr,

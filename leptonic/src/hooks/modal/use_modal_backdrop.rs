@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/overlays/useModalOverlay.ts @ 6f664fe911
 use leptos::{oco::Oco, prelude::*};
 
 use crate::hooks::{
@@ -9,7 +10,7 @@ use crate::hooks::{
     },
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useModalOverlay.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useModalOverlay.ts
 
 //
 // ## NAMING
@@ -187,12 +188,11 @@ pub fn use_modal_backdrop(input: UseModalBackdropInput) -> UseModalBackdropRetur
                 }
             });
 
-            if is_open.get() {
-                if let Some(el) = overlay_element.get() {
-                    let undo =
-                        aria_hide_outside(&[(*el).clone()], AriaHideOutsideOptions::default());
-                    hide_cleanup.set_value(Some(undo));
-                }
+            if is_open.get()
+                && let Some(el) = overlay_element.get()
+            {
+                let undo = aria_hide_outside(&[(*el).clone()], AriaHideOutsideOptions::default());
+                hide_cleanup.set_value(Some(undo));
             }
         });
 

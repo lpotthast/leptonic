@@ -12,16 +12,27 @@ use crate::{
     utils::{
         classes::Classes,
         color::{HSV, RGB8},
-        css::pct,
-        styles::{
-            Style::{
-                AlignItems, Background, Bottom, Display, FlexDirection, Height, JustifyContent,
-                Left, MarginRight, Width,
-            },
-            Styles,
+        css::{
+            CssColor, LengthPercentageAuto, computed_pct, computed_size, css_custom_property, em,
+            pct,
         },
+        style::{BottomProperty, HeightProperty, LeftProperty, MarginRightProperty, WidthProperty},
+        styles::Styles,
     },
 };
+
+css_custom_property!(KNOB_BACKGROUND_COLOR: CssColor = "--color-palette-knob-background-color");
+css_custom_property!(SLIDER_THUMB_BACKGROUND_COLOR: CssColor = "--slider-thumb-background-color");
+css_custom_property!(
+    SLIDER_THUMB_HALO_BACKGROUND_COLOR: CssColor = "--slider-thumb-halo-background-color"
+);
+
+fn width_height(width: f64, height: f64) -> Styles {
+    Styles::builder()
+        .with(WidthProperty.declare(computed_size(pct(width))))
+        .with(HeightProperty.declare(computed_size(pct(height))))
+        .build()
+}
 
 #[component]
 pub fn ColorPreview(
@@ -73,7 +84,8 @@ pub fn ColorPalette(
 
     let norm_pos = constraint_return.normalized_position;
 
-    let styles = styles.add(Background, move || {
+    // A gradient has no checked grammar in `leptos-css` yet.
+    let styles = styles.add_optional_unchecked("background", move || {
         let color = hsv.get();
         let rgb = RGB8::from(HSV {
             hue: color.hue,
@@ -81,23 +93,31 @@ pub fn ColorPalette(
             value: 1.0,
         });
         let top_right = format!("rgb({}, {}, {})", rgb.r, rgb.g, rgb.b);
-        format!(
+        Some(format!(
             "linear-gradient(to top, rgb(0, 0, 0) 0%, transparent 100%), \
              linear-gradient(to right, rgb(255, 255, 255) 0%, {top_right} 100%)"
-        )
+        ))
     });
 
     let knob_styles = Styles::new()
-        .add(Left, move || pct(norm_pos.get().x * 100.0))
-        .add(Bottom, move || pct((1.0 - norm_pos.get().y) * 100.0))
-        .add("--color-palette-knob-background-color", move || {
+        .add_reactive(move || {
+            LeftProperty.declare(LengthPercentageAuto::from(computed_pct(
+                norm_pos.get().x * 100.0,
+            )))
+        })
+        .add_reactive(move || {
+            BottomProperty.declare(LengthPercentageAuto::from(computed_pct(
+                (1.0 - norm_pos.get().y) * 100.0,
+            )))
+        })
+        .add_reactive(move || {
             let color = hsv.get();
-            let rgb = RGB8::from(HSV {
+            let hue_rgb = RGB8::from(HSV {
                 hue: color.hue,
                 saturation: 1.0,
                 value: 1.0,
             });
-            format!("rgb({}, {}, {})", rgb.r, rgb.g, rgb.b)
+            KNOB_BACKGROUND_COLOR.declare(CssColor::from(hue_rgb))
         });
 
     view! {
@@ -132,13 +152,11 @@ pub fn HueSlider(
             value: 1.0,
         })
     });
-    let rgb_css = move || {
-        let RGB8 { r, g, b } = rgb.get();
-        format!("rgb({r}, {g}, {b})")
-    };
     let slider_styles = Styles::new()
-        .add("--slider-thumb-background-color", rgb_css)
-        .add("--slider-thumb-halo-background-color", rgb_css);
+        .add_reactive(move || SLIDER_THUMB_BACKGROUND_COLOR.declare(CssColor::from(rgb.get())))
+        .add_reactive(move || {
+            SLIDER_THUMB_HALO_BACKGROUND_COLOR.declare(CssColor::from(rgb.get()))
+        });
     view! {
         <div class=classes.add("leptonic-hue-slider") style=styles>
             <Slider
@@ -175,32 +193,41 @@ pub fn ColorPicker(
 
     let rgb = Signal::derive(move || RGB8::from(hsv.get()));
 
-    let flex_row_styles = Styles::from([(Display, "flex"), (FlexDirection, "row")]);
+    let flex_row_styles = Styles::builder()
+        .with_unchecked("display", "flex")
+        .with_unchecked("flex-direction", "row")
+        .build();
 
-    let flex_row_centered_styles = Styles::from([
-        (Display, "flex"),
-        (FlexDirection, "row"),
-        (JustifyContent, "center"),
-        (AlignItems, "center"),
-        (Height, "20em"),
-    ]);
+    let flex_row_centered_styles = Styles::builder()
+        .with_unchecked("display", "flex")
+        .with_unchecked("flex-direction", "row")
+        .with_unchecked("justify-content", "center")
+        .with_unchecked("align-items", "center")
+        .with(HeightProperty.declare(computed_size(em(20.0))))
+        .build();
 
-    let field_styles = Styles::from([(Width, "32%"), (MarginRight, "2%")]);
+    let field_styles = Styles::builder()
+        .with(WidthProperty.declare(computed_size(pct(32.0))))
+        .with(MarginRightProperty.declare(LengthPercentageAuto::from(pct(2.0))))
+        .build();
 
-    let field_styles_last = Styles::from([(Width, "32%"), (MarginRight, "0%")]);
+    let field_styles_last = Styles::builder()
+        .with(WidthProperty.declare(computed_size(pct(32.0))))
+        .with(MarginRightProperty.declare(LengthPercentageAuto::from(pct(0.0))))
+        .build();
 
     view! {
         <div class=classes.add("leptonic-color-picker") style=styles>
             <div style=flex_row_centered_styles>
                 <ColorPreview
                     rgb=rgb
-                    styles=Styles::from([(Width, "20%"), (Height, "100%")])
+                    styles=width_height(20.0, 100.0)
                 />
                 <ColorPalette
                     hsv=hsv
                     set_saturation=set_saturation
                     set_value=set_value
-                    styles=Styles::from([(Width, "80%"), (Height, "100%")])
+                    styles=width_height(80.0, 100.0)
                 />
             </div>
 

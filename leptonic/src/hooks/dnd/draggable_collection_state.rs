@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/dnd/useDraggableCollectionState.ts @ 6f664fe911
 //! State management for draggable collections with selection awareness.
 //!
 //! Tracks which items are being dragged, supports multi-select drag (where
@@ -5,7 +6,7 @@
 //! events for drag lifecycle.
 //!
 //! Based on react-aria's `useDraggableCollectionState` from
-//! `@react-aria/dnd/src/useDraggableCollectionState.ts`.
+//! `react-stately/src/dnd/useDraggableCollectionState.ts`.
 
 use std::collections::HashSet;
 
@@ -262,7 +263,6 @@ pub fn use_draggable_collection_state(
 
 #[cfg(test)]
 mod tests {
-    use leptos::prelude::*;
 
     use super::*;
 

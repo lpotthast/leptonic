@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/switch/useSwitch.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::{
@@ -29,7 +30,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/switch/src/useSwitch.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/switch/useSwitch.ts
 
 // No intentional deviations from the react-aria implementation.
 

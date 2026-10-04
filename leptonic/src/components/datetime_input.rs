@@ -12,6 +12,8 @@ use crate::{
     },
 };
 
+leptos_styles::css::css_custom_property!(MARGIN: leptos_styles::css::Margin = "--margin");
+
 #[component]
 #[allow(clippy::needless_pass_by_value)]
 pub fn DateTimeInput(
@@ -37,7 +39,7 @@ pub fn DateTimeInput(
     let id = id.map(Oco::into_owned);
 
     let styles = match margin {
-        Some(m) => styles.add("--margin", leptos_styles::css::CssValue::from(m)),
+        Some(m) => styles.add(MARGIN.declare(m)),
         None => styles,
     };
 
@@ -72,10 +74,10 @@ pub fn DateTimeInput(
             on_change: Out::new_callback(move |new_value| {
                 tracing::info!("Received new value {:?}", new_value);
                 // Skip propagating a change event when the received value does not deviate from the current value.
-                if let Some(current) = get.get() {
-                    if current == new_value {
-                        return;
-                    }
+                if let Some(current) = get.get()
+                    && current == new_value
+                {
+                    return;
                 }
                 set.set(Some(new_value));
             }),

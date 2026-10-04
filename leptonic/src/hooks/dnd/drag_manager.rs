@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/dnd/DragManager.ts @ 6f664fe911
 //! Virtual drag-and-drop manager for keyboard and screen-reader support.
 //!
 //! This module provides keyboard-based drag-and-drop that works alongside
@@ -17,7 +18,7 @@
 //! - Cycles through source element when Tab-navigating past the last target
 //!
 //! Based on react-aria's `DragManager` from
-//! `@react-aria/dnd/src/DragManager.ts`.
+//! `react-aria/src/dnd/DragManager.ts`.
 
 #[cfg(not(feature = "ssr"))]
 use leptos::prelude::Callable;
@@ -587,24 +588,22 @@ fn cancel_event(
     let event_type = e.type_();
 
     // Allow focusin/focusout on the drag source and the current activate button.
-    if event_type == "focusin" || event_type == "focusout" {
-        if let Some(target) = e.target() {
-            if let Some(target_el) = target.dyn_ref::<web_sys::Element>() {
-                if target_el == source_element {
-                    return;
-                }
-                // Also allow focus on the activate button.
-                if let Some(ref activate_btn) = get_current_activate_button(state) {
-                    if crate::utils::dom_ext::node_contains(
-                        Some(activate_btn.as_ref()),
-                        Some(target_el.as_ref()),
-                    )
-                    .unwrap_or(false)
-                    {
-                        return;
-                    }
-                }
-            }
+    if (event_type == "focusin" || event_type == "focusout")
+        && let Some(target) = e.target()
+        && let Some(target_el) = target.dyn_ref::<web_sys::Element>()
+    {
+        if target_el == source_element {
+            return;
+        }
+        // Also allow focus on the activate button.
+        if let Some(ref activate_btn) = get_current_activate_button(state)
+            && crate::utils::dom_ext::node_contains(
+                Some(activate_btn.as_ref()),
+                Some(target_el.as_ref()),
+            )
+            .unwrap_or(false)
+        {
+            return;
         }
     }
 
@@ -757,11 +756,11 @@ fn handle_blur_event(state: &Rc<RefCell<SessionState>>, e: &web_sys::FocusEvent)
     let source_element = state.borrow().source_element.clone();
 
     // Prevent blur events except from the original drag target.
-    if let Some(event_target) = e.target() {
-        if event_target.dyn_ref::<web_sys::Element>() != Some(&source_element) {
-            e.stop_propagation();
-            e.stop_immediate_propagation();
-        }
+    if let Some(event_target) = e.target()
+        && event_target.dyn_ref::<web_sys::Element>() != Some(&source_element)
+    {
+        e.stop_propagation();
+        e.stop_immediate_propagation();
     }
 
     // If nothing is gaining focus (or related_target is not an HTMLElement),
@@ -1097,10 +1096,8 @@ fn drop_on_current_target(state: &Rc<RefCell<SessionState>>) {
     }
 
     // Return focus to source element (unless the target manages its own focus).
-    if !prevent_focus {
-        if let Some(html_el) = source_element.dyn_ref::<web_sys::HtmlElement>() {
-            let _ = html_el.focus();
-        }
+    if !prevent_focus && let Some(html_el) = source_element.dyn_ref::<web_sys::HtmlElement>() {
+        let _ = html_el.focus();
     }
 
     // Step 8: Re-trigger focusin on active element to fix focus ring state,
@@ -1149,10 +1146,10 @@ fn cancel_session(state: &Rc<RefCell<SessionState>>) {
     }
 
     // Return focus to source element (if not hidden).
-    if !is_element_hidden(&source_element) {
-        if let Some(html_el) = source_element.dyn_ref::<web_sys::HtmlElement>() {
-            let _ = html_el.focus();
-        }
+    if !is_element_hidden(&source_element)
+        && let Some(html_el) = source_element.dyn_ref::<web_sys::HtmlElement>()
+    {
+        let _ = html_el.focus();
     }
 
     // Step 8: Re-trigger focusin on active element to fix focus ring state.
@@ -1633,10 +1630,10 @@ pub fn is_virtual_dragging() -> bool {
 fn focus_element_by_id(target_id: &str) {
     DROP_TARGETS.with(|targets| {
         let targets = targets.borrow();
-        if let Some(target) = targets.get(target_id) {
-            if let Some(html_el) = target.element.dyn_ref::<web_sys::HtmlElement>() {
-                let _ = html_el.focus();
-            }
+        if let Some(target) = targets.get(target_id)
+            && let Some(html_el) = target.element.dyn_ref::<web_sys::HtmlElement>()
+        {
+            let _ = html_el.focus();
         }
     });
 }
@@ -1661,23 +1658,22 @@ fn find_target_for_element(
         let targets = targets.borrow();
         // First pass: exact element match.
         for (i, id) in valid_target_ids.iter().enumerate() {
-            if let Some(t) = targets.get(id) {
-                if t.element == *element {
-                    return Some((i, id.clone()));
-                }
+            if let Some(t) = targets.get(id)
+                && t.element == *element
+            {
+                return Some((i, id.clone()));
             }
         }
         // Second pass: containment (element is inside target).
         for (i, id) in valid_target_ids.iter().enumerate() {
-            if let Some(t) = targets.get(id) {
-                if crate::utils::dom_ext::node_contains(
+            if let Some(t) = targets.get(id)
+                && crate::utils::dom_ext::node_contains(
                     Some(t.element.as_ref()),
                     Some(element.as_ref()),
                 )
                 .unwrap_or(false)
-                {
-                    return Some((i, id.clone()));
-                }
+            {
+                return Some((i, id.clone()));
             }
         }
         None
@@ -1691,14 +1687,13 @@ fn find_target_for_element(
 #[cfg(not(feature = "ssr"))]
 fn dispatch_focusin_on_active_element() {
     let document = web_sys::window().and_then(|w| w.document());
-    if let Some(document) = document {
-        if let Some(active) = document.active_element() {
-            let init = web_sys::FocusEventInit::new();
-            init.set_bubbles(true);
-            if let Ok(event) = web_sys::FocusEvent::new_with_focus_event_init_dict("focusin", &init)
-            {
-                let _ = active.dispatch_event(&event);
-            }
+    if let Some(document) = document
+        && let Some(active) = document.active_element()
+    {
+        let init = web_sys::FocusEventInit::new();
+        init.set_bubbles(true);
+        if let Ok(event) = web_sys::FocusEvent::new_with_focus_event_init_dict("focusin", &init) {
+            let _ = active.dispatch_event(&event);
         }
     }
 }

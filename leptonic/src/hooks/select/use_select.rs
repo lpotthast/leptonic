@@ -1,5 +1,8 @@
+// Upstream: react-aria/src/select/useSelect.ts @ 6f664fe911
+// Upstream: react-stately/src/select/useSelectState.ts @ 6f664fe911
 use std::collections::HashSet;
 
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -7,7 +10,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::KeyboardEvent;
 
@@ -40,7 +42,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/select/src/useSelect.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/select/useSelect.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -71,7 +73,7 @@ use crate::{
 //   handling) is implemented inline, matching the same semantics.
 // - `filterDOMProps`: Leptos handles DOM attribute forwarding via the spread
 //   syntax and typed `Attr` tuples, so no DOM-prop filtering is needed.
-// - `useField` from `@react-aria/label`: Replaced by `use_field`
+// - `useField` from `react-aria/src/label`: Replaced by `use_field`
 //   which provides the same ID generation.
 
 /// Input parameters for the `use_select` hook.
@@ -358,6 +360,9 @@ where
     /// The composed aria-labelledby value for the listbox.
     pub aria_labelledby: String,
 
+    /// The listbox id, referenced by the trigger's `aria-controls`.
+    pub id: String,
+
     /// All available items.
     pub items: Signal<Vec<K>>,
 
@@ -388,7 +393,7 @@ pub struct UseSelectTriggerProps {
     pub tabindex: &'static str,
     pub aria_haspopup: AriaHasPopup,
     pub aria_expanded: Signal<Option<AriaExpanded>>,
-    pub aria_controls: String,
+    pub aria_controls: Signal<Option<String>>,
     pub aria_label: Option<&'static str>,
     pub aria_labelledby: Option<String>,
     pub aria_required: Option<AriaRequired>,
@@ -439,7 +444,7 @@ pub type UseSelectTriggerAttrs = (
     Attr<attr::Tabindex, &'static str>,
     Attr<attr::AriaHaspopup, AriaHasPopup>,
     Attr<attr::AriaExpanded, Signal<Option<AriaExpanded>>>,
-    Attr<attr::AriaControls, String>,
+    Attr<attr::AriaControls, Signal<Option<String>>>,
     Attr<attr::AriaLabel, Option<&'static str>>,
     Attr<attr::AriaLabelledby, Option<String>>,
     Attr<attr::AriaRequired, Option<AriaRequired>>,
@@ -465,11 +470,12 @@ pub struct UseSelectValueProps {
 /// Props for the label element. Extends `UseFieldLabelProps` with an `on_click`
 /// handler that focuses the trigger (since the label is a `<span>`, not `<label>`).
 #[derive(Debug, Clone)]
+/// The trigger is not a form control, so the label references nothing via `for`. Instead, clicking
+/// it focuses the trigger, and the trigger names itself via `aria-labelledby` (as in react-aria,
+/// which renders the label as a `<span>`).
 pub struct UseSelectLabelProps {
     /// The id of the label element.
     pub id: String,
-    /// The "for" attribute linking to the field.
-    pub html_for: String,
     /// Click handler that focuses the trigger element.
     pub on_click: EventHandler<web_sys::MouseEvent>,
 }
@@ -478,18 +484,13 @@ impl IntoAttrs for UseSelectLabelProps {
     type Attrs = UseSelectLabelAttrs;
 
     fn into_attrs(self) -> Self::Attrs {
-        (
-            Attr(attr::Id, self.id),
-            Attr(attr::For, self.html_for),
-            self.on_click.into_on(ev::click),
-        )
+        (Attr(attr::Id, self.id), self.on_click.into_on(ev::click))
     }
 }
 
 /// Attributes for the select label element.
 pub type UseSelectLabelAttrs = (
     Attr<attr::Id, String>,
-    Attr<attr::For, String>,
     On<ev::click, SharedEventCallback<web_sys::MouseEvent>>,
 );
 
@@ -618,7 +619,7 @@ where
     // IDs
     // =========================================================================
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("select");
     let trigger_id = format!("select-trigger-{base_id}");
     let value_id = format!("select-value-{base_id}");
     let listbox_id = format!("select-listbox-{base_id}");
@@ -673,10 +674,11 @@ where
             let open = is_open.get();
             let was_open = prev_open.get_value();
             prev_open.set_value(open);
-            if was_open && !open {
-                if let Some(el) = trigger_el.get_untracked() {
-                    focus_safely(&el);
-                }
+            if was_open
+                && !open
+                && let Some(el) = trigger_el.get_untracked()
+            {
+                focus_safely(&el);
             }
         });
     }
@@ -892,14 +894,15 @@ where
         // Delegate printable characters to type-ahead. If type-ahead consumed the key
         // (called preventDefault), skip standard handling. Otherwise, fall through so
         // e.g. Space can still open the menu when there's no active search.
-        if selection_mode == SelectionMode::Single && !is_open.get_untracked() {
-            if let Some(ref ts) = type_select {
-                let key_str = e.key();
-                if key_str.len() == 1 && !e.ctrl_key() && !e.alt_key() && !e.meta_key() {
-                    ts.on_keydown.run(e.clone());
-                    if e.default_prevented() {
-                        return;
-                    }
+        if selection_mode == SelectionMode::Single
+            && !is_open.get_untracked()
+            && let Some(ref ts) = type_select
+        {
+            let key_str = e.key();
+            if key_str.len() == 1 && !e.ctrl_key() && !e.alt_key() && !e.meta_key() {
+                ts.on_keydown.run(e.clone());
+                if e.default_prevented() {
+                    return;
                 }
             }
         }
@@ -1131,12 +1134,11 @@ where
         if is_disabled.get_untracked() {
             return;
         }
-        if let Some(doc) = leptos_use::use_document().as_ref() {
-            if let Some(el) = doc.get_element_by_id(&trigger_id_for_label) {
-                if let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>() {
-                    let _ = html_el.focus();
-                }
-            }
+        if let Some(doc) = leptos_use::use_document().as_ref()
+            && let Some(el) = doc.get_element_by_id(&trigger_id_for_label)
+            && let Some(html_el) = el.dyn_ref::<web_sys::HtmlElement>()
+        {
+            let _ = html_el.focus();
         }
     };
 
@@ -1147,7 +1149,12 @@ where
             tabindex: "0",
             aria_haspopup: AriaHasPopup::Listbox,
             aria_expanded,
-            aria_controls: listbox_id.clone(),
+            // The listbox only exists while open, so only reference it then (as react-aria's
+            // `useOverlayTrigger` does).
+            aria_controls: {
+                let listbox_id = listbox_id.clone();
+                Signal::derive(move || is_open.get().then(|| listbox_id.clone()))
+            },
             aria_label,
             aria_labelledby: composed_aria_labelledby,
             aria_required,
@@ -1171,7 +1178,6 @@ where
         },
         label_props: UseSelectLabelProps {
             id: field.label_props.id,
-            html_for: field.label_props.html_for,
             on_click: EventHandler::new(handle_label_click),
         },
         description_props: field.description_props,
@@ -1184,7 +1190,7 @@ where
             validation_behavior,
         },
         trigger_id,
-        listbox_id,
+        listbox_id: listbox_id.clone(),
         label_id,
         value_id,
         is_open,
@@ -1204,6 +1210,7 @@ where
         get_option_id,
         trigger_element,
         menu_config: UseSelectMenuConfig {
+            id: listbox_id.clone(),
             selection_mode,
             selected_keys: selection_state.selected_keys,
             on_selection_change: on_internal_selection_change,

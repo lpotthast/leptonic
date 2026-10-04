@@ -118,6 +118,10 @@ pub fn PageInputCategory() -> impl IntoView {
                             <TableCell><Link href=routes::doc::hooks::UseLabel.materialize()>"use_label"</Link></TableCell>
                             <TableCell>"Associate a label with a form element"</TableCell>
                         </TableRow>
+                        <TableRow>
+                            <TableCell><Link href=routes::doc::hooks::UseSpinButton.materialize()>"use_spin_button"</Link></TableCell>
+                            <TableCell>"Step a number up and down with the keyboard and hold-to-spin buttons"</TableCell>
+                        </TableRow>
                     </TableBody>
                 </Table>
             </TableContainer>

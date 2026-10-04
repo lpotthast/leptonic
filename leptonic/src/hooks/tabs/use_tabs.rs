@@ -1,9 +1,11 @@
+// Upstream: react-aria/src/tabs/useTabList.ts @ 6f664fe911
+// Upstream: react-stately/src/tabs/useTabListState.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr, prelude::*};
-use uuid::Uuid;
 
 use crate::{hooks::IntoAttrs, utils::aria::AriaOrientation};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabList.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tabs/useTabList.ts
 
 //
 // No intentional deviations from the react-aria implementation.
@@ -143,7 +145,7 @@ pub fn use_tabs(input: UseTabsInput) -> UseTabsReturn {
         on_selection_change,
     } = input;
 
-    let id_base = format!("tabs-{}", Uuid::new_v4());
+    let id_base = use_id("tabs");
 
     let select_tab = Callback::new(move |key: String| {
         if let Some(on_change) = on_selection_change {

@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/datepicker/useDatePickerState.ts @ 6f664fe911
 use leptos::prelude::*;
 use time::macros::format_description;
 
@@ -7,7 +8,7 @@ use crate::hooks::form::use_form_validation_state::{
     use_form_validation_state,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/datepicker/src/useDatePickerState.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/datepicker/useDatePickerState.ts
 
 //
 // ## OMITTED FEATURES
@@ -309,15 +310,18 @@ pub fn use_date_picker_state(input: UseDatePickerStateInput) -> UseDatePickerSta
             return;
         }
 
-        if is_open.get_untracked() && !new_open && value.get_untracked().is_none() && has_time {
-            if let Some(date) = selected_date.get_untracked() {
-                commit_value(
-                    date,
-                    selected_time
-                        .get_untracked()
-                        .unwrap_or_else(placeholder_time),
-                );
-            }
+        if is_open.get_untracked()
+            && !new_open
+            && value.get_untracked().is_none()
+            && has_time
+            && let Some(date) = selected_date.get_untracked()
+        {
+            commit_value(
+                date,
+                selected_time
+                    .get_untracked()
+                    .unwrap_or_else(placeholder_time),
+            );
         }
 
         notify_open(new_open);

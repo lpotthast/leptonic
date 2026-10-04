@@ -11,50 +11,9 @@ use leptonic::{
         EscapeKeyBehavior, GridCollection, GridFocusMode, GridRow as GridRowData, Selection,
         SelectionBehavior, SelectionMode,
     },
+    utils::{css::rgb, style::BackgroundColorProperty, styles::Styles},
 };
 use leptos::prelude::*;
-use leptos_styles::{
-    Style::{
-        Background, BorderRadius, Cursor, Display, FlexDirection, FontFamily, FontSize, Gap,
-        Height, MarginTop, Outline, OutlineOffset, Padding, Width,
-    },
-    Styles,
-};
-
-fn cell_style(color: &str) -> Styles {
-    Styles::builder()
-        .with(Width, "50px")
-        .with(Height, "50px")
-        .with(BorderRadius, "4px")
-        .with(Cursor, "pointer")
-        .with(
-            "transition",
-            "transform 0.15s, outline-color 0.15s, box-shadow 0.15s",
-        )
-        .with(Outline, "3px solid transparent")
-        .with(OutlineOffset, "2px")
-        .with(Background, color.to_string())
-        .build()
-}
-
-fn row_style() -> Styles {
-    Styles::from([(Display, "flex"), (Gap, "8px")])
-}
-
-fn grid_layout_style() -> Styles {
-    Styles::from([(Display, "flex"), (FlexDirection, "column"), (Gap, "8px")])
-}
-
-fn state_display_style() -> Styles {
-    Styles::from([
-        (MarginTop, "1em"),
-        (Padding, "0.75em 1em"),
-        (Background, "#f5f5f5"),
-        (BorderRadius, "6px"),
-        (FontSize, "0.9em"),
-        (FontFamily, "monospace"),
-    ])
-}
 
 fn format_selection(sel: &Selection<String>) -> String {
     match sel {
@@ -73,10 +32,26 @@ fn format_selection(sel: &Selection<String>) -> String {
 
 #[component]
 pub fn GridColorPaletteDemo() -> impl IntoView {
+    // Each cell's color is data, so it is the one inline style here: a typed `background-color`.
     let colors = [
-        ["#f44336", "#e91e63", "#9c27b0", "#673ab7"],
-        ["#3f51b5", "#2196f3", "#03a9f4", "#00bcd4"],
-        ["#009688", "#4caf50", "#8bc34a", "#cddc39"],
+        [
+            rgb(0xf4, 0x43, 0x36),
+            rgb(0xe9, 0x1e, 0x63),
+            rgb(0x9c, 0x27, 0xb0),
+            rgb(0x67, 0x3a, 0xb7),
+        ],
+        [
+            rgb(0x3f, 0x51, 0xb5),
+            rgb(0x21, 0x96, 0xf3),
+            rgb(0x03, 0xa9, 0xf4),
+            rgb(0x00, 0xbc, 0xd4),
+        ],
+        [
+            rgb(0x00, 0x96, 0x88),
+            rgb(0x4c, 0xaf, 0x50),
+            rgb(0x8b, 0xc3, 0x4a),
+            rgb(0xcd, 0xdc, 0x39),
+        ],
     ];
 
     let collection: Signal<GridCollection<String>> = Signal::stored(GridCollection::new(
@@ -94,7 +69,7 @@ pub fn GridColorPaletteDemo() -> impl IntoView {
     let (last_action, set_last_action) = signal::<Option<String>>(None);
 
     view! {
-        <div style="padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
+        <div class="demo-frame">
             <GridAtom
                 collection
                 selection_mode=SelectionMode::Multiple
@@ -108,33 +83,33 @@ pub fn GridColorPaletteDemo() -> impl IntoView {
                 })
                 label="Color Palette".to_string()
             >
-                <GridRowGroupAtom styles=grid_layout_style()>
+                <GridRowGroupAtom classes="demo-palette-grid">
                     {colors
                         .into_iter()
                         .enumerate()
                         .map(move |(ri, row)| {
                             view! {
-                                <GridRowAtom<String> item_key=format!("row-{ri}") row_index=ri styles=row_style()>
-                                    {
-                                        row
-                                            .into_iter()
-                                            .enumerate()
-                                            .map(move |(ci, color)| {
-                                                view! {
-                                                    <FocusRing>
-                                                        <GridCellAtom<String>
-                                                            item_key=format!("{ri}-{ci}")
-                                                            row_index=ri
-                                                            column_index=ci
-                                                            styles=cell_style(color)
-                                                        >
-                                                            ""
-                                                        </GridCellAtom<String>>
-                                                    </FocusRing>
-                                                }
-                                            })
-                                            .collect_view()
-                                    }
+                                <GridRowAtom<String> item_key=format!("row-{ri}") row_index=ri classes="demo-palette-row">
+                                    {row
+                                        .into_iter()
+                                        .enumerate()
+                                        .map(move |(ci, color)| {
+                                            view! {
+                                                <FocusRing>
+                                                    <GridCellAtom<String>
+                                                        item_key=format!("{ri}-{ci}")
+                                                        row_index=ri
+                                                        column_index=ci
+                                                        classes="demo-palette-cell"
+                                                        styles=Styles::new()
+                                                            .add(BackgroundColorProperty.declare(color))
+                                                    >
+                                                        ""
+                                                    </GridCellAtom<String>>
+                                                </FocusRing>
+                                            }
+                                        })
+                                        .collect_view()}
                                 </GridRowAtom<String>>
                             }
                         })
@@ -142,21 +117,16 @@ pub fn GridColorPaletteDemo() -> impl IntoView {
                 </GridRowGroupAtom>
             </GridAtom>
 
-            <div style=state_display_style()>
+            <div class="demo-state-display">
                 <div>
                     <strong>"Selected: "</strong>
                     {move || format_selection(&selected.get())}
                 </div>
-                <div style="margin-top: 0.25em;">
+                <div class="demo-mt-quarter">
                     <strong>"Last row action: "</strong>
                     {move || last_action.get().unwrap_or_else(|| "None".to_string())}
                 </div>
             </div>
         </div>
-
-        <style>
-            "article [role='gridcell'][data-focused='true'] { outline-color: #000 !important; }"
-            "article [role='gridcell'][data-selected='true'] { transform: scale(0.85); box-shadow: 0 0 0 3px white, 0 0 0 5px #1976d2; }"
-        </style>
     }
 }

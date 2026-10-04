@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/tabs/useTabPanel.ts @ 6f664fe911
 use leptos::{attr, attr::Attr, prelude::*};
 
 use crate::{
@@ -5,7 +6,7 @@ use crate::{
     utils::aria::{AriaHidden, AriaRole},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tabs/src/useTabPanel.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tabs/useTabPanel.ts
 
 //
 // No intentional deviations from the react-aria implementation.

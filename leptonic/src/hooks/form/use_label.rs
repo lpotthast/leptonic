@@ -1,9 +1,10 @@
+// Upstream: react-aria/src/label/useLabel.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr};
-use uuid::Uuid;
 
 use crate::hooks::IntoAttrs;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/label/src/useLabel.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/label/useLabel.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -100,8 +101,8 @@ pub fn use_label(input: UseLabelInput) -> UseLabelReturn {
         label_element_type,
     } = input;
 
-    let label_id = id.unwrap_or_else(|| format!("label-{}", Uuid::new_v4()));
-    let field_id = format!("field-{}", Uuid::new_v4());
+    let label_id = id.unwrap_or_else(|| use_id("label"));
+    let field_id = use_id("field");
 
     let element_type = label_element_type.unwrap_or_default();
 

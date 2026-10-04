@@ -21,17 +21,13 @@ pub fn LinkDisabledDemo() -> impl IntoView {
     view! {
         <div>
             <strong>"Disabled Link: "</strong>
-            <a
-                {..link_props.into_attrs()}
-                style=link_styles
-                    .add("color", move || if is_disabled.get() { "#999" } else { "var(--brand-color)" })
-                    .add("cursor", move || if is_disabled.get() { "not-allowed" } else { "pointer" })
-            >
+            // `.demo-link` greys itself out via `[aria-disabled="true"]`, which the hook sets.
+            <a {..link_props.into_attrs()} class="demo-link" style=link_styles>
                 "This link can be disabled"
             </a>
         </div>
 
-        <label style="display: flex; align-items: center; gap: 0.5em; cursor: pointer; margin-top: 0.5em;">
+        <label class="demo-checkbox-label">
             <input
                 type="checkbox"
                 prop:checked=is_disabled

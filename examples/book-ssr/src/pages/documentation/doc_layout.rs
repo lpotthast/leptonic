@@ -20,7 +20,7 @@ pub fn DocLayout() -> impl IntoView {
 
     let drawer_content = view! {
         <DrawerSection level=1 header=move || view! {
-            <Icon icon=icondata::BsBook margin=Margin::Right(em(1.0))></Icon> "Getting started"
+            <Icon icon=icondata::BsBook margin=Margin::Right(em(1.0).into())></Icon> "Getting started"
         }>
             <Stack orientation=StackOrientation::Vertical spacing=CssDimension::Zero classes="link-stack">
                 <Link href=routes::doc::Overview.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()>"Overview"</Link>
@@ -37,7 +37,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::Interactions.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsCursor margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsCursor margin=Margin::Right(em(1.0).into())/>
                 "Interactions"
             </Link>
         }>
@@ -58,7 +58,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::Focus.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsEye margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsEye margin=Margin::Right(em(1.0).into())/>
                 "Focus"
             </Link>
         }>
@@ -79,7 +79,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::Overlays.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsWindowStack margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsWindowStack margin=Margin::Right(em(1.0).into())/>
                 "Overlays"
             </Link>
         }>
@@ -93,7 +93,7 @@ pub fn DocLayout() -> impl IntoView {
         <div class="drawer-section" data-level="1">
             <Link href=routes::doc::SelectionDomain.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsCheckSquare margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsCheckSquare margin=Margin::Right(em(1.0).into())/>
                 "Selection"
             </Link>
         </div>
@@ -102,7 +102,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::InputCategory.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsToggles margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsToggles margin=Margin::Right(em(1.0).into())/>
                 "Input"
             </Link>
         }>
@@ -122,6 +122,7 @@ pub fn DocLayout() -> impl IntoView {
                 <Link href=routes::doc::components::DateTime.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Date & Time"</Link>
                 <Link href=routes::doc::components::TiptapEditor.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="comp"/> "Tiptap Editor"</Link>
                 <Link href=routes::doc::hooks::UseLabel.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_label"</Link>
+                <Link href=routes::doc::hooks::UseSpinButton.materialize() classes="item" on:click=move |_| close_doc_drawer_on_mobile()><DocBadge kind="hook"/> "use_spin_button"</Link>
             </Stack>
         </DrawerSection>
 
@@ -129,7 +130,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::DataDisplay.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsGrid margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsGrid margin=Margin::Right(em(1.0).into())/>
                 "Data Display"
             </Link>
         }>
@@ -146,7 +147,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::LayoutCategory.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsColumnsGap margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsColumnsGap margin=Margin::Right(em(1.0).into())/>
                 "Layout"
             </Link>
         }>
@@ -168,7 +169,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::Feedback.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsChatSquare margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsChatSquare margin=Margin::Right(em(1.0).into())/>
                 "Feedback"
             </Link>
         }>
@@ -191,7 +192,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::Navigation.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsSignpost margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsSignpost margin=Margin::Right(em(1.0).into())/>
                 "Navigation"
             </Link>
         }>
@@ -208,7 +209,7 @@ pub fn DocLayout() -> impl IntoView {
         <DrawerSection level=1 header=move || view! {
             <Link href=routes::doc::General.materialize() classes="drawer-domain-link"
                 on:click=move |_| close_doc_drawer_on_mobile()>
-                <Icon icon=icondata::BsCircleSquare margin=Margin::Right(em(1.0))/>
+                <Icon icon=icondata::BsCircleSquare margin=Margin::Right(em(1.0).into())/>
                 "General"
             </Link>
         }>

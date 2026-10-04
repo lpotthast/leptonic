@@ -3,10 +3,7 @@ use leptos::prelude::*;
 use crate::{
     components::icon::Icon,
     prelude::*,
-    utils::{
-        classes::Classes,
-        styles::{Style::Display, Styles},
-    },
+    utils::{classes::Classes, styles::Styles},
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -93,19 +90,19 @@ pub fn Toggle(
                                     <span class="icon-positioner">
                                         <Icon
                                             icon=off_icon
-                                            styles=Styles::new().add(Display, move || if state.get() {
-                                                "none"
-                                            } else {
-                                                "inherit"
-                                            })
+                                            styles=Styles::new()
+                                                .add_optional_unchecked(
+                                                    "display",
+                                                    move || Some(if state.get() { "none" } else { "inherit" }),
+                                                )
                                         />
                                         <Icon
                                             icon=on_icon
-                                            styles=Styles::new().add(Display, move || if state.get() {
-                                                "inherit"
-                                            } else {
-                                                "none"
-                                            })
+                                            styles=Styles::new()
+                                                .add_optional_unchecked(
+                                                    "display",
+                                                    move || Some(if state.get() { "inherit" } else { "none" }),
+                                                )
                                         />
                                     </span>
                                 }

@@ -1,6 +1,7 @@
+// Upstream: react-stately/src/toggle/useToggleState.ts @ 6f664fe911
 use leptos::prelude::*;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/toggle/src/useToggleState.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/toggle/useToggleState.ts
 
 // No intentional deviations from the react-aria implementation.
 

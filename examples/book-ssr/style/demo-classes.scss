@@ -11,6 +11,7 @@
 .demo-btn-primary   { padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; background: var(--brand-color); color: white; border: none; font-size: 1em; }
 .demo-btn-danger    { padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; background: #dc3545; color: white; border: none; font-size: 1em; }
 .demo-btn-secondary { padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; background: #6c757d; color: white; border: none; font-size: 1em; }
+.demo-btn-outline    { padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; border: 1px solid #ccc; font-size: 1em; }
 .demo-btn-dark      { padding: 0.5em 1em; border-radius: 6px; cursor: pointer; background: #555; color: white; border: none; font-size: 0.9em; }
 
 /* Inputs */
@@ -21,14 +22,42 @@
 .demo-form-row        { flex-direction: row; align-items: center; gap: 0.5em; }
 .demo-flex-gap        { display: flex; gap: 2em; flex-wrap: wrap; margin-top: 0.5em; }
 .demo-flex-center-row { display: flex; gap: 1em; align-items: center; }
+.demo-inline-controls { display: flex; align-items: center; gap: 0.5em; margin-top: 0.5em; }
+.demo-button-row-centered { display: flex; gap: 1em; align-items: center; justify-content: center; padding: 2em; }
 .demo-flex-center     { display: flex; justify-content: center; padding: 2em; }
+.demo-mt-half         { margin-top: 0.5em; }
 .demo-mt-1            { margin-top: 1em; }
+.demo-mb-1            { margin-bottom: 1em; }
+.demo-my-1            { margin: 1em 0; }
+.demo-mt-quarter      { margin-top: 0.25em; }
+
+/* Text */
+.demo-caption    { font-size: 0.85em; color: #666; margin-top: 0.5em; }
+.demo-muted-text { margin: 0; color: #666; }
+.demo-note       { text-align: center; color: #666; }
+.demo-hint      { margin-left: 0.5em; font-size: 0.875em; opacity: 0.7; }
+.demo-mono-log  { margin-top: 0.5em; font-size: 0.9em; font-family: monospace; }
+
+/* Checkbox label (native input) */
+.demo-checkbox-label { display: flex; align-items: center; gap: 0.5em; cursor: pointer; margin-top: 0.5em; }
+
+/* Links */
+.demo-link                       { color: var(--brand-color); cursor: pointer; }
+.demo-link[aria-disabled="true"] { color: #999; cursor: not-allowed; }
+.demo-link-underlined            { text-decoration: underline; }
+.demo-link-icon                  { margin-left: 0.25em; }
+.demo-anchor-target              { margin-top: 1em; padding: 1em; border: 1px solid var(--brand-color); border-radius: 4px; }
+
+/* Press feedback: toggle `.demo-pressed` from a hook's `is_pressed` signal */
+.demo-pressable              { display: inline-block; transition: transform 100ms; }
+.demo-pressable.demo-pressed { transform: scale(0.95); }
 
 /* State indicators */
 .demo-state-active   { color: green; }
 .demo-state-inactive { color: gray; }
 
 /* Containers */
+.demo-frame              { padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0; }
 .demo-container-active   { border: 2px solid var(--brand-color); padding: 1.5em; border-radius: 8px; background: var(--brand-color-light, rgba(230, 105, 86, 0.1)); }
 .demo-container-inactive { border: 2px solid #ccc; padding: 1.5em; border-radius: 8px; background: transparent; }
 .demo-container-title    { margin: 0 0 1em 0; font-weight: bold; }
@@ -44,11 +73,136 @@
 
 /* Popover & Overlay */
 .demo-popover-panel { background: white; border: 1px solid #ccc; border-radius: 8px; padding: 1em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 1000; max-width: 300px; }
+.demo-popover-panel-narrow { max-width: 200px; }
+.demo-popover-underlay     { position: fixed; inset: 0; z-index: 999; }
+.demo-popover-stage        { display: flex; justify-content: center; padding: 4em; }
 .demo-overlay-panel { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; border: 1px solid #ccc; border-radius: 8px; padding: 1.5em; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); z-index: 1000; max-width: 300px; }
+
+/* Slider
+ *
+ * `--demo-slider-accent` colors the fill and thumbs; the color modifiers below override it.
+ * Positioning (left/bottom/width/height of fill and thumbs) is computed by the slider itself.
+ */
+.demo-slider          { --demo-slider-accent: var(--brand-color); display: flex; align-items: center; gap: 1em; }
+.demo-slider-stacked  { flex-direction: column; align-items: stretch; gap: 0.5em; }
+.demo-slider-row      { display: flex; align-items: center; gap: 1em; }
+.demo-slider-label    { min-width: 80px; font-weight: 500; }
+.demo-slider-label-wide { min-width: 120px; }
+.demo-slider-track    { display: flex; flex: 1; width: 100%; height: 8px; position: relative; background: #ddd; border-radius: 4px; cursor: pointer; }
+.demo-slider-fill     { background-color: var(--demo-slider-accent); border-radius: 4px; }
+.demo-slider-thumb    { width: 20px; height: 20px; background-color: var(--demo-slider-accent); border: 2px solid white; border-radius: 50%; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); cursor: grab; }
+.demo-slider-output   { min-width: 50px; text-align: right; }
+.demo-slider-output-wide { min-width: 80px; }
+.demo-slider-marks    { position: relative; height: 1.5em; margin-left: 120px; margin-right: 40px; }
+.demo-slider-marks-no-output { margin-right: 10px; }
+
+.demo-slider-compact  { flex: 0 0 300px; gap: 0.5em; }
+.demo-slider-vertical { height: 150px; }
+.demo-slider-vertical .demo-slider-track { flex: none; width: 8px; height: 100%; }
+
+.demo-slider-blue   { --demo-slider-accent: #4a90d9; }
+.demo-slider-green  { --demo-slider-accent: #27ae60; }
+.demo-slider-purple { --demo-slider-accent: #9b59b6; }
+.demo-slider-orange { --demo-slider-accent: orange; }
+.demo-slider-muted  { --demo-slider-accent: #999; }
+
+/* Used by the hook-only slider demos, which position fill and thumb themselves. */
+.demo-slider-fill-positioned  { position: absolute; left: 0; top: 0; height: 100%; }
+.demo-slider-thumb-positioned { position: absolute; top: 50%; transform: translate(-50%, -50%); }
+.demo-visually-hidden-input   { opacity: 0.0001; width: 100%; height: 100%; pointer-events: none; position: absolute; top: 0; left: 0; }
+.demo-slider-step-labels      { display: flex; justify-content: space-between; padding: 0 10px; margin: 0.5em 60px 0 100px; }
+.demo-slider-step-label       { font-size: 0.7em; color: #999; }
+
+/* Overlay positioning */
+.demo-option-group       { border: 0.1em solid lightgrey; border-radius: 0.25em; padding: 0.5em; }
+.demo-radio-list         { display: flex; flex-direction: column; gap: 0.2em; width: 100%; margin-top: 0.5em; }
+.demo-positioning-stage  { display: flex; width: 100%; height: 20em; justify-content: center; align-items: center; }
+.demo-positioning-target { display: inline-flex; justify-content: center; align-items: center; width: 7em; height: 7em; padding: 0.5em; border: 0.1em solid green; cursor: pointer; }
+.demo-positioned-overlay { background-color: #0009; color: white; padding: 1em; border-radius: 0.25em; }
+
+/* Menu */
+.demo-menu-anchor             { display: inline-block; margin: 1em 0; }
+.demo-menu-trigger            { display: flex; align-items: center; gap: 0.5em; }
+.demo-menu-list               { margin: 0; padding: 0.25em 0; min-width: 180px; background: white; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+.demo-menu-item               { padding: 0.75em 1em; cursor: pointer; list-style: none; transition: background 0.15s; }
+.demo-menu-item.focused       { background: #e8f4fc; }
+.demo-menu-item.focus-visible { outline: 2px solid #0066cc; outline-offset: -2px; }
+.demo-menu-item.disabled      { cursor: not-allowed; opacity: 0.5; }
+.demo-disclosure-arrow        { display: inline-block; transition: transform 0.2s; }
+.demo-disclosure-arrow.open   { transform: rotate(180deg); }
+
+/* Listbox */
+.demo-listbox                       { border: 2px solid var(--brand-color); border-radius: 8px; max-width: 250px; margin: 1em 0; overflow: hidden; }
+.demo-listbox-option                { display: flex; align-items: center; gap: 0.5em; padding: 0.75em 1em; cursor: pointer; transition: all 0.15s; }
+.demo-listbox-option.selected       { background: var(--brand-color); color: white; }
+.demo-listbox-option.focus-visible  { outline: 2px solid #0066cc; outline-offset: -2px; }
+.demo-listbox-option.disabled       { cursor: not-allowed; opacity: 0.5; }
+.demo-listbox-checkbox              { display: flex; align-items: center; justify-content: center; width: 16px; height: 16px; border: 2px solid currentColor; border-radius: 3px; }
+.demo-listbox-option.selected .demo-listbox-checkbox { border-color: white; }
+
+/* Grid list
+ *
+ * The GridListItem atom exposes its state as `data-*` attributes; the hook demo toggles
+ * the equivalent `.selected` / `.focused` classes itself.
+ */
+.demo-grid-list      { border: 1px solid #ccc; border-radius: 6px; overflow: hidden; max-width: 360px; }
+.demo-grid-list-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; user-select: none; border-bottom: 1px solid #e0e0e0; outline: 2px solid transparent; outline-offset: -2px; transition: background-color 0.15s, outline-color 0.15s; }
+.demo-grid-list-item:last-child { border-bottom: none; }
+.demo-grid-list-item[data-focused="true"],  .demo-grid-list-item.focused  { outline-color: #1976d2; }
+.demo-grid-list-item[data-selected="true"], .demo-grid-list-item.selected { background-color: #e3f2fd; }
+.demo-grid-list-item[data-disabled="true"] { opacity: 0.4; cursor: not-allowed; }
+.demo-grid-list-cell { display: flex; align-items: center; gap: 10px; width: 100%; }
+.demo-grid-list-icon { width: 24px; text-align: center; font-size: 1.1em; }
+.demo-state-display  { margin-top: 1em; padding: 0.75em 1em; background: #f5f5f5; border-radius: 6px; font-size: 0.9em; font-family: monospace; }
+
+/* Color palette grid
+ *
+ * The Grid atoms expose `data-focused` / `data-selected`; the hook demo toggles `.focused` / `.selected`.
+ */
+.demo-contents        { display: contents; }
+.demo-palette-grid    { display: flex; flex-direction: column; gap: 8px; }
+.demo-palette-grid-2d { display: grid; grid-template-columns: repeat(4, 50px); gap: 8px; }
+.demo-palette-row     { display: flex; gap: 8px; }
+.demo-palette-cell    { position: relative; width: 50px; height: 50px; border-radius: 4px; cursor: pointer; outline: 3px solid transparent; outline-offset: 2px; transition: transform 0.15s, outline-color 0.15s, box-shadow 0.15s; }
+.demo-palette-cell[data-focused="true"],  .demo-palette-cell.focused  { outline-color: #000; }
+.demo-palette-cell[data-selected="true"], .demo-palette-cell.selected { transform: scale(0.85); box-shadow: 0 0 0 3px white, 0 0 0 5px #1976d2; }
+.demo-palette-check   { position: absolute; top: 3px; left: 3px; display: flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 3px; font-size: 10px; line-height: 1; pointer-events: none; background: rgba(0, 0, 0, 0.25); border: 1.5px solid rgba(255, 255, 255, 0.6); color: transparent; }
+.demo-palette-cell.selected .demo-palette-check { background: rgba(255, 255, 255, 0.95); border: none; color: #333; }
+
+/* Classes & Styles page: `--demo-meter-fill` and the width are set from Rust */
+.demo-meter               { height: 12px; margin: 1em 0; border-radius: 6px; background: #ddd; overflow: hidden; }
+.demo-meter-fill          { height: 100%; background-color: var(--demo-meter-fill, var(--brand-color)); transition: width 150ms ease-out, background-color 150ms; }
+.demo-meter-fill.complete { background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.3) 0 6px, transparent 6px 12px); }
 
 /* Color */
 .demo-color-swatch { width: 4em; height: 4em; border-radius: 0.5em; cursor: pointer; border: 2px solid rgba(128, 128, 128, 0.3); box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1); }
+.demo-color-slider-track { position: relative; width: 100%; height: 16px; border-radius: 8px; cursor: pointer; forced-color-adjust: none; }
+.demo-color-slider-thumb { position: absolute; top: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3); cursor: grab; touch-action: none; }
+.demo-color-preview      { display: inline-block; width: 1em; height: 1em; vertical-align: middle; border-radius: 2px; }
 .demo-color-picker-panel { padding: 0.75em; border-radius: 0.5em; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18); background: var(--surface); }
 
 /* Event log */
 .demo-event-log { width: 100%; height: 15em; overflow: auto; padding: var(--typography-code-padding); border: none; border-radius: var(--typography-code-border-radius); background-color: var(--typography-code-background-color); color: var(--typography-code-color); }
+
+// Increment/decrement buttons of number field demos.
+.demo-stepper-btn {
+    padding: 0.5em 1em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    cursor: pointer;
+
+    &:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+    }
+}
+
+// Value element of the spin button demo.
+.demo-spinbutton {
+    min-width: 3em;
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+}

@@ -1,6 +1,7 @@
+// Upstream: react-aria/src/utils/animation.ts @ 6f664fe911
 //! Hook for tracking CSS enter animations on an element.
 //!
-//! Based on: <https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/utils/src/animation.ts>
+//! Based on: <https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/animation.ts>
 
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;
@@ -91,24 +92,21 @@ pub fn use_enter_animation(input: UseEnterAnimationInput) -> UseEnterAnimationRe
 
             let is_animation_ready = is_entering_raw.get() && is_ready.get();
 
-            if is_animation_ready {
-                if let Some(el) = element.get() {
-                    // Cancel pre-existing CSS transitions before tracking animations.
-                    let animations = el.get_animations();
-                    for i in 0..animations.length() {
-                        if let Some(transition) =
-                            animations.get(i).dyn_ref::<web_sys::CssTransition>()
-                        {
-                            transition.cancel();
-                        }
+            if is_animation_ready && let Some(el) = element.get() {
+                // Cancel pre-existing CSS transitions before tracking animations.
+                let animations = el.get_animations();
+                for i in 0..animations.length() {
+                    if let Some(transition) = animations.get(i).dyn_ref::<web_sys::CssTransition>()
+                    {
+                        transition.cancel();
                     }
-
-                    // Watch for all remaining animations to complete.
-                    let cancel = watch_animations(&el, move || {
-                        set_is_entering.set(false);
-                    });
-                    cleanup.set_value(Some(Box::new(cancel)));
                 }
+
+                // Watch for all remaining animations to complete.
+                let cancel = watch_animations(&el, move || {
+                    set_is_entering.set(false);
+                });
+                cleanup.set_value(Some(Box::new(cancel)));
             }
         });
 

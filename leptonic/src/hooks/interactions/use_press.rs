@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/usePress.ts @ 99e6102368
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use std::{sync::atomic::Ordering, time::Duration};
@@ -23,19 +24,21 @@ use crate::{
         ContainsTarget, ElementExt, EventAccessors, EventHandler, EventModifiers, EventTargetExt,
         Modifiers, Propagation,
         aria::AriaDescribedby,
+        css::{TouchAction, TouchActionGestures, TouchActionHorizontalPan, TouchActionVerticalPan},
         focus::focus_element,
         is_over, node_contains,
         open_link::open_link,
         platform::device,
         pointer_type::PointerType,
         propagation_control::{PropagationControl, Sealed},
+        style::TouchActionProperty,
         styles::Styles,
         use_description::use_description,
         virtual_click::{is_virtual_click, is_virtual_pointer_event},
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/usePress.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/usePress.ts
 
 // ## DIFFERENT BEHAVIOR
 //
@@ -212,6 +215,32 @@ pub struct UsePressInput {
     /// action is available, e.g. "Long press to open menu".
     /// Only applied when `on_long_press` is `Some`.
     pub long_press_accessibility_description: Option<Oco<'static, str>>,
+}
+
+impl Default for UsePressInput {
+    /// Everything off, no callbacks (`on_press` does nothing).
+    fn default() -> Self {
+        Self {
+            disabled: Signal::stored(false),
+            force_prevent_default: false,
+            force_propagation: false,
+            allow_text_selection_on_press: false,
+            should_cancel_on_pointer_exit: false,
+            prevent_focus_on_press: false,
+            force_is_pressed: None,
+            on_press: Callback::new(|_| {}),
+            on_press_up: None,
+            on_press_start: None,
+            on_press_end: None,
+            on_press_change: None,
+            on_double_press: None,
+            on_long_press_start: None,
+            on_long_press: None,
+            on_long_press_end: None,
+            long_press_threshold: None,
+            long_press_accessibility_description: None,
+        }
+    }
 }
 
 /// Context for parent-to-child press prop forwarding.
@@ -446,10 +475,8 @@ impl PressState {
     }
 
     fn restore_text_selection_if_needed(&self, allow_text_selection_on_press: bool) {
-        if !allow_text_selection_on_press {
-            if let Some(element) = self.current_target.to_element() {
-                element.restore_text_selection();
-            }
+        if !allow_text_selection_on_press && let Some(element) = self.current_target.to_element() {
+            element.restore_text_selection();
         }
     }
 
@@ -462,6 +489,9 @@ enum EventRef<'a> {
     Pointer(&'a PointerEvent),
     Keyboard(&'a KeyboardEvent),
     Mouse(&'a MouseEvent),
+    /// A press that ends without a DOM event, e.g. because the element became disabled while
+    /// pressed. Carries the press target; it has no modifiers, coordinates or key.
+    Synthetic(&'a EventTarget),
 }
 
 impl EventRef<'_> {
@@ -470,6 +500,12 @@ impl EventRef<'_> {
             EventRef::Pointer(e) => e.modifiers(),
             EventRef::Keyboard(e) => e.modifiers(),
             EventRef::Mouse(e) => e.modifiers(),
+            EventRef::Synthetic(_) => Modifiers {
+                shift_key: false,
+                ctrl_key: false,
+                meta_key: false,
+                alt_key: false,
+            },
         }
     }
 
@@ -478,6 +514,7 @@ impl EventRef<'_> {
             EventRef::Pointer(e) => e.stop_propagation(),
             EventRef::Keyboard(e) => e.stop_propagation(),
             EventRef::Mouse(e) => e.stop_propagation(),
+            EventRef::Synthetic(_) => {}
         }
     }
 
@@ -486,6 +523,7 @@ impl EventRef<'_> {
             EventRef::Pointer(e) => e.expect_current_target(),
             EventRef::Keyboard(e) => e.expect_current_target(),
             EventRef::Mouse(e) => e.expect_current_target(),
+            EventRef::Synthetic(target) => (*target).clone(),
         }
     }
 
@@ -493,7 +531,7 @@ impl EventRef<'_> {
     fn key(&self) -> Option<String> {
         match self {
             EventRef::Keyboard(e) => Some(e.key()),
-            EventRef::Pointer(_) | EventRef::Mouse(_) => None,
+            EventRef::Pointer(_) | EventRef::Mouse(_) | EventRef::Synthetic(_) => None,
         }
     }
 
@@ -530,6 +568,7 @@ impl EventRef<'_> {
                 .map_or((None, None), |rect| {
                     (Some(rect.width() / 2.0), Some(rect.height() / 2.0))
                 }),
+            EventRef::Synthetic(_) => (None, None),
         }
     }
 }
@@ -571,7 +610,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
         let is_pressed = input
             .force_is_pressed
             .unwrap_or_else(|| Signal::stored(false));
-        return UsePressReturn {
+        UsePressReturn {
             props: PropsWithStyles::new(
                 UsePressProps {
                     on_keydown: EventHandler::new(|_: KeyboardEvent| {}),
@@ -586,7 +625,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                 Styles::new(),
             ),
             is_pressed,
-        };
+        }
     }
 
     #[cfg(not(feature = "ssr"))]
@@ -719,12 +758,12 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             state.set_value(Some(PressState {
                 pointer_id: match e {
                     EventRef::Pointer(e) => e.pointer_id(),
-                    EventRef::Keyboard(_) | EventRef::Mouse(_) => 0,
+                    EventRef::Keyboard(_) | EventRef::Mouse(_) | EventRef::Synthetic(_) => 0,
                 },
                 pointer_type: match e {
                     EventRef::Pointer(e) => PointerType::from(e.pointer_type()),
                     EventRef::Keyboard(_e) => PointerType::Keyboard,
-                    EventRef::Mouse(_e) => PointerType::Virtual,
+                    EventRef::Mouse(_) | EventRef::Synthetic(_) => PointerType::Virtual,
                 },
                 current_target: e.current_target(),
                 is_over_target: match e {
@@ -732,7 +771,7 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     // over it. react-aria also sets `isOverTarget = true` unconditionally here.
                     // Using `is_over()` breaks for `display: contents` (zero-sized bounding rect).
                     EventRef::Pointer(_) => true,
-                    EventRef::Keyboard(_) | EventRef::Mouse(_) => false,
+                    EventRef::Keyboard(_) | EventRef::Mouse(_) | EventRef::Synthetic(_) => false,
                 },
                 did_fire_press_start: false,
                 click_timeout_handle: None,
@@ -786,20 +825,19 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             // Fire long press end for mouse/touch when long press is configured.
             if supports_long_press
                 && (s.pointer_type == PointerType::Mouse || s.pointer_type == PointerType::Touch)
+                && let Some(on_long_press_end) = on_long_press_end
             {
-                if let Some(on_long_press_end) = on_long_press_end {
-                    let (x, y) = e.coordinates();
-                    is_triggering_event.set_value(true);
-                    on_long_press_end.run(LongPressEvent {
-                        event_type: LongPressEventType::LongPressEnd,
-                        pointer_type: s.pointer_type.clone(),
-                        target: SendWrapper::new(s.current_target.clone()),
-                        modifiers: e.modifiers(),
-                        x,
-                        y,
-                    });
-                    is_triggering_event.set_value(false);
-                }
+                let (x, y) = e.coordinates();
+                is_triggering_event.set_value(true);
+                on_long_press_end.run(LongPressEvent {
+                    event_type: LongPressEventType::LongPressEnd,
+                    pointer_type: s.pointer_type.clone(),
+                    target: SendWrapper::new(s.current_target.clone()),
+                    modifiers: e.modifiers(),
+                    x,
+                    y,
+                });
+                is_triggering_event.set_value(false);
             }
 
             if let Some(on_press_change) = on_press_change {
@@ -836,6 +874,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             state.set_value(None);
         };
 
+        // Cancel an active press when the element becomes disabled. The events that would
+        // normally end the press are ignored while disabled, so without this, e.g. a spin button
+        // whose first step disables it would keep spinning.
+        Effect::new(move |_| {
+            if disabled.get() {
+                let target = state.with_value(|s| s.as_ref().map(|s| s.current_target.clone()));
+                if let Some(target) = target {
+                    cancel_active_press(EventRef::Synthetic(&target));
+                }
+            }
+        });
+
         let handle_key_up = move |e: KeyboardEvent| {
             // First check if we should handle this event (immutable check).
             // Use the stored press target, not e.current_target(), because the keyup listener
@@ -862,24 +912,20 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
             // If a link was triggered with a key other than Enter, open the URL ourselves.
             // This means the link has a role override, and the default browser behavior
             // only applies when using the Enter key.
-            if key != "Enter" {
-                if let Some(current_target) =
+            if key != "Enter"
+                && let Some(current_target) =
                     state.with_value(|s| s.as_ref().map(|s| s.current_target.clone()))
-                {
-                    if let Some(true) = node_contains(
-                        current_target.as_node().as_ref(),
-                        e.expect_target()
-                            .to_element()
-                            .and_then(|el| el.as_node())
-                            .as_ref(),
-                    ) {
-                        if let Some(el) = current_target.as_element() {
-                            if el.is_anchor_link() {
-                                open_link(el, e.modifiers(), true);
-                            }
-                        }
-                    }
-                }
+                && let Some(true) = node_contains(
+                    current_target.as_node().as_ref(),
+                    e.expect_target()
+                        .to_element()
+                        .and_then(|el| el.as_node())
+                        .as_ref(),
+                )
+                && let Some(el) = current_target.as_element()
+                && el.is_anchor_link()
+            {
+                open_link(el, e.modifiers(), true);
             }
 
             // macOS Meta key workaround: if Meta key is up, dispatch synthetic
@@ -1200,20 +1246,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
             let target = e.expect_target();
 
-            if !allow_text_selection_on_press {
-                if let Some(target) = target.as_element() {
-                    target.disable_text_selection();
-                }
+            if !allow_text_selection_on_press && let Some(target) = target.as_element() {
+                target.disable_text_selection();
             }
 
             if !disabled.get_untracked() {
                 // Release pointer capture to enable pointerleave/pointerenter on touch.
                 // By default, the browser captures pointer events to the original target,
                 // which prevents these events from firing correctly.
-                if let Some(element) = target.dyn_ref::<web_sys::Element>() {
-                    if element.has_pointer_capture(e.pointer_id()) {
-                        let _ = element.release_pointer_capture(e.pointer_id());
-                    }
+                if let Some(element) = target.dyn_ref::<web_sys::Element>()
+                    && element.has_pointer_capture(e.pointer_id())
+                {
+                    let _ = element.release_pointer_capture(e.pointer_id());
                 }
 
                 let doc = e.expect_current_target().get_owner_document();
@@ -1442,7 +1486,13 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
                     on_dblclick: EventHandler::new(handle_dblclick),
                     aria_describedby,
                 },
-                Styles::new().add("touch-action", "pan-x pan-y pinch-zoom"),
+                Styles::new().add(
+                    TouchActionProperty.declare(TouchAction::Gestures(
+                        TouchActionGestures::horizontal(TouchActionHorizontalPan::PanX)
+                            .with_vertical(TouchActionVerticalPan::PanY)
+                            .with_pinch_zoom(),
+                    )),
+                ),
             ),
             is_pressed: match force_is_pressed {
                 Some(prop) => Signal::derive(move || is_pressed.get() || prop.get()),
@@ -1454,8 +1504,18 @@ pub fn use_press(input: UsePressInput) -> UsePressReturn {
 
 /// Tests whether a keyboard event's default action should be presented when the given `key` was pressed.
 fn should_prevent_default_keyboard(element: &web_sys::Element, key: &str) -> bool {
-    if element.is_instance_of::<HtmlInputElement>() {
-        return !is_valid_input_key(element.unchecked_ref::<HtmlInputElement>(), key);
+    // Don't prevent the context menu shortcut on macOS.
+    if key == "Enter" && device::is_mac() {
+        return false;
+    }
+
+    if let Some(input) = element.dyn_ref::<HtmlInputElement>() {
+        // Enter on a checkbox or radio should submit the surrounding form (implicit submission),
+        // not toggle the input.
+        if key == "Enter" && matches!(input.type_().as_str(), "checkbox" | "radio") {
+            return false;
+        }
+        return !is_valid_input_key(input, key);
     }
 
     if element.is_instance_of::<web_sys::HtmlButtonElement>() {

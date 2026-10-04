@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/focus/useFocusRing.ts @ 6f664fe911
 use leptos::{
     attr::custom::{CustomAttr, custom_attribute},
     ev,
@@ -18,7 +19,7 @@ use crate::{
     utils::EventHandler,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/useFocusRing.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/focus/useFocusRing.ts
 
 // ## ADDITIONAL FUNCTIONALITY
 //

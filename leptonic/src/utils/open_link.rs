@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/utils/openLink.tsx @ 6f664fe911
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use wasm_bindgen::{JsCast, JsValue};
@@ -38,7 +39,7 @@ pub(crate) fn is_opening_link() -> bool {
 ///   does not replicate this indirection.
 ///
 /// Otherwise matches the `openLink` function from
-/// `packages/@react-aria/utils/src/openLink.tsx`.
+/// `packages/react-aria/src/utils/openLink.tsx`.
 pub(crate) fn open_link(element: &web_sys::Element, modifiers: Modifiers, is_keyboard_event: bool) {
     let mut modifiers = modifiers;
 

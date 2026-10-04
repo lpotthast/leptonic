@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useHover.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -19,7 +20,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useHover.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useHover.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -126,13 +127,13 @@ pub fn use_hover(input: UseHoverInput) -> UseHoverReturn {
     {
         let _ = input;
         let (is_hovered, _) = signal(false);
-        return UseHoverReturn {
+        UseHoverReturn {
             props: UseHoverProps {
                 on_pointerenter: EventHandler::new(|_: PointerEvent| {}),
                 on_pointerleave: EventHandler::new(|_: PointerEvent| {}),
             },
             is_hovered: is_hovered.into(),
-        };
+        }
     }
 
     #[cfg(not(feature = "ssr"))]

@@ -4,10 +4,7 @@ use super::form_control::FormInput;
 use crate::{
     Out,
     components::{form_control::FormControlContext, icon::Icon},
-    utils::{
-        classes::Classes,
-        styles::{Style::Display, Styles},
-    },
+    utils::{classes::Classes, styles::Styles},
 };
 
 #[derive(Debug, Clone, Copy)]
@@ -64,11 +61,11 @@ pub fn Checkbox(
         >
             <Icon
                 icon=checked_icon
-                styles=Styles::new().add(Display, move || if checked.get() {
-                    "inherit"
-                } else {
-                    "none"
-                })
+                styles=Styles::new()
+                    .add_optional_unchecked(
+                        "display",
+                        move || Some(if checked.get() { "inherit" } else { "none" }),
+                    )
             />
         </div>
     }

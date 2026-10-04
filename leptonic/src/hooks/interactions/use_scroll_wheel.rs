@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useScrollWheel.ts @ 6f664fe911
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
@@ -7,7 +8,7 @@ use web_sys::WheelEvent;
 
 use crate::{hooks::IntoAttrs, utils::EventHandler};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useScrollWheel.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useScrollWheel.ts
 
 // No intentional deviations from the react-aria implementation.
 

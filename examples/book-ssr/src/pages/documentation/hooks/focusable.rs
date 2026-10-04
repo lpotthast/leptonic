@@ -125,7 +125,10 @@ pub fn PageUseFocusable() -> impl IntoView {
                 <AnchorLink href="#input" description="Direct link to input"/>
             </h2>
 
-            <p><code>"UseFocusableInput"</code> " fields:"</p>
+            <p>
+                <code>"UseFocusableInput"</code>" implements "<code>"Default"</code>". It is "<code>"Clone"</code>
+                " but not "<code>"Copy"</code>", because it can own a set of keyboard shortcuts."
+            </p>
 
             <TableContainer>
                 <Table bordered=true hoverable=true>
@@ -185,6 +188,18 @@ pub fn PageUseFocusable() -> impl IntoView {
                             <TableCell><code>"Option<Callback<KeyboardEventWrapper>>"</code></TableCell>
                             <TableCell><code>"None"</code></TableCell>
                             <TableCell>"Handler called when a key is released."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"shortcuts"</code></TableCell>
+                            <TableCell><code>"Option<KeyboardShortcuts>"</code></TableCell>
+                            <TableCell><code>"None"</code></TableCell>
+                            <TableCell>"Keyboard shortcuts handled while the element has focus, as in "<Link href=format!("{}#shortcuts", crate::routes::doc::interactions::UseKeyboard.materialize())>"use_keyboard"</Link>"."</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><code>"allow_shortcut_repeats"</code></TableCell>
+                            <TableCell><code>"bool"</code></TableCell>
+                            <TableCell><code>"false"</code></TableCell>
+                            <TableCell>"Whether shortcuts also fire for auto-repeated key presses (a key held down)."</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>

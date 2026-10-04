@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/select/HiddenSelect.tsx @ 6f664fe911
 use leptos::{attr, attr::Attr, ev, ev::On, ev::SharedEventCallback, prelude::*};
 
 use crate::{
@@ -20,7 +21,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/select/src/useHiddenSelect.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/select/HiddenSelect.tsx
 
 // REACT-ARIA DEVIATIONS
 //

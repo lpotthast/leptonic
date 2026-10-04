@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use leptonic::hooks::*;
+use leptonic::{hooks::*, utils::classes::Classes};
 use leptos::prelude::*;
 use leptos_element_capture::CapturedElement;
 
@@ -36,29 +36,17 @@ fn ListboxOption(
         focused_key,
     });
     let (option_props, option_styles) = option_props.into_parts();
-    let option_styles = option_styles
-        .add("padding", "0.75em 1em")
-        .add("transition", "all 0.15s")
-        .add("display", "flex")
-        .add("align-items", "center")
-        .add("gap", "0.5em");
 
     view! {
         <div
             {..option_props}
+            class=Classes::from("demo-listbox-option")
+                .add_reactive("disabled", is_disabled)
+                .add_reactive("selected", is_selected)
+                .add_reactive("focus-visible", is_focus_visible)
             style=option_styles
-            style:cursor=move || if is_disabled.get() { "not-allowed" } else { "pointer" }
-            style:background=move || if is_selected.get() { "var(--brand-color)" } else { "transparent" }
-            style:color=move || if is_selected.get() { "white" } else { "" }
-            style:outline=move || if is_focus_visible.get() { "2px solid #0066cc" } else { "none" }
-            style:outline-offset=move || if is_focus_visible.get() { "-2px" } else { "" }
         >
-            <span style=move || {
-                format!(
-                    "width: 16px; height: 16px; border: 2px solid {}; border-radius: 3px; display: flex; align-items: center; justify-content: center;",
-                    if is_selected.get() { "white" } else { "currentColor" },
-                )
-            }>
+            <span class="demo-listbox-checkbox">
                 <Show when=move || is_selected.get()>"\u{2713}"</Show>
             </span>
             {label}
@@ -105,6 +93,7 @@ pub fn ListboxDemo() -> impl IntoView {
         collection_ref: CapturedElement::default(),
         on_close: None,
         escape_key_behavior: EscapeKeyBehavior::default(),
+        id: None,
     });
 
     // Get selection state for displaying and for options
@@ -113,21 +102,19 @@ pub fn ListboxDemo() -> impl IntoView {
     let focused_key = listbox.state.collection.selection_state.focused_key;
 
     view! {
-        <div
-            {..listbox.listbox_props.into_attrs()}
-            style="
-            border: 2px solid var(--brand-color);
-            border-radius: 8px;
-            max-width: 250px;
-            margin: 1em 0;
-            overflow: hidden;
-            "
-        >
+        <div {..listbox.listbox_props.into_attrs()} class="demo-listbox">
             {items
                 .into_iter()
                 .map(|(key, label)| {
                     let state = selection_state;
-                    view! { <ListboxOption item_key=key.to_string() label=label state=state focused_key=focused_key /> }
+                    view! {
+                        <ListboxOption
+                            item_key=key.to_string()
+                            label=label
+                            state=state
+                            focused_key=focused_key
+                        />
+                    }
                 })
                 .collect_view()}
         </div>

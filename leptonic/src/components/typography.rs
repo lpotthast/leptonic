@@ -197,24 +197,22 @@ pub fn Code(
 
     #[cfg(all(feature = "syntax-highlight", not(feature = "ssr")))]
     {
-        if !is_inline {
-            if let Some(lang) = language {
-                let token = lang.token();
-                // Defer highlighting to a separate browser macrotask.
-                // Each Code block highlights in its own macrotask, allowing the
-                // browser to paint and handle events between them.
-                set_timeout(
-                    move || {
-                        highlighted_html.set(
-                            crate::utils::syntax_highlight::highlight_to_classed_html(
-                                code_text.get_value().as_str(),
-                                token,
-                            ),
-                        );
-                    },
-                    std::time::Duration::ZERO,
-                );
-            }
+        if !is_inline && let Some(lang) = language {
+            let token = lang.token();
+            // Defer highlighting to a separate browser macrotask.
+            // Each Code block highlights in its own macrotask, allowing the
+            // browser to paint and handle events between them.
+            set_timeout(
+                move || {
+                    highlighted_html.set(
+                        crate::utils::syntax_highlight::highlight_to_classed_html(
+                            code_text.get_value().as_str(),
+                            token,
+                        ),
+                    );
+                },
+                std::time::Duration::ZERO,
+            );
         }
     }
 

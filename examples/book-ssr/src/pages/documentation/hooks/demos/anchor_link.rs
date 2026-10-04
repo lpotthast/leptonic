@@ -5,11 +5,7 @@ use leptos::prelude::*;
 pub fn AnchorLinkDemo() -> impl IntoView {
     let (disabled, set_disabled) = signal(false);
 
-    let UseAnchorLinkReturn {
-        props,
-        is_pressed: _,
-        ..
-    } = use_anchor_link(UseAnchorLinkInput {
+    let UseAnchorLinkReturn { props, .. } = use_anchor_link(UseAnchorLinkInput {
         href: Href::from_str(Oco::Borrowed("#my-anchor-element")).expect("valid href"),
         scroll_behavior: Some(ScrollBehavior::Smooth),
         disabled: disabled.into(),
@@ -23,12 +19,7 @@ pub fn AnchorLinkDemo() -> impl IntoView {
     let attrs = link_props.into_attrs();
 
     view! {
-        <a
-            {..attrs}
-            style=link_styles
-            class="leptonic-anchor-link"
-            target="_self"
-        >
+        <a {..attrs} style=link_styles class="leptonic-anchor-link" target="_self">
             "#"
         </a>
 
@@ -37,7 +28,7 @@ pub fn AnchorLinkDemo() -> impl IntoView {
             <Label>"Disabled"</Label>
         </FormControl>
 
-        <div id="my-anchor-element" style="margin-top: 1em; padding: 1em; border: 1px solid var(--brand-color); border-radius: 4px;">
+        <div id="my-anchor-element" class="demo-anchor-target">
             "This is the anchor target element."
         </div>
     }

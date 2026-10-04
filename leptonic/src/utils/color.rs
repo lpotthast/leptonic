@@ -1129,7 +1129,7 @@ mod tests {
 
     #[test]
     fn rgb8_from_hex_with_hash() {
-        assert_that(RGB8::from_hex("#FF8000")).is_equal_to(Some(RGB8 {
+        assert_that!(RGB8::from_hex("#FF8000")).is_equal_to(Some(RGB8 {
             r: 255,
             g: 128,
             b: 0,
@@ -1138,7 +1138,7 @@ mod tests {
 
     #[test]
     fn rgb8_from_hex_without_hash() {
-        assert_that(RGB8::from_hex("ff8000")).is_equal_to(Some(RGB8 {
+        assert_that!(RGB8::from_hex("ff8000")).is_equal_to(Some(RGB8 {
             r: 255,
             g: 128,
             b: 0,
@@ -1147,12 +1147,12 @@ mod tests {
 
     #[test]
     fn rgb8_from_hex_invalid_length() {
-        assert_that(RGB8::from_hex("FFF")).is_none();
+        assert_that!(RGB8::from_hex("FFF")).is_none();
     }
 
     #[test]
     fn rgb8_from_hex_invalid_chars() {
-        assert_that(RGB8::from_hex("ZZZZZZ")).is_none();
+        assert_that!(RGB8::from_hex("ZZZZZZ")).is_none();
     }
 
     #[test]
@@ -1163,7 +1163,7 @@ mod tests {
             b: 241,
         };
         let int = rgb.to_hex_int();
-        assert_that(RGB8::from_hex_int(int)).is_equal_to(rgb);
+        assert_that!(RGB8::from_hex_int(int)).is_equal_to(rgb);
     }
 
     // --- HSV ColorValue trait tests ---
@@ -1175,48 +1175,48 @@ mod tests {
             saturation: 0.5,
             value: 0.8,
         };
-        assert_that(hsv.get_channel_value(HsvChannel::Hue)).is_close_to(120.0, 0.001);
-        assert_that(hsv.get_channel_value(HsvChannel::Saturation)).is_close_to(0.5, 0.001);
-        assert_that(hsv.get_channel_value(HsvChannel::Brightness)).is_close_to(0.8, 0.001);
+        assert_that!(hsv.get_channel_value(HsvChannel::Hue)).is_close_to(120.0, 0.001);
+        assert_that!(hsv.get_channel_value(HsvChannel::Saturation)).is_close_to(0.5, 0.001);
+        assert_that!(hsv.get_channel_value(HsvChannel::Brightness)).is_close_to(0.8, 0.001);
     }
 
     #[test]
     fn hsv_with_channel_value() {
         let hsv = HSV::new();
         let updated = hsv.with_channel_value(HsvChannel::Hue, 180.0);
-        assert_that(updated.hue).is_close_to(180.0, 0.001);
-        assert_that(updated.saturation).is_close_to(hsv.saturation, 0.001);
+        assert_that!(updated.hue).is_close_to(180.0, 0.001);
+        assert_that!(updated.saturation).is_close_to(hsv.saturation, 0.001);
     }
 
     #[test]
     fn hsv_get_channel_range() {
         let range = HSV::get_channel_range(HsvChannel::Hue);
-        assert_that(range.min_value).is_close_to(0.0, 0.001);
-        assert_that(range.max_value).is_close_to(360.0, 0.001);
-        assert_that(range.step).is_close_to(1.0, 0.001);
+        assert_that!(range.min_value).is_close_to(0.0, 0.001);
+        assert_that!(range.max_value).is_close_to(360.0, 0.001);
+        assert_that!(range.step).is_close_to(1.0, 0.001);
     }
 
     #[test]
     fn hsv_channels() {
         let channels = HSV::channels();
-        assert_that(channels.len()).is_equal_to(3);
+        assert_that!(channels.len()).is_equal_to(3);
     }
 
     #[test]
     fn hsv_get_color_space_axes_defaults() {
         let (x, y, z) = HSV::get_color_space_axes(None, None);
-        assert_that(x).is_equal_to(HsvChannel::Saturation);
-        assert_that(y).is_equal_to(HsvChannel::Hue);
-        assert_that(z).is_equal_to(HsvChannel::Brightness);
+        assert_that!(x).is_equal_to(HsvChannel::Saturation);
+        assert_that!(y).is_equal_to(HsvChannel::Hue);
+        assert_that!(z).is_equal_to(HsvChannel::Brightness);
     }
 
     #[test]
     fn hsv_get_color_space_axes_custom() {
         let (x, y, z) =
             HSV::get_color_space_axes(Some(HsvChannel::Saturation), Some(HsvChannel::Brightness));
-        assert_that(x).is_equal_to(HsvChannel::Saturation);
-        assert_that(y).is_equal_to(HsvChannel::Brightness);
-        assert_that(z).is_equal_to(HsvChannel::Hue);
+        assert_that!(x).is_equal_to(HsvChannel::Saturation);
+        assert_that!(y).is_equal_to(HsvChannel::Brightness);
+        assert_that!(z).is_equal_to(HsvChannel::Hue);
     }
 
     #[test]
@@ -1226,7 +1226,7 @@ mod tests {
             saturation: 1.0,
             value: 1.0,
         };
-        assert_that(hsv.to_css_string()).is_equal_to("rgb(255, 0, 0)".to_owned());
+        assert_that!(hsv.to_css_string()).is_equal_to("rgb(255, 0, 0)".to_owned());
     }
 
     #[test]
@@ -1236,24 +1236,26 @@ mod tests {
             saturation: 0.5,
             value: 0.8,
         };
-        assert_that(hsv.format_channel_value(HsvChannel::Hue)).is_equal_to("120°".to_owned());
-        assert_that(hsv.format_channel_value(HsvChannel::Saturation)).is_equal_to("50%".to_owned());
-        assert_that(hsv.format_channel_value(HsvChannel::Brightness)).is_equal_to("80%".to_owned());
+        assert_that!(hsv.format_channel_value(HsvChannel::Hue)).is_equal_to("120°".to_owned());
+        assert_that!(hsv.format_channel_value(HsvChannel::Saturation))
+            .is_equal_to("50%".to_owned());
+        assert_that!(hsv.format_channel_value(HsvChannel::Brightness))
+            .is_equal_to("80%".to_owned());
     }
 
     #[test]
     fn hsv_get_channel_name() {
-        assert_that(HSV::get_channel_name(HsvChannel::Hue)).is_equal_to("Hue");
-        assert_that(HSV::get_channel_name(HsvChannel::Saturation)).is_equal_to("Saturation");
-        assert_that(HSV::get_channel_name(HsvChannel::Brightness)).is_equal_to("Brightness");
+        assert_that!(HSV::get_channel_name(HsvChannel::Hue)).is_equal_to("Hue");
+        assert_that!(HSV::get_channel_name(HsvChannel::Saturation)).is_equal_to("Saturation");
+        assert_that!(HSV::get_channel_name(HsvChannel::Brightness)).is_equal_to("Brightness");
     }
 
     #[test]
     fn hsv_get_hue_name() {
-        assert_that(HSV::get_hue_name(0.0)).is_equal_to("red");
-        assert_that(HSV::get_hue_name(120.0)).is_equal_to("green");
-        assert_that(HSV::get_hue_name(240.0)).is_equal_to("blue");
-        assert_that(HSV::get_hue_name(60.0)).is_equal_to("yellow");
+        assert_that!(HSV::get_hue_name(0.0)).is_equal_to("red");
+        assert_that!(HSV::get_hue_name(120.0)).is_equal_to("green");
+        assert_that!(HSV::get_hue_name(240.0)).is_equal_to("blue");
+        assert_that!(HSV::get_hue_name(60.0)).is_equal_to("yellow");
     }
 
     // --- RGB8 ColorValue trait tests ---
@@ -1265,9 +1267,9 @@ mod tests {
             g: 64,
             b: 32,
         };
-        assert_that(rgb.get_channel_value(RgbChannel::Red)).is_close_to(128.0, 0.001);
-        assert_that(rgb.get_channel_value(RgbChannel::Green)).is_close_to(64.0, 0.001);
-        assert_that(rgb.get_channel_value(RgbChannel::Blue)).is_close_to(32.0, 0.001);
+        assert_that!(rgb.get_channel_value(RgbChannel::Red)).is_close_to(128.0, 0.001);
+        assert_that!(rgb.get_channel_value(RgbChannel::Green)).is_close_to(64.0, 0.001);
+        assert_that!(rgb.get_channel_value(RgbChannel::Blue)).is_close_to(32.0, 0.001);
     }
 
     #[test]
@@ -1278,7 +1280,7 @@ mod tests {
             b: 32,
         };
         let updated = rgb.with_channel_value(RgbChannel::Red, 200.0);
-        assert_that(updated).is_equal_to(RGB8 {
+        assert_that!(updated).is_equal_to(RGB8 {
             r: 200,
             g: 64,
             b: 32,
@@ -1289,9 +1291,9 @@ mod tests {
     fn rgb8_with_channel_value_clamps() {
         let rgb = RGB8::new();
         let updated = rgb.with_channel_value(RgbChannel::Red, 300.0);
-        assert_that(updated.r).is_equal_to(255);
+        assert_that!(updated.r).is_equal_to(255);
         let updated = rgb.with_channel_value(RgbChannel::Red, -10.0);
-        assert_that(updated.r).is_equal_to(0);
+        assert_that!(updated.r).is_equal_to(0);
     }
 
     #[test]
@@ -1301,14 +1303,14 @@ mod tests {
             g: 64,
             b: 32,
         };
-        assert_that(rgb.to_css_string()).is_equal_to("rgb(128, 64, 32)".to_owned());
+        assert_that!(rgb.to_css_string()).is_equal_to("rgb(128, 64, 32)".to_owned());
     }
 
     #[test]
     fn rgb8_get_channel_name() {
-        assert_that(RGB8::get_channel_name(RgbChannel::Red)).is_equal_to("Red");
-        assert_that(RGB8::get_channel_name(RgbChannel::Green)).is_equal_to("Green");
-        assert_that(RGB8::get_channel_name(RgbChannel::Blue)).is_equal_to("Blue");
+        assert_that!(RGB8::get_channel_name(RgbChannel::Red)).is_equal_to("Red");
+        assert_that!(RGB8::get_channel_name(RgbChannel::Green)).is_equal_to("Green");
+        assert_that!(RGB8::get_channel_name(RgbChannel::Blue)).is_equal_to("Blue");
     }
 
     // --- HSL ColorValue trait tests ---
@@ -1320,36 +1322,36 @@ mod tests {
             saturation: 0.5,
             lightness: 0.6,
         };
-        assert_that(hsl.get_channel_value(HslChannel::Hue)).is_close_to(120.0, 0.001);
-        assert_that(hsl.get_channel_value(HslChannel::Saturation)).is_close_to(0.5, 0.001);
-        assert_that(hsl.get_channel_value(HslChannel::Lightness)).is_close_to(0.6, 0.001);
+        assert_that!(hsl.get_channel_value(HslChannel::Hue)).is_close_to(120.0, 0.001);
+        assert_that!(hsl.get_channel_value(HslChannel::Saturation)).is_close_to(0.5, 0.001);
+        assert_that!(hsl.get_channel_value(HslChannel::Lightness)).is_close_to(0.6, 0.001);
     }
 
     #[test]
     fn hsl_with_channel_value() {
         let hsl = HSL::new();
         let updated = hsl.with_channel_value(HslChannel::Hue, 240.0);
-        assert_that(updated.hue).is_close_to(240.0, 0.001);
-        assert_that(updated.saturation).is_close_to(hsl.saturation, 0.001);
+        assert_that!(updated.hue).is_close_to(240.0, 0.001);
+        assert_that!(updated.saturation).is_close_to(hsl.saturation, 0.001);
     }
 
     #[test]
     fn hsl_get_channel_range() {
         let range = HSL::get_channel_range(HslChannel::Hue);
-        assert_that(range.min_value).is_close_to(0.0, 0.001);
-        assert_that(range.max_value).is_close_to(360.0, 0.001);
-        assert_that(range.step).is_close_to(1.0, 0.001);
+        assert_that!(range.min_value).is_close_to(0.0, 0.001);
+        assert_that!(range.max_value).is_close_to(360.0, 0.001);
+        assert_that!(range.step).is_close_to(1.0, 0.001);
 
         let light_range = HSL::get_channel_range(HslChannel::Lightness);
-        assert_that(light_range.gradient_stops.unwrap().len()).is_equal_to(3);
+        assert_that!(light_range.gradient_stops.unwrap().len()).is_equal_to(3);
     }
 
     #[test]
     fn hsl_get_color_space_axes_defaults() {
         let (x, y, z) = HSL::get_color_space_axes(None, None);
-        assert_that(x).is_equal_to(HslChannel::Saturation);
-        assert_that(y).is_equal_to(HslChannel::Hue);
-        assert_that(z).is_equal_to(HslChannel::Lightness);
+        assert_that!(x).is_equal_to(HslChannel::Saturation);
+        assert_that!(y).is_equal_to(HslChannel::Hue);
+        assert_that!(z).is_equal_to(HslChannel::Lightness);
     }
 
     #[test]
@@ -1359,16 +1361,17 @@ mod tests {
             saturation: 0.5,
             lightness: 0.75,
         };
-        assert_that(hsl.format_channel_value(HslChannel::Hue)).is_equal_to("120°".to_owned());
-        assert_that(hsl.format_channel_value(HslChannel::Saturation)).is_equal_to("50%".to_owned());
-        assert_that(hsl.format_channel_value(HslChannel::Lightness)).is_equal_to("75%".to_owned());
+        assert_that!(hsl.format_channel_value(HslChannel::Hue)).is_equal_to("120°".to_owned());
+        assert_that!(hsl.format_channel_value(HslChannel::Saturation))
+            .is_equal_to("50%".to_owned());
+        assert_that!(hsl.format_channel_value(HslChannel::Lightness)).is_equal_to("75%".to_owned());
     }
 
     #[test]
     fn hsl_get_channel_name() {
-        assert_that(HSL::get_channel_name(HslChannel::Hue)).is_equal_to("Hue");
-        assert_that(HSL::get_channel_name(HslChannel::Saturation)).is_equal_to("Saturation");
-        assert_that(HSL::get_channel_name(HslChannel::Lightness)).is_equal_to("Lightness");
+        assert_that!(HSL::get_channel_name(HslChannel::Hue)).is_equal_to("Hue");
+        assert_that!(HSL::get_channel_name(HslChannel::Saturation)).is_equal_to("Saturation");
+        assert_that!(HSL::get_channel_name(HslChannel::Lightness)).is_equal_to("Lightness");
     }
 
     #[test]
@@ -1379,9 +1382,9 @@ mod tests {
             lightness: 0.2,
         };
         let display = hsl.get_display_color(HslChannel::Hue);
-        assert_that(display.hue).is_close_to(120.0, 0.001);
-        assert_that(display.saturation).is_close_to(1.0, 0.001);
-        assert_that(display.lightness).is_close_to(0.5, 0.001);
+        assert_that!(display.hue).is_close_to(120.0, 0.001);
+        assert_that!(display.saturation).is_close_to(1.0, 0.001);
+        assert_that!(display.lightness).is_close_to(0.5, 0.001);
     }
 
     #[test]
@@ -1391,8 +1394,8 @@ mod tests {
             saturation: 1.0,
             lightness: 0.5,
         };
-        assert_that(hsl.get_hue_name_for_channel(HslChannel::Hue)).is_equal_to(Some("green"));
-        assert_that(hsl.get_hue_name_for_channel(HslChannel::Saturation)).is_equal_to(None);
+        assert_that!(hsl.get_hue_name_for_channel(HslChannel::Hue)).is_equal_to(Some("green"));
+        assert_that!(hsl.get_hue_name_for_channel(HslChannel::Saturation)).is_equal_to(None);
     }
 
     // --- HSL conversion tests ---
@@ -1405,7 +1408,7 @@ mod tests {
             lightness: 0.5,
         };
         let rgb = RGB8::from(hsl);
-        assert_that(rgb).is_equal_to(RGB8 { r: 255, g: 0, b: 0 });
+        assert_that!(rgb).is_equal_to(RGB8 { r: 255, g: 0, b: 0 });
     }
 
     #[test]
@@ -1416,7 +1419,7 @@ mod tests {
             lightness: 0.5,
         };
         let rgb = RGB8::from(hsl);
-        assert_that(rgb).is_equal_to(RGB8 { r: 0, g: 255, b: 0 });
+        assert_that!(rgb).is_equal_to(RGB8 { r: 0, g: 255, b: 0 });
     }
 
     #[test]
@@ -1427,7 +1430,7 @@ mod tests {
             lightness: 0.5,
         };
         let rgb = RGB8::from(hsl);
-        assert_that(rgb).is_equal_to(RGB8 { r: 0, g: 0, b: 255 });
+        assert_that!(rgb).is_equal_to(RGB8 { r: 0, g: 0, b: 255 });
     }
 
     #[test]
@@ -1438,7 +1441,7 @@ mod tests {
             lightness: 1.0,
         };
         let rgb = RGB8::from(hsl);
-        assert_that(rgb).is_equal_to(RGB8 {
+        assert_that!(rgb).is_equal_to(RGB8 {
             r: 255,
             g: 255,
             b: 255,
@@ -1453,7 +1456,7 @@ mod tests {
             lightness: 0.0,
         };
         let rgb = RGB8::from(hsl);
-        assert_that(rgb).is_equal_to(RGB8 { r: 0, g: 0, b: 0 });
+        assert_that!(rgb).is_equal_to(RGB8 { r: 0, g: 0, b: 0 });
     }
 
     #[test]
@@ -1464,7 +1467,7 @@ mod tests {
             lightness: 0.5,
         };
         let rgb = RGB8::from(hsl);
-        assert_that(rgb).is_equal_to(RGB8 {
+        assert_that!(rgb).is_equal_to(RGB8 {
             r: 128,
             g: 128,
             b: 128,
@@ -1487,9 +1490,9 @@ mod tests {
             let hsl = HSL::from(original);
             let back = RGB8::from(hsl);
             // Allow ±1 rounding difference per channel.
-            assert_that(i16::from(back.r) - i16::from(original.r)).is_in_range(-1..=1);
-            assert_that(i16::from(back.g) - i16::from(original.g)).is_in_range(-1..=1);
-            assert_that(i16::from(back.b) - i16::from(original.b)).is_in_range(-1..=1);
+            assert_that!(i16::from(back.r) - i16::from(original.r)).is_in_range(-1..=1);
+            assert_that!(i16::from(back.g) - i16::from(original.g)).is_in_range(-1..=1);
+            assert_that!(i16::from(back.b) - i16::from(original.b)).is_in_range(-1..=1);
         }
     }
 
@@ -1502,9 +1505,9 @@ mod tests {
         };
         let hsv = HSV::from(hsl);
         let back = HSL::from(hsv);
-        assert_that(back.hue).is_close_to(hsl.hue, 0.01);
-        assert_that(back.saturation).is_close_to(hsl.saturation, 0.01);
-        assert_that(back.lightness).is_close_to(hsl.lightness, 0.01);
+        assert_that!(back.hue).is_close_to(hsl.hue, 0.01);
+        assert_that!(back.saturation).is_close_to(hsl.saturation, 0.01);
+        assert_that!(back.lightness).is_close_to(hsl.lightness, 0.01);
     }
 
     #[test]
@@ -1516,9 +1519,9 @@ mod tests {
         };
         let hsl = HSL::from(hsv);
         let back = HSV::from(hsl);
-        assert_that(back.hue).is_close_to(hsv.hue, 0.01);
-        assert_that(back.saturation).is_close_to(hsv.saturation, 0.01);
-        assert_that(back.value).is_close_to(hsv.value, 0.01);
+        assert_that!(back.hue).is_close_to(hsv.hue, 0.01);
+        assert_that!(back.saturation).is_close_to(hsv.saturation, 0.01);
+        assert_that!(back.value).is_close_to(hsv.value, 0.01);
     }
 
     #[test]
@@ -1530,6 +1533,6 @@ mod tests {
             lightness: 0.5,
         };
         let hsv = HSV::from(hsl);
-        assert_that(hsv.saturation).is_close_to(0.0, 0.001);
+        assert_that!(hsv.saturation).is_close_to(0.0, 0.001);
     }
 }

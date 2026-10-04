@@ -20,13 +20,11 @@ pub fn LinkExternalDemo() -> impl IntoView {
     view! {
         <div>
             <strong>"External Link: "</strong>
-            <a {..link_props.into_attrs()} style=link_styles.add("color", "var(--brand-color)")>
+            <a {..link_props.into_attrs()} class="demo-link" style=link_styles>
                 "Visit Leptos"
-                <span style="margin-left: 0.25em;">{"\u{2197}"}</span>
+                <span class="demo-link-icon">{"\u{2197}"}</span>
             </a>
-            <span style="margin-left: 0.5em; font-size: 0.875em; opacity: 0.7;">
-                "(opens in new tab)"
-            </span>
+            <span class="demo-hint">"(opens in new tab)"</span>
         </div>
     }
 }

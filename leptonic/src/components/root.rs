@@ -1,4 +1,6 @@
 use leptos::{ev, prelude::*};
+#[cfg(feature = "tiptap")]
+use leptos_meta::Script;
 use leptos_use::{use_document, use_event_listener, use_window};
 use wasm_bindgen::JsCast;
 
@@ -90,8 +92,7 @@ where
             window
                 .navigator()
                 .user_agent()
-                .map(|agent| agent.to_lowercase().contains("mobi"))
-                .unwrap_or(false)
+                .is_ok_and(|agent| agent.to_lowercase().contains("mobi"))
         })
     });
 
@@ -101,7 +102,6 @@ where
     });
 
     cfg_if::cfg_if! { if #[cfg(feature="tiptap")] {
-        use leptos_meta::Script;
         let tiptap_js_module_includes = view! {
             <Script type_="module" src=format!("/{}/tiptap-bundle.min.js", runtime_js_dir)/>
             <Script type_="module" src=format!("/{}/tiptap.js", runtime_js_dir)/>

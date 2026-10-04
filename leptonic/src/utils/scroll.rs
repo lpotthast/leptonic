@@ -1,8 +1,12 @@
+// Upstream: react-aria/src/utils/scrollIntoView.ts @ 6f664fe911
+// Upstream: react-aria/src/utils/isScrollable.ts @ 6f664fe911
+// Upstream: react-aria/src/utils/getScrollParent.ts @ 6f664fe911
+// Upstream: react-aria/src/utils/getScrollParents.ts @ 6f664fe911
 // Based on:
-// - https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/utils/src/scrollIntoView.ts
-// - https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/utils/src/isScrollable.ts
-// - https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/utils/src/getScrollParent.ts
-// - https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/utils/src/getScrollParents.ts
+// - https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/scrollIntoView.ts
+// - https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/isScrollable.ts
+// - https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/getScrollParent.ts
+// - https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/getScrollParents.ts
 
 use wasm_bindgen::JsCast;
 use web_sys::{Element, HtmlElement};
@@ -409,14 +413,14 @@ fn scroll_into_viewport_native(target: &Element, opts: &ScrollIntoViewportOpts) 
 
     let after = target.get_bounding_client_rect();
     // Account for sub-pixel rounding differences.
-    if (original_left - after.left()).abs() > 1.0 || (original_top - after.top()).abs() > 1.0 {
-        if let Some(containing) = &opts.containing_element {
-            let center_opts = web_sys::ScrollIntoViewOptions::new();
-            center_opts.set_block(web_sys::ScrollLogicalPosition::Center);
-            center_opts.set_inline(web_sys::ScrollLogicalPosition::Center);
-            containing.scroll_into_view_with_scroll_into_view_options(&center_opts);
-            target.scroll_into_view_with_scroll_into_view_options(&nearest_opts);
-        }
+    if ((original_left - after.left()).abs() > 1.0 || (original_top - after.top()).abs() > 1.0)
+        && let Some(containing) = &opts.containing_element
+    {
+        let center_opts = web_sys::ScrollIntoViewOptions::new();
+        center_opts.set_block(web_sys::ScrollLogicalPosition::Center);
+        center_opts.set_inline(web_sys::ScrollLogicalPosition::Center);
+        containing.scroll_into_view_with_scroll_into_view_options(&center_opts);
+        target.scroll_into_view_with_scroll_into_view_options(&nearest_opts);
     }
 }
 
@@ -440,23 +444,23 @@ fn scroll_into_viewport_manual(target: &Element, opts: &ScrollIntoViewportOpts) 
 
     let after = target.get_bounding_client_rect();
     // Account for sub-pixel rounding differences.
-    if (original_left - after.left()).abs() > 1.0 || (original_top - after.top()).abs() > 1.0 {
-        if let Some(containing) = &opts.containing_element {
-            let container_parents = get_scroll_parents(containing, true);
-            for parent in &container_parents {
-                if let (Some(sv), Some(ce)) = (
-                    parent.dyn_ref::<HtmlElement>(),
-                    containing.dyn_ref::<HtmlElement>(),
-                ) {
-                    scroll_into_view(
-                        sv,
-                        ce,
-                        ScrollIntoViewOpts {
-                            block: ScrollAlignment::Center,
-                            inline: ScrollAlignment::Center,
-                        },
-                    );
-                }
+    if ((original_left - after.left()).abs() > 1.0 || (original_top - after.top()).abs() > 1.0)
+        && let Some(containing) = &opts.containing_element
+    {
+        let container_parents = get_scroll_parents(containing, true);
+        for parent in &container_parents {
+            if let (Some(sv), Some(ce)) = (
+                parent.dyn_ref::<HtmlElement>(),
+                containing.dyn_ref::<HtmlElement>(),
+            ) {
+                scroll_into_view(
+                    sv,
+                    ce,
+                    ScrollIntoViewOpts {
+                        block: ScrollAlignment::Center,
+                        inline: ScrollAlignment::Center,
+                    },
+                );
             }
         }
     }
@@ -470,28 +474,28 @@ mod tests {
 
     #[test]
     fn parse_css_px_parses_integer_pixels() {
-        assert_that(parse_css_px("10px")).is_equal_to(10.0);
+        assert_that!(parse_css_px("10px")).is_equal_to(10.0);
     }
 
     #[test]
     fn parse_css_px_parses_zero() {
-        assert_that(parse_css_px("0px")).is_equal_to(0.0);
-        assert_that(parse_css_px("0")).is_equal_to(0.0);
+        assert_that!(parse_css_px("0px")).is_equal_to(0.0);
+        assert_that!(parse_css_px("0")).is_equal_to(0.0);
     }
 
     #[test]
     fn parse_css_px_parses_fractional_pixels() {
-        assert_that(parse_css_px("10.5px")).is_equal_to(10.5);
+        assert_that!(parse_css_px("10.5px")).is_equal_to(10.5);
     }
 
     #[test]
     fn parse_css_px_returns_zero_for_empty_or_non_numeric() {
-        assert_that(parse_css_px("")).is_equal_to(0.0);
-        assert_that(parse_css_px("auto")).is_equal_to(0.0);
+        assert_that!(parse_css_px("")).is_equal_to(0.0);
+        assert_that!(parse_css_px("auto")).is_equal_to(0.0);
     }
 
     #[test]
     fn parse_css_px_trims_whitespace() {
-        assert_that(parse_css_px("  10px  ")).is_equal_to(10.0);
+        assert_that!(parse_css_px("  10px  ")).is_equal_to(10.0);
     }
 }

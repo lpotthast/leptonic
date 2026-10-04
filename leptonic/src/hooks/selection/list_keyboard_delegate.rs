@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/selection/ListKeyboardDelegate.ts @ 6f664fe911
 use std::collections::HashSet;
 
 use leptos::prelude::*;
@@ -7,7 +8,7 @@ use super::{
 };
 use crate::{hooks::form::use_checkbox_group::Orientation, utils::locale::WritingDirection};
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/ListKeyboardDelegate.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/selection/ListKeyboardDelegate.ts
 
 // REACT-ARIA DEVIATIONS
 //

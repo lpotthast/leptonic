@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/checkbox/useCheckbox.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::{
@@ -29,7 +30,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckbox.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/checkbox/useCheckbox.ts
 
 // No intentional deviations from the react-aria implementation.
 

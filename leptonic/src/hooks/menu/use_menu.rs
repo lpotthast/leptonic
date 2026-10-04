@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/menu/useMenu.ts @ 6f664fe911
 use std::collections::HashSet;
 
 use leptos::{
@@ -9,7 +10,7 @@ use leptos::{
 };
 use web_sys::KeyboardEvent;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenu.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/menu/useMenu.ts
 
 // 1. `selection_mode` defaults to `SelectionMode::None` (action-only menu).
 //    React-aria determines mode from the collection; we require it upfront.
@@ -222,12 +223,11 @@ where
         default_selected_keys: None,
         on_selection_change: Some(Callback::new(move |selection: Selection<K>| {
             // When an item is selected, trigger the action
-            if let Selection::Keys(keys) = selection {
-                if let Some(key) = keys.into_iter().next() {
-                    if let Some(on_action) = on_action {
-                        on_action.run(key);
-                    }
-                }
+            if let Selection::Keys(keys) = selection
+                && let Some(key) = keys.into_iter().next()
+                && let Some(on_action) = on_action
+            {
+                on_action.run(key);
             }
         })),
         disabled_keys,

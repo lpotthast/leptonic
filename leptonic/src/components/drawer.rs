@@ -104,11 +104,12 @@ pub fn Drawer(
 
     view! {
         <div
-            class=classes.add("leptonic-drawer")
-            class:shown=move || anim_state.get() == DrawerAnimationState::Shown
-            class:showing=move || anim_state.get() == DrawerAnimationState::Showing
-            class:hiding=move || anim_state.get() == DrawerAnimationState::Hiding
-            class:hidden=move || anim_state.get() == DrawerAnimationState::Hidden
+            class=classes
+                .add("leptonic-drawer")
+                .add_reactive("shown", move || anim_state.get() == DrawerAnimationState::Shown)
+                .add_reactive("showing", move || anim_state.get() == DrawerAnimationState::Showing)
+                .add_reactive("hiding", move || anim_state.get() == DrawerAnimationState::Hiding)
+                .add_reactive("hidden", move || anim_state.get() == DrawerAnimationState::Hidden)
             data-side=side.to_str()
             style=styles
         >

@@ -1,6 +1,7 @@
+// Upstream: react-aria/src/overlays/usePopover.ts @ 6f664fe911
 //
 // This hook is based on React Aria's `usePopover`:
-// https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/usePopover.ts
+// https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/usePopover.ts
 //
 // ## OMITTED FEATURES
 //

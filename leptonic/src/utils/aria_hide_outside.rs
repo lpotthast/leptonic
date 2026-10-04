@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/overlays/ariaHideOutside.ts @ 6f664fe911
 //! Hides all elements outside the given targets from assistive technology.
 //!
 //! When a modal or popover is open, content behind it should be hidden from
@@ -12,7 +13,7 @@
 //! - Preserves live announcer regions and top-layer elements
 //!
 //! Based on react-aria's `ariaHideOutside` from
-//! `@react-aria/overlays/src/ariaHideOutside.ts`.
+//! `react-aria/src/overlays/ariaHideOutside.ts`.
 //!
 //! ## Deviation from react-aria
 //!
@@ -135,12 +136,11 @@ fn classify(
     // Exception: elements with role="row" — VoiceOver on iOS has issues
     // hiding elements with role="row", so we hide cells individually.
     // https://bugs.webkit.org/show_bug.cgi?id=222623
-    if let Some(parent) = element.parent_element() {
-        if hidden_nodes.iter().any(|n| n == &parent)
-            && parent.get_attribute("role").as_deref() != Some("row")
-        {
-            return WalkAction::Reject;
-        }
+    if let Some(parent) = element.parent_element()
+        && hidden_nodes.iter().any(|n| n == &parent)
+        && parent.get_attribute("role").as_deref() != Some("row")
+    {
+        return WalkAction::Reject;
     }
 
     // Node contains a visible target — don't hide it, but recurse into children.
@@ -167,10 +167,9 @@ fn discover_special_elements(root: &web_sys::Element, visible_nodes: &mut Vec<we
         if let Some(el) = special
             .item(i)
             .and_then(|n| n.dyn_ref::<web_sys::Element>().cloned())
+            && !visible_nodes.iter().any(|v| v == &el)
         {
-            if !visible_nodes.iter().any(|v| v == &el) {
-                visible_nodes.push(el);
-            }
+            visible_nodes.push(el);
         }
     }
 }

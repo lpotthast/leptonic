@@ -6,39 +6,6 @@ use leptonic::{
     hooks::{EscapeKeyBehavior, Selection, SelectionBehavior, SelectionMode},
 };
 use leptos::prelude::*;
-use leptos_styles::{
-    Style::{
-        AlignItems, Background, Border, BorderBottom, BorderRadius, Cursor, Display, FontFamily,
-        FontSize, Gap, MarginTop, MaxWidth, Outline, OutlineOffset, Overflow, Padding, UserSelect,
-    },
-    Styles,
-};
-
-fn list_item_style() -> Styles {
-    Styles::builder()
-        .with(Display, "flex")
-        .with(AlignItems, "center")
-        .with(Padding, "10px 14px")
-        .with(Cursor, "pointer")
-        .with(UserSelect, "none")
-        .with("transition", "background-color 0.15s, outline-color 0.15s")
-        .with(Outline, "2px solid transparent")
-        .with(OutlineOffset, "-2px")
-        .with(BorderBottom, "1px solid #e0e0e0")
-        .with(Gap, "10px")
-        .build()
-}
-
-fn state_display_style() -> Styles {
-    Styles::from([
-        (MarginTop, "1em"),
-        (Padding, "0.75em 1em"),
-        (Background, "#f5f5f5"),
-        (BorderRadius, "6px"),
-        (FontSize, "0.9em"),
-        (FontFamily, "monospace"),
-    ])
-}
 
 fn format_selection(sel: &Selection<String>) -> String {
     match sel {
@@ -91,15 +58,8 @@ pub fn GridFileListDemo() -> impl IntoView {
             .collect::<HashSet<String>>(),
     );
 
-    let list_container_style = Styles::from([
-        (Border, "1px solid #ccc"),
-        (BorderRadius, "6px"),
-        (Overflow, "hidden"),
-        (MaxWidth, "360px"),
-    ]);
-
     view! {
-        <div style="padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
+        <div class="demo-frame">
             <GridList
                 all_keys
                 disabled_keys
@@ -112,7 +72,7 @@ pub fn GridFileListDemo() -> impl IntoView {
                     set_last_action.set(Some(key));
                 })
                 label="Files".to_string()
-                styles=list_container_style
+                classes="demo-grid-list"
             >
                 {items
                     .iter()
@@ -126,11 +86,9 @@ pub fn GridFileListDemo() -> impl IntoView {
                                 item_key=key
                                 row_index=idx
                                 text_value=label.to_string()
-                                styles=list_item_style()
+                                classes="demo-grid-list-item"
                             >
-                                <span style="width: 24px; text-align: center; font-size: 1.1em;">
-                                    {file_icon(icon)}
-                                </span>
+                                <span class="demo-grid-list-icon">{file_icon(icon)}</span>
                                 <span>{label}</span>
                             </GridListItem<String>>
                         }
@@ -138,26 +96,20 @@ pub fn GridFileListDemo() -> impl IntoView {
                     .collect_view()}
             </GridList>
 
-            <p style="font-size: 0.85em; color: #666; margin-top: 0.5em;">
+            <p class="demo-caption">
                 "\"Archive.zip\" is disabled — it is skipped during keyboard navigation and cannot be selected."
             </p>
 
-            <div style=state_display_style()>
+            <div class="demo-state-display">
                 <div>
                     <strong>"Selected: "</strong>
                     {move || format_selection(&selected.get())}
                 </div>
-                <div style="margin-top: 0.25em;">
+                <div class="demo-mt-quarter">
                     <strong>"Last action: "</strong>
                     {move || last_action.get().unwrap_or_else(|| "None".to_string())}
                 </div>
             </div>
         </div>
-
-        <style>
-            "article [role='row'][data-focused='true'] { outline-color: #1976d2 !important; }"
-            "article [role='row'][data-selected='true'] { background-color: #e3f2fd; }"
-            "article [role='row'][data-disabled='true'] { opacity: 0.4; cursor: not-allowed !important; }"
-        </style>
     }
 }

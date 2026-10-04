@@ -1,9 +1,10 @@
+// Upstream: react-aria/src/focus/FocusScope.tsx @ 6f664fe911
 //! Focusable tree walker utility.
 //!
 //! Creates a `ShadowTreeWalker` with a baked-in filter that handles focusability/tabbability
 //! checks, radio group deduplication, and custom accept callbacks.
 //!
-//! Based on react-aria's `getFocusableTreeWalker` from `@react-aria/focus/src/FocusScope.tsx`.
+//! Based on react-aria's `getFocusableTreeWalker` from `react-aria/src/focus/FocusScope.tsx`.
 
 use std::sync::Arc;
 
@@ -54,16 +55,16 @@ pub fn get_focusable_tree_walker(
         if tabbable {
             // Radio group handling: skip non-tabbable radios and radios in the
             // same group as the starting element.
-            if let Some(input) = el.dyn_ref::<web_sys::HtmlInputElement>() {
-                if input.type_() == "radio" {
-                    if !focusability::is_tabbable_radio(input) {
-                        return false;
-                    }
-                    if let Some(ref group) = from_radio_group {
-                        if input.name() == *group {
-                            return false;
-                        }
-                    }
+            if let Some(input) = el.dyn_ref::<web_sys::HtmlInputElement>()
+                && input.type_() == "radio"
+            {
+                if !focusability::is_tabbable_radio(input) {
+                    return false;
+                }
+                if let Some(ref group) = from_radio_group
+                    && input.name() == *group
+                {
+                    return false;
                 }
             }
             if !focusability::is_tabbable(el) {
@@ -73,10 +74,10 @@ pub fn get_focusable_tree_walker(
             return false;
         }
 
-        if let Some(ref accept_fn) = accept {
-            if !accept_fn(el) {
-                return false;
-            }
+        if let Some(ref accept_fn) = accept
+            && !accept_fn(el)
+        {
+            return false;
         }
 
         true

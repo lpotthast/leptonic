@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/selection/useSelectableItem.ts @ 6f664fe911
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
@@ -20,7 +21,7 @@ use crate::{
     utils::{EventHandler, pointer_type::PointerType, propagation_control::Propagation},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useSelectableItem.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/selection/useSelectableItem.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -352,14 +353,15 @@ where
         }
 
         // Shift: extend selection (multiple mode only)
-        if modifiers.shift_key && selection_mode == SelectionMode::Multiple {
-            if let Some(extend) = on_extend {
-                extend.run(key);
-                if let Some(action) = on_action {
-                    action.run(());
-                }
-                return;
+        if modifiers.shift_key
+            && selection_mode == SelectionMode::Multiple
+            && let Some(extend) = on_extend
+        {
+            extend.run(key);
+            if let Some(action) = on_action {
+                action.run(());
             }
+            return;
         }
 
         // Ctrl/Cmd (or Alt on Mac): toggle in multiple mode

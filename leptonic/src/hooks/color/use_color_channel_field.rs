@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/color/useColorChannelField.ts @ 6f664fe911
 use leptos::prelude::*;
 
 use crate::{
@@ -13,7 +14,7 @@ use crate::{
 
 use super::use_color_channel_field_state::UseColorChannelFieldStateReturn;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/color/src/useColorChannelField.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorChannelField.ts
 
 // ## INTENTIONAL DEVIATIONS
 //

@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/dialog/useDialog.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +7,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::FocusEvent;
 
 use crate::{
@@ -17,7 +18,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dialog/src/useDialog.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/dialog/useDialog.ts
 
 //
 // ## DIFFERENT BEHAVIOR
@@ -239,7 +240,7 @@ pub fn use_dialog(input: UseDialogInput) -> UseDialogReturn {
         role: dialog_role,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("dialog");
     let dialog_id = format!("dialog-{base_id}");
     let title_id = format!("dialog-title-{base_id}");
     let description_id = format!("dialog-description-{base_id}");

@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/menu/useMenuItem.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -8,7 +10,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::{
@@ -33,7 +34,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/menu/src/useMenuItem.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/menu/useMenuItem.ts
 
 // 1. `close_on_select` is `Option<bool>` with smart defaults instead of `bool`.
 //    When `None`, close behavior varies by trigger and selection mode:
@@ -307,7 +308,7 @@ where
     } = input;
 
     // Generate unique IDs for accessible slot elements
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("menu-item");
     let item_id = format!("menuitem-{base_id}");
     let label_id = format!("menuitem-label-{base_id}");
     let description_id = format!("menuitem-desc-{base_id}");
@@ -344,6 +345,7 @@ where
         on_focus_change: None,
         on_key_down: None, // We handle keydown separately for menu-specific behavior
         on_key_up: None,
+        ..Default::default()
     });
 
     // Effect to focus the element when is_focused becomes true
@@ -417,10 +419,8 @@ where
             return;
         }
         on_action.run(key_for_keyboard_action.clone());
-        if should_close {
-            if let Some(on_close) = on_close {
-                on_close.run(());
-            }
+        if should_close && let Some(on_close) = on_close {
+            on_close.run(());
         }
     };
 
@@ -431,10 +431,8 @@ where
             return;
         }
         on_action.run(key_for_click_action.clone());
-        if should_close_on_click {
-            if let Some(on_close) = on_close {
-                on_close.run(());
-            }
+        if should_close_on_click && let Some(on_close) = on_close {
+            on_close.run(());
         }
     };
 

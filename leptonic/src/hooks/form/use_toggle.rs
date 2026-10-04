@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/toggle/useToggle.ts @ 6f664fe911
 use leptos::{
     attr::custom::{CustomAttr, custom_attribute},
     ev,
@@ -14,7 +15,7 @@ use crate::{
     utils::EventHandler,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/toggle/src/useToggle.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/toggle/useToggle.ts
 
 // No intentional deviations from the react-aria implementation.
 

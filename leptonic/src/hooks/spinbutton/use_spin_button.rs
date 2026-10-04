@@ -1,344 +1,410 @@
-use leptos::prelude::*;
-use web_sys::{KeyboardEvent, PointerEvent};
+// Upstream: react-aria/src/spinbutton/useSpinButton.ts @ 99e6102368
+use std::time::Duration;
 
-use crate::utils::{
-    EventHandler,
-    live_announcer::{Assertiveness, LiveAnnouncerContext},
+use leptos::{
+    attr,
+    attr::Attr,
+    ev,
+    ev::{On, SharedEventCallback},
+    prelude::*,
+};
+use leptos_use::{UseEventListenerOptions, use_event_listener_with_options, use_window};
+use web_sys::{FocusEvent, KeyboardEvent};
+
+use crate::{
+    hooks::{
+        IntoAttrs, PressEvent, UseButtonInput,
+        interactions::use_keyboard::{UseKeyboardInput, UseKeyboardReturn, use_keyboard},
+    },
+    utils::{
+        EventHandler,
+        aria::AriaRole,
+        keyboard_shortcut::{KeyboardShortcuts, Shortcut},
+        live_announcer::{Assertiveness, announce, clear_announcer},
+        pointer_type::PointerType,
+    },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/spinbutton/src/useSpinButton.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/spinbutton/useSpinButton.ts
 
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
 //
-// 1. PointerEvent-only: We assume PointerEvent is available (per CLAUDE.md).
-//    No separate mouse/touch event handling. Touch vs mouse is detected via
-//    `e.pointer_type()`.
+// ## DIFFERENT BEHAVIOR
+// - Touch: react-aria increments once more when a finger is lifted after the button already
+//   spun, because `onPressEnd` resets the "spinning" flag before checking it. Leptonic records
+//   whether the button was spinning on press up, so a tap steps once and a hold only spins.
 //
-// 2. Hook-owned state: The spin button does not own value state — it receives
-//    callbacks for increment/decrement and signals for value display.
+// ## API DIFFERENCES
+// - The stepper buttons are returned as `UseButtonInput` (react-aria: `AriaButtonProps`).
+//   Pass them to `use_button`, adding labels and other settings with struct update syntax.
+// - `text_value: None` means "derive from `value`"; `Some("")` announces "Empty".
 //
-// 3. No separate `onIncrementPage`/`onDecrementPage` with custom step sizes.
-//    PageUp/PageDown fall through to regular increment/decrement.
+// ## OMITTED FEATURES
+// - Localized "Empty" text (English only, until leptonic has localized strings).
 //
+// =============================================================================
 
-/// Auto-repeat timing constants (milliseconds), matching react-aria.
-const INITIAL_DELAY_MOUSE_MS: i32 = 400;
-const INITIAL_DELAY_TOUCH_MS: i32 = 600;
-const REPEAT_INTERVAL_MS: i32 = 60;
+/// Delay before a held stepper button starts spinning, for mouse and pen.
+const INITIAL_SPIN_DELAY: Duration = Duration::from_millis(400);
+/// Delay before a held stepper button starts spinning, for touch. Longer, because the user might
+/// be about to scroll.
+const INITIAL_SPIN_DELAY_TOUCH: Duration = Duration::from_millis(600);
+/// Delay between steps while spinning.
+const SPIN_INTERVAL: Duration = Duration::from_millis(60);
 
-/// Input parameters for the `use_spin_button` hook.
-#[derive(Copy, Clone)]
+/// Input of [`use_spin_button`].
+#[derive(Debug, Clone, Default)]
 pub struct UseSpinButtonInput {
-    /// The current text value for screen reader announcements.
-    pub text_value: Signal<String>,
-
-    /// Whether the spin button is disabled.
-    pub is_disabled: Signal<bool>,
-
-    /// Whether the spin button is read-only.
-    pub is_read_only: Signal<bool>,
-
-    /// Called on increment (`ArrowUp`, `PageUp`, or increment button press).
-    pub on_increment: Callback<()>,
-
-    /// Called on decrement (`ArrowDown`, `PageDown`, or decrement button press).
-    pub on_decrement: Callback<()>,
-
-    /// Called to jump to max (End key).
-    pub on_increment_to_max: Callback<()>,
-
-    /// Called to jump to min (Home key).
-    pub on_decrement_to_min: Callback<()>,
+    /// The current value. `None` (or NaN) when empty.
+    pub value: Signal<Option<f64>>,
+    /// A textual representation of the value, announced to screen readers and exposed as
+    /// `aria-valuetext`. `None` uses `value`.
+    pub text_value: Signal<Option<String>>,
+    pub min_value: Signal<Option<f64>>,
+    pub max_value: Signal<Option<f64>>,
+    pub disabled: Signal<bool>,
+    pub read_only: Signal<bool>,
+    pub required: Signal<bool>,
+    /// Step up (ArrowUp, increment button).
+    pub on_increment: Option<Callback<()>>,
+    /// Step up by a page (PageUp). Falls back to `on_increment`.
+    pub on_increment_page: Option<Callback<()>>,
+    /// Step down (ArrowDown, decrement button).
+    pub on_decrement: Option<Callback<()>>,
+    /// Step down by a page (PageDown). Falls back to `on_decrement`.
+    pub on_decrement_page: Option<Callback<()>>,
+    /// Jump to the minimum (Home).
+    pub on_decrement_to_min: Option<Callback<()>>,
+    /// Jump to the maximum (End).
+    pub on_increment_to_max: Option<Callback<()>>,
 }
 
-/// Return value of the `use_spin_button` hook.
+/// Return value of [`use_spin_button`].
+#[derive(Debug)]
 pub struct UseSpinButtonReturn {
-    /// Keyboard event handler to attach to the input element.
+    /// Props for the element with `role="spinbutton"`.
+    pub props: UseSpinButtonProps,
+    /// Configuration for the increment button; pass it to `use_button`.
+    pub increment_button: UseButtonInput,
+    /// Configuration for the decrement button; pass it to `use_button`.
+    pub decrement_button: UseButtonInput,
+}
+
+/// Props for the spin button element.
+#[derive(Debug)]
+pub struct UseSpinButtonProps {
+    pub role: AriaRole,
+    pub aria_valuenow: Signal<Option<String>>,
+    pub aria_valuetext: Signal<String>,
+    pub aria_valuemin: Signal<Option<String>>,
+    pub aria_valuemax: Signal<Option<String>>,
+    pub aria_disabled: Signal<Option<&'static str>>,
+    pub aria_readonly: Signal<Option<&'static str>>,
+    pub aria_required: Signal<Option<&'static str>>,
     pub on_keydown: EventHandler<KeyboardEvent>,
-
-    /// Props for the increment button.
-    pub increment_button_props: SpinButtonButtonProps,
-
-    /// Props for the decrement button.
-    pub decrement_button_props: SpinButtonButtonProps,
+    pub on_keyup: EventHandler<KeyboardEvent>,
+    pub on_focus: EventHandler<FocusEvent>,
+    pub on_blur: EventHandler<FocusEvent>,
 }
 
-/// Pointer event handlers for a spin button increment/decrement button.
-pub struct SpinButtonButtonProps {
-    pub on_pointerdown: EventHandler<PointerEvent>,
-    pub on_pointerup: EventHandler<PointerEvent>,
-    pub on_pointerleave: EventHandler<PointerEvent>,
-}
+pub type UseSpinButtonAttrs = (
+    Attr<attr::Role, AriaRole>,
+    Attr<attr::AriaValuenow, Signal<Option<String>>>,
+    Attr<attr::AriaValuetext, Signal<String>>,
+    Attr<attr::AriaValuemin, Signal<Option<String>>>,
+    Attr<attr::AriaValuemax, Signal<Option<String>>>,
+    Attr<attr::AriaDisabled, Signal<Option<&'static str>>>,
+    Attr<attr::AriaReadonly, Signal<Option<&'static str>>>,
+    Attr<attr::AriaRequired, Signal<Option<&'static str>>>,
+    On<ev::keydown, SharedEventCallback<KeyboardEvent>>,
+    On<ev::keyup, SharedEventCallback<KeyboardEvent>>,
+    On<ev::focus, SharedEventCallback<FocusEvent>>,
+    On<ev::blur, SharedEventCallback<FocusEvent>>,
+);
 
-/// Announce a value change to screen readers.
-fn announce_value(announcer: Option<&LiveAnnouncerContext>, text_value: Signal<String>) {
-    if let Some(announcer) = announcer {
-        let text = text_value.get_untracked();
-        let announcement = if text.is_empty() {
-            "Empty".to_string()
-        } else {
-            // Replace ASCII minus with Unicode minus for better screen reader pronunciation.
-            text.replace('-', "\u{2212}")
-        };
-        announcer.announce(announcement, Assertiveness::Assertive);
+impl IntoAttrs for UseSpinButtonProps {
+    type Attrs = UseSpinButtonAttrs;
+
+    fn into_attrs(self) -> Self::Attrs {
+        (
+            Attr(attr::Role, self.role),
+            Attr(attr::AriaValuenow, self.aria_valuenow),
+            Attr(attr::AriaValuetext, self.aria_valuetext),
+            Attr(attr::AriaValuemin, self.aria_valuemin),
+            Attr(attr::AriaValuemax, self.aria_valuemax),
+            Attr(attr::AriaDisabled, self.aria_disabled),
+            Attr(attr::AriaReadonly, self.aria_readonly),
+            Attr(attr::AriaRequired, self.aria_required),
+            self.on_keydown.into_on(ev::keydown),
+            self.on_keyup.into_on(ev::keyup),
+            self.on_focus.into_on(ev::focus),
+            self.on_blur.into_on(ev::blur),
+        )
     }
 }
 
-/// Creates a spin button hook providing keyboard navigation and auto-repeat button behavior.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Direction {
+    Up,
+    Down,
+}
+
+/// Steps the value while a stepper button is held: once after an initial delay, then every
+/// [`SPIN_INTERVAL`] until the limit is reached or the button is released.
+#[derive(Clone, Copy)]
+struct Spinner {
+    timeout: StoredValue<Option<TimeoutHandle>>,
+    /// Whether a step is scheduled.
+    is_spinning: StoredValue<bool>,
+    /// Whether the current press already stepped through spinning (reset per press).
+    spun: StoredValue<bool>,
+    value: Signal<Option<f64>>,
+    min_value: Signal<Option<f64>>,
+    max_value: Signal<Option<f64>>,
+    on_increment: Option<Callback<()>>,
+    on_decrement: Option<Callback<()>>,
+}
+
+impl Spinner {
+    fn clear(self) {
+        if let Some(handle) = self.timeout.get_value() {
+            handle.clear();
+        }
+        self.timeout.set_value(None);
+        self.is_spinning.set_value(false);
+    }
+
+    fn start(self, direction: Direction, delay: Duration) {
+        self.clear();
+        self.is_spinning.set_value(true);
+        let handle = set_timeout_with_handle(move || self.step(direction), delay).ok();
+        self.timeout.set_value(handle);
+    }
+
+    fn step(self, direction: Direction) {
+        // Missing or NaN bounds and values never stop the spinning.
+        let value = self.value.get_untracked().filter(|v| !v.is_nan());
+        let can_step = match direction {
+            Direction::Up => {
+                let max = self.max_value.get_untracked().filter(|v| !v.is_nan());
+                value.zip(max).is_none_or(|(value, max)| value < max)
+            }
+            Direction::Down => {
+                let min = self.min_value.get_untracked().filter(|v| !v.is_nan());
+                value.zip(min).is_none_or(|(value, min)| value > min)
+            }
+        };
+        if can_step {
+            self.spun.set_value(true);
+            if let Some(step) = self.callback(direction) {
+                step.run(());
+            }
+            self.start(direction, SPIN_INTERVAL);
+        }
+    }
+
+    fn callback(self, direction: Direction) -> Option<Callback<()>> {
+        match direction {
+            Direction::Up => self.on_increment,
+            Direction::Down => self.on_decrement,
+        }
+    }
+}
+
+type CleanupFn = Box<dyn Fn() + Send + Sync>;
+
+/// Implements a spin button: an element whose numeric value is changed with the arrow,
+/// page and Home/End keys, plus increment/decrement buttons that keep stepping while held.
 ///
-/// This hook handles:
-/// - Keyboard: ArrowUp/Down, PageUp/Down, Home/End with modifier key guards
-/// - Auto-repeat: Press-and-hold on increment/decrement buttons
-/// - Live announcer: Announces new values to screen readers
-#[allow(clippy::too_many_lines)]
+/// Value changes are announced to screen readers while the spin button has focus.
 pub fn use_spin_button(input: UseSpinButtonInput) -> UseSpinButtonReturn {
     let UseSpinButtonInput {
+        value,
         text_value,
-        is_disabled,
-        is_read_only,
+        min_value,
+        max_value,
+        disabled,
+        read_only,
+        required,
         on_increment,
+        on_increment_page,
         on_decrement,
-        on_increment_to_max,
+        on_decrement_page,
         on_decrement_to_min,
+        on_increment_to_max,
     } = input;
 
-    let live_announcer = use_context::<LiveAnnouncerContext>();
+    let spinner = Spinner {
+        timeout: StoredValue::new(None),
+        is_spinning: StoredValue::new(false),
+        spun: StoredValue::new(false),
+        value,
+        min_value,
+        max_value,
+        on_increment,
+        on_decrement,
+    };
+    on_cleanup(move || spinner.clear());
 
-    // -- Keyboard handler --
-    let announcer_for_keys = live_announcer.clone();
-    let handle_keydown = move |e: KeyboardEvent| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
-            return;
-        }
-
-        // Skip if modifier keys are held (matching react-aria).
-        if e.ctrl_key() || e.meta_key() || e.shift_key() || e.alt_key() {
-            return;
-        }
-
-        // Skip during IME composition.
-        if e.is_composing() {
-            return;
-        }
-
-        match e.key().as_str() {
-            "ArrowUp" | "PageUp" => {
-                e.prevent_default();
-                on_increment.run(());
-                announce_value(announcer_for_keys.as_ref(), text_value);
-            }
-            "ArrowDown" | "PageDown" => {
-                e.prevent_default();
-                on_decrement.run(());
-                announce_value(announcer_for_keys.as_ref(), text_value);
-            }
-            "Home" => {
-                e.prevent_default();
-                on_decrement_to_min.run(());
-                announce_value(announcer_for_keys.as_ref(), text_value);
-            }
-            "End" => {
-                e.prevent_default();
-                on_increment_to_max.run(());
-                announce_value(announcer_for_keys.as_ref(), text_value);
-            }
-            _ => {}
+    // -- Keyboard --
+    // A key only counts as handled when the corresponding callback exists. Otherwise the event
+    // is left alone (no `preventDefault`, keeps bubbling).
+    let run_first = |callbacks: [Option<Callback<()>>; 2]| {
+        move |_: &KeyboardEvent| {
+            callbacks.iter().flatten().next().is_some_and(|callback| {
+                callback.run(());
+                true
+            })
         }
     };
-
-    // -- Auto-repeat for increment button --
-    let inc_timeout: StoredValue<Option<i32>> = StoredValue::new(None);
-    let inc_interval: StoredValue<Option<i32>> = StoredValue::new(None);
-
-    let clear_inc_timers = move || {
-        if let Some(id) = inc_timeout.get_value() {
-            clear_timeout(id);
-            inc_timeout.set_value(None);
-        }
-        if let Some(id) = inc_interval.get_value() {
-            clear_interval(id);
-            inc_interval.set_value(None);
-        }
-    };
-
-    let announcer_for_inc = live_announcer.clone();
-    let inc_pointerdown = move |e: PointerEvent| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
-            return;
-        }
-
-        // Clear any leftover timers.
-        clear_inc_timers();
-
-        let is_touch = e.pointer_type() == "touch";
-
-        // For mouse: fire immediately. For touch: wait (user might be scrolling).
-        if !is_touch {
-            on_increment.run(());
-            announce_value(announcer_for_inc.as_ref(), text_value);
-        }
-
-        let initial_delay = if is_touch {
-            INITIAL_DELAY_TOUCH_MS
-        } else {
-            INITIAL_DELAY_MOUSE_MS
-        };
-
-        // Clone announcer for use inside timer callbacks.
-        let announcer_for_timeout = announcer_for_inc.clone();
-        let timeout_id = set_timeout_once(
-            move || {
-                if is_touch {
-                    on_increment.run(());
-                    announce_value(announcer_for_timeout.as_ref(), text_value);
-                }
-
-                let announcer_for_interval = announcer_for_timeout.clone();
-                let interval_id = set_interval_repeating(
-                    move || {
-                        on_increment.run(());
-                        announce_value(announcer_for_interval.as_ref(), text_value);
-                    },
-                    REPEAT_INTERVAL_MS,
-                );
-                inc_interval.set_value(Some(interval_id));
-            },
-            initial_delay,
-        );
-        inc_timeout.set_value(Some(timeout_id));
-    };
-
-    // -- Auto-repeat for decrement button --
-    let dec_timeout: StoredValue<Option<i32>> = StoredValue::new(None);
-    let dec_interval: StoredValue<Option<i32>> = StoredValue::new(None);
-
-    let clear_dec_timers = move || {
-        if let Some(id) = dec_timeout.get_value() {
-            clear_timeout(id);
-            dec_timeout.set_value(None);
-        }
-        if let Some(id) = dec_interval.get_value() {
-            clear_interval(id);
-            dec_interval.set_value(None);
-        }
-    };
-
-    let announcer_for_dec = live_announcer;
-    let dec_pointerdown = move |e: PointerEvent| {
-        if is_disabled.get_untracked() || is_read_only.get_untracked() {
-            return;
-        }
-
-        clear_dec_timers();
-
-        let is_touch = e.pointer_type() == "touch";
-
-        if !is_touch {
-            on_decrement.run(());
-            announce_value(announcer_for_dec.as_ref(), text_value);
-        }
-
-        let initial_delay = if is_touch {
-            INITIAL_DELAY_TOUCH_MS
-        } else {
-            INITIAL_DELAY_MOUSE_MS
-        };
-
-        let announcer_for_timeout = announcer_for_dec.clone();
-        let timeout_id = set_timeout_once(
-            move || {
-                if is_touch {
-                    on_decrement.run(());
-                    announce_value(announcer_for_timeout.as_ref(), text_value);
-                }
-
-                let announcer_for_interval = announcer_for_timeout.clone();
-                let interval_id = set_interval_repeating(
-                    move || {
-                        on_decrement.run(());
-                        announce_value(announcer_for_interval.as_ref(), text_value);
-                    },
-                    REPEAT_INTERVAL_MS,
-                );
-                dec_interval.set_value(Some(interval_id));
-            },
-            initial_delay,
-        );
-        dec_timeout.set_value(Some(timeout_id));
-    };
-
-    // Clean up timers on disposal.
-    on_cleanup(move || {
-        clear_inc_timers();
-        clear_dec_timers();
+    let shortcuts = KeyboardShortcuts::new()
+        .on(
+            Shortcut::key("PageUp"),
+            run_first([on_increment_page, on_increment]),
+        )
+        .on(Shortcut::key("ArrowUp"), run_first([on_increment, None]))
+        .on(
+            Shortcut::key("PageDown"),
+            run_first([on_decrement_page, on_decrement]),
+        )
+        .on(Shortcut::key("ArrowDown"), run_first([on_decrement, None]))
+        .on(
+            Shortcut::key("Home"),
+            run_first([on_decrement_to_min, None]),
+        )
+        .on(Shortcut::key("End"), run_first([on_increment_to_max, None]));
+    let UseKeyboardReturn {
+        props: keyboard_props,
+    } = use_keyboard(UseKeyboardInput {
+        disabled: Signal::derive(move || disabled.get() || read_only.get()),
+        shortcuts: Some(shortcuts),
+        allow_repeats: true,
+        ..UseKeyboardInput::default()
     });
 
+    // -- Focus tracking and announcements --
+    let is_focused = StoredValue::new(false);
+    let on_focus = Callback::new(move |_: FocusEvent| is_focused.set_value(true));
+    let on_blur = Callback::new(move |_: FocusEvent| is_focused.set_value(false));
+
+    // Use the real minus sign (U+2212), so that macOS VoiceOver reads "minus" even when other
+    // characters (like a currency symbol) sit between the sign and the number. An empty field is
+    // announced as "Empty" instead of iOS VoiceOver reading a stale value.
+    let aria_text_value = Memo::new(move |_| match text_value.get() {
+        Some(text) if text.is_empty() => "Empty".to_owned(),
+        Some(text) => text.replacen('-', "\u{2212}", 1),
+        None => value
+            .get()
+            .map_or_else(|| "undefined".to_owned(), |v| v.to_string())
+            .replacen('-', "\u{2212}", 1),
+    });
+
+    Effect::new(move |previous: Option<()>| {
+        let text = aria_text_value.get();
+        // Only announce changes, and only while focus is on the spin button or its buttons.
+        if previous.is_some() && is_focused.get_value() {
+            clear_announcer(Some(Assertiveness::Assertive));
+            announce(text, Assertiveness::Assertive);
+        }
+    });
+
+    // -- Stepper buttons --
+    // Window listeners that live for the duration of one touch press.
+    let global_listeners: StoredValue<Vec<CleanupFn>> = StoredValue::new(Vec::new());
+    let remove_global_listeners = move || {
+        global_listeners.update_value(|listeners| {
+            for remove in listeners.drain(..) {
+                remove();
+            }
+        });
+    };
+    on_cleanup(remove_global_listeners);
+
+    // While pressing with touch, the press is released ("up") before it ends. A press that ends
+    // without an up (the finger slid off, e.g. to scroll) must not step.
+    let is_up = StoredValue::new(false);
+
+    let stepper = move |direction: Direction| {
+        let step = spinner.callback(direction);
+        UseButtonInput {
+            on_press_start: Some(Callback::new(move |e: PressEvent| {
+                spinner.clear();
+                spinner.spun.set_value(false);
+                if e.pointer_type == PointerType::Touch {
+                    // Don't step on touch start: wait for the press end, or spin when held.
+                    is_up.set_value(false);
+                    // A cancelled pointer means the browser took over (e.g. scrolling).
+                    let window = use_window();
+                    let remove = use_event_listener_with_options(
+                        window,
+                        ev::pointercancel,
+                        move |_| spinner.clear(),
+                        UseEventListenerOptions::default().capture(true),
+                    );
+                    global_listeners.update_value(|l| l.push(Box::new(remove)));
+                    spinner.start(direction, INITIAL_SPIN_DELAY_TOUCH);
+                } else {
+                    if let Some(step) = step {
+                        step.run(());
+                    }
+                    spinner.start(direction, INITIAL_SPIN_DELAY);
+                }
+                // Holding a button with touch would otherwise open the context menu.
+                let remove = use_event_listener_with_options(
+                    use_window(),
+                    ev::contextmenu,
+                    |e| e.prevent_default(),
+                    UseEventListenerOptions::default(),
+                );
+                global_listeners.update_value(|l| l.push(Box::new(remove)));
+            })),
+            on_press_up: Some(Callback::new(move |e: PressEvent| {
+                if e.pointer_type == PointerType::Touch {
+                    is_up.set_value(true);
+                }
+                spinner.clear();
+                remove_global_listeners();
+            })),
+            on_press_end: Some(Callback::new(move |e: PressEvent| {
+                spinner.clear();
+                remove_global_listeners();
+                if e.pointer_type == PointerType::Touch
+                    && is_up.get_value()
+                    && !spinner.spun.get_value()
+                    && let Some(step) = step
+                {
+                    step.run(());
+                }
+                is_up.set_value(false);
+            })),
+            on_focus: Some(on_focus),
+            on_blur: Some(on_blur),
+            ..UseButtonInput::default()
+        }
+    };
+
+    let format_bound = |bound: Signal<Option<f64>>| {
+        Signal::derive(move || bound.get().filter(|v| !v.is_nan()).map(|v| v.to_string()))
+    };
+
     UseSpinButtonReturn {
-        on_keydown: EventHandler::new(handle_keydown),
-        increment_button_props: SpinButtonButtonProps {
-            on_pointerdown: EventHandler::new(inc_pointerdown),
-            on_pointerup: EventHandler::new(move |_e: PointerEvent| clear_inc_timers()),
-            on_pointerleave: EventHandler::new(move |_e: PointerEvent| clear_inc_timers()),
+        props: UseSpinButtonProps {
+            role: AriaRole::Spinbutton,
+            aria_valuenow: format_bound(value),
+            aria_valuetext: aria_text_value.into(),
+            aria_valuemin: format_bound(min_value),
+            aria_valuemax: format_bound(max_value),
+            aria_disabled: Signal::derive(move || disabled.get().then_some("true")),
+            aria_readonly: Signal::derive(move || read_only.get().then_some("true")),
+            aria_required: Signal::derive(move || required.get().then_some("true")),
+            on_keydown: keyboard_props.on_keydown,
+            on_keyup: keyboard_props.on_keyup,
+            on_focus: EventHandler::new(move |e: FocusEvent| on_focus.run(e)),
+            on_blur: EventHandler::new(move |e: FocusEvent| on_blur.run(e)),
         },
-        decrement_button_props: SpinButtonButtonProps {
-            on_pointerdown: EventHandler::new(dec_pointerdown),
-            on_pointerup: EventHandler::new(move |_e: PointerEvent| clear_dec_timers()),
-            on_pointerleave: EventHandler::new(move |_e: PointerEvent| clear_dec_timers()),
-        },
-    }
-}
-
-/// Set a one-shot timeout. Returns the timeout ID for cancellation.
-fn set_timeout_once(callback: impl FnOnce() + 'static, delay_ms: i32) -> i32 {
-    use wasm_bindgen::JsCast;
-    use wasm_bindgen::closure::Closure;
-
-    let window = leptos_use::use_window();
-    let Some(window) = window.as_ref() else {
-        return 0;
-    };
-
-    let closure = Closure::once_into_js(callback);
-    window
-        .set_timeout_with_callback_and_timeout_and_arguments_0(
-            closure.as_ref().unchecked_ref(),
-            delay_ms,
-        )
-        .unwrap_or(0)
-}
-
-/// Set a repeating interval. Returns the interval ID for cancellation.
-fn set_interval_repeating(callback: impl Fn() + 'static, interval_ms: i32) -> i32 {
-    use wasm_bindgen::JsCast;
-    use wasm_bindgen::closure::Closure;
-
-    let window = leptos_use::use_window();
-    let Some(window) = window.as_ref() else {
-        return 0;
-    };
-
-    let closure = Closure::wrap(Box::new(callback) as Box<dyn Fn()>);
-    let id = window
-        .set_interval_with_callback_and_timeout_and_arguments_0(
-            closure.as_ref().unchecked_ref(),
-            interval_ms,
-        )
-        .unwrap_or(0);
-    closure.forget(); // Leak the closure so it persists for the interval's lifetime.
-    id
-}
-
-/// Clear a timeout.
-fn clear_timeout(id: i32) {
-    let window = leptos_use::use_window();
-    if let Some(window) = window.as_ref() {
-        window.clear_timeout_with_handle(id);
-    }
-}
-
-/// Clear an interval.
-fn clear_interval(id: i32) {
-    let window = leptos_use::use_window();
-    if let Some(window) = window.as_ref() {
-        window.clear_interval_with_handle(id);
+        increment_button: stepper(Direction::Up),
+        decrement_button: stepper(Direction::Down),
     }
 }

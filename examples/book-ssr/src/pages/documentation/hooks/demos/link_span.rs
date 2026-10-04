@@ -24,10 +24,8 @@ pub fn LinkSpanDemo() -> impl IntoView {
             <strong>"Span as Link: "</strong>
             <span
                 {..link_props.into_attrs()}
+                class="demo-link demo-link-underlined"
                 style=link_styles
-                    .add("color", "var(--brand-color)")
-                    .add("cursor", "pointer")
-                    .add("text-decoration", "underline")
             >
                 "Click or press Enter (check console)"
             </span>

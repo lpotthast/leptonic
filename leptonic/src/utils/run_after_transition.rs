@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/utils/runAfterTransition.ts @ 6f664fe911
 /// Transition-aware callback utility, matching react-aria's `runAfterTransition.ts`.
 ///
 /// Tracks elements that are currently transitioning via global `transitionrun`/`transitionend`
@@ -6,7 +7,7 @@
 /// cause jank in the middle of CSS transitions.
 use std::cell::{Cell, RefCell};
 
-// Loosely based on https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/utils/src/runAfterTransition.ts
+// Loosely based on https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/utils/runAfterTransition.ts
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::{JsCast, prelude::*};
 

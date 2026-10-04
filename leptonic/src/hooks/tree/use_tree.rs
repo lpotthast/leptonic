@@ -1,3 +1,6 @@
+// Upstream: react-aria/src/tree/useTree.ts @ 6f664fe911
+// Upstream: react-stately/src/tree/useTreeState.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +8,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::{
@@ -16,7 +18,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tree/src/useTree.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tree/useTree.ts
 
 //
 // No intentional deviations from the react-aria implementation.
@@ -168,7 +170,7 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
         on_action,
     } = input;
 
-    let tree_id = format!("tree-{}", Uuid::new_v4());
+    let tree_id = use_id("tree");
 
     // Track focused item
     let (focused_key, set_focused_key_signal) = signal::<Option<String>>(None);
@@ -227,19 +229,19 @@ pub fn use_tree(input: UseTreeInput) -> UseTreeReturn {
         let key = e.key();
         match key.as_str() {
             "Enter" => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    if let Some(on_action) = on_action {
-                        e.prevent_default();
-                        on_action.run(focused);
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && let Some(on_action) = on_action
+                {
+                    e.prevent_default();
+                    on_action.run(focused);
                 }
             }
             " " => {
-                if let Some(focused) = focused_key.get_untracked() {
-                    if selection_mode != TreeSelectionMode::None {
-                        e.prevent_default();
-                        toggle_selected.run(focused);
-                    }
+                if let Some(focused) = focused_key.get_untracked()
+                    && selection_mode != TreeSelectionMode::None
+                {
+                    e.prevent_default();
+                    toggle_selected.run(focused);
                 }
             }
             _ => {}

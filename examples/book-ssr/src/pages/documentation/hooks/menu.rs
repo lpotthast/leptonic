@@ -55,12 +55,15 @@ pub fn PageUseMenuHook() -> impl IntoView {
             </h2>
 
             <p>
-                "Provides behavior for a menu trigger button. Handles press, keyboard shortcuts, and ARIA associations."
+                "Provides the behavior of the button that opens a menu: when to open it, which item gets focus first, "
+                "and the ARIA attributes linking the button and the menu. It doesn\u{2019}t render the button itself. "
+                "Instead, it returns a "<code>"UseButtonInput"</code>" that you pass to "
+                <Link href=crate::routes::doc::button::Hook.materialize()>"use_button"</Link>"."
             </p>
 
             <Code language=Language::Rust>
                 {indoc!(
-                    r"
+                    r#"
                     let state = use_menu_trigger_state(UseMenuTriggerStateInput::default());
 
                     let menu_trigger = use_menu_trigger(UseMenuTriggerInput {
@@ -69,7 +72,14 @@ pub fn PageUseMenuHook() -> impl IntoView {
                         trigger: MenuTriggerType::Press,
                         state,
                     });
-                "
+
+                    let button = use_button(menu_trigger.button);
+                    let (attrs, styles) = button.props.into_parts();
+
+                    view! {
+                        <button {..attrs} style=styles>"Actions"</button>
+                    }
+                "#
                 )}
             </Code>
 
@@ -79,15 +89,16 @@ pub fn PageUseMenuHook() -> impl IntoView {
                 "See the interactive demo above for a complete example."
             </p>
 
-            <p>"The hook provides:"</p>
+            <p>"The hook returns:"</p>
             <ul>
                 <li>
-                    <strong>"props"</strong>
-                    " - ARIA attributes and event handlers for the button (use .into_attrs() to spread)"
+                    <strong>"button"</strong>
+                    " - A "<code>"UseButtonInput"</code>" for the trigger: id, "<code>"aria-haspopup"</code>", "
+                    <code>"aria-expanded"</code>", "<code>"aria-controls"</code>", press callbacks and keyboard shortcuts"
                 </li>
                 <li>
                     <strong>"menu_props"</strong>
-                    " - Props to pass to the menu (aria_labelledby, auto_focus signal, on_close)"
+                    " - Props to pass to the menu (id, aria_labelledby, auto_focus signal, on_close)"
                 </li>
             </ul>
 
@@ -113,48 +124,65 @@ pub fn PageUseMenuHook() -> impl IntoView {
 
             <p>"The state hook accepts an optional " <code>"on_open_change"</code> " callback that fires whenever the open state changes."</p>
 
-            <h3 id="merge_with_button" class="anchor">
-                "Merging with use_button"
+            <h3 id="trigger-behavior" class="anchor">
+                "Opening the menu"
+                <AnchorLink href="#trigger-behavior" description="Direct link to opening the menu"/>
+            </h3>
+
+            <p>
+                "With "<code>"MenuTriggerType::Press"</code>", a mouse opens the menu as soon as the button goes down, "
+                "just like native menus. Touch opens it when the finger "
+                "is lifted, so scrolling past the button doesn\u{2019}t open anything. The trigger doesn\u{2019}t take "
+                "focus on press. Screen reader users get the first item focused, mouse users get the menu itself."
+            </p>
+
+            <p>
+                "From the keyboard, "<kbd>"Enter"</kbd>", "<kbd>"Space"</kbd>" and "<kbd>"\u{2193}"</kbd>
+                " open the menu with the first item focused, "<kbd>"\u{2191}"</kbd>" opens it with the last one. "
+                "With "<code>"MenuTriggerType::LongPress"</code>", a plain press stays free for the button\u{2019}s own action. "
+                "The menu opens on a long press, or from the keyboard with "<kbd>"Alt"</kbd>" + "<kbd>"\u{2193}"</kbd>
+                " / "<kbd>"\u{2191}"</kbd>" ("<kbd>"Alt"</kbd>" + "<kbd>"Enter"</kbd>" and "<kbd>"Alt"</kbd>" + "<kbd>"Space"</kbd>
+                " work too). The long press is announced to screen readers as \u{201c}Long press to open menu\u{201d}."
+            </p>
+
+            <h3 id="composition" class="anchor">
+                "Combining with your own button settings"
                 <AnchorLink
-                    href="#merge_with_button"
-                    description="Direct link to merge_with_button"
+                    href="#composition"
+                    description="Direct link to combining with your own button settings"
                 />
             </h3>
 
             <p>
-                "When using " <code>"use_menu_trigger"</code> " with " <code>"use_button"</code> ", "
-                "you can merge their props using the " <code>"MergeWith"</code> " trait:"
+                "Because "<code>"menu_trigger.button"</code>" is just a "<code>"UseButtonInput"</code>
+                ", you can add or override settings with struct update syntax before handing it to "<code>"use_button"</code>":"
             </p>
 
             <Code language=Language::Rust>
                 {indoc!(
                     r#"
-                    let button = use_button(UseButtonInput { ... });
-                    let menu_trigger = use_menu_trigger(UseMenuTriggerInput { ... });
-
-                    // Merge using the MergeWith trait (order is irrelevant)
-                    let trigger_props = button.props.merge_with(menu_trigger.props);
+                    let button = use_button(UseButtonInput {
+                        aria_label: Some("More actions".into()),
+                        on_hover_start: Some(Callback::new(|_| log!("hovered"))),
+                        ..menu_trigger.button
+                    });
+                    let (attrs, styles) = button.props.into_parts();
 
                     view! {
-                        <button {..trigger_props.into_attrs()}>
-                            "Actions"
-                        </button>
+                        <button {..attrs} style=styles>"\u{22ee}"</button>
                     }
                 "#
                 )}
             </Code>
 
-            <p>"This combines:"</p>
-            <ul>
-                <li>"Button semantics: " <code>"role=\"button\""</code> ", " <code>"tabindex"</code> ", disabled state"</li>
-                <li>"Menu ARIA: " <code>"aria-haspopup"</code> ", " <code>"aria-expanded"</code> ", " <code>"aria-controls"</code></li>
-                <li>"Chained event handlers (both run in sequence): keydown, click, pointerdown"</li>
-                <li>"Button's hover and focus handlers (for visual feedback)"</li>
-            </ul>
-
             <p>
-                "The merged return also provides " <code>"is_hovered"</code> ", " <code>"is_pressed"</code> ", "
-                "and " <code>"is_focus_visible"</code> " signals from the button, plus " <code>"menu_props"</code> " from the menu trigger."
+                "The trigger then has a single press handler that does both: open the menu and run your callbacks. "
+                "You also get "<code>"is_pressed"</code>", "<code>"is_hovered"</code>", "<code>"is_focus_visible"</code>
+                " and a "<code>"focus_handle"</code>" from "<code>"use_button"</code>" for styling. Be careful not to replace the "
+                "press callbacks or "<code>"shortcuts"</code>" the trigger sets, since they are what opens the menu. If you need "
+                "your own callback on one of them, chain both with "<code>"chain_optional_callbacks"</code>". See "
+                <Link href=format!("{}#composing-hooks", crate::routes::doc::Architecture.materialize())>"Composing hooks"</Link>
+                " for why leptonic composes inputs instead of merging DOM props."
             </p>
 
             <h2 id="use_menu" class="anchor">
@@ -447,8 +475,12 @@ pub fn PageUseMenuHook() -> impl IntoView {
                     link: "#use_menu_trigger",
                 },
                 Toc::Leaf {
-                    title: "Merging with use_button",
-                    link: "#merge_with_button",
+                    title: "Opening the menu",
+                    link: "#trigger-behavior",
+                },
+                Toc::Leaf {
+                    title: "Combining with your own button settings",
+                    link: "#composition",
                 },
                 Toc::Leaf {
                     title: "use_menu",

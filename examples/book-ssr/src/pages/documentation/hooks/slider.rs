@@ -13,14 +13,6 @@ use leptonic::{
     hooks::*,
 };
 use leptos::prelude::*;
-use leptos_styles::{
-    Style::{
-        Background, BackgroundColor, Border, BorderRadius, BoxShadow, Cursor, Display,
-        FlexDirection, FontWeight, Gap, Height, MarginLeft, MarginRight, MinWidth, Position,
-        TextAlign, Width,
-    },
-    Styles,
-};
 use ordered_float::OrderedFloat;
 
 use super::demos::{
@@ -30,75 +22,53 @@ use super::demos::{
 };
 use crate::pages::documentation::{article::Article, demo_shell::DemoShell, toc::Toc};
 
-fn track_style(orientation: SliderOrientation) -> Styles {
-    Styles::from([
-        (Display, "flex"),
-        (
-            Width,
-            match orientation {
-                SliderOrientation::Horizontal => "100%",
-                SliderOrientation::Vertical => "8px",
-            },
-        ),
-        (
-            Height,
-            match orientation {
-                SliderOrientation::Horizontal => "8px",
-                SliderOrientation::Vertical => "100%",
-            },
-        ),
-        (Background, "#ddd"),
-        (BorderRadius, "4px"),
-        (Position, "relative"),
-        (Cursor, "pointer"),
-    ])
-}
-
-fn thumb_style(color: &'static str) -> Styles {
-    Styles::builder()
-        .with(Width, "20px")
-        .with(Height, "20px")
-        .with(BackgroundColor, color)
-        .with(BorderRadius, "50%")
-        .with(Border, "2px solid white")
-        .with(BoxShadow, "0 2px 4px rgba(0,0,0,0.2)")
-        .with(Cursor, "grab")
-        .build()
-}
-
 #[component]
 pub fn PageUseSliderHook() -> impl IntoView {
     view! {
         <Article>
             <h1 id="use_slider" class="anchor">
                 "use_slider"
-                <AnchorLink href="#use_slider" description="Direct link to article header"/>
+                <AnchorLink href="#use_slider" description="Direct link to article header" />
             </h1>
 
-            <p>"Create accessible range sliders with keyboard navigation, drag support, and multi-thumb range selection."</p>
+            <p>
+                "Create accessible range sliders with keyboard navigation, drag support, and multi-thumb range selection."
+            </p>
 
             <p>
                 "Based on react-aria\u{2019}s "
-                <LinkExt href="https://react-spectrum.adobe.com/react-aria/useSlider.html" target=LinkTarget::_Blank>
+                <LinkExt
+                    href="https://react-spectrum.adobe.com/react-aria/useSlider.html"
+                    target=LinkTarget::_Blank
+                >
                     "useSlider"
-                </LinkExt>
-                "."
+                </LinkExt> "."
             </p>
 
             <h2 id="architecture" class="anchor">
                 "Architecture"
-                <AnchorLink href="#architecture" description="Direct link to architecture"/>
+                <AnchorLink href="#architecture" description="Direct link to architecture" />
             </h2>
 
             <p>"The slider is split into three hooks following react-aria's pattern:"</p>
             <ul>
-                <li><strong>"use_slider_state"</strong>" - Manages multi-thumb state, values, constraints"</li>
-                <li><strong>"use_slider"</strong>" - Track-level behavior (container, track clicks, labels)"</li>
-                <li><strong>"use_slider_thumb"</strong>" - Per-thumb behavior (drag, keyboard, ARIA)"</li>
+                <li>
+                    <strong>"use_slider_state"</strong>
+                    " - Manages multi-thumb state, values, constraints"
+                </li>
+                <li>
+                    <strong>"use_slider"</strong>
+                    " - Track-level behavior (container, track clicks, labels)"
+                </li>
+                <li>
+                    <strong>"use_slider_thumb"</strong>
+                    " - Per-thumb behavior (drag, keyboard, ARIA)"
+                </li>
             </ul>
 
             <Code language=Language::Rust>
-                {indoc!(r"
+                {indoc!(
+                    r"
                     // Create state for a single-thumb slider
                     let state = use_slider_state(UseSliderStateInput {
                         values: SliderValues::Uncontrolled(vec![50.0]),
@@ -123,12 +93,13 @@ pub fn PageUseSliderHook() -> impl IntoView {
                             index: 0,
                             ..Default::default()
                         });
-                ")}
+                "
+                )}
             </Code>
 
             <h2 id="basic-slider" class="anchor">
                 "Basic Slider"
-                <AnchorLink href="#basic-slider" description="Direct link to basic slider"/>
+                <AnchorLink href="#basic-slider" description="Direct link to basic slider" />
             </h2>
 
             <p>"A simple single-thumb slider with full keyboard and drag support:"</p>
@@ -139,13 +110,16 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
             <h2 id="range-slider" class="anchor">
                 "Range Slider (Multi-Thumb)"
-                <AnchorLink href="#range-slider" description="Direct link to range slider"/>
+                <AnchorLink href="#range-slider" description="Direct link to range slider" />
             </h2>
 
-            <p>"A slider with two thumbs for selecting a range. Thumbs are constrained and cannot cross each other:"</p>
+            <p>
+                "A slider with two thumbs for selecting a range. Thumbs are constrained and cannot cross each other:"
+            </p>
 
             <Code language=Language::Rust>
-                {indoc!(r#"
+                {indoc!(
+                    r#"
                     // Create state with two thumbs
                     let state = use_slider_state(UseSliderStateInput {
                         values: SliderValues::Uncontrolled(vec![20.0, 80.0]),
@@ -166,7 +140,8 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         aria_label: Some("Maximum"),
                         ..Default::default()
                     });
-                "#)}
+                "#
+                )}
             </Code>
 
             <DemoShell source=include_str!("demos/slider_range.rs")>
@@ -175,10 +150,12 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
             <h2 id="step-slider" class="anchor">
                 "Slider with Steps"
-                <AnchorLink href="#step-slider" description="Direct link to step slider"/>
+                <AnchorLink href="#step-slider" description="Direct link to step slider" />
             </h2>
 
-            <p>"Slider with step=5, snapping to multiples of 5. Use Shift+Arrow for larger increments (page size):"</p>
+            <p>
+                "Slider with step=5, snapping to multiples of 5. Use Shift+Arrow for larger increments (page size):"
+            </p>
 
             <DemoShell source=include_str!("demos/slider_callbacks.rs")>
                 <SliderCallbacksDemo />
@@ -186,10 +163,13 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
             <h2 id="vertical-slider" class="anchor">
                 "Vertical Slider"
-                <AnchorLink href="#vertical-slider" description="Direct link to vertical slider"/>
+                <AnchorLink href="#vertical-slider" description="Direct link to vertical slider" />
             </h2>
 
-            <p>"Set " <code>"orientation: Orientation::Vertical"</code> " for a vertical slider. Note: keyboard Up/Down work regardless of orientation."</p>
+            <p>
+                "Set " <code>"orientation: Orientation::Vertical"</code>
+                " for a vertical slider. Note: keyboard Up/Down work regardless of orientation."
+            </p>
 
             <DemoShell source=include_str!("demos/slider_vertical.rs")>
                 <SliderVerticalDemo />
@@ -199,10 +179,13 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
             <h2 id="disabled-slider" class="anchor">
                 "Disabled Slider"
-                <AnchorLink href="#disabled-slider" description="Direct link to disabled slider"/>
+                <AnchorLink href="#disabled-slider" description="Direct link to disabled slider" />
             </h2>
 
-            <p>"Set " <code>"is_disabled: true.into()"</code> " on both " <code>"use_slider"</code> " and " <code>"use_slider_thumb"</code> " to disable the slider:"</p>
+            <p>
+                "Set " <code>"is_disabled: true.into()"</code> " on both " <code>"use_slider"</code>
+                " and " <code>"use_slider_thumb"</code> " to disable the slider:"
+            </p>
 
             <DemoShell source=include_str!("demos/slider_disabled.rs")>
                 <SliderDisabledDemo />
@@ -210,88 +193,155 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
             <h2 id="keyboard" class="anchor">
                 "Keyboard Navigation"
-                <AnchorLink href="#keyboard" description="Direct link to keyboard"/>
+                <AnchorLink href="#keyboard" description="Direct link to keyboard" />
             </h2>
 
             <ul>
-                <li><strong>"Arrow Left/Down"</strong> " - Decrease by step"</li>
-                <li><strong>"Arrow Right/Up"</strong> " - Increase by step"</li>
-                <li><strong>"Shift + Arrow Left/Down"</strong> " - Decrease by page size (10% of range)"</li>
-                <li><strong>"Shift + Arrow Right/Up"</strong> " - Increase by page size (10% of range)"</li>
-                <li><strong>"Page Down"</strong> " - Decrease by page size"</li>
-                <li><strong>"Page Up"</strong> " - Increase by page size"</li>
-                <li><strong>"Home"</strong> " - Jump to minimum"</li>
-                <li><strong>"End"</strong> " - Jump to maximum"</li>
+                <li>
+                    <strong>"Arrow Left/Down"</strong>
+                    " - Decrease by step"
+                </li>
+                <li>
+                    <strong>"Arrow Right/Up"</strong>
+                    " - Increase by step"
+                </li>
+                <li>
+                    <strong>"Shift + Arrow Left/Down"</strong>
+                    " - Decrease by page size (10% of range)"
+                </li>
+                <li>
+                    <strong>"Shift + Arrow Right/Up"</strong>
+                    " - Increase by page size (10% of range)"
+                </li>
+                <li>
+                    <strong>"Page Down"</strong>
+                    " - Decrease by page size"
+                </li>
+                <li>
+                    <strong>"Page Up"</strong>
+                    " - Increase by page size"
+                </li>
+                <li>
+                    <strong>"Home"</strong>
+                    " - Jump to minimum"
+                </li>
+                <li>
+                    <strong>"End"</strong>
+                    " - Jump to maximum"
+                </li>
             </ul>
 
             <h2 id="features" class="anchor">
                 "Features"
-                <AnchorLink href="#features" description="Direct link to features"/>
+                <AnchorLink href="#features" description="Direct link to features" />
             </h2>
 
             <ul>
-                <li><strong>"Multi-thumb support"</strong>" - Create range sliders with any number of thumbs"</li>
-                <li><strong>"Thumb constraints"</strong>" - Thumbs cannot cross each other"</li>
-                <li><strong>"Full drag support"</strong>" - Global pointer tracking for reliable dragging"</li>
-                <li><strong>"RTL support"</strong>" - Arrow key directions reverse in RTL mode"</li>
-                <li><strong>"Page size"</strong>" - Shift+Arrow for larger increments, snapped to step"</li>
-                <li><strong>"Closest thumb algorithm"</strong>" - Track clicks move the nearest thumb"</li>
-                <li><strong>"ARIA slider role"</strong>" - Full accessibility support"</li>
-                <li><strong>"on_change_end"</strong>" - Callback fires only when all thumbs stop dragging"</li>
+                <li>
+                    <strong>"Multi-thumb support"</strong>
+                    " - Create range sliders with any number of thumbs"
+                </li>
+                <li>
+                    <strong>"Thumb constraints"</strong>
+                    " - Thumbs cannot cross each other"
+                </li>
+                <li>
+                    <strong>"Full drag support"</strong>
+                    " - Global pointer tracking for reliable dragging"
+                </li>
+                <li>
+                    <strong>"RTL support"</strong>
+                    " - Arrow key directions reverse in RTL mode"
+                </li>
+                <li>
+                    <strong>"Page size"</strong>
+                    " - Shift+Arrow for larger increments, snapped to step"
+                </li>
+                <li>
+                    <strong>"Closest thumb algorithm"</strong>
+                    " - Track clicks move the nearest thumb"
+                </li>
+                <li>
+                    <strong>"ARIA slider role"</strong>
+                    " - Full accessibility support"
+                </li>
+                <li>
+                    <strong>"on_change_end"</strong>
+                    " - Callback fires only when all thumbs stop dragging"
+                </li>
             </ul>
 
             <h2 id="marks" class="anchor">
                 "Slider Marks"
-                <AnchorLink href="#marks" description="Direct link to marks"/>
+                <AnchorLink href="#marks" description="Direct link to marks" />
             </h2>
 
-            <p>"The "<code>"use_slider_marks"</code>" hook computes marks along the slider track with reactive "<code>"in_range"</code>" state. It supports automatic generation from the step value or fully custom marks."</p>
+            <p>
+                "The "<code>"use_slider_marks"</code>
+                " hook computes marks along the slider track with reactive "<code>"in_range"</code>
+                " state. It supports automatic generation from the step value or fully custom marks."
+            </p>
 
             <h3 id="marks-automatic" class="anchor">
                 "Automatic Marks"
-                <AnchorLink href="#marks-automatic" description="Direct link to automatic marks"/>
+                <AnchorLink href="#marks-automatic" description="Direct link to automatic marks" />
             </h3>
 
-            <p>"When using a stepped slider, automatic marks are generated at each step. Mark count is capped at ~20 to avoid clutter."</p>
+            <p>
+                "When using a stepped slider, automatic marks are generated at each step. Mark count is capped at ~20 to avoid clutter."
+            </p>
 
             <Code language=Language::Rust>
-                {indoc!(r"
+                {indoc!(
+                    r"
                     let marks = use_slider_marks(UseSliderMarksInput {
                         state,
                         marks: SliderMarks::Automatic { create_names: true },
                         value_display: None,
                     });
-                    ")}
+                    "
+                )}
             </Code>
 
             <SliderContainer>
-                <SliderAtom values=SliderValues::Uncontrolled(vec![5.0]) min=0.0 max=10.0 step=1.0 styles=[(Display, "flex"), (FlexDirection, "column"), (Gap, "0.5em")]>
-                    <div style="display: flex; align-items: center; gap: 1em;">
-                        <LabelAtom styles=[(MinWidth, "120px"), (FontWeight, "500")]>
+                <SliderAtom
+                    values=SliderValues::Uncontrolled(vec![5.0])
+                    min=0.0
+                    max=10.0
+                    step=1.0
+                    classes=["demo-slider", "demo-slider-stacked"]
+                >
+                    <div class="demo-slider-row">
+                        <LabelAtom classes=["demo-slider-label", "demo-slider-label-wide"]>
                             "Auto marks"
                         </LabelAtom>
-                        <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
-                            <SliderTrackFill styles=[(BackgroundColor, "var(--brand-color)"), (BorderRadius, "4px")]/>
-                            <SliderThumb styles=thumb_style("var(--brand-color)")/>
+                        <SliderTrack classes="demo-slider-track">
+                            <SliderTrackFill classes="demo-slider-fill" />
+                            <SliderThumb classes="demo-slider-thumb" />
                         </SliderTrack>
                         <SliderOutput let:attrs let:values>
-                            <output {..attrs} style=Styles::from([(MinWidth, "30px"), (TextAlign, "right")])>
-                                { move || format!("{:.0}", values.get().first().copied().unwrap_or(0.0)) }
+                            <output {..attrs} class="demo-slider-output">
+                                {move || {
+                                    format!("{:.0}", values.get().first().copied().unwrap_or(0.0))
+                                }}
                             </output>
                         </SliderOutput>
                     </div>
                     <SliderMarksAtom
-                        marks=SliderMarks::Automatic { create_names: true }
-                        styles=[(Position, "relative"), (Height, "1.5em"), (MarginLeft, "120px"), (MarginRight, "40px")]
+                        marks=SliderMarks::Automatic {
+                            create_names: true,
+                        }
+                        classes="demo-slider-marks"
                         let:marks
                     >
                         <For
                             each=move || marks.get()
                             key=|mark| OrderedFloat::from(mark.percentage)
-                            children=|mark| view! {
-                                <SliderMark mark=mark.clone()>
-                                    { mark.name.unwrap_or_default() }
-                                </SliderMark>
+                            children=|mark| {
+                                view! {
+                                    <SliderMark mark=mark
+                                        .clone()>{mark.name.unwrap_or_default()}</SliderMark>
+                                }
                             }
                         />
                     </SliderMarksAtom>
@@ -300,13 +350,16 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
             <h3 id="marks-custom" class="anchor">
                 "Custom Marks"
-                <AnchorLink href="#marks-custom" description="Direct link to custom marks"/>
+                <AnchorLink href="#marks-custom" description="Direct link to custom marks" />
             </h3>
 
-            <p>"Custom marks can be placed at absolute values or percentages. Invalid marks (outside the slider range) are filtered out with a warning."</p>
+            <p>
+                "Custom marks can be placed at absolute values or percentages. Invalid marks (outside the slider range) are filtered out with a warning."
+            </p>
 
             <Code language=Language::Rust>
-                {indoc!(r#"
+                {indoc!(
+                    r#"
                     let marks = use_slider_marks(UseSliderMarksInput {
                         state,
                         marks: SliderMarks::Custom {
@@ -327,22 +380,28 @@ pub fn PageUseSliderHook() -> impl IntoView {
                         },
                         value_display: None,
                     });
-                    "#)}
+                    "#
+                )}
             </Code>
 
             <SliderContainer>
-                <SliderAtom values=SliderValues::Uncontrolled(vec![50.0]) styles=[(Display, "flex"), (FlexDirection, "column"), (Gap, "0.5em")]>
-                    <div style="display: flex; align-items: center; gap: 1em;">
-                        <LabelAtom styles=[(MinWidth, "120px"), (FontWeight, "500")]>
+                <SliderAtom
+                    values=SliderValues::Uncontrolled(vec![50.0])
+                    classes=["demo-slider", "demo-slider-stacked", "demo-slider-blue"]
+                >
+                    <div class="demo-slider-row">
+                        <LabelAtom classes=["demo-slider-label", "demo-slider-label-wide"]>
                             "Custom marks"
                         </LabelAtom>
-                        <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
-                            <SliderTrackFill styles=[(BackgroundColor, "#4a90d9"), (BorderRadius, "4px")]/>
-                            <SliderThumb styles=thumb_style("#4a90d9")/>
+                        <SliderTrack classes="demo-slider-track">
+                            <SliderTrackFill classes="demo-slider-fill" />
+                            <SliderThumb classes="demo-slider-thumb" />
                         </SliderTrack>
                         <SliderOutput let:attrs let:values>
-                            <output {..attrs} style=Styles::from([(MinWidth, "30px"), (TextAlign, "right")])>
-                                { move || format!("{:.0}", values.get().first().copied().unwrap_or(0.0)) }
+                            <output {..attrs} class="demo-slider-output">
+                                {move || {
+                                    format!("{:.0}", values.get().first().copied().unwrap_or(0.0))
+                                }}
                             </output>
                         </SliderOutput>
                     </div>
@@ -363,16 +422,17 @@ pub fn PageUseSliderHook() -> impl IntoView {
                                 },
                             ],
                         }
-                        styles=[(Position, "relative"), (Height, "1.5em"), (MarginLeft, "120px"), (MarginRight, "40px")]
+                        classes="demo-slider-marks"
                         let:marks
                     >
                         <For
                             each=move || marks.get()
                             key=|mark| OrderedFloat::from(mark.percentage)
-                            children=|mark| view! {
-                                <SliderMark mark=mark.clone()>
-                                    { mark.name.unwrap_or_default() }
-                                </SliderMark>
+                            children=|mark| {
+                                view! {
+                                    <SliderMark mark=mark
+                                        .clone()>{mark.name.unwrap_or_default()}</SliderMark>
+                                }
                             }
                         />
                     </SliderMarksAtom>
@@ -381,35 +441,50 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
             <h3 id="marks-range" class="anchor">
                 "Marks with Range Slider"
-                <AnchorLink href="#marks-range" description="Direct link to marks with range slider"/>
+                <AnchorLink
+                    href="#marks-range"
+                    description="Direct link to marks with range slider"
+                />
             </h3>
 
-            <p>"With two thumbs, "<code>"in_range"</code>" is "<code>"true"</code>" for marks between the two thumb values."</p>
+            <p>
+                "With two thumbs, "<code>"in_range"</code>" is "<code>"true"</code>
+                " for marks between the two thumb values."
+            </p>
 
             <SliderContainer>
-                <SliderAtom values=SliderValues::Uncontrolled(vec![3.0, 7.0]) min=0.0 max=10.0 step=1.0 styles=[(Display, "flex"), (FlexDirection, "column"), (Gap, "0.5em")]>
-                    <div style="display: flex; align-items: center; gap: 1em;">
-                        <LabelAtom styles=[(MinWidth, "120px"), (FontWeight, "500")]>
+                <SliderAtom
+                    values=SliderValues::Uncontrolled(vec![3.0, 7.0])
+                    min=0.0
+                    max=10.0
+                    step=1.0
+                    classes=["demo-slider", "demo-slider-stacked", "demo-slider-green"]
+                >
+                    <div class="demo-slider-row">
+                        <LabelAtom classes=["demo-slider-label", "demo-slider-label-wide"]>
                             "Range marks"
                         </LabelAtom>
-                        <SliderTrack styles=track_style(SliderOrientation::Horizontal)>
-                            <SliderTrackFill styles=[(BackgroundColor, "#27ae60"), (BorderRadius, "4px")]/>
-                            <SliderThumb styles=thumb_style("#27ae60")/>
-                            <SliderThumb styles=thumb_style("#27ae60")/>
+                        <SliderTrack classes="demo-slider-track">
+                            <SliderTrackFill classes="demo-slider-fill" />
+                            <SliderThumb classes="demo-slider-thumb" />
+                            <SliderThumb classes="demo-slider-thumb" />
                         </SliderTrack>
                     </div>
                     <SliderMarksAtom
-                        marks=SliderMarks::Automatic { create_names: true }
-                        styles=[(Position, "relative"), (Height, "1.5em"), (MarginLeft, "120px"), (MarginRight, "10px")]
+                        marks=SliderMarks::Automatic {
+                            create_names: true,
+                        }
+                        classes=["demo-slider-marks", "demo-slider-marks-no-output"]
                         let:marks
                     >
                         <For
                             each=move || marks.get()
                             key=|mark| OrderedFloat::from(mark.percentage)
-                            children=|mark| view! {
-                                <SliderMark mark=mark.clone()>
-                                    { mark.name.unwrap_or_default() }
-                                </SliderMark>
+                            children=|mark| {
+                                view! {
+                                    <SliderMark mark=mark
+                                        .clone()>{mark.name.unwrap_or_default()}</SliderMark>
+                                }
                             }
                         />
                     </SliderMarksAtom>
@@ -418,108 +493,244 @@ pub fn PageUseSliderHook() -> impl IntoView {
 
             <h2 id="api" class="anchor">
                 "API Reference"
-                <AnchorLink href="#api" description="Direct link to API"/>
+                <AnchorLink href="#api" description="Direct link to API" />
             </h2>
 
             <h3>"UseSliderStateInput"</h3>
             <ul>
-                <li><code>"values: SliderValues"</code>" - Uncontrolled (with initial values) or Controlled (with external signal)"</li>
-                <li><code>"min_value: f64"</code>" - Minimum slider value"</li>
-                <li><code>"max_value: f64"</code>" - Maximum slider value"</li>
-                <li><code>"step: Option<f64>"</code>" - Step increment (None for continuous mode)"</li>
-                <li><code>"on_change: Option<Callback<Vec<f64>>>"</code>" - Called during interaction"</li>
-                <li><code>"on_change_end: Option<Callback<Vec<f64>>>"</code>" - Called when dragging ends"</li>
+                <li>
+                    <code>"values: SliderValues"</code>
+                    " - Uncontrolled (with initial values) or Controlled (with external signal)"
+                </li>
+                <li>
+                    <code>"min_value: f64"</code>
+                    " - Minimum slider value"
+                </li>
+                <li>
+                    <code>"max_value: f64"</code>
+                    " - Maximum slider value"
+                </li>
+                <li>
+                    <code>"step: Option<f64>"</code>
+                    " - Step increment (None for continuous mode)"
+                </li>
+                <li>
+                    <code>"on_change: Option<Callback<Vec<f64>>>"</code>
+                    " - Called during interaction"
+                </li>
+                <li>
+                    <code>"on_change_end: Option<Callback<Vec<f64>>>"</code>
+                    " - Called when dragging ends"
+                </li>
             </ul>
 
             <h3>"UseSliderInput"</h3>
             <ul>
-                <li><code>"state: UseSliderStateReturn"</code>" - State from use_slider_state"</li>
-                <li><code>"aria_label: Option<&'static str>"</code>" - Accessible label text"</li>
-                <li><code>"aria_labelledby: Option<String>"</code>" - ID of labelling element"</li>
-                <li><code>"is_rtl: bool"</code>" - Right-to-left layout"</li>
+                <li>
+                    <code>"state: UseSliderStateReturn"</code>
+                    " - State from use_slider_state"
+                </li>
+                <li>
+                    <code>"aria_label: Option<&'static str>"</code>
+                    " - Accessible label text"
+                </li>
+                <li>
+                    <code>"aria_labelledby: Option<String>"</code>
+                    " - ID of labelling element"
+                </li>
+                <li>
+                    <code>"is_rtl: bool"</code>
+                    " - Right-to-left layout"
+                </li>
             </ul>
 
             <h3>"UseSliderReturn"</h3>
             <ul>
-                <li><code>"track_props"</code>" - Props to spread on the track element"</li>
-                <li><code>"track_ref: CapturedElement"</code>" - Captured track element (pass to use_slider_thumb)"</li>
-                <li><code>"group_props"</code>" - Props for the group container"</li>
-                <li><code>"label_props"</code>" - Props for the label element"</li>
-                <li><code>"output_props"</code>" - Props for the output element"</li>
+                <li>
+                    <code>"track_props"</code>
+                    " - Props to spread on the track element"
+                </li>
+                <li>
+                    <code>"track_ref: CapturedElement"</code>
+                    " - Captured track element (pass to use_slider_thumb)"
+                </li>
+                <li>
+                    <code>"group_props"</code>
+                    " - Props for the group container"
+                </li>
+                <li>
+                    <code>"label_props"</code>
+                    " - Props for the label element"
+                </li>
+                <li>
+                    <code>"output_props"</code>
+                    " - Props for the output element"
+                </li>
             </ul>
 
             <h3>"UseSliderThumbInput"</h3>
             <ul>
-                <li><code>"state: UseSliderStateReturn"</code>" - State from use_slider_state"</li>
-                <li><code>"track: CapturedElement"</code>" - Track ref from use_slider return"</li>
-                <li><code>"index: usize"</code>" - Thumb index (0-based)"</li>
-                <li><code>"aria_label: Option<Cow<'static, str>>"</code>" - Accessible label"</li>
-                <li><code>"disabled: Signal<bool>"</code>" - Disabled state"</li>
-                <li><code>"is_rtl: bool"</code>" - Right-to-left layout"</li>
+                <li>
+                    <code>"state: UseSliderStateReturn"</code>
+                    " - State from use_slider_state"
+                </li>
+                <li>
+                    <code>"track: CapturedElement"</code>
+                    " - Track ref from use_slider return"
+                </li>
+                <li>
+                    <code>"index: usize"</code>
+                    " - Thumb index (0-based)"
+                </li>
+                <li>
+                    <code>"aria_label: Option<Cow<'static, str>>"</code>
+                    " - Accessible label"
+                </li>
+                <li>
+                    <code>"disabled: Signal<bool>"</code>
+                    " - Disabled state"
+                </li>
+                <li>
+                    <code>"is_rtl: bool"</code>
+                    " - Right-to-left layout"
+                </li>
             </ul>
 
             <h3>"UseSliderMarksInput"</h3>
             <ul>
-                <li><code>"state: UseSliderStateReturn"</code>" - State from use_slider_state"</li>
-                <li><code>"marks: SliderMarks"</code>" - Marks configuration (None, Automatic, or Custom)"</li>
-                <li><code>"value_display: Option<Callback<f64, String>>"</code>" - Optional formatter for automatic mark labels"</li>
+                <li>
+                    <code>"state: UseSliderStateReturn"</code>
+                    " - State from use_slider_state"
+                </li>
+                <li>
+                    <code>"marks: SliderMarks"</code>
+                    " - Marks configuration (None, Automatic, or Custom)"
+                </li>
+                <li>
+                    <code>"value_display: Option<Callback<f64, String>>"</code>
+                    " - Optional formatter for automatic mark labels"
+                </li>
             </ul>
 
             <h3>"UseSliderMarksReturn"</h3>
             <ul>
-                <li><code>"marks: Signal<Vec<ComputedSliderMark>>"</code>" - Computed marks with reactive in_range state"</li>
+                <li>
+                    <code>"marks: Signal<Vec<ComputedSliderMark>>"</code>
+                    " - Computed marks with reactive in_range state"
+                </li>
             </ul>
 
             <h3>"ComputedSliderMark"</h3>
             <ul>
-                <li><code>"percentage: f64"</code>" - Position along the track (0.0-1.0)"</li>
-                <li><code>"in_range: Signal<bool>"</code>" - Whether this mark is within the selected range (reactive)"</li>
-                <li><code>"name: Option<Cow<'static, str>>"</code>" - Optional display name"</li>
+                <li>
+                    <code>"percentage: f64"</code>
+                    " - Position along the track (0.0-1.0)"
+                </li>
+                <li>
+                    <code>"in_range: Signal<bool>"</code>
+                    " - Whether this mark is within the selected range (reactive)"
+                </li>
+                <li>
+                    <code>"name: Option<Cow<'static, str>>"</code>
+                    " - Optional display name"
+                </li>
             </ul>
 
             <h3>"SliderMarks (enum)"</h3>
             <ul>
-                <li><code>"None"</code>" - No marks"</li>
-                <li><code>"Automatic { create_names: bool }"</code>" - Auto-generate from step (capped at ~20)"</li>
-                <li><code>"Custom { marks: Vec<SliderMark> }"</code>" - Manually specified marks"</li>
+                <li>
+                    <code>"None"</code>
+                    " - No marks"
+                </li>
+                <li>
+                    <code>"Automatic { create_names: bool }"</code>
+                    " - Auto-generate from step (capped at ~20)"
+                </li>
+                <li>
+                    <code>"Custom { marks: Vec<SliderMark> }"</code>
+                    " - Manually specified marks"
+                </li>
             </ul>
             <h2 id="see-also" class="anchor">
                 "See Also"
-                <AnchorLink href="#see-also" description="Direct link to section: See Also"/>
+                <AnchorLink href="#see-also" description="Direct link to section: See Also" />
             </h2>
 
             <ul>
-                <li><Link href=crate::routes::doc::Slider.materialize()>"Slider overview"</Link></li>
-                <li><Link href=crate::routes::doc::slider::Atom.materialize()>"Slider atom"</Link></li>
-                <li><Link href=crate::routes::doc::slider::Component.materialize()>"Slider component"</Link></li>
-                <li><Link href=crate::routes::doc::interactions::UseMove.materialize()>"use_move"</Link>" (used internally)"</li>
+                <li>
+                    <Link href=crate::routes::doc::Slider.materialize()>"Slider overview"</Link>
+                </li>
+                <li>
+                    <Link href=crate::routes::doc::slider::Atom.materialize()>"Slider atom"</Link>
+                </li>
+                <li>
+                    <Link href=crate::routes::doc::slider::Component
+                        .materialize()>"Slider component"</Link>
+                </li>
+                <li>
+                    <Link href=crate::routes::doc::interactions::UseMove
+                        .materialize()>"use_move"</Link>
+                    " (used internally)"
+                </li>
             </ul>
         </Article>
 
         <Toc toc=Toc::List {
             inner: vec![
-                Toc::Leaf { title: "use_slider", link: "#use_slider" },
-                Toc::Leaf { title: "Architecture", link: "#architecture" },
-                Toc::Leaf { title: "Basic Slider", link: "#basic-slider" },
-                Toc::Leaf { title: "Range Slider", link: "#range-slider" },
-                Toc::Leaf { title: "Slider with Steps", link: "#step-slider" },
-                Toc::Leaf { title: "Vertical Slider", link: "#vertical-slider" },
-                Toc::Leaf { title: "Disabled Slider", link: "#disabled-slider" },
-                Toc::Leaf { title: "Keyboard Navigation", link: "#keyboard" },
-                Toc::Leaf { title: "Features", link: "#features" },
-                Toc::Leaf { title: "Slider Marks", link: "#marks" },
-                Toc::Leaf { title: "API Reference", link: "#api" },
-                Toc::Leaf { title: "See Also", link: "#see-also" },
-            ]
-        }/>
+                Toc::Leaf {
+                    title: "use_slider",
+                    link: "#use_slider",
+                },
+                Toc::Leaf {
+                    title: "Architecture",
+                    link: "#architecture",
+                },
+                Toc::Leaf {
+                    title: "Basic Slider",
+                    link: "#basic-slider",
+                },
+                Toc::Leaf {
+                    title: "Range Slider",
+                    link: "#range-slider",
+                },
+                Toc::Leaf {
+                    title: "Slider with Steps",
+                    link: "#step-slider",
+                },
+                Toc::Leaf {
+                    title: "Vertical Slider",
+                    link: "#vertical-slider",
+                },
+                Toc::Leaf {
+                    title: "Disabled Slider",
+                    link: "#disabled-slider",
+                },
+                Toc::Leaf {
+                    title: "Keyboard Navigation",
+                    link: "#keyboard",
+                },
+                Toc::Leaf {
+                    title: "Features",
+                    link: "#features",
+                },
+                Toc::Leaf {
+                    title: "Slider Marks",
+                    link: "#marks",
+                },
+                Toc::Leaf {
+                    title: "API Reference",
+                    link: "#api",
+                },
+                Toc::Leaf {
+                    title: "See Also",
+                    link: "#see-also",
+                },
+            ],
+        } />
     }
 }
 
 #[component]
 fn SliderContainer(children: Children) -> impl IntoView {
-    view! {
-        <div style="padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-            { children() }
-        </div>
-    }
+    view! { <div class="demo-frame">{children()}</div> }
 }

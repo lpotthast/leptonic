@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/tooltip/useTooltipTriggerState.ts @ 6f664fe911
 #[cfg(not(feature = "ssr"))]
 use std::time::Duration;
 
@@ -7,7 +8,7 @@ use leptos::prelude::*;
 use super::tooltip_registry;
 use super::tooltip_registry::{TOOLTIP_COOLDOWN, TOOLTIP_DELAY};
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/tooltip/src/useTooltipTriggerState.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/tooltip/useTooltipTriggerState.ts
 
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
@@ -122,7 +123,7 @@ pub fn use_tooltip_trigger_state(
     {
         let _ = delay;
         let _ = close_delay;
-        return UseTooltipTriggerStateReturn {
+        UseTooltipTriggerStateReturn {
             is_open,
             open: Callback::new(move |_immediate: bool| {
                 update_open(true);
@@ -130,7 +131,7 @@ pub fn use_tooltip_trigger_state(
             close: Callback::new(move |_immediate: bool| {
                 update_open(false);
             }),
-        };
+        }
     }
 
     #[cfg(not(feature = "ssr"))]

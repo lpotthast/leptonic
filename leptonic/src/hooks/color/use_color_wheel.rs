@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/color/useColorWheel.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::{
@@ -27,7 +28,7 @@ use crate::{
 
 use super::use_color_wheel_state::UseColorWheelStateReturn;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/color/src/useColorWheel.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/color/useColorWheel.ts
 
 // ## INTENTIONAL DEVIATIONS
 //

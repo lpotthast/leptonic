@@ -1,3 +1,8 @@
+/// Number of panics on the server. Browser tests read it through `/__test/server-panics`, so that
+/// a panic during server-side rendering fails the test run even if the page still loads.
+#[cfg(feature = "ssr")]
+static SERVER_PANICS: std::sync::atomic::AtomicUsize = std::sync::atomic::AtomicUsize::new(0);
+
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
@@ -28,6 +33,12 @@ async fn main() {
         .with(fmt_layer_filtered)
         .init();
 
+    let default_hook = std::panic::take_hook();
+    std::panic::set_hook(Box::new(move |info| {
+        SERVER_PANICS.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+        default_hook(info);
+    }));
+
     let conf = get_configuration(None).unwrap();
     let addr = conf.leptos_options.site_addr;
     let leptos_options = conf.leptos_options;
@@ -35,6 +46,14 @@ async fn main() {
     let routes = generate_route_list(App);
 
     let app = Router::new()
+        .route(
+            "/__test/server-panics",
+            axum::routing::get(|| async {
+                SERVER_PANICS
+                    .load(std::sync::atomic::Ordering::SeqCst)
+                    .to_string()
+            }),
+        )
         .leptos_routes(&leptos_options, routes, {
             let leptos_options = leptos_options.clone();
             move || shell(leptos_options.clone())

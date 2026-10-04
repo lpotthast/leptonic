@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/selection/useMultipleSelectionState.ts @ 6f664fe911
 use std::{
     collections::HashSet,
     ops::{Deref, DerefMut},
@@ -7,7 +8,7 @@ use leptos::prelude::*;
 
 use super::SelectionKey;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/selection/src/useMultipleSelectionState.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/selection/useMultipleSelectionState.ts
 
 // REACT-ARIA DEVIATIONS
 //
@@ -622,10 +623,10 @@ where
         match selection_mode {
             SelectionMode::None => return,
             SelectionMode::Single => {
-                if let Selection::Keys(ref keys) = new_selection {
-                    if keys.len() > 1 {
-                        return; // Single mode can't have multiple selections
-                    }
+                if let Selection::Keys(ref keys) = new_selection
+                    && keys.len() > 1
+                {
+                    return; // Single mode can't have multiple selections
                 }
             }
             SelectionMode::Multiple => {}

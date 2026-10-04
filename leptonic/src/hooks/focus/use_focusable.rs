@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useFocusable.tsx @ 99e6102368
 use leptos::{
     attr,
     attr::Attr,
@@ -13,6 +14,7 @@ use crate::{
         focus::use_focus::{UseFocusInput, use_focus},
         interactions::use_keyboard::{KeyboardEventWrapper, UseKeyboardInput, use_keyboard},
     },
+    utils::keyboard_shortcut::KeyboardShortcuts,
     utils::{
         EventHandler,
         element_capture::{CapturedElement, ElementCaptureAttr},
@@ -20,7 +22,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusable.tsx
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useFocusable.tsx
 
 // ## DIFFERENT BEHAVIOR
 //
@@ -43,7 +45,7 @@ use crate::{
 //   directly before rendering focusable children.
 
 /// Input parameters for the `use_focusable` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct UseFocusableInput {
     /// Whether focus should be disabled.
     pub disabled: Signal<bool>,
@@ -69,6 +71,12 @@ pub struct UseFocusableInput {
 
     /// Handler called when a key is released.
     pub on_key_up: Option<Callback<KeyboardEventWrapper>>,
+
+    /// Keyboard shortcuts, see [`UseKeyboardInput::shortcuts`].
+    pub shortcuts: Option<KeyboardShortcuts>,
+
+    /// See [`UseKeyboardInput::allow_repeats`].
+    pub allow_shortcut_repeats: bool,
 }
 
 impl Default for UseFocusableInput {
@@ -82,6 +90,8 @@ impl Default for UseFocusableInput {
             on_focus_change: None,
             on_key_down: None,
             on_key_up: None,
+            shortcuts: None,
+            allow_shortcut_repeats: false,
         }
     }
 }
@@ -304,6 +314,8 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
         on_focus_change,
         on_key_down,
         on_key_up,
+        shortcuts,
+        allow_shortcut_repeats,
     } = input;
 
     let element = CapturedElement::new();
@@ -327,6 +339,9 @@ pub fn use_focusable(input: UseFocusableInput) -> UseFocusableReturn {
         disabled,
         on_key_down,
         on_key_up,
+        shortcuts,
+        allow_repeats: allow_shortcut_repeats,
+        allow_composing: false,
     });
 
     // Chain context handlers with own handlers (own first, context second).

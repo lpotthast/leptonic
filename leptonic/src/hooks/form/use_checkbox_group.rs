@@ -1,7 +1,8 @@
+// Upstream: react-aria/src/checkbox/useCheckboxGroup.ts @ 6f664fe911
 use std::{collections::HashSet, hash::Hash};
 
+use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr, prelude::*};
-use uuid::Uuid;
 
 use super::use_form_validation_state::{
     UseFormValidationStateInput, ValidateFn, ValidationBehavior, ValidityStateSnapshot,
@@ -12,7 +13,7 @@ use crate::{
     utils::aria::{AriaDisabled, AriaInvalid, AriaOrientation, AriaRequired, AriaRole},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/checkbox/src/useCheckboxGroup.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/checkbox/useCheckboxGroup.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -289,7 +290,7 @@ where
     });
 
     // ---- IDs ----
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("checkbox-group");
     let label_id = format!("checkbox-group-label-{base_id}");
     let description_id = format!("checkbox-group-description-{base_id}");
     let error_id = format!("checkbox-group-error-{base_id}");

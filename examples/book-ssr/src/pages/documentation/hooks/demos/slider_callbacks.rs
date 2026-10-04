@@ -1,4 +1,11 @@
-use leptonic::hooks::*;
+use leptonic::{
+    hooks::*,
+    utils::{
+        css::{CssDimension, LengthPercentageAuto, NonNegativeLengthPercentage, Size, try_pct},
+        style::{LeftProperty, WidthProperty},
+        styles::Styles,
+    },
+};
 use leptos::prelude::*;
 
 #[component]
@@ -51,56 +58,63 @@ pub fn SliderCallbacksDemo() -> impl IntoView {
         aria_valuetext: None,
     });
 
+    // The fill and thumb positions are the only dynamic styles; everything else is in CSS classes.
+    let fill_styles = Styles::new().add_reactive(move || {
+        WidthProperty.declare(computed_size(computed_pct(step_percent.get())))
+    });
+    let thumb_styles = Styles::new().add_reactive(move || {
+        LeftProperty.declare(LengthPercentageAuto::from(computed_pct(step_percent.get())))
+    });
+
     view! {
-        <div style="padding: 1.5em; border: 1px solid #ddd; border-radius: 8px; margin: 1em 0;">
-            <div style="display: flex; align-items: center; gap: 1em;">
-                <label
-                    id=step_label_props.id
-                    style="min-width: 80px; font-weight: 500;"
-                >
+        <div class="demo-frame">
+            <div class="demo-slider demo-slider-orange">
+                <label id=step_label_props.id class="demo-slider-label">
                     "Brightness"
                 </label>
 
-                <div
-                    {..step_track_props}
-                    style=step_track_styles
-                        .add("flex", "1")
-                        .add("height", "8px")
-                        .add("background", "#ddd")
-                        .add("border-radius", "4px")
-                        .add("position", "relative")
-                        .add("cursor", "pointer")
-                >
-                    <div style=move || format!(
-                        "position: absolute; left: 0; top: 0; height: 100%; background: orange; border-radius: 4px; width: {}%;",
-                        step_percent.get()
-                    )></div>
+                <div {..step_track_props} class="demo-slider-track" style=step_track_styles>
+                    <div
+                        class="demo-slider-fill demo-slider-fill-positioned"
+                        style=fill_styles
+                    ></div>
 
                     <div
                         {..step_thumb_props.into_attrs()}
-                        style=move || format!(
-                            "position: absolute; top: 50%; transform: translate(-50%, -50%); width: 20px; height: 20px; background: orange; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: grab; left: {}%;",
-                            step_percent.get()
-                        )
+                        class="demo-slider-thumb demo-slider-thumb-positioned"
+                        style=thumb_styles
                     >
                         <input
                             {..step_input_props.into_attrs()}
-                            style="opacity: 0.0001; width: 100%; height: 100%; pointer-events: none; position: absolute; top: 0; left: 0;"
+                            class="demo-visually-hidden-input"
                         />
                     </div>
                 </div>
 
-                <output style="min-width: 50px; text-align: right;">
-                    { move || format!("{:.0}%", step_value.get()) }
+                <output class="demo-slider-output">
+                    {move || format!("{:.0}%", step_value.get())}
                 </output>
             </div>
 
             // Step markers
-            <div style="display: flex; justify-content: space-between; padding: 0 10px; margin-top: 0.5em; margin-left: 100px; margin-right: 60px;">
-                {(0..=20).map(|i| view! {
-                    <span style="font-size: 0.7em; color: #999;">{ i * 5 }</span>
-                }).collect::<Vec<_>>()}
+            <div class="demo-slider-step-labels">
+                {(0..=20)
+                    .map(|i| view! { <span class="demo-slider-step-label">{i * 5}</span> })
+                    .collect::<Vec<_>>()}
             </div>
         </div>
     }
+}
+
+/// Percentages computed from slider state can be NaN (e.g. when `min == max`),
+/// so use the fallible `try_pct` instead of `pct`, which panics on non-finite input.
+fn computed_pct(value: f64) -> CssDimension {
+    try_pct(value).unwrap_or(CssDimension::Zero)
+}
+
+/// `width`/`height` only accept non-negative values; fall back to `0` otherwise.
+fn computed_size(value: CssDimension) -> Size {
+    NonNegativeLengthPercentage::try_from(value)
+        .unwrap_or_else(|_| NonNegativeLengthPercentage::new(CssDimension::Zero))
+        .into()
 }

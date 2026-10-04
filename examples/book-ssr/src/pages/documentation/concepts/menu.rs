@@ -87,15 +87,20 @@ pub fn PageMenuOverview() -> impl IntoView {
                     let menu_trigger = use_menu_trigger(/* ... */);
                     let menu = use_menu(/* ... */);
 
-                    // Spread trigger attrs on a button
-                    <button {..menu_trigger.attrs}>
-                        "Actions"
-                    </button>
+                    // The trigger configures a button; use_button renders it.
+                    let (trigger_attrs, trigger_styles) =
+                        use_button(menu_trigger.button).props.into_parts();
 
-                    // Render the menu overlay with items
-                    <ul {..menu.attrs}>
-                        // Each item uses use_menu_item
-                    </ul>
+                    view! {
+                        <button {..trigger_attrs} style=trigger_styles>
+                            "Actions"
+                        </button>
+
+                        // Render the menu overlay with items
+                        <ul {..menu.menu_props.into_attrs()}>
+                            // Each item uses use_menu_item
+                        </ul>
+                    }
                 "#)}
             </Code>
 
@@ -129,6 +134,18 @@ pub fn PageMenuOverview() -> impl IntoView {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Enter / Space / Arrow Down"</Code>" (on the trigger)"</TableCell>
+                            <TableCell>"Open the menu and focus the first item"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Arrow Up"</Code>" (on the trigger)"</TableCell>
+                            <TableCell>"Open the menu and focus the last item"</TableCell>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell><Code inline=true>"Alt + Arrow Down / Up"</Code>" (on the trigger)"</TableCell>
+                            <TableCell>"Open the menu. Long press triggers also accept "<Code inline=true>"Alt + Enter / Space"</Code>", since a plain press is reserved for the button\u{2019}s own action"</TableCell>
+                        </TableRow>
                         <TableRow>
                             <TableCell><Code inline=true>"Enter / Space"</Code></TableCell>
                             <TableCell>"Activate focused item"</TableCell>

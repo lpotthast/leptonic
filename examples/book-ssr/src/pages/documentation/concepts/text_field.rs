@@ -28,10 +28,12 @@ pub fn PageTextFieldOverview() -> impl IntoView {
                 "Leptonic provides text fields at two abstraction levels. "
                 "See "<Link href=routes::doc::Architecture.materialize()>"Hooks, Atoms & Components"</Link>
                 " for a detailed explanation of each layer. "
-                <Code inline=true>"NumberInput"</Code>" uses a different hook ("
-                <Code inline=true>"use_number_field"</Code>") with "
-                <Code inline=true>"role=\"spinbutton\""</Code>
-                ", arrow key increment/decrement, and min/max constraints."
+                <Code inline=true>"NumberInput"</Code>" renders a native number input (implicitly "
+                <Code inline=true>"role=\"spinbutton\""</Code>"). For a custom number field with stepper buttons, "
+                "arrow key increment/decrement and min/max constraints, use the "
+                <Link href=routes::doc::text_field::NumberFieldHook.materialize()>"use_number_field"</Link>
+                " hook, which builds on "
+                <Link href=routes::doc::hooks::UseSpinButton.materialize()>"use_spin_button"</Link>"."
             </p>
 
             <h2 id="when-to-use" class="anchor">

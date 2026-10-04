@@ -1,92 +1,56 @@
+//! Browser integration tests.
+//!
+//! Starts `testing/test-app` through `cargo leptos serve` and drives it with Chrome for Testing.
+//! Every test gets a fresh WebDriver session. A failing test fails `cargo test`.
+//!
+//! Useful environment variables:
+//! - `BROWSER_TEST_VISIBLE=1`: show the browser window.
+//! - `BROWSER_TEST_PAUSE=1`: pause before each test for manual inspection.
+//! - `BROWSER_TEST_DRIVER_OUTPUT=1`: forward chromedriver output.
+#![cfg(not(target_arch = "wasm32"))]
+
 mod common;
 mod pages;
-mod test_app;
 mod ui_tests;
 
-use chrome_for_testing_manager::{Channel, Chromedriver, PortRequest, VersionRequest};
-use thirtyfour::{ChromeCapabilities, ChromiumLikeCapabilities};
-use ui_tests::UiTest;
+use std::time::Duration;
 
-/// Set to `true` to pause before running tests, allowing manual inspection
-/// of the running test-app. Enter "y" to continue, "n" to tear down.
-const DELAY_TEST_EXECUTION: bool = false;
+use browser_test::{
+    BrowserTestFailurePolicy, BrowserTestRunner, BrowserTestVisibility, BrowserTimeouts,
+    DriverOutputConfig, PauseConfig, thirtyfour::ChromiumLikeCapabilities,
+};
+use leptos_browser_test::{LeptosTestAppConfig, Report};
 
 #[tokio::test(flavor = "multi_thread")]
-async fn browser_tests() -> anyhow::Result<()> {
+async fn browser_tests() -> Result<(), Report> {
     common::tracing::init_subscriber();
 
-    // 1. Start test-app via `cargo leptos serve`.
-    let fe = test_app::start_frontend().await?;
+    let app = LeptosTestAppConfig::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../testing/test-app"))
+        .with_app_name("leptonic test app")
+        .start()
+        .await
+        .map_err(Report::into_dynamic)?;
 
-    // 2. Optional: pause for manual debugging.
-    if DELAY_TEST_EXECUTION {
-        tracing::info!("Continue with tests? y/n");
-        let mut buf = String::new();
-        loop {
-            buf.clear();
-            let input = std::io::stdin().read_line(&mut buf);
-            if input.is_ok() {
-                match buf.trim() {
-                    "y" => break,
-                    "n" => return Ok(()),
-                    _ => {}
-                }
-            }
-            if let Err(err) = input {
-                tracing::error!("Error reading input: {err:?}");
-                return Err(err.into());
-            }
-        }
-    }
+    BrowserTestRunner::new()
+        .with_chrome_capabilities(|caps| {
+            // Chrome for Testing is extracted in user mode, so its setuid sandbox helper can't be
+            // installed. Without these flags, Chrome may exit before chromedriver opens a session.
+            caps.add_arg("--no-sandbox")?;
+            caps.add_arg("--disable-dev-shm-usage")?;
+            Ok(())
+        })
+        .with_failure_policy(BrowserTestFailurePolicy::RunAll)
+        .with_visibility(BrowserTestVisibility::from_env())
+        .with_pause(PauseConfig::from_env())
+        .with_driver_output(DriverOutputConfig::from_env())
+        .with_timeouts(
+            BrowserTimeouts::builder()
+                .implicit_wait_timeout(Duration::from_secs(3))
+                .build(),
+        )
+        .run(app.base_url(), ui_tests::all())
+        .await
+        .map_err(Report::into_dynamic)?;
 
-    // 3. Collect all test implementations.
-    let tests: Vec<Box<dyn UiTest>> = vec![
-        Box::new(ui_tests::test_button::ButtonTests {}),
-        Box::new(ui_tests::test_focus::FocusTests {}),
-        Box::new(ui_tests::test_focus_within::FocusWithinTests {}),
-        Box::new(ui_tests::test_focus_ring::FocusRingTests {}),
-        Box::new(ui_tests::test_focusable::FocusableTests {}),
-        Box::new(ui_tests::test_focus_manager::FocusManagerTests {}),
-        Box::new(ui_tests::test_focus_visible::FocusVisibleTests {}),
-        Box::new(ui_tests::test_has_tabbable_child::HasTabbableChildTests {}),
-        Box::new(ui_tests::test_focus_scope::FocusScopeTests {}),
-    ];
-
-    // 4. Launch chromedriver (auto-downloads matching Chrome version).
-    tracing::info!("Starting webdriver...");
-    let chromedriver =
-        Chromedriver::run(VersionRequest::LatestIn(Channel::Stable), PortRequest::Any).await?;
-
-    // 5. Run each test with a fresh WebDriver session.
-    let base_url = &fe.base_url;
-    for test in tests {
-        #[allow(clippy::redundant_closure_for_method_calls)]
-        chromedriver
-            .with_custom_session(
-                |caps: &mut ChromeCapabilities| {
-                    if std::env::var("BROWSER_TEST_VISIBLE").is_ok() {
-                        caps.unset_headless()?;
-                    }
-                    Ok(())
-                },
-                async |driver| {
-                    tracing::info!("Executing test: {}", test.name());
-                    match test.run(driver, base_url).await {
-                        Ok(()) => {
-                            tracing::info!("Test '{}' passed!", test.name());
-                        }
-                        Err(err) => {
-                            tracing::error!("Test '{}' failed: {:?}", test.name(), err);
-                        }
-                    }
-                    Ok(())
-                },
-            )
-            .await?;
-    }
-
-    // 6. Teardown.
-    chromedriver.terminate().await?;
-    drop(fe);
     Ok(())
 }

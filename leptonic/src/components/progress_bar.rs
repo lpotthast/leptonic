@@ -3,8 +3,9 @@ use leptos_use::{UseElementSizeReturn, use_element_size};
 
 use crate::utils::{
     classes::Classes,
-    css::{pct, px},
-    styles::{Style::Width, Styles},
+    css::{computed_pct, computed_px, computed_size},
+    style::WidthProperty,
+    styles::Styles,
 };
 
 #[component]
@@ -37,9 +38,11 @@ pub fn ProgressBar(
         percentage_done.map(|percentage_done| percentage_done * width)
     });
 
-    let fill_styles = Styles::new().add(Width, move || match fill_width_px.get() {
-        Some(px_val) => px(px_val),
-        None => pct(20.0),
+    let fill_styles = Styles::new().add_reactive(move || {
+        WidthProperty.declare(computed_size(match fill_width_px.get() {
+            Some(px_val) => computed_px(px_val),
+            None => computed_pct(20.0),
+        }))
     });
 
     view! {

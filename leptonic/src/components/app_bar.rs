@@ -2,8 +2,10 @@ use leptos::prelude::*;
 
 use crate::{
     Height,
-    utils::{classes::Classes, styles::Styles},
+    utils::{classes::Classes, css::css_custom_property, styles::Styles},
 };
+
+css_custom_property!(APP_BAR_HEIGHT: Height = "--app-bar-height");
 
 #[component]
 pub fn AppBar(
@@ -13,7 +15,7 @@ pub fn AppBar(
     children: Children,
 ) -> impl IntoView {
     let styles = match height {
-        Some(h) => styles.add("--app-bar-height", h),
+        Some(h) => styles.add(APP_BAR_HEIGHT.declare(h)),
         None => styles,
     };
     view! {

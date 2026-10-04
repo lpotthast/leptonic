@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/datepicker/useDateFieldState.ts @ 6f664fe911
 use leptos::prelude::*;
 
 use super::{
@@ -12,7 +13,7 @@ use crate::{
     utils::time::whole_days_in,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/datepicker/src/useDateFieldState.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/datepicker/useDateFieldState.ts
 
 //
 // DIFFERENT BEHAVIOR
@@ -358,15 +359,15 @@ fn clamp_date(
     max: Option<time::OffsetDateTime>,
 ) -> time::OffsetDateTime {
     let mut result = date;
-    if let Some(min) = min {
-        if result < min {
-            result = min;
-        }
+    if let Some(min) = min
+        && result < min
+    {
+        result = min;
     }
-    if let Some(max) = max {
-        if result > max {
-            result = max;
-        }
+    if let Some(max) = max
+        && result > max
+    {
+        result = max;
     }
     result
 }

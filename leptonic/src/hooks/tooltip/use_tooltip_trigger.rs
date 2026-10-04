@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/tooltip/useTooltipTrigger.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +7,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use super::use_tooltip_trigger_state::UseTooltipTriggerStateReturn;
@@ -17,7 +18,7 @@ use crate::{
     utils::{EventHandler, aria::AriaRole},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tooltip/src/useTooltipTrigger.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tooltip/useTooltipTrigger.ts
 
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS
@@ -185,7 +186,7 @@ pub fn use_tooltip_trigger(
         should_close_on_press,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("tooltip-trigger");
     let trigger_id = format!("tooltip-trigger-{base_id}");
     let tooltip_id = format!("tooltip-{base_id}");
 
@@ -285,20 +286,20 @@ pub fn use_tooltip_trigger(
 
         let document = use_document();
         Effect::new(move |_| {
-            if is_open.get() {
-                if let Some(doc) = document.as_ref() {
-                    let _cleanup = use_event_listener_with_options(
-                        doc.clone(),
-                        ev::keydown,
-                        move |e: KeyboardEvent| {
-                            if e.key() == "Escape" {
-                                e.prevent_default();
-                                state.close.run(true);
-                            }
-                        },
-                        UseEventListenerOptions::default().capture(true),
-                    );
-                }
+            if is_open.get()
+                && let Some(doc) = document.as_ref()
+            {
+                let _cleanup = use_event_listener_with_options(
+                    doc.clone(),
+                    ev::keydown,
+                    move |e: KeyboardEvent| {
+                        if e.key() == "Escape" {
+                            e.prevent_default();
+                            state.close.run(true);
+                        }
+                    },
+                    UseEventListenerOptions::default().capture(true),
+                );
             }
         });
     }

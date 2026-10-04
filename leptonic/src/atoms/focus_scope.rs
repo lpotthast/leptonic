@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/focus/FocusScope.tsx @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::{html, prelude::*};
@@ -13,7 +14,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/FocusScope.tsx
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/focus/FocusScope.tsx
 
 // REACT-ARIA DEVIATIONS
 //
@@ -109,7 +110,7 @@ pub fn FocusScope(
                 focus_manager: FocusManager::new(|| None),
             });
             view! {
-                <div node_ref=scope_ref class=classes style=styles.add("display", "contents")>
+                <div node_ref=scope_ref class=classes style=styles.add_unchecked("display", "contents")>
                     {children()}
                 </div>
             }
@@ -128,11 +129,10 @@ pub fn FocusScope(
     let previously_focused: StoredValue<Option<web_sys::Element>, LocalStorage> =
         StoredValue::new_local(None);
 
-    if restore_focus {
-        if let Some(document) = use_document().as_ref() {
+    if restore_focus
+        && let Some(document) = use_document().as_ref() {
             previously_focused.set_value(document.active_element());
         }
-    }
 
     // Register in the scope tree once the DOM element is available.
     // Also store node_to_restore in the tree for stacked overlay propagation.
@@ -290,11 +290,10 @@ pub fn FocusScope(
                 scope_el,
                 leptos::ev::focusin,
                 move |e: web_sys::FocusEvent| {
-                    if let Some(target) = e.target() {
-                        if let Some(html_el) = target.dyn_ref::<web_sys::HtmlElement>() {
+                    if let Some(target) = e.target()
+                        && let Some(html_el) = target.dyn_ref::<web_sys::HtmlElement>() {
                             focused_node.set_value(Some(html_el.clone()));
                         }
-                    }
                 },
             );
         });
@@ -321,11 +320,10 @@ pub fn FocusScope(
 
                 if focus_is_within {
                     // Focus moved within scope — update tracked node.
-                    if let Some(t) = target.as_ref() {
-                        if let Some(html_el) = t.dyn_ref::<web_sys::HtmlElement>() {
+                    if let Some(t) = target.as_ref()
+                        && let Some(html_el) = t.dyn_ref::<web_sys::HtmlElement>() {
                             focused_node.set_value(Some(html_el.clone()));
                         }
-                    }
                 } else {
                     // Focus escaped — recapture. Try the last focused node first,
                     // falling back to the first focusable element.
@@ -508,8 +506,8 @@ pub fn FocusScope(
 
             focus_scope_tree::unregister_scope(scope_id);
 
-            if let Some(element) = node_to_restore {
-                if let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
+            if let Some(element) = node_to_restore
+                && let Some(html_el) = element.dyn_ref::<web_sys::HtmlElement>() {
                     // Dispatch a cancelable custom event before restoring focus.
                     // Listeners can call preventDefault() to cancel restoration.
                     if !dispatch_restore_focus_event(html_el) {
@@ -517,14 +515,13 @@ pub fn FocusScope(
                     }
                     let _ = html_el.focus();
                 }
-            }
         } else {
             focus_scope_tree::unregister_scope(scope_id);
         }
     });
 
             view! {
-                <div node_ref=scope_ref class=classes style=styles.add("display", "contents")>
+                <div node_ref=scope_ref class=classes style=styles.add_unchecked("display", "contents")>
                     {children()}
                 </div>
             }

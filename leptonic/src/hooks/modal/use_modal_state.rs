@@ -1,6 +1,7 @@
+// Upstream: react-stately/src/overlays/useOverlayTriggerState.ts @ 6f664fe911
 use leptos::prelude::*;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/overlays/src/useOverlayTriggerState.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/overlays/useOverlayTriggerState.ts
 
 //
 // ## OMITTED FEATURES

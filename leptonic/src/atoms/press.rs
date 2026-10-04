@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/PressResponder.tsx @ 6f664fe911
 use leptos::prelude::*;
 
 use crate::{
@@ -38,7 +39,9 @@ pub fn Pressable(
     });
 
     let (press_attrs, press_styles) = press_props.into_parts();
-    let styles = press_styles.merge(styles).add("display", "contents");
+    let styles = press_styles
+        .merge(styles)
+        .add_unchecked("display", "contents");
 
     view! {
         <div

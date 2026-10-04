@@ -30,8 +30,8 @@ mod tests {
     fn use_slot_id_returns_some_when_rendered() {
         Owner::new().with(|| {
             let result = use_slot_id("desc-123".to_owned(), Signal::stored(true));
-            assert_that(result.get_untracked())
-                .is_some()
+            assert_that!(result.get_untracked())
+                .get_some()
                 .is_equal_to("desc-123".to_owned());
         });
     }
@@ -40,7 +40,7 @@ mod tests {
     fn use_slot_id_returns_none_when_not_rendered() {
         Owner::new().with(|| {
             let result = use_slot_id("desc-123".to_owned(), Signal::stored(false));
-            assert_that(result.get_untracked()).is_none();
+            assert_that!(result.get_untracked()).is_none();
         });
     }
 
@@ -50,7 +50,7 @@ mod tests {
             let a = Signal::stored(None);
             let b = Signal::stored(None);
             let result = join_slot_ids(&[a, b]);
-            assert_that(result.get_untracked()).is_none();
+            assert_that!(result.get_untracked()).is_none();
         });
     }
 
@@ -61,8 +61,8 @@ mod tests {
             let b = Signal::stored(None);
             let c = Signal::stored(Some("id-c".to_owned()));
             let result = join_slot_ids(&[a, b, c]);
-            assert_that(result.get_untracked())
-                .is_some()
+            assert_that!(result.get_untracked())
+                .get_some()
                 .is_equal_to("id-a id-c".to_owned());
         });
     }
@@ -73,8 +73,8 @@ mod tests {
             let a = Signal::stored(None);
             let b = Signal::stored(Some("only-one".to_owned()));
             let result = join_slot_ids(&[a, b]);
-            assert_that(result.get_untracked())
-                .is_some()
+            assert_that!(result.get_untracked())
+                .get_some()
                 .is_equal_to("only-one".to_owned());
         });
     }

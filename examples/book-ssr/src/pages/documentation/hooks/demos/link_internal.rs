@@ -20,7 +20,7 @@ pub fn LinkInternalDemo() -> impl IntoView {
     view! {
         <div>
             <strong>"Internal Link: "</strong>
-            <a {..link_props.into_attrs()} style=link_styles.add("color", "var(--brand-color)")>
+            <a {..link_props.into_attrs()} class="demo-link" style=link_styles>
                 "Jump to demo section"
             </a>
         </div>

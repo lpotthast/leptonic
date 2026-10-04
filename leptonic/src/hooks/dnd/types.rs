@@ -121,10 +121,10 @@ impl DropTarget {
                     position: DropPosition::After,
                 },
             ) => {
-                if let Some(idx_a) = keys.iter().position(|k| k == key_a) {
-                    if idx_a + 1 < keys.len() {
-                        return keys[idx_a + 1] == *key_b;
-                    }
+                if let Some(idx_a) = keys.iter().position(|k| k == key_a)
+                    && idx_a + 1 < keys.len()
+                {
+                    return keys[idx_a + 1] == *key_b;
                 }
                 false
             }

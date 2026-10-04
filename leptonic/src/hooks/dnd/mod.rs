@@ -1,4 +1,4 @@
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/dnd/
 
 pub(crate) mod drag_manager;
 pub mod draggable_collection_state;

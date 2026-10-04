@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/slider/useSliderState.ts @ 6f664fe911
 use leptos::prelude::*;
 
 use crate::{
@@ -271,10 +272,10 @@ pub fn use_slider_state(input: UseSliderStateInput) -> UseSliderStateReturn {
 
     // Check if all thumbs have stopped dragging for on_change_end
     let check_change_end = move || {
-        if let Some(on_change_end) = on_change_end {
-            if dragging_thumbs.get_untracked().iter().all(|d| !d) {
-                on_change_end.run(values.get_untracked());
-            }
+        if let Some(on_change_end) = on_change_end
+            && dragging_thumbs.get_untracked().iter().all(|d| !d)
+        {
+            on_change_end.run(values.get_untracked());
         }
     };
 

@@ -1,7 +1,8 @@
+// Upstream: react-stately/src/dnd/useDroppableCollectionState.ts @ 6f664fe911
 //! State management for droppable collections.
 //!
 //! Equivalent to react-aria's `useDroppableCollectionState` from
-//! `@react-aria/dnd/src/useDroppableCollectionState.ts`.
+//! `react-stately/src/dnd/useDroppableCollectionState.ts`.
 //!
 //! Tracks the current drop target, validates drop operations, and determines
 //! which semantic callback should fire based on the drop context.
@@ -160,23 +161,23 @@ impl DroppableCollectionState {
         }
 
         // Fire exit on old target
-        if let Some(ref old) = old_target {
-            if let Some(on_exit) = self.input.on_drop_exit {
-                on_exit.run(CollectionDropExitEvent {
-                    target: old.clone(),
-                });
-            }
+        if let Some(ref old) = old_target
+            && let Some(on_exit) = self.input.on_drop_exit
+        {
+            on_exit.run(CollectionDropExitEvent {
+                target: old.clone(),
+            });
         }
 
         self.target.set(new_target.cloned());
 
         // Fire enter on new target
-        if let Some(new) = new_target {
-            if let Some(on_enter) = self.input.on_drop_enter {
-                on_enter.run(CollectionDropEnterEvent {
-                    target: new.clone(),
-                });
-            }
+        if let Some(new) = new_target
+            && let Some(on_enter) = self.input.on_drop_enter
+        {
+            on_enter.run(CollectionDropEnterEvent {
+                target: new.clone(),
+            });
         }
     }
 
@@ -336,15 +337,13 @@ impl DroppableCollectionState {
 
                 match position {
                     DropPosition::On => {
-                        if is_internal {
-                            if let Some(on_move) = self.input.on_move {
-                                on_move.run(CollectionMoveEvent {
-                                    keys: dragging_keys.iter().cloned().collect(),
-                                    target: item_target,
-                                    drop_effect,
-                                });
-                                return;
-                            }
+                        if is_internal && let Some(on_move) = self.input.on_move {
+                            on_move.run(CollectionMoveEvent {
+                                keys: dragging_keys.iter().cloned().collect(),
+                                target: item_target,
+                                drop_effect,
+                            });
+                            return;
                         }
                         if let Some(on_item_drop) = self.input.on_item_drop {
                             on_item_drop.run(CollectionItemDropEvent {

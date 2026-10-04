@@ -1,6 +1,7 @@
+// Upstream: react-aria/src/overlays/useCloseOnScroll.ts @ 6f664fe911
 //
 // This hook is based on React Aria's `useCloseOnScroll`:
-// https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/overlays/src/useCloseOnScroll.ts
+// https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/overlays/useCloseOnScroll.ts
 //
 // ## DIFFERENT BEHAVIOR
 //

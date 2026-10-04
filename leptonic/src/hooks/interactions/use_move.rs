@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useMove.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::{
@@ -19,7 +20,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useMove.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useMove.ts
 
 // ## INTENTIONAL DEVIATIONS
 //
@@ -278,7 +279,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             }
         });
 
-        return UseMoveReturn {
+        UseMoveReturn {
             props: UseMoveProps {
                 on_pointerdown: EventHandler::new(|_: PointerEvent| {}),
                 on_keydown: EventHandler::new(|_: KeyboardEvent| {}),
@@ -286,7 +287,7 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             },
             is_moving: is_moving.into(),
             constraint: constraint_return,
-        };
+        }
     }
 
     #[cfg(not(feature = "ssr"))]
@@ -498,21 +499,21 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     fire_move(pt, modifiers, delta_x, delta_y);
 
                     // Update constraint signals if constrained
-                    if let Some(ref calc) = calculate_constrained_position {
-                        if let Some(ref cs) = constraint_state {
-                            let client_x = e.client_x();
-                            let client_y = e.client_y();
-                            let drag_offset = cs.drag_offset.get_value();
+                    if let Some(ref calc) = calculate_constrained_position
+                        && let Some(ref cs) = constraint_state
+                    {
+                        let client_x = e.client_x();
+                        let client_y = e.client_y();
+                        let drag_offset = cs.drag_offset.get_value();
 
-                            if let Some((norm_pos, pixel_x, pixel_y)) =
-                                calc(client_x, client_y, drag_offset)
-                            {
-                                cs.set_normalized_position.set(norm_pos);
-                                cs.set_pixel_position.set((pixel_x, pixel_y));
-                                cs.last_pixel_pos.set_value((pixel_x, pixel_y));
-                                if let Some(cb) = on_position_change {
-                                    cb.run(norm_pos);
-                                }
+                        if let Some((norm_pos, pixel_x, pixel_y)) =
+                            calc(client_x, client_y, drag_offset)
+                        {
+                            cs.set_normalized_position.set(norm_pos);
+                            cs.set_pixel_position.set((pixel_x, pixel_y));
+                            cs.last_pixel_pos.set_value((pixel_x, pixel_y));
+                            if let Some(cb) = on_position_change {
+                                cb.run(norm_pos);
                             }
                         }
                     }
@@ -526,18 +527,18 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             let modifiers = e.modifiers();
 
             let should_clear = state.with_value(|s| {
-                if let Some(s) = s.as_ref() {
-                    if s.pointer_id == pointer_id {
-                        if s.moved {
-                            fire_move_end(s.pointer_type.clone(), modifiers);
-                        }
-                        if let Some(ref el) = s.text_selection_element {
-                            restore_text_selection(el);
-                        }
-                        s.event_handlers.cleanup();
-                        set_is_moving.set(false);
-                        return true;
+                if let Some(s) = s.as_ref()
+                    && s.pointer_id == pointer_id
+                {
+                    if s.moved {
+                        fire_move_end(s.pointer_type.clone(), modifiers);
                     }
+                    if let Some(ref el) = s.text_selection_element {
+                        restore_text_selection(el);
+                    }
+                    s.event_handlers.cleanup();
+                    set_is_moving.set(false);
+                    return true;
                 }
                 false
             });
@@ -553,18 +554,18 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
             let modifiers = e.modifiers();
 
             let should_clear = state.with_value(|s| {
-                if let Some(s) = s.as_ref() {
-                    if s.pointer_id == pointer_id {
-                        if s.moved {
-                            fire_move_end(s.pointer_type.clone(), modifiers);
-                        }
-                        if let Some(ref el) = s.text_selection_element {
-                            restore_text_selection(el);
-                        }
-                        s.event_handlers.cleanup();
-                        set_is_moving.set(false);
-                        return true;
+                if let Some(s) = s.as_ref()
+                    && s.pointer_id == pointer_id
+                {
+                    if s.moved {
+                        fire_move_end(s.pointer_type.clone(), modifiers);
                     }
+                    if let Some(ref el) = s.text_selection_element {
+                        restore_text_selection(el);
+                    }
+                    s.event_handlers.cleanup();
+                    set_is_moving.set(false);
+                    return true;
                 }
                 false
             });
@@ -625,16 +626,15 @@ pub fn use_move(input: UseMoveInput) -> UseMoveReturn {
                     cs.drag_offset.set_value(drag_offset);
 
                     // Update constrained position immediately
-                    if let Some(ref calc) = calculate_constrained_position {
-                        if let Some((norm_pos, pixel_x, pixel_y)) =
+                    if let Some(ref calc) = calculate_constrained_position
+                        && let Some((norm_pos, pixel_x, pixel_y)) =
                             calc(client_x, client_y, drag_offset)
-                        {
-                            cs.set_normalized_position.set(norm_pos);
-                            cs.set_pixel_position.set((pixel_x, pixel_y));
-                            cs.last_pixel_pos.set_value((pixel_x, pixel_y));
-                            if let Some(cb) = on_position_change {
-                                cb.run(norm_pos);
-                            }
+                    {
+                        cs.set_normalized_position.set(norm_pos);
+                        cs.set_pixel_position.set((pixel_x, pixel_y));
+                        cs.last_pixel_pos.set_value((pixel_x, pixel_y));
+                        if let Some(cb) = on_position_change {
+                            cb.run(norm_pos);
                         }
                     }
                 }

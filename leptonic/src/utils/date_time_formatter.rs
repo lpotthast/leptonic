@@ -1,4 +1,5 @@
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/i18n/src/useDateFormatter.ts
+// Upstream: react-aria/src/i18n/useDateFormatter.ts @ 6f664fe911
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/i18n/useDateFormatter.ts
 
 use icu_locale::Locale as IcuLocale;
 
@@ -128,10 +129,10 @@ impl DateTimeFormatter {
     #[must_use]
     pub fn format(&self, dt: &time::OffsetDateTime) -> String {
         // Try ICU4X formatting for date_style/time_style
-        if self.options.date_style.is_some() || self.options.time_style.is_some() {
-            if let Some(result) = self.try_format_with_icu(dt) {
-                return result;
-            }
+        if (self.options.date_style.is_some() || self.options.time_style.is_some())
+            && let Some(result) = self.try_format_with_icu(dt)
+        {
+            return result;
         }
 
         // Fall back to component-based formatting

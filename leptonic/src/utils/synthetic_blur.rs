@@ -101,7 +101,7 @@ pub fn setup_synthetic_blur_observer(element: &web_sys::Element) -> Box<dyn Fn()
                 let related_target = target
                     .owner_document()
                     .and_then(|d| d.active_element())
-                    .and_then(|active| if active == target { None } else { Some(active) });
+                    .filter(|active| *active != target);
 
                 // Dispatch synthetic blur event.
                 let blur_init = web_sys::FocusEventInit::new();

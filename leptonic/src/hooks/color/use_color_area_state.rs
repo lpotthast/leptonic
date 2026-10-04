@@ -1,3 +1,4 @@
+// Upstream: react-stately/src/color/useColorAreaState.ts @ 6f664fe911
 use std::fmt;
 
 use leptos::prelude::*;
@@ -7,7 +8,7 @@ use crate::utils::{
     math::{decimal_precision, snap_value_to_step},
 };
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/color/src/useColorAreaState.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorAreaState.ts
 
 // ## INTENTIONAL DEVIATIONS
 //
@@ -264,10 +265,11 @@ pub fn use_color_area_state<C: ColorValue>(
     let set_dragging = Callback::new(move |dragging: bool| {
         let was_dragging = is_dragging.get_untracked();
         set_is_dragging.set(dragging);
-        if was_dragging && !dragging {
-            if let Some(cb) = on_change_end {
-                cb.run(value.get_untracked());
-            }
+        if was_dragging
+            && !dragging
+            && let Some(cb) = on_change_end
+        {
+            cb.run(value.get_untracked());
         }
     });
 

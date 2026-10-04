@@ -1,4 +1,4 @@
-use leptonic::hooks::*;
+use leptonic::{hooks::*, utils::classes::Classes};
 use leptos::prelude::*;
 
 #[component]
@@ -21,14 +21,13 @@ pub fn LinkPressedDemo() -> impl IntoView {
         <div>
             <a
                 {..link_props.into_attrs()}
+                class=Classes::from(["demo-link", "demo-pressable"])
+                    .add_reactive("demo-pressed", pressed_link_is_pressed)
                 style=link_styles
-                    .add("color", "var(--brand-color)")
-                    .add("transition", "transform 100ms")
-                    .add("transform", move || if pressed_link_is_pressed.get() { "scale(0.95)" } else { "scale(1)" })
             >
                 "Press and hold me"
             </a>
-            <span style="margin-left: 0.5em; font-size: 0.875em; opacity: 0.7;">
+            <span class="demo-hint">
                 {move || if pressed_link_is_pressed.get() { "(pressed!)" } else { "" }}
             </span>
         </div>

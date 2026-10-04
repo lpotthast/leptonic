@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/table/useTableCell.ts @ 6f664fe911
 use leptos::{
     attr,
     attr::Attr,
@@ -18,7 +19,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/table/src/useTableCell.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/table/useTableCell.ts
 
 // No intentional deviations from the react-aria implementation.
 

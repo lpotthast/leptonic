@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/focus/useHasTabbableChild.ts @ 6f664fe911
 use leptos::prelude::*;
 
 #[cfg(not(feature = "ssr"))]
@@ -11,7 +12,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/focus/src/useHasTabbableChild.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/focus/useHasTabbableChild.ts
 //
 // ## React-aria deviation
 //

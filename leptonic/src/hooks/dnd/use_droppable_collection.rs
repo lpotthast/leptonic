@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/dnd/useDroppableCollection.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::prelude::*;
@@ -20,7 +21,7 @@ use crate::hooks::{
     use_auto_scroll, use_droppable,
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDroppableCollection.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/dnd/useDroppableCollection.ts
 
 //
 // ## LEPTOS-SPECIFIC ADAPTATIONS

@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/utils/isVirtualEvent.ts @ 99e6102368
 use wasm_bindgen::JsCast;
 
 /// Detects screen reader / assistive technology clicks.
@@ -38,24 +39,26 @@ pub fn is_virtual_click(e: &web_sys::MouseEvent) -> bool {
     e.detail() == 0 && pointer_type.as_ref().is_none_or(String::is_empty)
 }
 
-/// Detects virtual pointer events (e.g., `VoiceOver` on iOS).
+/// Detects virtual pointer events, i.e. pointer events fired by assistive technology.
 ///
-/// `VoiceOver` on iOS can fire pointer events that look like real touch events
-/// but have telltale characteristics (zero-size touch, zero pressure, etc.).
+/// - A zero-size pointer is assumed to come from a screen reader (not on Android, where real
+///   touches can report a zero size).
+/// - Android `TalkBack` double taps sometimes report a 1x1 `"mouse"` pointer with zero pressure
+///   and zero detail. This combination is only checked on Android: on desktop, real mouse events
+///   can look the same (e.g. WebDriver-driven input reports zero pressure), and Safari always
+///   reports zero pressure.
+///
+/// Based on react-aria's `isVirtualPointerEvent` from `isVirtualEvent.ts`.
 pub fn is_virtual_pointer_event(e: &web_sys::PointerEvent) -> bool {
+    let is_android = crate::utils::platform::device::is_android();
     let width = e.width();
     let height = e.height();
 
-    // Zero-size touch area indicates a virtual event.
-    if width == 0 && height == 0 {
-        return true;
-    }
-
-    // `VoiceOver` on iOS fires pointer events with these specific characteristics.
-    // `PointerEvent` extends `MouseEvent` via Deref, so `.detail()` is available directly.
-    width == 1
-        && height == 1
-        && e.pressure() == 0.0
-        && e.detail() == 0
-        && e.pointer_type() == "mouse"
+    (!is_android && width == 0 && height == 0)
+        || (is_android
+            && width == 1
+            && height == 1
+            && e.pressure() == 0.0
+            && e.detail() == 0
+            && e.pointer_type() == "mouse")
 }

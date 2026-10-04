@@ -3,9 +3,13 @@ use leptos_use::{UseElementSizeReturn, use_element_size};
 
 use crate::utils::{
     classes::Classes,
-    css::{CssDimension, CssValue, px},
+    css::{CssDimension, computed_px, css_custom_property, pct},
     styles::Styles,
 };
+
+css_custom_property!(SKELETON_WIDTH: CssDimension = "--width");
+css_custom_property!(SKELETON_HEIGHT: CssDimension = "--height");
+css_custom_property!(SKELETON_EL_WIDTH: CssDimension = "--el-width");
 
 #[component]
 pub fn Skeleton(
@@ -16,8 +20,7 @@ pub fn Skeleton(
     #[prop(into, optional)] styles: Styles,
     #[prop(optional)] children: Option<Children>,
 ) -> impl IntoView {
-    let width = width.unwrap_or(CssDimension::Percent(100.0));
-    let height = height.unwrap_or(CssDimension::Auto);
+    let width = width.unwrap_or_else(|| pct(100.0));
 
     let element: NodeRef<html::Div> = NodeRef::new();
 
@@ -27,9 +30,10 @@ pub fn Skeleton(
     } = use_element_size(element);
 
     let styles = styles
-        .add("--height", height)
-        .add("--width", width)
-        .add("--el-width", move || CssValue::from(px(el_width.get())));
+        // Without an explicit height, `var(--height)` is unset and the element sizes to its content.
+        .add_optional(height.map(|height| SKELETON_HEIGHT.declare(height)))
+        .add(SKELETON_WIDTH.declare(width))
+        .add_reactive(move || SKELETON_EL_WIDTH.declare(computed_px(el_width.get())));
 
     view! {
         <div

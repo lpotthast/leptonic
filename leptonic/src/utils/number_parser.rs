@@ -273,13 +273,13 @@ fn extract_decimal_separator(formatted: &str) -> String {
     let chars: Vec<char> = formatted.chars().collect();
     if chars.len() >= 4 {
         // Find the position of "111" from the end.
-        if let Some(pos) = formatted.rfind("111") {
-            if pos > 0 {
-                let sep_end = pos;
-                // Walk backward to find start of separator (could be multi-char).
-                let sep_start = sep_end - 1;
-                return formatted[sep_start..sep_end].to_string();
-            }
+        if let Some(pos) = formatted.rfind("111")
+            && pos > 0
+        {
+            let sep_end = pos;
+            // Walk backward to find start of separator (could be multi-char).
+            let sep_start = sep_end - 1;
+            return formatted[sep_start..sep_end].to_string();
         }
     }
     ".".to_string()
@@ -420,10 +420,10 @@ mod tests {
         let locale = Locale::new("en-US");
         let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
-        assert_that(parser.parse("123")).is_equal_to(Some(123.0));
-        assert_that(parser.parse("0")).is_equal_to(Some(0.0));
-        assert_that(parser.parse("-42")).is_equal_to(Some(-42.0));
-        assert_that(parser.parse("3.14")).is_equal_to(Some(3.14));
+        assert_that!(parser.parse("123")).is_equal_to(Some(123.0));
+        assert_that!(parser.parse("0")).is_equal_to(Some(0.0));
+        assert_that!(parser.parse("-42")).is_equal_to(Some(-42.0));
+        assert_that!(parser.parse("3.14")).is_equal_to(Some(3.14));
     }
 
     #[test]
@@ -435,9 +435,9 @@ mod tests {
         };
         let parser = NumberParser::new(&locale, &options);
 
-        assert_that(parser.parse("1,234")).is_equal_to(Some(1234.0));
-        assert_that(parser.parse("1,234.56")).is_equal_to(Some(1234.56));
-        assert_that(parser.parse("1,234,567")).is_equal_to(Some(1_234_567.0));
+        assert_that!(parser.parse("1,234")).is_equal_to(Some(1234.0));
+        assert_that!(parser.parse("1,234.56")).is_equal_to(Some(1234.56));
+        assert_that!(parser.parse("1,234,567")).is_equal_to(Some(1_234_567.0));
     }
 
     #[test]
@@ -452,9 +452,9 @@ mod tests {
         let parser = NumberParser::new(&locale, &options);
 
         // German uses '.' for grouping and ',' for decimal.
-        assert_that(parser.parse("1.234,56")).is_equal_to(Some(1234.56));
-        assert_that(parser.parse("42,5")).is_equal_to(Some(42.5));
-        assert_that(parser.parse("-1.234,56")).is_equal_to(Some(-1234.56));
+        assert_that!(parser.parse("1.234,56")).is_equal_to(Some(1234.56));
+        assert_that!(parser.parse("42,5")).is_equal_to(Some(42.5));
+        assert_that!(parser.parse("-1.234,56")).is_equal_to(Some(-1234.56));
     }
 
     #[test]
@@ -462,9 +462,9 @@ mod tests {
         let locale = Locale::new("en-US");
         let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
-        assert_that(parser.parse("")).is_equal_to(None);
-        assert_that(parser.parse("abc")).is_equal_to(None);
-        assert_that(parser.parse("12.34.56")).is_equal_to(None);
+        assert_that!(parser.parse("")).is_equal_to(None);
+        assert_that!(parser.parse("abc")).is_equal_to(None);
+        assert_that!(parser.parse("12.34.56")).is_equal_to(None);
     }
 
     #[test]
@@ -476,8 +476,8 @@ mod tests {
         };
         let parser = NumberParser::new(&locale, &options);
 
-        assert_that(parser.parse("75%")).is_equal_to(Some(0.75));
-        assert_that(parser.parse("100%")).is_equal_to(Some(1.0));
+        assert_that!(parser.parse("75%")).is_equal_to(Some(0.75));
+        assert_that!(parser.parse("100%")).is_equal_to(Some(1.0));
     }
 
     #[test]
@@ -486,18 +486,18 @@ mod tests {
         let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
         // Valid partial inputs.
-        assert_that(parser.is_valid_partial_number("", None, None)).is_true();
-        assert_that(parser.is_valid_partial_number("1", None, None)).is_true();
-        assert_that(parser.is_valid_partial_number("1.", None, None)).is_true();
-        assert_that(parser.is_valid_partial_number("1.2", None, None)).is_true();
-        assert_that(parser.is_valid_partial_number("-", None, None)).is_true();
-        assert_that(parser.is_valid_partial_number("-1", None, None)).is_true();
-        assert_that(parser.is_valid_partial_number("-1.", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number("", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number("1", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number("1.", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number("1.2", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number("-", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number("-1", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number("-1.", None, None)).is_true();
 
         // Invalid partial inputs.
-        assert_that(parser.is_valid_partial_number("abc", None, None)).is_false();
-        assert_that(parser.is_valid_partial_number("1.2.3", None, None)).is_false();
-        assert_that(parser.is_valid_partial_number("1a", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number("abc", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number("1.2.3", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number("1a", None, None)).is_false();
     }
 
     #[test]
@@ -506,9 +506,9 @@ mod tests {
         let parser = NumberParser::new(&locale, &NumberFormatOptions::default());
 
         // When min_value >= 0, minus is not allowed.
-        assert_that(parser.is_valid_partial_number("-", Some(0.0), None)).is_false();
-        assert_that(parser.is_valid_partial_number("-1", Some(0.0), None)).is_false();
-        assert_that(parser.is_valid_partial_number("1", Some(0.0), None)).is_true();
+        assert_that!(parser.is_valid_partial_number("-", Some(0.0), None)).is_false();
+        assert_that!(parser.is_valid_partial_number("-1", Some(0.0), None)).is_false();
+        assert_that!(parser.is_valid_partial_number("1", Some(0.0), None)).is_true();
     }
 
     #[test]
@@ -520,9 +520,9 @@ mod tests {
         };
         let parser = NumberParser::new(&locale, &options);
 
-        assert_that(parser.is_valid_partial_number("1.", None, None)).is_false();
-        assert_that(parser.is_valid_partial_number("1.5", None, None)).is_false();
-        assert_that(parser.is_valid_partial_number("123", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number("1.", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number("1.5", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number("123", None, None)).is_true();
     }
 
     #[test]
@@ -534,8 +534,8 @@ mod tests {
         };
         let parser = NumberParser::new(&locale, &options);
 
-        assert_that(parser.is_valid_partial_number(",123", None, None)).is_false();
-        assert_that(parser.is_valid_partial_number("1,234", None, None)).is_true();
+        assert_that!(parser.is_valid_partial_number(",123", None, None)).is_false();
+        assert_that!(parser.is_valid_partial_number("1,234", None, None)).is_true();
     }
 
     #[test]
@@ -553,7 +553,7 @@ mod tests {
         let original = 1234.56;
         let formatted = formatter.format(original);
         let parsed = parser.parse(&formatted);
-        assert_that(parsed).is_equal_to(Some(original));
+        assert_that!(parsed).is_equal_to(Some(original));
     }
 
     #[test]
@@ -571,6 +571,6 @@ mod tests {
         let original = 1234.56;
         let formatted = formatter.format(original);
         let parsed = parser.parse(&formatted);
-        assert_that(parsed).is_equal_to(Some(original));
+        assert_that!(parsed).is_equal_to(Some(original));
     }
 }

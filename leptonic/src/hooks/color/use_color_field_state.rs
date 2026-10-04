@@ -1,10 +1,11 @@
+// Upstream: react-stately/src/color/useColorFieldState.ts @ 6f664fe911
 use std::fmt;
 
 use leptos::prelude::*;
 
 use crate::utils::color::RGB8;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/color/src/useColorFieldState.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorFieldState.ts
 
 // ## INTENTIONAL DEVIATIONS
 //

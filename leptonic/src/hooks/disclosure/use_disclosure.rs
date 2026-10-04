@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/disclosure/useDisclosure.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -8,7 +10,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::{FocusEvent, KeyboardEvent, MouseEvent};
 
 use crate::{
@@ -22,7 +23,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/disclosure/src/useDisclosure.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/disclosure/useDisclosure.ts
 
 //
 // No intentional deviations from the react-aria implementation.
@@ -188,7 +189,7 @@ pub fn use_disclosure(input: UseDisclosureInput) -> UseDisclosureReturn {
         on_expanded_change,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("disclosure");
     let trigger_id = format!("disclosure-trigger-{base_id}");
     let content_id = format!("disclosure-content-{base_id}");
 

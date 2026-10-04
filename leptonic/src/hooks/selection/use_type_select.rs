@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/selection/useTypeSelect.ts @ 6f664fe911
 use leptos::{
     ev,
     ev::{On, SharedEventCallback},
@@ -15,7 +16,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/selection/src/useTypeSelect.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/selection/useTypeSelect.ts
 
 // REACT-ARIA DEVIATIONS
 //

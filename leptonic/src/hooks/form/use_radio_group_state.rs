@@ -1,6 +1,7 @@
+// Upstream: react-stately/src/radio/useRadioGroupState.ts @ 6f664fe911
 use leptos::prelude::*;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/radio/src/useRadioGroupState.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/radio/useRadioGroupState.ts
 
 // No intentional deviations from the react-aria implementation.
 

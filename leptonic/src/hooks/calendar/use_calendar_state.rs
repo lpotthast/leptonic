@@ -1,9 +1,10 @@
+// Upstream: react-stately/src/calendar/useCalendarState.ts @ 6f664fe911
 use leptos::prelude::*;
 use time::macros::format_description;
 use uuid::Uuid;
 
 use crate::utils::{
-    live_announcer::try_use_live_announcer,
+    live_announcer::announce_polite,
     time::{
         Day, InMonth, Month, SaveReplaceYear, Week, Year, is_in_range, start_of_next_month,
         start_of_previous_month, whole_days_in,
@@ -246,9 +247,7 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> UseCalendarStateRetur
         if new_month != prev_month.get_value() || new_year != prev_year.get_value() {
             prev_month.set_value(new_month);
             prev_year.set_value(new_year);
-            if let Some(announcer) = try_use_live_announcer() {
-                announcer.announce_polite(format!("{new_month} {new_year}"));
-            }
+            announce_polite(format!("{new_month} {new_year}"));
         }
     });
 
@@ -357,19 +356,19 @@ pub fn use_calendar_state(input: UseCalendarStateInput) -> UseCalendarStateRetur
     // --- Validation ---
 
     let is_value_invalid = Signal::derive(move || {
-        if let Some(is_invalid) = is_invalid {
-            if is_invalid.get() {
-                return true;
-            }
+        if let Some(is_invalid) = is_invalid
+            && is_invalid.get()
+        {
+            return true;
         }
         if let Some(val) = value.get() {
             if !is_in_range(&val, min.as_ref(), max.as_ref()) {
                 return true;
             }
-            if let Some(ref unavailable) = is_date_unavailable {
-                if unavailable.run(val) {
-                    return true;
-                }
+            if let Some(ref unavailable) = is_date_unavailable
+                && unavailable.run(val)
+            {
+                return true;
             }
         }
         false

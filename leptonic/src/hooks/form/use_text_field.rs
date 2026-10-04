@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/textfield/useTextField.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -8,7 +10,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use wasm_bindgen::JsCast;
 use web_sys::{ClipboardEvent, CompositionEvent, Event, FocusEvent, InputEvent, KeyboardEvent};
 
@@ -31,7 +32,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/textfield/src/useTextField.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/textfield/useTextField.ts
 
 // No intentional deviations from the react-aria implementation.
 
@@ -653,7 +654,7 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
     });
 
     // ---- IDs ----
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("text-field");
     let input_id = format!("textfield-{base_id}");
     let label_id = format!("textfield-label-{base_id}");
     let description_id = format!("textfield-description-{base_id}");
@@ -665,10 +666,10 @@ pub fn use_text_field(input: UseTextFieldInput) -> UseTextFieldReturn {
             return;
         }
 
-        if let Some(new_value) = get_input_value(&e.expect_target()) {
-            if let Some(on_change) = on_change {
-                on_change.run(new_value);
-            }
+        if let Some(new_value) = get_input_value(&e.expect_target())
+            && let Some(on_change) = on_change
+        {
+            on_change.run(new_value);
         }
     };
 

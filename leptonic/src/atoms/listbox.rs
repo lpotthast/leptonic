@@ -166,9 +166,10 @@ pub fn ListBox<V: Keyed + Clone + Send + Sync + 'static>(
         .or_else(|| menu_config.as_ref().map(|mc| mc.escape_key_behavior))
         .unwrap_or_default();
 
+    // A standalone listbox doesn't wrap (as in react-aria); a select's listbox does.
     let resolved_should_focus_wrap = should_focus_wrap
         .or_else(|| menu_config.as_ref().map(|mc| mc.should_focus_wrap))
-        .unwrap_or(true);
+        .unwrap_or(false);
 
     let resolved_auto_focus = auto_focus
         .or_else(|| menu_config.as_ref().map(|mc| mc.auto_focus))
@@ -226,6 +227,7 @@ pub fn ListBox<V: Keyed + Clone + Send + Sync + 'static>(
         collection_ref,
         on_close: resolved_on_close,
         escape_key_behavior: resolved_escape_key_behavior,
+        id: menu_config.as_ref().map(|mc| mc.id.clone()),
     });
 
     // Extract blur handler and focused key setter before consuming menu_config.

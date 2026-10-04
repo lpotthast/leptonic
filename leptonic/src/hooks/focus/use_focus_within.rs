@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useFocusWithin.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(unused_imports))]
 
 use leptos::{
@@ -17,7 +18,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useFocusWithin.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useFocusWithin.ts
 
 // ## DIFFERENT BEHAVIOR
 //
@@ -142,13 +143,13 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
     {
         let _ = input;
         let (is_focus_within, _) = signal(false);
-        return UseFocusWithinReturn {
+        UseFocusWithinReturn {
             props: UseFocusWithinProps {
                 on_focusin: EventHandler::new(|_: FocusEvent| {}),
                 on_focusout: EventHandler::new(|_: FocusEvent| {}),
             },
             is_focus_within: is_focus_within.into(),
-        };
+        }
     }
 
     #[cfg(not(feature = "ssr"))]
@@ -334,15 +335,14 @@ pub fn use_focus_within(input: UseFocusWithinInput) -> UseFocusWithinReturn {
 
             // Check if focus is moving to another element within the same tree.
             // If relatedTarget (where focus is going) is within current_target, don't trigger blur.
-            if let Some(related_target) = e.related_target() {
-                if node_contains(
+            if let Some(related_target) = e.related_target()
+                && node_contains(
                     current_target.dyn_ref::<web_sys::Node>(),
                     related_target.dyn_ref::<web_sys::Node>(),
                 )
                 .unwrap_or(false)
-                {
-                    return;
-                }
+            {
+                return;
             }
 
             // Focus is leaving the element tree

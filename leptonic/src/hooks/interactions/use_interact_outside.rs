@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useInteractOutside.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::prelude::*;
@@ -11,7 +12,7 @@ use crate::{
     utils::{CapturedElement, ElementCaptureAttr, EventAccessors, dom_ext::node_contains},
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useInteractOutside.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useInteractOutside.ts
 
 // ## OMITTED FEATURES
 //
@@ -101,11 +102,11 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
     {
         let _ = input;
         let element = CapturedElement::new();
-        return UseInteractOutsideReturn {
+        UseInteractOutsideReturn {
             props: UseInteractOutsideProps {
                 element_capture: element.attr(),
             },
-        };
+        }
     }
 
     #[cfg(not(feature = "ssr"))]
@@ -170,10 +171,9 @@ pub fn use_interact_outside(input: UseInteractOutsideInput) -> UseInteractOutsid
                     if !disabled.get_untracked()
                         && is_pointer_down.get_value()
                         && is_valid_event(&e, element.get_untracked().as_ref())
+                        && let Some(on_interact_outside) = on_interact_outside
                     {
-                        if let Some(on_interact_outside) = on_interact_outside {
-                            on_interact_outside.run(e);
-                        }
+                        on_interact_outside.run(e);
                     }
                     is_pointer_down.set_value(false);
                 },
@@ -209,25 +209,23 @@ fn is_valid_event(
     let target = event.expect_target();
     if let Some(target_node) = target.dyn_ref::<web_sys::Node>() {
         let owner_document = target_node.owner_document();
-        if let Some(doc) = owner_document {
-            if let Some(doc_element) = doc.document_element() {
-                if !node_contains(Some(doc_element.as_ref()), Some(target_node)).unwrap_or(false) {
-                    return false;
-                }
-            }
+        if let Some(doc) = owner_document
+            && let Some(doc_element) = doc.document_element()
+            && !node_contains(Some(doc_element.as_ref()), Some(target_node)).unwrap_or(false)
+        {
+            return false;
         }
     }
 
     // Check if target is within a top layer element (e.g. toasts)
-    if let Some(target_el) = target.dyn_ref::<web_sys::Element>() {
-        if target_el
+    if let Some(target_el) = target.dyn_ref::<web_sys::Element>()
+        && target_el
             .closest("[data-leptonic-top-layer]")
             .ok()
             .flatten()
             .is_some()
-        {
-            return false;
-        }
+    {
+        return false;
     }
 
     // Check if we have an element to compare against

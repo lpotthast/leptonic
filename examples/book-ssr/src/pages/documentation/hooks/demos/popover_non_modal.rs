@@ -36,7 +36,7 @@ pub fn NonModalPopoverDemo() -> impl IntoView {
     let popover_styles = StoredValue::new(popover_styles);
 
     view! {
-        <div style="display: flex; gap: 1em; align-items: center; justify-content: center; padding: 2em;">
+        <div class="demo-button-row-centered">
             <button
                 {..trigger_attrs.get_value()}
                 on:click=move |_| set_is_open.set(!is_open.get())
@@ -45,15 +45,12 @@ pub fn NonModalPopoverDemo() -> impl IntoView {
                 {move || if is_open.get() { "Close" } else { "Open Non-Modal" }}
             </button>
 
-            <button
-                on:click=move |_| set_counter.update(|c| *c += 1)
-                style="padding: 0.75em 1.5em; border-radius: 8px; cursor: pointer; border: 1px solid #ccc; font-size: 1em;"
-            >
+            <button on:click=move |_| set_counter.update(|c| *c += 1) class="demo-btn-outline">
                 {move || format!("Counter: {}", counter.get())}
             </button>
         </div>
 
-        <p style="text-align: center; color: #666;">
+        <p class="demo-note">
             "Notice: You can still click the counter button while the popover is open!"
         </p>
 
@@ -62,16 +59,10 @@ pub fn NonModalPopoverDemo() -> impl IntoView {
                 // No underlay for non-modal popover
                 <div
                     {..popover_props.get_value()}
+                    class="demo-popover-panel demo-popover-panel-narrow"
                     style=popover_styles.get_value()
-                        .add("background", "white")
-                        .add("border", "1px solid #ccc")
-                        .add("border-radius", "8px")
-                        .add("padding", "1em")
-                        .add("box-shadow", "0 4px 12px rgba(0,0,0,0.15)")
-                        .add("z-index", "1000")
-                        .add("max-width", "200px")
                 >
-                    <p style="margin: 0; color: #666;">
+                    <p class="demo-muted-text">
                         "This is a non-modal popover. You can interact with elements outside!"
                     </p>
                 </div>

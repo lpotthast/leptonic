@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/tag/useTagGroup.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +7,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::KeyboardEvent;
 
 use crate::{
@@ -16,7 +17,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/tag/src/useTagGroup.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/tag/useTagGroup.ts
 
 //
 // No intentional deviations from the react-aria implementation.
@@ -170,7 +171,7 @@ pub fn use_tag_group(input: UseTagGroupInput) -> UseTagGroupReturn {
         allow_removal: _allow_removal,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("tag-group");
     let group_id = format!("tag-group-{base_id}");
     let label_id = format!("tag-group-label-{base_id}");
 

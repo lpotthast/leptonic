@@ -19,11 +19,11 @@ pub fn LinkProgrammaticFocusDemo() -> impl IntoView {
 
     view! {
         <div>
-            <a {..link_props.into_attrs()} style=link_styles.add("color", "var(--brand-color)")>
+            <a {..link_props.into_attrs()} class="demo-link" style=link_styles>
                 "Target link"
             </a>
         </div>
-        <button on:click=move |_| focus_handle.focus() style="margin-top: 0.5em;">
+        <button on:click=move |_| focus_handle.focus() class="demo-mt-half">
             "Focus the link above"
         </button>
     }

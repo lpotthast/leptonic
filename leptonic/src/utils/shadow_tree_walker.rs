@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/utils/shadowdom/ShadowTreeWalker.ts @ 6f664fe911
 //! A tree walker that descends into shadow roots.
 //!
 //! The native `TreeWalker` API does not cross shadow DOM boundaries.
@@ -5,7 +6,7 @@
 //! one per shadow boundary — so that iteration seamlessly enters and exits
 //! shadow roots.
 //!
-//! Based on react-aria's `@react-aria/utils/src/shadowdom/ShadowTreeWalker.ts`.
+//! Based on react-aria's `react-aria/src/utils/shadowdom/ShadowTreeWalker.ts`.
 
 use wasm_bindgen::JsCast;
 
@@ -42,15 +43,15 @@ impl ShadowTreeWalker {
         let current = self.current_node();
 
         // If the current node has a shadow root, descend into it.
-        if let Some(el) = current.dyn_ref::<web_sys::Element>() {
-            if let Some(shadow) = el.shadow_root() {
-                let doc = current.owner_document()?;
-                let walker = doc
-                    .create_tree_walker_with_what_to_show(shadow.as_ref(), self.what_to_show)
-                    .ok()?;
-                self.walkers.push(walker);
-                return self.first_child();
-            }
+        if let Some(el) = current.dyn_ref::<web_sys::Element>()
+            && let Some(shadow) = el.shadow_root()
+        {
+            let doc = current.owner_document()?;
+            let walker = doc
+                .create_tree_walker_with_what_to_show(shadow.as_ref(), self.what_to_show)
+                .ok()?;
+            self.walkers.push(walker);
+            return self.first_child();
         }
 
         let walker = self.walkers.last()?;
@@ -64,15 +65,15 @@ impl ShadowTreeWalker {
         let current = self.current_node();
 
         // If the current node has a shadow root, descend into it.
-        if let Some(el) = current.dyn_ref::<web_sys::Element>() {
-            if let Some(shadow) = el.shadow_root() {
-                let doc = current.owner_document()?;
-                let walker = doc
-                    .create_tree_walker_with_what_to_show(shadow.as_ref(), self.what_to_show)
-                    .ok()?;
-                self.walkers.push(walker);
-                return self.last_child();
-            }
+        if let Some(el) = current.dyn_ref::<web_sys::Element>()
+            && let Some(shadow) = el.shadow_root()
+        {
+            let doc = current.owner_document()?;
+            let walker = doc
+                .create_tree_walker_with_what_to_show(shadow.as_ref(), self.what_to_show)
+                .ok()?;
+            self.walkers.push(walker);
+            return self.last_child();
         }
 
         let walker = self.walkers.last()?;
@@ -85,17 +86,14 @@ impl ShadowTreeWalker {
         let current = self.current_node();
 
         // If the current element has a shadow root, push a walker for it.
-        if let Some(el) = current.dyn_ref::<web_sys::Element>() {
-            if let Some(shadow) = el.shadow_root() {
-                if let Some(doc) = current.owner_document() {
-                    if let Ok(walker) =
-                        doc.create_tree_walker_with_what_to_show(shadow.as_ref(), self.what_to_show)
-                    {
-                        self.walkers.push(walker);
-                        return self.next_node();
-                    }
-                }
-            }
+        if let Some(el) = current.dyn_ref::<web_sys::Element>()
+            && let Some(shadow) = el.shadow_root()
+            && let Some(doc) = current.owner_document()
+            && let Ok(walker) =
+                doc.create_tree_walker_with_what_to_show(shadow.as_ref(), self.what_to_show)
+        {
+            self.walkers.push(walker);
+            return self.next_node();
         }
 
         // Try to advance within the current walker.
@@ -122,26 +120,23 @@ impl ShadowTreeWalker {
 
         // If the current element has a shadow root, push a walker for it
         // and seek to the last descendant.
-        if let Some(el) = current.dyn_ref::<web_sys::Element>() {
-            if let Some(shadow) = el.shadow_root() {
-                if let Some(doc) = current.owner_document() {
-                    if let Ok(walker) =
-                        doc.create_tree_walker_with_what_to_show(shadow.as_ref(), self.what_to_show)
-                    {
-                        self.walkers.push(walker);
-                        // Seek to the deepest last node.
-                        let mut node: web_sys::Node = shadow.into();
-                        while let Some(last) = node.last_child() {
-                            node = last;
-                        }
-                        // Set current node on the walker now in the stack.
-                        if let Some(w) = self.walkers.last() {
-                            w.set_current_node(&node);
-                        }
-                        return self.check_shadow_and_filter_backwards(node);
-                    }
-                }
+        if let Some(el) = current.dyn_ref::<web_sys::Element>()
+            && let Some(shadow) = el.shadow_root()
+            && let Some(doc) = current.owner_document()
+            && let Ok(walker) =
+                doc.create_tree_walker_with_what_to_show(shadow.as_ref(), self.what_to_show)
+        {
+            self.walkers.push(walker);
+            // Seek to the deepest last node.
+            let mut node: web_sys::Node = shadow.into();
+            while let Some(last) = node.last_child() {
+                node = last;
             }
+            // Set current node on the walker now in the stack.
+            if let Some(w) = self.walkers.last() {
+                w.set_current_node(&node);
+            }
+            return self.check_shadow_and_filter_backwards(node);
         }
 
         // Try to go backwards within the current walker.
@@ -174,25 +169,25 @@ impl ShadowTreeWalker {
     /// Also applies the filter. If the filter rejects, advance to next.
     fn check_shadow_and_filter(&mut self, node: web_sys::Node) -> Option<web_sys::Node> {
         // Check if this element has a shadow root we should descend into.
-        if let Some(el) = node.dyn_ref::<web_sys::Element>() {
-            if el.shadow_root().is_some() {
-                // Set current to this element, then next_node will descend.
-                if let Some(walker) = self.walkers.last() {
-                    walker.set_current_node(&node);
-                }
-                return self.next_node();
+        if let Some(el) = node.dyn_ref::<web_sys::Element>()
+            && el.shadow_root().is_some()
+        {
+            // Set current to this element, then next_node will descend.
+            if let Some(walker) = self.walkers.last() {
+                walker.set_current_node(&node);
             }
+            return self.next_node();
         }
 
         // Apply filter.
-        if let Some(ref filter) = self.filter {
-            if !filter(&node) {
-                // Advance past rejected node.
-                if let Some(walker) = self.walkers.last() {
-                    walker.set_current_node(&node);
-                }
-                return self.next_node();
+        if let Some(ref filter) = self.filter
+            && !filter(&node)
+        {
+            // Advance past rejected node.
+            if let Some(walker) = self.walkers.last() {
+                walker.set_current_node(&node);
             }
+            return self.next_node();
         }
 
         Some(node)
@@ -200,22 +195,22 @@ impl ShadowTreeWalker {
 
     /// Backwards variant of `check_shadow_and_filter`.
     fn check_shadow_and_filter_backwards(&mut self, node: web_sys::Node) -> Option<web_sys::Node> {
-        if let Some(el) = node.dyn_ref::<web_sys::Element>() {
-            if el.shadow_root().is_some() {
-                if let Some(walker) = self.walkers.last() {
-                    walker.set_current_node(&node);
-                }
-                return self.previous_node();
+        if let Some(el) = node.dyn_ref::<web_sys::Element>()
+            && el.shadow_root().is_some()
+        {
+            if let Some(walker) = self.walkers.last() {
+                walker.set_current_node(&node);
             }
+            return self.previous_node();
         }
 
-        if let Some(ref filter) = self.filter {
-            if !filter(&node) {
-                if let Some(walker) = self.walkers.last() {
-                    walker.set_current_node(&node);
-                }
-                return self.previous_node();
+        if let Some(ref filter) = self.filter
+            && !filter(&node)
+        {
+            if let Some(walker) = self.walkers.last() {
+                walker.set_current_node(&node);
             }
+            return self.previous_node();
         }
 
         Some(node)

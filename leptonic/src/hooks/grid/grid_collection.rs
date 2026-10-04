@@ -166,48 +166,48 @@ mod tests {
     #[test]
     fn column_count_returns_max_cells() {
         let c = make_collection();
-        assert_that(c.column_count()).is_equal_to(3);
+        assert_that!(c.column_count()).is_equal_to(3);
     }
 
     #[test]
     fn is_row_key_and_is_cell_key() {
         let c = make_collection();
-        assert_that(c.is_row_key(&"row-0".into())).is_true();
-        assert_that(c.is_row_key(&"0-0".into())).is_false();
-        assert_that(c.is_cell_key(&"0-0".into())).is_true();
-        assert_that(c.is_cell_key(&"row-0".into())).is_false();
+        assert_that!(c.is_row_key(&"row-0".into())).is_true();
+        assert_that!(c.is_row_key(&"0-0".into())).is_false();
+        assert_that!(c.is_cell_key(&"0-0".into())).is_true();
+        assert_that!(c.is_cell_key(&"row-0".into())).is_false();
     }
 
     #[test]
     fn get_row_for_cell_works() {
         let c = make_collection();
         let (row, ci) = c.get_row_for_cell(&"1-2".into()).unwrap();
-        assert_that(row.key.as_str()).is_equal_to("row-1");
-        assert_that(ci).is_equal_to(2);
+        assert_that!(row.key.as_str()).is_equal_to("row-1");
+        assert_that!(ci).is_equal_to(2);
     }
 
     #[test]
     fn row_before_and_after() {
         let c = make_collection();
-        assert_that(c.row_before(&"row-0".into())).is_none();
-        assert_that(c.row_before(&"row-1".into()).unwrap().key.as_str()).is_equal_to("row-0");
-        assert_that(c.row_after(&"row-2".into())).is_none();
-        assert_that(c.row_after(&"row-1".into()).unwrap().key.as_str()).is_equal_to("row-2");
+        assert_that!(c.row_before(&"row-0".into())).is_none();
+        assert_that!(c.row_before(&"row-1".into()).unwrap().key.as_str()).is_equal_to("row-0");
+        assert_that!(c.row_after(&"row-2".into())).is_none();
+        assert_that!(c.row_after(&"row-1".into()).unwrap().key.as_str()).is_equal_to("row-2");
     }
 
     #[test]
     fn first_and_last_row() {
         let c = make_collection();
-        assert_that(c.first_row().unwrap().key.as_str()).is_equal_to("row-0");
-        assert_that(c.last_row().unwrap().key.as_str()).is_equal_to("row-2");
+        assert_that!(c.first_row().unwrap().key.as_str()).is_equal_to("row-0");
+        assert_that!(c.last_row().unwrap().key.as_str()).is_equal_to("row-2");
     }
 
     #[test]
     fn empty_collection() {
         let c: GridCollection<String> = GridCollection::default();
-        assert_that(c.size()).is_equal_to(0);
-        assert_that(c.column_count()).is_equal_to(0);
-        assert_that(c.first_row()).is_none();
-        assert_that(c.last_row()).is_none();
+        assert_that!(c.size()).is_equal_to(0);
+        assert_that!(c.column_count()).is_equal_to(0);
+        assert_that!(c.first_row()).is_none();
+        assert_that!(c.last_row()).is_none();
     }
 }

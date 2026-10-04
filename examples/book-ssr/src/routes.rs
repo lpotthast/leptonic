@@ -812,6 +812,10 @@ pub mod routes {
             mod use_color_channel_field {
                 page!(crate::pages::documentation::hooks::color_channel_field::PageUseColorChannelField);
             }
+            #[route("/use-spin-button")]
+            mod use_spin_button {
+                page!(crate::pages::documentation::hooks::spin_button::PageUseSpinButton);
+            }
             #[route("/use-toolbar")]
             mod use_toolbar {
                 page!(crate::pages::documentation::hooks::toolbar::PageUseToolbar);

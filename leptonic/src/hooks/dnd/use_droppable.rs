@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/dnd/useDrop.ts @ 6f664fe911
 #![cfg_attr(feature = "ssr", allow(dead_code, unused_imports))]
 
 use leptos::{
@@ -26,7 +27,7 @@ use crate::{
         use_description::use_description,
     },
 };
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/dnd/src/useDrop.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/dnd/useDrop.ts
 
 //
 // ## ACCESSIBILITY
@@ -239,11 +240,11 @@ pub type UseDroppableAttrs = (
 /// Compute element-relative coordinates from a drag event.
 fn element_relative_coords(e: &DragEvent) -> (f64, f64) {
     let (cx, cy) = (e.client_x(), e.client_y());
-    if let Some(ct) = e.current_target() {
-        if let Some(el) = ct.dyn_ref::<web_sys::HtmlElement>() {
-            let rect = el.get_bounding_client_rect();
-            return (cx - rect.x(), cy - rect.y());
-        }
+    if let Some(ct) = e.current_target()
+        && let Some(el) = ct.dyn_ref::<web_sys::HtmlElement>()
+    {
+        let rect = el.get_bounding_client_rect();
+        return (cx - rect.x(), cy - rect.y());
     }
     (cx, cy)
 }
@@ -396,11 +397,10 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
     let clear_activate_timer = move || {
         #[cfg(not(feature = "ssr"))]
         activate_timer.update_value(|timer| {
-            if let Some((id, _closure)) = timer.take() {
-                if let Some(window) = web_sys::window() {
+            if let Some((id, _closure)) = timer.take()
+                && let Some(window) = web_sys::window() {
                     window.clear_timeout_with_handle(id);
                 }
-            }
         });
     };
 
@@ -593,23 +593,21 @@ pub fn use_droppable(input: UseDroppableInput) -> UseDroppableReturn {
         // Drop activate timer: reset on every non-dedup dragover.
         clear_activate_timer();
         #[cfg(not(feature = "ssr"))]
-        if let Some(on_activate) = on_drop_activate {
-            if de_str != "none" {
+        if let Some(on_activate) = on_drop_activate
+            && de_str != "none" {
                 let closure = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
                     on_activate.run(DropActivateEvent { x: rel_x, y: rel_y });
                 })
                     as Box<dyn FnMut()>);
 
-                if let Some(window) = web_sys::window() {
-                    if let Ok(id) = window.set_timeout_with_callback_and_timeout_and_arguments_0(
+                if let Some(window) = web_sys::window()
+                    && let Ok(id) = window.set_timeout_with_callback_and_timeout_and_arguments_0(
                         closure.as_ref().unchecked_ref(),
                         DROP_ACTIVATE_TIMEOUT_MS,
                     ) {
                         activate_timer.set_value(Some((id, closure)));
                     }
-                }
             }
-        }
     };
 
     let handle_drag_leave = move |e: DragEvent| {

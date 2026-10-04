@@ -1,3 +1,4 @@
+// Upstream: react-aria/src/interactions/useKeyboard.ts @ 99e6102368
 use std::sync::atomic::Ordering;
 
 use leptos::{
@@ -11,12 +12,26 @@ use crate::{
     hooks::IntoAttrs,
     utils::{
         EventHandler, EventWrapper, Propagation,
+        keyboard_shortcut::KeyboardShortcuts,
         propagation_control::{PropagationControl, Sealed},
     },
 };
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/%40react-aria/interactions/src/useKeyboard.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/useKeyboard.ts
 
-// No intentional deviations from the react-aria implementation.
+// =============================================================================
+// REACT-ARIA DEVIATIONS
+// =============================================================================
+//
+// ## API DIFFERENCES
+// - `shortcuts`: typed `KeyboardShortcuts` built from `Shortcut` values instead of a record of
+//   shortcut strings. `Shortcut::parse` still accepts react-aria's string syntax.
+//
+// ## OMITTED FEATURES
+// - Ignoring events from React portals: React re-dispatches events through the component tree,
+//   so react-aria must skip events whose target is not a DOM descendant. Leptos uses native DOM
+//   events, which only ever bubble through DOM ancestors.
+//
+// =============================================================================
 
 /// A keyboard event with additional functionality.
 ///
@@ -119,7 +134,7 @@ impl Clone for KeyboardEventWrapper {
 }
 
 /// Input parameters for the `use_keyboard` hook.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Default)]
 pub struct UseKeyboardInput {
     /// Whether keyboard events should be disabled.
     pub disabled: Signal<bool>,
@@ -129,6 +144,17 @@ pub struct UseKeyboardInput {
 
     /// Handler called when a key is released.
     pub on_key_up: Option<Callback<KeyboardEventWrapper>>,
+
+    /// Shortcuts handled on key down, after `on_key_down`. A handled shortcut prevents the
+    /// browser default and stops propagation; key presses that match no shortcut bubble on.
+    pub shortcuts: Option<KeyboardShortcuts>,
+
+    /// Whether shortcuts also fire for auto-repeated key presses (a key held down). Enable this
+    /// for navigation keys, so that holding an arrow key keeps moving.
+    pub allow_repeats: bool,
+
+    /// Whether shortcuts also fire while an input method editor is composing text.
+    pub allow_composing: bool,
 }
 
 /// The return value of the `use_keyboard` hook.
@@ -194,6 +220,9 @@ pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
         disabled,
         on_key_down,
         on_key_up,
+        shortcuts,
+        allow_repeats,
+        allow_composing,
     } = input;
 
     let handle_key_down = move |e: KeyboardEvent| {
@@ -201,13 +230,28 @@ pub fn use_keyboard(input: UseKeyboardInput) -> UseKeyboardReturn {
             return;
         }
 
+        // Without a handler, events bubble. A handler stops propagation unless it opts in.
+        let mut continue_propagation = true;
+
         if let Some(on_key_down) = on_key_down {
             let (wrapper, continue_state) = KeyboardEventWrapper::new(e.clone());
             on_key_down.run(wrapper);
+            continue_propagation = continue_state.load(Ordering::Acquire);
+        }
 
-            if !continue_state.load(Ordering::Acquire) {
-                e.stop_propagation();
+        if let Some(shortcuts) = &shortcuts
+            && (allow_repeats || !e.repeat())
+            && (allow_composing || !e.is_composing())
+            && let Some(outcome) = shortcuts.handle(&e)
+        {
+            if outcome.prevent_default() {
+                e.prevent_default();
             }
+            continue_propagation &= outcome.continue_propagation();
+        }
+
+        if !continue_propagation {
+            e.stop_propagation();
         }
     };
 

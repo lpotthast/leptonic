@@ -1,10 +1,11 @@
+// Upstream: react-stately/src/color/useColorPickerState.ts @ 6f664fe911
 use std::fmt;
 
 use leptos::prelude::*;
 
 use crate::utils::color::ColorValue;
 
-// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-stately/color/src/useColorPickerState.ts
+// This is based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-stately/src/color/useColorPickerState.ts
 
 // ## INTENTIONAL DEVIATIONS
 //

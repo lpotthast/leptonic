@@ -1,10 +1,11 @@
+// Upstream: react-aria/src/dnd/useDropIndicator.ts @ 6f664fe911
 //! Drop indicator hook for visual drop target feedback within collections.
 //!
 //! Provides ARIA labels and visibility state for drop indicator elements
 //! that show users where items will be inserted during drag-and-drop.
 //!
 //! Based on react-aria's `useDropIndicator` from
-//! `@react-aria/dnd/src/useDropIndicator.ts`.
+//! `react-aria/src/dnd/useDropIndicator.ts`.
 
 use leptos::{attr, attr::Attr, prelude::*};
 

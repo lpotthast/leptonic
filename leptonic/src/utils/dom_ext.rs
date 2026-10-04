@@ -157,12 +157,12 @@ pub(crate) fn node_contains(
         }
 
         // If the current node is a slotted element, follow its assigned slot.
-        if let Some(el) = cur.dyn_ref::<web_sys::Element>() {
-            if let Some(slot) = el.assigned_slot() {
-                let slot_node: web_sys::Node = slot.into();
-                current = Some(slot_node);
-                continue;
-            }
+        if let Some(el) = cur.dyn_ref::<web_sys::Element>()
+            && let Some(slot) = el.assigned_slot()
+        {
+            let slot_node: web_sys::Node = slot.into();
+            current = Some(slot_node);
+            continue;
         }
 
         // If we've reached a shadow root, jump to its host element.

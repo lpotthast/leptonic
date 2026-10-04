@@ -1,5 +1,7 @@
+// Upstream: react-aria/src/slider/useSliderThumb.ts @ 569946588e
 use std::borrow::Cow;
 
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::{
@@ -10,7 +12,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::{FocusEvent, KeyboardEvent, PointerEvent};
 
 use crate::{
@@ -340,7 +341,7 @@ pub fn use_slider_thumb(input: UseSliderThumbInput) -> UseSliderThumbReturn {
         aria_valuetext,
     } = input;
 
-    let base_id = Uuid::new_v4();
+    let base_id = use_id("slider-thumb");
     let thumb_id = format!("slider-thumb-{base_id}");
 
     let orientation = state.orientation;

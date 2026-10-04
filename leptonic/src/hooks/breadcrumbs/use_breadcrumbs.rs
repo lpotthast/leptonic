@@ -1,9 +1,10 @@
+// Upstream: react-aria/src/breadcrumbs/useBreadcrumbs.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{attr, attr::Attr};
-use uuid::Uuid;
 
 use crate::hooks::IntoAttrs;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/breadcrumbs/src/useBreadcrumbs.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/breadcrumbs/useBreadcrumbs.ts
 
 //
 // No intentional deviations from the react-aria implementation.
@@ -85,7 +86,7 @@ pub type UseBreadcrumbsAttrs = (
 pub fn use_breadcrumbs(input: UseBreadcrumbsInput) -> UseBreadcrumbsReturn {
     let UseBreadcrumbsInput { label } = input;
 
-    let nav_id = format!("breadcrumbs-{}", Uuid::new_v4());
+    let nav_id = use_id("breadcrumbs");
 
     UseBreadcrumbsReturn {
         nav_props: UseBreadcrumbsProps {

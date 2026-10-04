@@ -46,7 +46,10 @@ name):
 - UsePressProps
 - UsePressAttrs
 
-`*Input` types should derive `Debug` and `Clone`. They may implement `Copy` but do not have to.
+`*Input` types should derive `Debug` and `Clone`. They may implement `Copy` but do not have to. Implement `Default`
+whenever there is a sensible "everything off" configuration (optional callbacks as `Option<Callback<_>>`, flags
+defaulting to `false`, `Signal<bool>` defaulting to `false`), so callers can write
+`UseFooInput { on_bar: Some(cb), ..Default::default() }`.
 `*Props` and `*Return` types should derive `Debug` but **not** `Clone`. Props are designed to bind a hook to exactly
 one DOM element; making them non-Clone enforces single-use at compile time. Only `into_attrs(self)` (consuming) is
 provided for conversion.
@@ -182,10 +185,40 @@ the sealed trait via `PropagationControl`.
 
 ---
 
-## Merging Props from Multiple Hooks
+## Combining Hooks
 
-When composing multiple hooks (e.g., `use_press` + `use_hover` + `use_focus_ring`), their Props need to be merged.
-The `MergeWith` trait provides a type-safe way to combine Props from different hooks.
+There are two ways to combine hooks. Prefer the first one.
+
+### Input Composition (preferred)
+
+When a hook *configures* an element that another hook renders, it returns that hook's **input**, not DOM props.
+A menu trigger configures a button, so `use_menu_trigger` returns a `UseButtonInput`; a spin button configures two
+stepper buttons, so `use_spin_button` returns two `UseButtonInput`s. The caller hands them to `use_button`, adding
+its own settings with struct update syntax:
+
+```rust
+let menu_trigger = use_menu_trigger(UseMenuTriggerInput { .. });
+let button = use_button(UseButtonInput {
+    on_hover_start: Some(Callback::new(|_| { /* ... */ })),
+    ..menu_trigger.button
+});
+let (attrs, styles) = button.props.into_parts();
+view! { <button {..attrs} style=styles>"Actions"</button> }
+```
+
+This is how react-aria passes `AriaButtonProps` between hooks. It keeps exactly one press, focus and hover state
+machine per element. (Merging the DOM props of a menu trigger and a button used to attach two independent press
+handlers to the same element.) When a configuring hook needs to *add* to a callback the caller may also set, chain
+them, e.g. with `chain_optional_callbacks` from `use_press`.
+
+For this to be pleasant, input structs that are meant to be composed implement `Default` (all options off, no
+callbacks), so callers only name what they set.
+
+### Merging Props (`MergeWith`)
+
+When independent hooks add unrelated behavior to the same element (e.g., `use_press` + `use_hover` +
+`use_focus_ring`), their Props need to be merged. The `MergeWith` trait provides a type-safe way to combine Props from
+different hooks.
 
 ### The `MergeWith` Trait
 
@@ -507,6 +540,17 @@ Attr<attr::Role, Signal<AriaRole> >,
 **Design principle:** No `Undefined` variants — optionality is expressed via `Option<T>`. An `Option<AriaRole>`
 that is `None` produces no `role` attribute in the DOM.
 
+### Element Ids
+
+Hooks that link elements (`aria-labelledby`, `aria-controls`, `aria-activedescendant`, `for`, ...) create ids with
+`crate::utils::id::use_id("prefix")`, never with random values like `Uuid::new_v4()`. `use_id` draws from Leptos'
+hydration counter, so the server and the hydrating client produce the same ids.
+
+Call it in the hook body, unconditionally, in the same order on server and client: never in an effect or event
+handler, and never in a code path that exists on only one side (e.g. after an `#[cfg(feature = "ssr")]` early
+return). Otherwise every id created afterwards differs between server and client. The browser test
+`test_hydration_ids.rs` compares the server's HTML with the hydrated DOM; add new fixtures to its page list.
+
 ### Element Capture Pattern
 
 Many hooks cannot solely rely on returning spreadable props. They often need direct programmatic access to DOM
@@ -769,8 +813,36 @@ use_form_reset(UseFormResetInput { element, on_reset: reset_callback,..});
 
 ## Based On React-Aria
 
-Most hooks are loosely based on hooks from Adobe's `react-aria` library (part of `react-spectrum`), checked out at
-`{leptonic_root_dir}/../react-spectrum`.
+Most hooks are based on hooks from Adobe's `react-aria` library (part of `react-spectrum`), checked out at
+`{leptonic_root_dir}/../react-spectrum`. Since react-spectrum's package consolidation (2026-03), the sources live in
+`packages/react-aria/src/<package>/` and `packages/react-stately/src/<package>/`. The old `packages/@react-aria/*`
+packages only re-export them.
+
+### Tracking Upstream Changes
+
+react-aria keeps evolving, so every file that ports upstream code declares where it came from, at the very top:
+
+```rust
+// Upstream: react-aria/src/interactions/usePress.ts @ 6f664fe911
+// Upstream: react-stately/src/toggle/useToggleState.ts @ 6f664fe911
+```
+
+The path is relative to react-spectrum's `packages/` directory. The hash is the react-spectrum commit this file was
+last synced against: everything upstream up to that commit is either ported or consciously skipped (and then listed
+in the deviations block below).
+
+`scripts/upstream-drift.sh` turns these lines into a work list:
+
+```bash
+scripts/upstream-drift.sh                 # Files with unabsorbed upstream commits, most drifted first.
+scripts/upstream-drift.sh -v use_press    # The commits themselves, for files matching the filter.
+scripts/upstream-drift.sh --mark-synced leptonic/src/hooks/interactions/use_press.rs
+```
+
+To re-sync a hook: read the listed upstream commits (`git -C ../react-spectrum show <hash>`), port what applies, add
+deviations for what doesn't, cover the behavior with tests, then run `--mark-synced` on the file. When you add a new
+hook, add its `// Upstream:` lines with react-spectrum's current HEAD (`git -C ../react-spectrum rev-parse
+--short=10 HEAD`).
 
 ### React-Aria Deviations
 

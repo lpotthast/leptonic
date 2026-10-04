@@ -1,3 +1,5 @@
+// Upstream: react-aria/src/calendar/useCalendarGrid.ts @ 6f664fe911
+use crate::utils::id::use_id;
 use leptos::{
     attr,
     attr::Attr,
@@ -5,7 +7,6 @@ use leptos::{
     ev::{On, SharedEventCallback},
     prelude::*,
 };
-use uuid::Uuid;
 use web_sys::{FocusEvent, KeyboardEvent};
 
 use crate::{
@@ -16,7 +17,7 @@ use crate::{
     },
 };
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/calendar/src/useCalendarGrid.ts
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/calendar/useCalendarGrid.ts
 
 //
 // 1. No RTL support: react-aria swaps ArrowLeft/ArrowRight based on
@@ -359,7 +360,7 @@ pub fn use_calendar_grid(input: UseCalendarGridInput) -> UseCalendarGridReturn {
         on_blur,
     } = input;
 
-    let grid_id = format!("calendar-grid-{}", Uuid::new_v4());
+    let grid_id = use_id("calendar-grid");
 
     // Reorder weekday labels based on start_of_week
     let mut weekday_labels = weekday_labels;

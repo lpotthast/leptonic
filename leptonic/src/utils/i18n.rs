@@ -1,8 +1,9 @@
+// Upstream: react-aria/src/interactions/context.ts @ 6f664fe911
 use leptos::prelude::*;
 
 use super::locale::WritingDirection;
 
-// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/@react-aria/i18n/src/context.tsx
+// This is mostly based on work in: https://github.com/adobe/react-spectrum/blob/main/packages/react-aria/src/interactions/context.ts
 
 /// Locale information for internationalization.
 ///
@@ -202,70 +203,70 @@ mod tests {
     #[test]
     fn test_locale_default() {
         let locale = Locale::default();
-        assert_that(locale.locale_str()).is_equal_to("en-US".to_string());
-        assert_that(locale.direction).is_equal_to(WritingDirection::Ltr);
+        assert_that!(locale.locale_str()).is_equal_to("en-US".to_string());
+        assert_that!(locale.direction).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_new() {
         let locale = Locale::new("de-DE");
-        assert_that(locale.locale_str()).is_equal_to("de-DE".to_string());
-        assert_that(locale.direction).is_equal_to(WritingDirection::Ltr);
+        assert_that!(locale.locale_str()).is_equal_to("de-DE".to_string());
+        assert_that!(locale.direction).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_rtl() {
         let locale = Locale::new("ar-SA");
-        assert_that(locale.direction).is_equal_to(WritingDirection::Rtl);
-        assert_that(locale.is_rtl()).is_true();
+        assert_that!(locale.direction).is_equal_to(WritingDirection::Rtl);
+        assert_that!(locale.is_rtl()).is_true();
     }
 
     #[test]
     fn test_locale_language() {
         let locale = Locale::new("en-US");
-        assert_that(locale.language()).is_equal_to("en".to_string());
-        assert_that(locale.region())
-            .is_some()
+        assert_that!(locale.language()).is_equal_to("en".to_string());
+        assert_that!(locale.region())
+            .get_some()
             .is_equal_to("US".to_string());
     }
 
     #[test]
     fn test_direction_for_locale() {
-        assert_that(Locale::direction_for_locale("ar")).is_equal_to(WritingDirection::Rtl);
-        assert_that(Locale::direction_for_locale("he-IL")).is_equal_to(WritingDirection::Rtl);
-        assert_that(Locale::direction_for_locale("en")).is_equal_to(WritingDirection::Ltr);
-        assert_that(Locale::direction_for_locale("ja-JP")).is_equal_to(WritingDirection::Ltr);
+        assert_that!(Locale::direction_for_locale("ar")).is_equal_to(WritingDirection::Rtl);
+        assert_that!(Locale::direction_for_locale("he-IL")).is_equal_to(WritingDirection::Rtl);
+        assert_that!(Locale::direction_for_locale("en")).is_equal_to(WritingDirection::Ltr);
+        assert_that!(Locale::direction_for_locale("ja-JP")).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_locale_rtl_via_script_detection() {
         // These should all be detected as RTL via script-based detection
-        assert_that(Locale::new("fa").is_rtl()).is_true(); // Persian/Farsi (Arab script)
-        assert_that(Locale::new("ur").is_rtl()).is_true(); // Urdu (Arab script)
-        assert_that(Locale::new("he").is_rtl()).is_true(); // Hebrew (Hebr script)
-        assert_that(Locale::new("ps").is_rtl()).is_true(); // Pashto (Arab script)
-        assert_that(Locale::new("yi").is_rtl()).is_true(); // Yiddish (Hebr script)
+        assert_that!(Locale::new("fa").is_rtl()).is_true(); // Persian/Farsi (Arab script)
+        assert_that!(Locale::new("ur").is_rtl()).is_true(); // Urdu (Arab script)
+        assert_that!(Locale::new("he").is_rtl()).is_true(); // Hebrew (Hebr script)
+        assert_that!(Locale::new("ps").is_rtl()).is_true(); // Pashto (Arab script)
+        assert_that!(Locale::new("yi").is_rtl()).is_true(); // Yiddish (Hebr script)
     }
 
     #[test]
     fn test_locale_ltr_scripts() {
-        assert_that(Locale::new("zh-CN").is_rtl()).is_false(); // Chinese
-        assert_that(Locale::new("ko-KR").is_rtl()).is_false(); // Korean
-        assert_that(Locale::new("hi-IN").is_rtl()).is_false(); // Hindi (Devanagari)
-        assert_that(Locale::new("th").is_rtl()).is_false(); // Thai
+        assert_that!(Locale::new("zh-CN").is_rtl()).is_false(); // Chinese
+        assert_that!(Locale::new("ko-KR").is_rtl()).is_false(); // Korean
+        assert_that!(Locale::new("hi-IN").is_rtl()).is_false(); // Hindi (Devanagari)
+        assert_that!(Locale::new("th").is_rtl()).is_false(); // Thai
     }
 
     #[test]
     fn test_invalid_locale_falls_back() {
         let locale = Locale::new("not-a-real-locale");
         // Should fall back to en-US
-        assert_that(locale.direction).is_equal_to(WritingDirection::Ltr);
+        assert_that!(locale.direction).is_equal_to(WritingDirection::Ltr);
     }
 
     #[test]
     fn test_icu_locale_accessor() {
         let locale = Locale::new("de-DE");
         let icu = locale.icu_locale();
-        assert_that(icu.to_string()).is_equal_to("de-DE".to_string());
+        assert_that!(icu.to_string()).is_equal_to("de-DE".to_string());
     }
 }

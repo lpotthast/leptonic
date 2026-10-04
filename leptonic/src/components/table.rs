@@ -24,9 +24,10 @@ pub fn Table(
 ) -> impl IntoView {
     view! {
         <table
-            class=classes.add("leptonic-table")
-            class:leptonic-table-bordered=bordered.unwrap_or(false)
-            class:leptonic-table-hoverable=hoverable.unwrap_or(false)
+            class=classes
+                .add("leptonic-table")
+                .add_reactive("leptonic-table-bordered", bordered.unwrap_or(false))
+                .add_reactive("leptonic-table-hoverable", hoverable.unwrap_or(false))
             style=styles
         >
             {children()}
@@ -111,7 +112,7 @@ pub fn TableHeaderCell(
     view! {
         <th
             {..press_attrs}
-            class=classes.add("leptonic-table-header-cell").add(("min-width", min_width.unwrap_or(true)))
+            class=classes.add("leptonic-table-header-cell").add_reactive("min-width", min_width.unwrap_or(true))
             style=styles
         >
             {children()}
